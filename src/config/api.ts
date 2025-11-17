@@ -4,7 +4,7 @@
 
 export const API_ENDPOINTS = {
   jolpica: {
-    base: process.env.NEXT_PUBLIC_JOLPICA_API_URL || 'https://jolpi.ca/ergast/f1',
+    base: process.env.NEXT_PUBLIC_JOLPICA_API_URL || 'https://api.jolpi.ca/ergast/f1',
     drivers: (year?: number) =>
       year ? `${API_ENDPOINTS.jolpica.base}/${year}/drivers.json` : `${API_ENDPOINTS.jolpica.base}/drivers.json`,
     constructors: (year?: number) =>
