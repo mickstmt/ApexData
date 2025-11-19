@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react';
+import { fallbackRaces } from '@/lib/fallback-data';
 
 export const metadata = {
   title: 'Calendario F1 2025 | ApexData',
@@ -7,21 +8,63 @@ export const metadata = {
 };
 
 export default async function CalendarPage() {
-  // Obtener todas las carreras de 2025 ordenadas por fecha
-  const races = await prisma.race.findMany({
-    where: {
-      season: {
-        year: 2025,
+  // Intentar obtener carreras de 2025, si no hay, obtener de 2024
+  let races;
+  let displayYear = 2025;
+  let isCurrentSeason = true;
+  let usingFallback = false;
+
+  try {
+    races = await prisma.race.findMany({
+      where: {
+        season: {
+          year: 2025,
+        },
       },
-    },
-    include: {
-      circuit: true,
-      season: true,
-    },
-    orderBy: {
-      round: 'asc',
-    },
-  });
+      include: {
+        circuit: true,
+        season: true,
+      },
+      orderBy: {
+        round: 'asc',
+      },
+    });
+
+    // Si no hay carreras de 2025, buscar la temporada más reciente
+    if (races.length === 0) {
+      const latestSeason = await prisma.season.findFirst({
+        orderBy: { year: 'desc' },
+        include: {
+          races: {
+            include: {
+              circuit: true,
+              season: true,
+            },
+            orderBy: {
+              round: 'asc',
+            },
+          },
+        },
+      });
+
+      if (latestSeason && latestSeason.races.length > 0) {
+        races = latestSeason.races;
+        displayYear = latestSeason.year;
+        isCurrentSeason = false;
+      } else {
+        races = fallbackRaces;
+        displayYear = 2024;
+        isCurrentSeason = false;
+        usingFallback = true;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching races:', error);
+    races = fallbackRaces;
+    displayYear = 2024;
+    isCurrentSeason = false;
+    usingFallback = true;
+  }
 
   const today = new Date();
 
@@ -32,12 +75,35 @@ export default async function CalendarPage() {
         <div className="mb-4 flex items-center gap-3">
           <CalendarIcon className="h-8 w-8 text-primary" />
           <h1 className="text-4xl font-bold md:text-5xl">
-            Calendario <span className="text-primary">2025</span>
+            Calendario <span className="text-primary">{displayYear}</span>
           </h1>
         </div>
         <p className="text-lg text-muted-foreground">
           {races.length} grandes premios programados para la temporada
         </p>
+        {usingFallback && (
+          <div className="mt-4 rounded-lg border border-red-500/20 bg-red-500/5 p-4">
+            <p className="text-sm text-red-600 dark:text-red-400">
+              <strong>⚠️ Base de datos no disponible:</strong> Mostrando datos de ejemplo.
+              Por favor, reactiva tu proyecto de Supabase en{' '}
+              <a
+                href="https://supabase.com/dashboard/projects"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-red-700"
+              >
+                el dashboard
+              </a>.
+            </p>
+          </div>
+        )}
+        {!isCurrentSeason && !usingFallback && (
+          <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+            <p className="text-sm text-muted-foreground">
+              <strong>Nota:</strong> Mostrando datos de la temporada {displayYear}. Los datos de 2025 aún no están disponibles.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Races List */}
@@ -72,7 +138,7 @@ export default async function CalendarPage() {
                   {/* Race info */}
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-xl font-bold">{race.name}</h3>
+                      <h3 className="text-xl font-bold">{race.raceName}</h3>
                       {isToday && (
                         <span className="rounded-full bg-primary px-2 py-1 text-xs font-bold text-primary-foreground">
                           HOY

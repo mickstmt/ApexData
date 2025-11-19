@@ -1,0 +1,136 @@
+// Datos de ejemplo cuando la base de datos no está disponible
+
+export const fallbackDrivers = [
+  {
+    id: 'fallback-1',
+    driverId: 'verstappen',
+    givenName: 'Max',
+    familyName: 'Verstappen',
+    permanentNumber: 1,
+    code: 'VER',
+    nationality: 'Dutch',
+    dateOfBirth: new Date('1997-09-30'),
+    url: 'https://en.wikipedia.org/wiki/Max_Verstappen',
+  },
+  {
+    id: 'fallback-2',
+    driverId: 'hamilton',
+    givenName: 'Lewis',
+    familyName: 'Hamilton',
+    permanentNumber: 44,
+    code: 'HAM',
+    nationality: 'British',
+    dateOfBirth: new Date('1985-01-07'),
+    url: 'https://en.wikipedia.org/wiki/Lewis_Hamilton',
+  },
+  {
+    id: 'fallback-3',
+    driverId: 'alonso',
+    givenName: 'Fernando',
+    familyName: 'Alonso',
+    permanentNumber: 14,
+    code: 'ALO',
+    nationality: 'Spanish',
+    dateOfBirth: new Date('1981-07-29'),
+    url: 'https://en.wikipedia.org/wiki/Fernando_Alonso',
+  },
+  {
+    id: 'fallback-4',
+    driverId: 'leclerc',
+    givenName: 'Charles',
+    familyName: 'Leclerc',
+    permanentNumber: 16,
+    code: 'LEC',
+    nationality: 'Monegasque',
+    dateOfBirth: new Date('1997-10-16'),
+    url: 'https://en.wikipedia.org/wiki/Charles_Leclerc',
+  },
+  {
+    id: 'fallback-5',
+    driverId: 'norris',
+    givenName: 'Lando',
+    familyName: 'Norris',
+    permanentNumber: 4,
+    code: 'NOR',
+    nationality: 'British',
+    dateOfBirth: new Date('1999-11-13'),
+    url: 'https://en.wikipedia.org/wiki/Lando_Norris',
+  },
+];
+
+export const fallbackConstructors = [
+  {
+    id: 'fallback-1',
+    constructorId: 'red_bull',
+    name: 'Red Bull Racing',
+    nationality: 'Austrian',
+    url: 'https://en.wikipedia.org/wiki/Red_Bull_Racing',
+  },
+  {
+    id: 'fallback-2',
+    constructorId: 'mercedes',
+    name: 'Mercedes',
+    nationality: 'German',
+    url: 'https://en.wikipedia.org/wiki/Mercedes-Benz_in_Formula_One',
+  },
+  {
+    id: 'fallback-3',
+    constructorId: 'ferrari',
+    name: 'Ferrari',
+    nationality: 'Italian',
+    url: 'https://en.wikipedia.org/wiki/Scuderia_Ferrari',
+  },
+  {
+    id: 'fallback-4',
+    constructorId: 'mclaren',
+    name: 'McLaren',
+    nationality: 'British',
+    url: 'https://en.wikipedia.org/wiki/McLaren',
+  },
+  {
+    id: 'fallback-5',
+    constructorId: 'aston_martin',
+    name: 'Aston Martin',
+    nationality: 'British',
+    url: 'https://en.wikipedia.org/wiki/Aston_Martin_in_Formula_One',
+  },
+];
+
+export const fallbackRaces = [
+  {
+    id: 'fallback-1',
+    round: 1,
+    raceName: 'Bahrain Grand Prix',
+    date: new Date('2024-03-02'),
+    circuit: {
+      name: 'Bahrain International Circuit',
+      location: 'Sakhir',
+      country: 'Bahrain',
+    },
+    season: { year: 2024 },
+  },
+  {
+    id: 'fallback-2',
+    round: 2,
+    raceName: 'Saudi Arabian Grand Prix',
+    date: new Date('2024-03-09'),
+    circuit: {
+      name: 'Jeddah Corniche Circuit',
+      location: 'Jeddah',
+      country: 'Saudi Arabia',
+    },
+    season: { year: 2024 },
+  },
+  {
+    id: 'fallback-3',
+    round: 3,
+    raceName: 'Australian Grand Prix',
+    date: new Date('2024-03-24'),
+    circuit: {
+      name: 'Albert Park Circuit',
+      location: 'Melbourne',
+      country: 'Australia',
+    },
+    season: { year: 2024 },
+  },
+];
