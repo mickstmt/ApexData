@@ -17,6 +17,7 @@
 ⏳ FASE 5: Features Avanzadas (0%)
 ⏳ FASE 6: Testing y QA (0%)
 ⏳ FASE 7: Deployment y Documentación (0%)
+⏳ FASE 8: Extras y Mejoras Visuales Avanzadas (0%)
 ```
 
 ---
@@ -626,6 +627,74 @@ Preparar el proyecto para producción y documentar todo el proceso.
 - CI/CD funcionando correctamente
 - Documentación completa
 - Monitoreo activo
+
+---
+
+## 📅 FASE 8: Extras y Mejoras Visuales Avanzadas
+
+**Estado**: Pendiente (0%)
+
+### Objetivos
+Implementar mejoras visuales adicionales incluyendo imágenes reales de pilotos y equipos.
+
+### Tareas (3)
+
+#### 8.1 Integración de Imágenes de Pilotos y Equipos
+- [ ] Agregar campos `imageUrl` y `logoUrl` a la base de datos
+- [ ] Crear migración de Prisma para nuevos campos
+- [ ] Investigar fuentes de imágenes (F1 API oficial, Jolpica, Wikipedia, etc.)
+- [ ] Implementar script de seeding para URLs de imágenes
+- [ ] Actualizar componentes para usar imágenes reales
+- [ ] Testing de carga y optimización de imágenes
+
+**Cambios en base de datos:**
+```prisma
+model Driver {
+  // ... campos existentes
+  imageUrl  String?  @map("image_url")
+}
+
+model Constructor {
+  // ... campos existentes
+  logoUrl   String?  @map("logo_url")
+}
+```
+
+**Componentes a actualizar:**
+- `DriverCard.tsx` - Usar DriverAvatar con imageUrl
+- `ConstructorCard.tsx` - Usar TeamLogo con logoUrl
+- `DriverDetailPage` - Avatar grande del piloto
+- Cualquier otra vista que muestre pilotos/equipos
+
+**Fuentes potenciales de imágenes:**
+- API oficial de F1 (si disponible)
+- Jolpica F1 API (verificar si incluye URLs de imágenes)
+- Wikipedia/Wikimedia Commons
+- OpenF1 API
+- Repositorio manual de imágenes
+
+#### 8.2 Mejoras Visuales Adicionales
+- [ ] Agregar imágenes de circuitos
+- [ ] Backgrounds personalizados por equipo
+- [ ] Badges y trofeos visuales
+- [ ] Iconos de banderas por nacionalidad
+
+#### 8.3 Galería y Media
+- [ ] Sección de galería de fotos
+- [ ] Highlights de carreras (enlaces a videos)
+- [ ] Pósters generativos para compartir en redes
+
+**Archivos a crear:**
+- `prisma/migrations/xxx_add_image_fields.sql`
+- `prisma/seed-images.ts`
+- `src/app/gallery/page.tsx`
+- `src/components/media/ImageGallery.tsx`
+
+### Criterios de Éxito
+- Todas las imágenes de pilotos y equipos cargando correctamente
+- Performance mantenido (Core Web Vitals)
+- Placeholders elegantes para imágenes faltantes
+- Experiencia visual mejorada significativamente
 
 ---
 
