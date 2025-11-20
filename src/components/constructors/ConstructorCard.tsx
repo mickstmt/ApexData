@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 
 interface ConstructorCardProps {
   constructor: {
@@ -26,6 +27,11 @@ export function ConstructorCard({ constructor, index = 0 }: ConstructorCardProps
         whileTap={{ scale: 0.98 }}
         className="group relative overflow-hidden rounded-lg border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg"
       >
+        {/* Favorite button */}
+        <div className="absolute right-2 top-2 z-10">
+          <FavoriteButton id={constructor.constructorId} type="constructor" />
+        </div>
+
         {/* Icon */}
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
           <Building2 className="h-8 w-8 text-primary" />

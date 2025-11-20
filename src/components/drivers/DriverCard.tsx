@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { User } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 
 interface DriverCardProps {
   driver: {
@@ -33,9 +34,14 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
         whileTap={{ scale: 0.98 }}
         className="group relative overflow-hidden rounded-lg border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg"
       >
+        {/* Favorite button */}
+        <div className="absolute right-2 top-2 z-10">
+          <FavoriteButton id={driver.driverId} type="driver" />
+        </div>
+
         {/* Número permanente en background */}
         {driver.permanentNumber && (
-          <div className="absolute right-4 top-4 text-6xl font-bold text-muted/10 transition-colors group-hover:text-primary/20">
+          <div className="absolute right-4 top-16 text-6xl font-bold text-muted/10 transition-colors group-hover:text-primary/20">
             {driver.permanentNumber}
           </div>
         )}

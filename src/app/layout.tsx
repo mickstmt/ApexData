@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PageTransition } from '@/components/providers/PageTransition';
+import { FavoritesProvider } from '@/contexts/FavoritesContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -44,11 +45,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Header />
-          <main className="flex-1">
-            <PageTransition>{children}</PageTransition>
-          </main>
-          <Footer />
+          <FavoritesProvider>
+            <Header />
+            <main className="flex-1">
+              <PageTransition>{children}</PageTransition>
+            </main>
+            <Footer />
+          </FavoritesProvider>
         </ThemeProvider>
       </body>
     </html>

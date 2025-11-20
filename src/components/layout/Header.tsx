@@ -11,6 +11,9 @@ const navLinks = [
   { href: '/constructors', label: 'Equipos' },
   { href: '/calendar', label: 'Calendario' },
   { href: '/standings', label: 'Standings' },
+  { href: '/telemetry', label: 'Telemetría' },
+  { href: '/compare', label: 'Comparar' },
+  { href: '/favorites', label: 'Favoritos' },
 ];
 
 export function Header() {
