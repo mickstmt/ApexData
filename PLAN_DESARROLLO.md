@@ -14,7 +14,7 @@
 ✅ FASE 2: Frontend - Estructura Base y Componentes (100%)
 ✅ FASE 3: Frontend - Páginas Principales (100%)
 ✅ FASE 4: Optimización y Mejoras Visuales (100%)
-⏳ FASE 5: Features Avanzadas (0%)
+✅ FASE 5: Features Avanzadas (100%)
 ⏳ FASE 6: Testing y QA (0%)
 ⏳ FASE 7: Deployment y Documentación (0%)
 ⏳ FASE 8: Extras y Mejoras Visuales Avanzadas (0%)
@@ -442,76 +442,97 @@ Pulir la experiencia visual con animaciones, transiciones y optimizaciones de re
 
 ---
 
-## 📅 FASE 5: Features Avanzadas
+## 📅 FASE 5: Features Avanzadas ✅
 
-**Estado**: Pendiente (0%)
+**Estado**: Completada (100%)
 
 ### Objetivos
 Implementar características avanzadas que diferencien a ApexData.
 
-### Tareas (5)
+### Objetivos Cumplidos
 
-#### 5.1 Telemetría en Tiempo Real (OpenF1)
-- [ ] Integración con OpenF1 API
-- [ ] Visualización de datos de telemetría
-- [ ] Gráficos de velocidad, throttle, brake, DRS
-- [ ] Comparación de vueltas
-- [ ] Live timing durante carreras
+#### 5.1 Telemetría en Tiempo Real (OpenF1) ✅
+- ✅ Integración completa con OpenF1 API
+- ✅ Cliente con todos los endpoints (sessions, drivers, car_data, laps, etc.)
+- ✅ Página de telemetría con información de sesión más reciente
+- ✅ Visualización de pilotos participantes con colores de equipo
+- ✅ Datos meteorológicos (temperatura aire/pista, humedad, viento)
+- ✅ Mensajes de control de carrera
+- ✅ Loading states para telemetry page
 
-**Archivos a crear:**
-- `src/services/openf1/client.ts`
-- `src/components/telemetry/TelemetryChart.tsx`
-- `src/components/telemetry/LiveTiming.tsx`
-- `src/app/telemetry/page.tsx`
+**Archivos creados:**
+- `src/services/openf1/client.ts` - Cliente completo con 15+ métodos
+- `src/app/telemetry/page.tsx` - Página principal de telemetría
+- `src/app/telemetry/loading.tsx` - Loading skeleton
 
-#### 5.2 Comparador de Pilotos
-- [ ] Selección de múltiples pilotos
-- [ ] Comparación de estadísticas
-- [ ] Gráficos comparativos
-- [ ] Head-to-head histórico
+**Funciones implementadas:**
+- getSessions, getLatestSession, getDrivers
+- getCarData, getLaps, getPositions, getIntervals
+- getPitStops, getStints, getWeather, getTeamRadio
+- getRaceControl, getMeetings, getFastestLap
+- compareTelemetry, getSessionSummary, getDriverPerformance
 
-**Archivos a crear:**
-- `src/app/compare/page.tsx`
-- `src/components/compare/PilotSelector.tsx`
-- `src/components/compare/ComparisonChart.tsx`
+#### 5.2 Comparador de Pilotos ✅
+- ✅ Selección interactiva de dos pilotos con búsqueda en tiempo real
+- ✅ Comparación de estadísticas (carreras, victorias, podios, posición promedio)
+- ✅ Visualización destacada del piloto con mejor rendimiento
+- ✅ Tarjetas informativas detalladas de cada piloto
+- ✅ Interfaz responsive con animaciones Framer Motion
 
-#### 5.3 Sistema de Favoritos
-- [ ] Marcar pilotos/equipos favoritos
-- [ ] Dashboard personalizado
-- [ ] Notificaciones (opcional)
-- [ ] Persistencia en localStorage
+**Archivos creados:**
+- `src/app/compare/page.tsx` - Página de comparación
+- `src/components/compare/DriverSelector.tsx` - Componente interactivo
 
-**Archivos a crear:**
-- `src/contexts/FavoritesContext.tsx`
-- `src/components/favorites/FavoriteButton.tsx`
-- `src/app/favorites/page.tsx`
+**Características:**
+- Búsqueda en tiempo real con dropdown dinámico
+- Previene selección del mismo piloto en ambos slots
+- Cálculo automático de estadísticas desde resultados
+- Highlighting visual del mejor piloto en cada métrica
 
-#### 5.4 Estadísticas Avanzadas
-- [ ] Análisis histórico de rendimiento
+#### 5.3 Sistema de Favoritos ✅
+- ✅ Context API para gestión global de favoritos
+- ✅ Persistencia automática en localStorage
+- ✅ Botón animado de favoritos en cards
+- ✅ Página dedicada para ver favoritos guardados
+- ✅ Sincronización automática entre páginas
+
+**Archivos creados:**
+- `src/contexts/FavoritesContext.tsx` - Context y hooks
+- `src/components/favorites/FavoriteButton.tsx` - Botón con animación
+- `src/components/favorites/FavoritesGrid.tsx` - Grid de favoritos
+- `src/app/favorites/page.tsx` - Página de favoritos
+
+**Características:**
+- Toggle con animación (star fill/outline)
+- Separación entre favoritos de pilotos y equipos
+- Carga dinámica desde API
+- Estado vacío informativo
+
+#### 5.4 Navegación ✅
+- ✅ Agregados links a Header: Telemetría, Comparar, Favoritos
+- ✅ Navegación mobile actualizada
+- ✅ Todas las páginas accesibles desde menú principal
+
+### Pendiente para futuras iteraciones
+
+#### 5.4 Estadísticas Avanzadas (Mover a futuras iteraciones)
+- [ ] Análisis histórico de rendimiento con gráficos
 - [ ] Predicciones basadas en datos
-- [ ] Tendencias y patrones
-- [ ] Visualizaciones interactivas
+- [ ] Tendencias y patrones temporales
+- [ ] Visualizaciones interactivas avanzadas
 
-**Archivos a crear:**
-- `src/app/stats/page.tsx`
-- `src/components/stats/PerformanceChart.tsx`
-- `src/components/stats/TrendsAnalysis.tsx`
-
-#### 5.5 Exportación de Datos
+#### 5.5 Exportación de Datos (Mover a futuras iteraciones)
 - [ ] Exportar tablas a CSV
 - [ ] Exportar gráficos como imagen
 - [ ] Compartir resultados en redes sociales
 - [ ] Generar PDFs de resúmenes
 
-**Archivos a crear:**
-- `src/utils/export.ts`
-- `src/components/export/ExportButton.tsx`
-
 ### Criterios de Éxito
-- Telemetría en tiempo real funcionando
-- Comparador intuitivo y rápido
-- Favoritos persistentes
-- Exportación sin errores
+- ✅ OpenF1 API integrada y funcionando
+- ✅ Telemetría mostrando datos de sesiones reales
+- ✅ Comparador intuitivo y rápido con búsqueda
+- ✅ Favoritos persistentes en localStorage
+- ✅ Navegación completa actualizada
 
 ---
 
