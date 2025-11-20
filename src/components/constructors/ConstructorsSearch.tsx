@@ -80,8 +80,8 @@ export function ConstructorsSearch({ constructors }: ConstructorsSearchProps) {
       {/* Constructors Grid */}
       {filteredConstructors.length > 0 ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredConstructors.map((constructor) => (
-            <ConstructorCard key={constructor.id} constructor={constructor} />
+          {filteredConstructors.map((constructor, index) => (
+            <ConstructorCard key={constructor.id} constructor={constructor} index={index} />
           ))}
         </div>
       ) : (

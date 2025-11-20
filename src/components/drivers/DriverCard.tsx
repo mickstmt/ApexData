@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import { User } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface DriverCardProps {
   driver: {
@@ -12,16 +15,24 @@ interface DriverCardProps {
     nationality: string;
     dateOfBirth: Date | null;
   };
+  index?: number;
 }
 
-export function DriverCard({ driver }: DriverCardProps) {
+export function DriverCard({ driver, index = 0 }: DriverCardProps) {
   const age = driver.dateOfBirth
     ? new Date().getFullYear() - new Date(driver.dateOfBirth).getFullYear()
     : null;
 
   return (
     <Link href={`/drivers/${driver.driverId}`}>
-      <div className="group relative overflow-hidden rounded-lg border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        whileHover={{ scale: 1.02, y: -5 }}
+        whileTap={{ scale: 0.98 }}
+        className="group relative overflow-hidden rounded-lg border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg"
+      >
         {/* Número permanente en background */}
         {driver.permanentNumber && (
           <div className="absolute right-4 top-4 text-6xl font-bold text-muted/10 transition-colors group-hover:text-primary/20">
@@ -71,7 +82,7 @@ export function DriverCard({ driver }: DriverCardProps) {
 
         {/* Hover indicator */}
         <div className="absolute bottom-0 left-0 h-1 w-full origin-left scale-x-0 bg-primary transition-transform group-hover:scale-x-100" />
-      </div>
+      </motion.div>
     </Link>
   );
 }
