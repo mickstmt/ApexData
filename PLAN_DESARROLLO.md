@@ -658,9 +658,24 @@ Preparar el proyecto para producción y documentar todo el proceso.
 ### Objetivos
 Implementar mejoras visuales adicionales incluyendo imágenes reales de pilotos y equipos.
 
-### Tareas (3)
+### Tareas (4)
 
-#### 8.1 Integración de Imágenes de Pilotos y Equipos
+#### 8.1 Selector de Temporadas
+- [ ] Crear componente SeasonSelector reutilizable
+- [ ] Agregar selector a página de calendario
+- [ ] Agregar selector a página de standings
+- [ ] Permitir navegación entre años (1950-actualidad)
+- [ ] Mostrar indicador de temporada actual
+- [ ] Mantener selección en URL params
+
+**Componentes a crear:**
+- `src/components/ui/SeasonSelector.tsx`
+
+**Páginas a actualizar:**
+- `src/app/calendar/page.tsx` - Agregar selector de año
+- `src/app/standings/page.tsx` - Agregar selector de año
+
+#### 8.2 Integración de Imágenes de Pilotos y Equipos
 - [ ] Agregar campos `imageUrl` y `logoUrl` a la base de datos
 - [ ] Crear migración de Prisma para nuevos campos
 - [ ] Investigar fuentes de imágenes (F1 API oficial, Jolpica, Wikipedia, etc.)
@@ -694,13 +709,13 @@ model Constructor {
 - OpenF1 API
 - Repositorio manual de imágenes
 
-#### 8.2 Mejoras Visuales Adicionales
+#### 8.3 Mejoras Visuales Adicionales
 - [ ] Agregar imágenes de circuitos
 - [ ] Backgrounds personalizados por equipo
 - [ ] Badges y trofeos visuales
 - [ ] Iconos de banderas por nacionalidad
 
-#### 8.3 Galería y Media
+#### 8.4 Galería y Media
 - [ ] Sección de galería de fotos
 - [ ] Highlights de carreras (enlaces a videos)
 - [ ] Pósters generativos para compartir en redes

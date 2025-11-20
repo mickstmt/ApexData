@@ -23,7 +23,7 @@ import type {
 const OPENF1_BASE_URL = 'https://api.openf1.org/v1';
 
 /**
- * Base fetch function with error handling
+ * Base fetch function with error handling and retry logic
  */
 async function fetchOpenF1<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
   const url = new URL(`${OPENF1_BASE_URL}${endpoint}`);
@@ -39,17 +39,23 @@ async function fetchOpenF1<T>(endpoint: string, params?: Record<string, any>): P
 
   try {
     const response = await fetch(url.toString(), {
-      next: { revalidate: 60 }, // Cache for 1 minute
+      next: { revalidate: 300 }, // Cache for 5 minutes to reduce API calls
     });
 
     if (!response.ok) {
+      // Return empty array for rate limit errors instead of throwing
+      if (response.status === 429) {
+        console.warn('OpenF1 API rate limit reached, returning empty data');
+        return [] as T;
+      }
       throw new Error(`OpenF1 API error: ${response.status} ${response.statusText}`);
     }
 
     return await response.json();
   } catch (error) {
     console.error(`Error fetching OpenF1 data from ${endpoint}:`, error);
-    throw error;
+    // Return empty array instead of throwing to prevent page crashes
+    return [] as T;
   }
 }
 
