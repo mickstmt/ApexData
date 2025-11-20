@@ -7,7 +7,13 @@ export default function Home() {
     <div className="flex flex-col">
       {/* Hero Section */}
       <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-background to-muted/20 px-4 py-20 md:py-32">
-        <div className="container mx-auto">
+        {/* Animated background pattern */}
+        <div className="absolute inset-0 -z-10 opacity-30">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+          <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+        </div>
+        <div className="container relative mx-auto">
           <div className="mx-auto max-w-4xl text-center">
             <h1 className="mb-6 text-5xl font-bold tracking-tight md:text-7xl">
               <span className="text-foreground">Apex</span>
