@@ -1,24 +1,31 @@
 import { prisma } from '@/lib/prisma';
 import { Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react';
 import { fallbackRaces } from '@/lib/fallback-data';
+import { SeasonSelector } from '@/components/ui/SeasonSelector';
 
 export const metadata = {
-  title: 'Calendario F1 2025 | ApexData',
-  description: 'Calendario completo de la temporada 2025 de Fórmula 1',
+  title: 'Calendario F1 | ApexData',
+  description: 'Calendario completo de temporadas de Fórmula 1',
 };
 
-export default async function CalendarPage() {
-  // Intentar obtener carreras de 2025, si no hay, obtener de 2024
+interface CalendarPageProps {
+  searchParams: Promise<{ season?: string }>;
+}
+
+export default async function CalendarPage({ searchParams }: CalendarPageProps) {
+  const params = await searchParams;
+  const requestedYear = params.season ? parseInt(params.season) : new Date().getFullYear();
+
   let races;
-  let displayYear = 2025;
-  let isCurrentSeason = true;
+  let displayYear = requestedYear;
+  let isCurrentSeason = requestedYear === new Date().getFullYear();
   let usingFallback = false;
 
   try {
     races = await prisma.race.findMany({
       where: {
         season: {
-          year: 2025,
+          year: displayYear,
         },
       },
       include: {
@@ -72,11 +79,14 @@ export default async function CalendarPage() {
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
       <div className="mb-12">
-        <div className="mb-4 flex items-center gap-3">
-          <CalendarIcon className="h-8 w-8 text-primary" />
-          <h1 className="text-4xl font-bold md:text-5xl">
-            Calendario <span className="text-primary">{displayYear}</span>
-          </h1>
+        <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <CalendarIcon className="h-8 w-8 text-primary" />
+            <h1 className="text-4xl font-bold md:text-5xl">
+              Calendario <span className="text-primary">{displayYear}</span>
+            </h1>
+          </div>
+          <SeasonSelector currentSeason={displayYear} />
         </div>
         <p className="text-lg text-muted-foreground">
           {races.length} grandes premios programados para la temporada

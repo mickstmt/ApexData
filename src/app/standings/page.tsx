@@ -1,11 +1,19 @@
 import { Trophy, Medal, Award } from 'lucide-react';
+import { SeasonSelector } from '@/components/ui/SeasonSelector';
 
 export const metadata = {
-  title: 'Standings F1 2025 | ApexData',
-  description: 'Clasificación del campeonato de pilotos y constructores de F1 2025',
+  title: 'Standings F1 | ApexData',
+  description: 'Clasificación del campeonato de pilotos y constructores de F1',
 };
 
-export default async function StandingsPage() {
+interface StandingsPageProps {
+  searchParams: Promise<{ season?: string }>;
+}
+
+export default async function StandingsPage({ searchParams }: StandingsPageProps) {
+  const params = await searchParams;
+  const displayYear = params.season ? parseInt(params.season) : new Date().getFullYear();
+
   // Datos de ejemplo para mostrar la estructura
   // TODO: Integrar con API de Jolpica para obtener standings reales
   const driversStandings = [
@@ -28,11 +36,14 @@ export default async function StandingsPage() {
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
       <div className="mb-12">
-        <div className="mb-4 flex items-center gap-3">
-          <Trophy className="h-8 w-8 text-primary" />
-          <h1 className="text-4xl font-bold md:text-5xl">
-            Clasificación <span className="text-primary">2025</span>
-          </h1>
+        <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <Trophy className="h-8 w-8 text-primary" />
+            <h1 className="text-4xl font-bold md:text-5xl">
+              Clasificación <span className="text-primary">{displayYear}</span>
+            </h1>
+          </div>
+          <SeasonSelector currentSeason={displayYear} />
         </div>
         <p className="text-lg text-muted-foreground">
           Campeonato Mundial de Pilotos y Constructores
