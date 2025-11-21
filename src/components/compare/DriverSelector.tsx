@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, X, Trophy, Flag, Calendar, TrendingUp } from 'lucide-react';
+import { Search, X, Trophy, Flag, Calendar, TrendingUp, GitCompare } from 'lucide-react';
 import type { Driver, Result, Race, Season } from '@prisma/client';
 
 type DriverWithResults = Driver & {
@@ -15,6 +15,36 @@ type DriverWithResults = Driver & {
 
 interface DriverSelectorProps {
   drivers: DriverWithResults[];
+}
+
+function calculateStats(driver: DriverWithResults) {
+  const results = driver.results;
+  if (results.length === 0) {
+    return {
+      totalRaces: 0,
+      wins: 0,
+      podiums: 0,
+      avgPosition: null as string | null,
+    };
+  }
+
+  const wins = results.filter((r) => Number(r.position) === 1).length;
+  const podiums = results.filter(
+    (r) => Number(r.position) >= 1 && Number(r.position) <= 3
+  ).length;
+  const totalRaces = results.length;
+  const validPositions = results.filter((r) => r.position).map((r) => Number(r.position));
+  const avgPosition =
+    validPositions.length > 0
+      ? (validPositions.reduce((a, b) => a + b, 0) / validPositions.length).toFixed(1)
+      : null;
+
+  return {
+    totalRaces,
+    wins,
+    podiums,
+    avgPosition,
+  };
 }
 
 export function DriverSelector({ drivers }: DriverSelectorProps) {
@@ -40,36 +70,6 @@ export function DriverSelector({ drivers }: DriverSelectorProps) {
         d.familyName.toLowerCase().includes(search2.toLowerCase()) ||
         d.code?.toLowerCase().includes(search2.toLowerCase()))
   );
-
-  const calculateStats = (driver: DriverWithResults) => {
-    const results = driver.results;
-    if (results.length === 0) {
-      return {
-        totalRaces: 0,
-        wins: 0,
-        podiums: 0,
-        avgPosition: null,
-      };
-    }
-
-    const wins = results.filter((r) => Number(r.position) === 1).length;
-    const podiums = results.filter(
-      (r) => Number(r.position) >= 1 && Number(r.position) <= 3
-    ).length;
-    const totalRaces = results.length;
-    const validPositions = results.filter((r) => r.position).map((r) => Number(r.position));
-    const avgPosition =
-      validPositions.length > 0
-        ? (validPositions.reduce((a, b) => a + b, 0) / validPositions.length).toFixed(1)
-        : null;
-
-    return {
-      totalRaces,
-      wins,
-      podiums,
-      avgPosition,
-    };
-  };
 
   return (
     <div className="space-y-8">

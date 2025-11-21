@@ -10,14 +10,15 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     year: string;
-  };
+  }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const year = params.year === 'current' ? 'current' : parseInt(params.year);
+    const resolvedParams = await params;
+    const year = resolvedParams.year === 'current' ? 'current' : parseInt(resolvedParams.year);
 
     // Try database first (only for historical data)
     if (typeof year === 'number') {

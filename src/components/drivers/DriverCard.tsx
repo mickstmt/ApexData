@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
+import { DriverAvatar } from '@/components/ui/OptimizedImage';
 
 interface DriverCardProps {
   driver: {
@@ -15,6 +16,7 @@ interface DriverCardProps {
     code: string | null;
     nationality: string;
     dateOfBirth: Date | null;
+    imageUrl: string | null;
   };
   index?: number;
 }
@@ -48,9 +50,13 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
 
         {/* Contenido */}
         <div className="relative">
-          {/* Avatar placeholder */}
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <User className="h-8 w-8 text-primary" />
+          {/* Avatar */}
+          <div className="mb-4">
+            <DriverAvatar
+              src={driver.imageUrl}
+              name={`${driver.givenName} ${driver.familyName}`}
+              size="md"
+            />
           </div>
 
           {/* Nombre */}

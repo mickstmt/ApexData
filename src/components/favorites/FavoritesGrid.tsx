@@ -21,7 +21,7 @@ export function FavoritesGrid() {
         if (favoriteDrivers.length > 0) {
           const driversRes = await fetch('/api/drivers');
           const driversData = await driversRes.json();
-          const filteredDrivers = driversData.drivers.filter((d: Driver) =>
+          const filteredDrivers = driversData.data.filter((d: Driver) =>
             favoriteDrivers.includes(d.driverId)
           );
           setDrivers(filteredDrivers);
@@ -33,7 +33,7 @@ export function FavoritesGrid() {
         if (favoriteConstructors.length > 0) {
           const constructorsRes = await fetch('/api/constructors');
           const constructorsData = await constructorsRes.json();
-          const filteredConstructors = constructorsData.constructors.filter(
+          const filteredConstructors = constructorsData.data.filter(
             (c: Constructor) => favoriteConstructors.includes(c.constructorId)
           );
           setConstructors(filteredConstructors);

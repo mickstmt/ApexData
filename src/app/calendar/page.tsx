@@ -28,9 +28,24 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
           year: displayYear,
         },
       },
-      include: {
-        circuit: true,
-        season: true,
+      select: {
+        id: true,
+        round: true,
+        raceName: true,
+        date: true,
+        url: true,
+        circuit: {
+          select: {
+            name: true,
+            location: true,
+            country: true,
+          },
+        },
+        season: {
+          select: {
+            year: true,
+          },
+        },
       },
       orderBy: {
         round: 'asc',
@@ -41,11 +56,27 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
     if (races.length === 0) {
       const latestSeason = await prisma.season.findFirst({
         orderBy: { year: 'desc' },
-        include: {
+        select: {
+          year: true,
           races: {
-            include: {
-              circuit: true,
-              season: true,
+            select: {
+              id: true,
+              round: true,
+              raceName: true,
+              date: true,
+              url: true,
+              circuit: {
+                select: {
+                  name: true,
+                  location: true,
+                  country: true,
+                },
+              },
+              season: {
+                select: {
+                  year: true,
+                },
+              },
             },
             orderBy: {
               round: 'asc',

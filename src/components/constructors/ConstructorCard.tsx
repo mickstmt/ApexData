@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
+import { TeamLogo } from '@/components/ui/OptimizedImage';
 
 interface ConstructorCardProps {
   constructor: {
@@ -12,6 +12,7 @@ interface ConstructorCardProps {
     name: string;
     nationality: string;
     url: string | null;
+    logoUrl: string | null;
   };
   index?: number;
 }
@@ -32,9 +33,13 @@ export function ConstructorCard({ constructor, index = 0 }: ConstructorCardProps
           <FavoriteButton id={constructor.constructorId} type="constructor" />
         </div>
 
-        {/* Icon */}
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-          <Building2 className="h-8 w-8 text-primary" />
+        {/* Logo */}
+        <div className="mb-4">
+          <TeamLogo
+            src={constructor.logoUrl}
+            name={constructor.name}
+            size="md"
+          />
         </div>
 
         {/* Nombre del equipo */}

@@ -653,54 +653,95 @@ Preparar el proyecto para producción y documentar todo el proceso.
 
 ## 📅 FASE 8: Extras y Mejoras Visuales Avanzadas
 
-**Estado**: Pendiente (0%)
+**Estado**: En Progreso (60%)
 
 ### Objetivos
 Implementar mejoras visuales adicionales incluyendo imágenes reales de pilotos y equipos.
 
 ### Tareas (4)
 
-#### 8.1 Selector de Temporadas
-- [ ] Crear componente SeasonSelector reutilizable
-- [ ] Agregar selector a página de calendario
-- [ ] Agregar selector a página de standings
-- [ ] Permitir navegación entre años (1950-actualidad)
-- [ ] Mostrar indicador de temporada actual
-- [ ] Mantener selección en URL params
+#### 8.1 Selector de Temporadas ✅
+- ✅ Crear componente SeasonSelector reutilizable
+- ✅ Agregar selector a página de calendario
+- ✅ Agregar selector a página de standings
+- ✅ Permitir navegación entre años (1950-actualidad)
+- ✅ Mantener selección en URL params
 
-**Componentes a crear:**
-- `src/components/ui/SeasonSelector.tsx`
+**Componentes creados:**
+- ✅ `src/components/ui/SeasonSelector.tsx`
 
-**Páginas a actualizar:**
-- `src/app/calendar/page.tsx` - Agregar selector de año
-- `src/app/standings/page.tsx` - Agregar selector de año
+**Páginas actualizadas:**
+- ✅ `src/app/calendar/page.tsx` - Con selector de año y manejo de searchParams async
+- ✅ `src/app/standings/page.tsx` - Con selector de año y manejo de searchParams async
 
-#### 8.2 Integración de Imágenes de Pilotos y Equipos
-- [ ] Agregar campos `imageUrl` y `logoUrl` a la base de datos
-- [ ] Crear migración de Prisma para nuevos campos
-- [ ] Investigar fuentes de imágenes (F1 API oficial, Jolpica, Wikipedia, etc.)
-- [ ] Implementar script de seeding para URLs de imágenes
-- [ ] Actualizar componentes para usar imágenes reales
-- [ ] Testing de carga y optimización de imágenes
+**Notas de implementación:**
+- Next.js 15 requiere que searchParams sea Promise<>
+- Selector genera años desde 1950 hasta año actual + 1
+- Usa URL query params para persistir selección entre navegaciones
 
-**Cambios en base de datos:**
-```prisma
-model Driver {
-  // ... campos existentes
-  imageUrl  String?  @map("image_url")
-}
+#### 8.2 Integración de Imágenes de Pilotos y Equipos (EN PROGRESO - PAUSADA)
+- ✅ Campos `imageUrl` y `logoUrl` ya existen en schema.prisma
+- ✅ Prisma client regenerado con nuevos campos
+- ✅ DriverCard actualizado para usar DriverAvatar con imageUrl
+- ✅ ConstructorCard actualizado para usar TeamLogo con logoUrl
+- ✅ Interfaces actualizadas en componentes (DriverCard, ConstructorCard)
+- ✅ DriversSearch y ConstructorsSearch actualizados con nuevos campos
+- ✅ Fallback data actualizado (imageUrl, logoUrl, createdAt, updatedAt, results[])
+- ✅ FavoritesGrid corregido (API usa .data no .drivers/.constructors)
+- ✅ Compare page con calculateStats movido fuera del componente
+- ✅ API routes actualizados para Next.js 15 (params como Promise)
+- ✅ Build exitoso sin errores de TypeScript
+- ⏸️ **PAUSADA** - Lista para continuar cuando el usuario lo indique
 
-model Constructor {
-  // ... campos existentes
-  logoUrl   String?  @map("logo_url")
-}
+**ESTADO ACTUAL DEL CÓDIGO:**
+✅ **Infraestructura completa:**
+  - Schema tiene imageUrl y logoUrl
+  - Todos los componentes actualizados para usar estos campos
+  - Componentes OptimizedImage (DriverAvatar, TeamLogo) listos con fallbacks
+  - Queries de Prisma devuelven todos los campos (sin select explícito)
+  - Build compila sin errores
+
+🔄 **PENDIENTE (próxima sesión):**
+  - [ ] Investigar fuentes de imágenes (Wikipedia, OpenF1, APIs oficiales)
+  - [ ] Crear script de seeding (`prisma/seed-images.ts`) para poblar URLs
+  - [ ] Ejecutar seed para llenar imageUrl/logoUrl en base de datos
+  - [ ] Testing visual de imágenes y fallbacks
+  - [ ] Validar que imágenes cargan correctamente
+  - [ ] Optimizar performance de carga de imágenes
+
+**IMPORTANTE - Problemas resueltos en esta sesión:**
+1. ✅ Next.js 15 - searchParams debe ser Promise<>
+2. ✅ Next.js 15 - API route params deben ser Promise<>
+3. ✅ Prisma client regenerado para incluir logoUrl/imageUrl
+4. ✅ ThemeProvider - Fixed import de ThemeProviderProps (usar ComponentProps)
+5. ✅ Types index.ts - Cambiado @/generated/prisma a @prisma/client
+6. ✅ Jolpica transformers - Fixed import de Prisma
+7. ✅ FavoritesGrid - API responde con .data no .drivers/.constructors
+8. ✅ DriverSelector - calculateStats movido fuera para ReturnType
+9. ✅ Fallback data - Agregados imageUrl, logoUrl, createdAt, updatedAt, results[]
+
+**Archivos clave modificados:**
+- `src/components/ui/SeasonSelector.tsx` (NUEVO)
+- `src/app/calendar/page.tsx` (ACTUALIZADO)
+- `src/app/standings/page.tsx` (ACTUALIZADO)
+- `src/components/drivers/DriverCard.tsx` (ACTUALIZADO - usa DriverAvatar)
+- `src/components/constructors/ConstructorCard.tsx` (ACTUALIZADO - usa TeamLogo)
+- `src/components/drivers/DriversSearch.tsx` (ACTUALIZADO - interfaces)
+- `src/components/constructors/ConstructorsSearch.tsx` (ACTUALIZADO - interfaces)
+- `src/lib/fallback-data.ts` (ACTUALIZADO - campos adicionales)
+- `src/components/favorites/FavoritesGrid.tsx` (FIX - API response)
+- `src/components/compare/DriverSelector.tsx` (FIX - calculateStats)
+- `src/app/api/drivers/[driverId]/route.ts` (FIX - async params)
+- `src/app/api/seasons/[year]/route.ts` (FIX - async params)
+- `src/components/providers/ThemeProvider.tsx` (FIX - imports)
+- `src/types/index.ts` (FIX - Prisma imports)
+- `src/services/jolpica/transformers.ts` (FIX - Prisma imports)
+
+**Comandos ejecutados:**
+```bash
+npx prisma generate  # Regenerar cliente después de confirmar schema
+npm run build        # ✅ Build exitoso
 ```
-
-**Componentes a actualizar:**
-- `DriverCard.tsx` - Usar DriverAvatar con imageUrl
-- `ConstructorCard.tsx` - Usar TeamLogo con logoUrl
-- `DriverDetailPage` - Avatar grande del piloto
-- Cualquier otra vista que muestre pilotos/equipos
 
 **Fuentes potenciales de imágenes:**
 - API oficial de F1 (si disponible)

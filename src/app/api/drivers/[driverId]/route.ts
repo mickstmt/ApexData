@@ -10,14 +10,14 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     driverId: string;
-  };
+  }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { driverId } = params;
+    const { driverId } = await params;
 
     // Try database first
     const driverFromDb = await prisma.driver.findUnique({

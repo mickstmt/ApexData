@@ -4,7 +4,7 @@
  */
 
 import type { JolpicaDriver, JolpicaConstructor, JolpicaCircuit, JolpicaRace } from '@/types';
-import type { Prisma } from '@/generated/prisma';
+import type { Prisma } from '@prisma/client';
 
 // ============================================================================
 // DRIVER TRANSFORMER

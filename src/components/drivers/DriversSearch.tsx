@@ -14,6 +14,9 @@ interface Driver {
   nationality: string;
   dateOfBirth: Date | null;
   url: string | null;
+  imageUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface DriversSearchProps {

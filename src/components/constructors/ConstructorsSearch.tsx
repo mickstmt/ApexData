@@ -10,6 +10,9 @@ interface Constructor {
   name: string;
   nationality: string;
   url: string | null;
+  logoUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface ConstructorsSearchProps {

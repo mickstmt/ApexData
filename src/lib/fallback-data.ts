@@ -11,6 +11,10 @@ export const fallbackDrivers = [
     nationality: 'Dutch',
     dateOfBirth: new Date('1997-09-30'),
     url: 'https://en.wikipedia.org/wiki/Max_Verstappen',
+    imageUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    results: [],
   },
   {
     id: 'fallback-2',
@@ -22,6 +26,10 @@ export const fallbackDrivers = [
     nationality: 'British',
     dateOfBirth: new Date('1985-01-07'),
     url: 'https://en.wikipedia.org/wiki/Lewis_Hamilton',
+    imageUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    results: [],
   },
   {
     id: 'fallback-3',
@@ -33,6 +41,10 @@ export const fallbackDrivers = [
     nationality: 'Spanish',
     dateOfBirth: new Date('1981-07-29'),
     url: 'https://en.wikipedia.org/wiki/Fernando_Alonso',
+    imageUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    results: [],
   },
   {
     id: 'fallback-4',
@@ -44,6 +56,10 @@ export const fallbackDrivers = [
     nationality: 'Monegasque',
     dateOfBirth: new Date('1997-10-16'),
     url: 'https://en.wikipedia.org/wiki/Charles_Leclerc',
+    imageUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    results: [],
   },
   {
     id: 'fallback-5',
@@ -55,6 +71,10 @@ export const fallbackDrivers = [
     nationality: 'British',
     dateOfBirth: new Date('1999-11-13'),
     url: 'https://en.wikipedia.org/wiki/Lando_Norris',
+    imageUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    results: [],
   },
 ];
 
@@ -65,6 +85,9 @@ export const fallbackConstructors = [
     name: 'Red Bull Racing',
     nationality: 'Austrian',
     url: 'https://en.wikipedia.org/wiki/Red_Bull_Racing',
+    logoUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   },
   {
     id: 'fallback-2',
@@ -72,6 +95,9 @@ export const fallbackConstructors = [
     name: 'Mercedes',
     nationality: 'German',
     url: 'https://en.wikipedia.org/wiki/Mercedes-Benz_in_Formula_One',
+    logoUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   },
   {
     id: 'fallback-3',
@@ -79,6 +105,9 @@ export const fallbackConstructors = [
     name: 'Ferrari',
     nationality: 'Italian',
     url: 'https://en.wikipedia.org/wiki/Scuderia_Ferrari',
+    logoUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   },
   {
     id: 'fallback-4',
@@ -86,6 +115,9 @@ export const fallbackConstructors = [
     name: 'McLaren',
     nationality: 'British',
     url: 'https://en.wikipedia.org/wiki/McLaren',
+    logoUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   },
   {
     id: 'fallback-5',
@@ -93,6 +125,9 @@ export const fallbackConstructors = [
     name: 'Aston Martin',
     nationality: 'British',
     url: 'https://en.wikipedia.org/wiki/Aston_Martin_in_Formula_One',
+    logoUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   },
 ];
 
@@ -102,6 +137,7 @@ export const fallbackRaces = [
     round: 1,
     raceName: 'Bahrain Grand Prix',
     date: new Date('2024-03-02'),
+    url: 'https://en.wikipedia.org/wiki/2024_Bahrain_Grand_Prix',
     circuit: {
       name: 'Bahrain International Circuit',
       location: 'Sakhir',
@@ -114,6 +150,7 @@ export const fallbackRaces = [
     round: 2,
     raceName: 'Saudi Arabian Grand Prix',
     date: new Date('2024-03-09'),
+    url: 'https://en.wikipedia.org/wiki/2024_Saudi_Arabian_Grand_Prix',
     circuit: {
       name: 'Jeddah Corniche Circuit',
       location: 'Jeddah',
@@ -126,6 +163,7 @@ export const fallbackRaces = [
     round: 3,
     raceName: 'Australian Grand Prix',
     date: new Date('2024-03-24'),
+    url: 'https://en.wikipedia.org/wiki/2024_Australian_Grand_Prix',
     circuit: {
       name: 'Albert Park Circuit',
       location: 'Melbourne',
