@@ -1,17 +1,25 @@
 import { prisma } from '@/lib/prisma';
-import { Trophy, User, Users, Clock } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import Link from 'next/link';
+import { SeasonSelector } from '@/components/ui/SeasonSelector';
 
 export const metadata = {
-  title: 'Resultados 2024 | ApexData',
-  description: 'Todos los resultados de carreras de la temporada 2024 de Fórmula 1',
+  title: 'Resultados | ApexData',
+  description: 'Todos los resultados de carreras de Fórmula 1',
 };
 
-export default async function ResultsPage() {
-  // Obtener todas las carreras de 2024 con sus resultados
+interface ResultsPageProps {
+  searchParams: Promise<{ season?: string }>;
+}
+
+export default async function ResultsPage({ searchParams }: ResultsPageProps) {
+  const params = await searchParams;
+  const displayYear = params.season ? parseInt(params.season) : 2024;
+
+  // Obtener todas las carreras del año seleccionado con sus resultados
   const races = await prisma.race.findMany({
     where: {
-      year: 2024,
+      year: displayYear,
     },
     include: {
       circuit: true,
@@ -23,6 +31,7 @@ export default async function ResultsPage() {
         orderBy: {
           positionOrder: 'asc',
         },
+        take: 3, // Solo top 3 para la vista compacta
       },
     },
     orderBy: {
@@ -30,175 +39,195 @@ export default async function ResultsPage() {
     },
   });
 
-  const totalRaces = races.length;
-  const totalResults = races.reduce((acc, race) => acc + race.results.length, 0);
+  // Filtrar solo carreras que tengan resultados
+  const racesWithResults = races.filter((race) => race.results.length > 0);
 
   return (
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
       <div className="mb-12">
-        <div className="mb-4 flex items-center gap-3">
-          <Trophy className="h-8 w-8 text-primary" />
-          <h1 className="text-4xl font-bold md:text-5xl">
-            Resultados <span className="text-primary">2024</span>
-          </h1>
+        <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <Trophy className="h-8 w-8 text-primary" />
+            <h1 className="text-4xl font-bold md:text-5xl">
+              Resultados <span className="text-primary">{displayYear}</span>
+            </h1>
+          </div>
+          <SeasonSelector currentSeason={displayYear} />
         </div>
         <p className="text-lg text-muted-foreground">
-          Todos los resultados de las {totalRaces} carreras disputadas en la temporada 2024
+          Resultados de las carreras de la temporada {displayYear}
         </p>
-
-        {/* Stats */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Trophy className="h-4 w-4" />
-              Carreras
-            </div>
-            <div className="mt-2 text-2xl font-bold">{totalRaces}</div>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <User className="h-4 w-4" />
-              Resultados
-            </div>
-            <div className="mt-2 text-2xl font-bold">{totalResults}</div>
-          </div>
-        </div>
       </div>
 
-      {/* Results by Race */}
-      <div className="space-y-8">
-        {races.map((race) => (
-          <div key={race.id} className="rounded-lg border border-border bg-card">
-            {/* Race Header */}
-            <div className="border-b border-border bg-muted/50 p-6">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-sm font-semibold text-primary">
-                    Round {race.round}
-                  </div>
-                  <h2 className="text-2xl font-bold">{race.raceName}</h2>
-                  <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>{race.circuit.name}</span>
-                    <span>•</span>
-                    <span>{new Date(race.date).toLocaleDateString('es-ES', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* Results Table */}
+      {racesWithResults.length > 0 ? (
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="p-4 text-left text-sm font-semibold text-foreground">
+                    GRAND PRIX
+                  </th>
+                  <th className="p-4 text-left text-sm font-semibold text-foreground">
+                    DATE
+                  </th>
+                  <th className="p-4 text-left text-sm font-semibold text-foreground">
+                    WINNER
+                  </th>
+                  <th className="p-4 text-left text-sm font-semibold text-foreground">
+                    CAR
+                  </th>
+                  <th className="p-4 text-right text-sm font-semibold text-foreground">
+                    LAPS
+                  </th>
+                  <th className="p-4 text-right text-sm font-semibold text-foreground">
+                    TIME
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {racesWithResults.map((race) => {
+                  const winner = race.results[0];
+                  if (!winner) return null;
 
-            {/* Results Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border text-left text-sm text-muted-foreground">
-                    <th className="p-4 font-semibold">Pos</th>
-                    <th className="p-4 font-semibold">Piloto</th>
-                    <th className="p-4 font-semibold">Equipo</th>
-                    <th className="p-4 font-semibold">Grid</th>
-                    <th className="p-4 font-semibold">Vueltas</th>
-                    <th className="p-4 font-semibold">Tiempo</th>
-                    <th className="p-4 font-semibold">Puntos</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {race.results.map((result, index) => {
-                    const isPodium = result.position && result.position <= 3;
-                    const isWinner = result.position === 1;
+                  const flagEmoji = getFlagEmoji(race.circuit.country);
 
-                    return (
-                      <tr
-                        key={result.id}
-                        className={`border-b border-border transition-colors hover:bg-muted/50 ${
-                          isPodium ? 'bg-primary/5' : ''
-                        }`}
-                      >
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
-                                isWinner
-                                  ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
-                                  : isPodium
-                                    ? 'bg-primary/20 text-primary'
-                                    : 'bg-muted text-muted-foreground'
-                              }`}
-                            >
-                              {result.positionText}
+                  return (
+                    <tr
+                      key={race.id}
+                      className="border-b border-border transition-colors hover:bg-muted/30"
+                    >
+                      <td className="p-4">
+                        <Link
+                          href={`/results/${displayYear}/${race.round}`}
+                          className="flex items-center gap-3 hover:text-primary transition-colors"
+                        >
+                          <span className="text-2xl">{flagEmoji}</span>
+                          <div>
+                            <div className="font-semibold">{race.circuit.country}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {race.raceName}
+                            </div>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="p-4 text-sm text-muted-foreground">
+                        {new Date(race.date).toLocaleDateString('en-US', {
+                          day: '2-digit',
+                          month: 'short',
+                        })}
+                      </td>
+                      <td className="p-4">
+                        <Link
+                          href={`/drivers/${winner.driver.driverId}`}
+                          className="flex items-center gap-2 hover:text-primary transition-colors"
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-500/20 text-sm font-bold text-yellow-600 dark:text-yellow-400">
+                            {winner.driver.code || winner.driver.familyName.slice(0, 3).toUpperCase()}
+                          </div>
+                          <span className="font-medium">
+                            {winner.driver.givenName} {winner.driver.familyName}
+                          </span>
+                        </Link>
+                      </td>
+                      <td className="p-4">
+                        <Link
+                          href={`/constructors/${winner.constructor.constructorId}`}
+                          className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                        >
+                          <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/20">
+                            <span className="text-xs font-bold text-primary">
+                              {getTeamAbbr(winner.constructor.name)}
                             </span>
                           </div>
-                        </td>
-                        <td className="p-4">
-                          <Link
-                            href={`/drivers/${result.driver.driverId}`}
-                            className="hover:text-primary transition-colors"
-                          >
-                            <div className="font-semibold">
-                              {result.driver.givenName} {result.driver.familyName}
-                            </div>
-                            {result.driver.code && (
-                              <div className="text-xs text-muted-foreground">
-                                {result.driver.code}
-                              </div>
-                            )}
-                          </Link>
-                        </td>
-                        <td className="p-4">
-                          <Link
-                            href={`/constructors/${result.constructor.constructorId}`}
-                            className="text-sm hover:text-primary transition-colors"
-                          >
-                            {result.constructor.name}
-                          </Link>
-                        </td>
-                        <td className="p-4 text-sm text-muted-foreground">
-                          {result.grid}
-                        </td>
-                        <td className="p-4 text-sm text-muted-foreground">
-                          {result.laps}
-                        </td>
-                        <td className="p-4 text-sm">
-                          {result.time || (
-                            <span className="text-muted-foreground">
-                              {result.status}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          <span
-                            className={`font-semibold ${
-                              result.points > 0
-                                ? 'text-primary'
-                                : 'text-muted-foreground'
-                            }`}
-                          >
-                            {result.points}
+                          <span className="text-muted-foreground">
+                            {winner.constructor.name}
                           </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </Link>
+                      </td>
+                      <td className="p-4 text-right text-sm text-muted-foreground">
+                        {winner.laps}
+                      </td>
+                      <td className="p-4 text-right text-sm font-mono">
+                        {winner.time || (
+                          <span className="text-muted-foreground">{winner.status}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {races.length === 0 && (
+        </div>
+      ) : (
         <div className="rounded-lg border border-border bg-card p-12 text-center">
           <Trophy className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="mb-2 text-lg font-semibold">No hay resultados disponibles</h3>
           <p className="text-sm text-muted-foreground">
-            Los resultados de la temporada 2024 aún no están disponibles.
+            Los resultados de la temporada {displayYear} aún no están disponibles en nuestra base
+            de datos.
           </p>
         </div>
       )}
     </div>
   );
+}
+
+// Helper function to get flag emoji from country name
+function getFlagEmoji(country: string): string {
+  const flagMap: Record<string, string> = {
+    Bahrain: '🇧🇭',
+    'Saudi Arabia': '🇸🇦',
+    Australia: '🇦🇺',
+    Japan: '🇯🇵',
+    China: '🇨🇳',
+    USA: '🇺🇸',
+    Italy: '🇮🇹',
+    Monaco: '🇲🇨',
+    Canada: '🇨🇦',
+    Spain: '🇪🇸',
+    Austria: '🇦🇹',
+    UK: '🇬🇧',
+    Hungary: '🇭🇺',
+    Belgium: '🇧🇪',
+    Netherlands: '🇳🇱',
+    Azerbaijan: '🇦🇿',
+    Singapore: '🇸🇬',
+    Mexico: '🇲🇽',
+    Brazil: '🇧🇷',
+    Qatar: '🇶🇦',
+    UAE: '🇦🇪',
+    Unknown: '🏁',
+  };
+  return flagMap[country] || '🏁';
+}
+
+// Helper function to get team abbreviation
+function getTeamAbbr(teamName: string): string {
+  const abbrMap: Record<string, string> = {
+    'Red Bull': 'RB',
+    Ferrari: 'FER',
+    Mercedes: 'MER',
+    McLaren: 'MCL',
+    'Aston Martin': 'AM',
+    Alpine: 'ALP',
+    Williams: 'WIL',
+    'Alfa Romeo': 'AR',
+    'AlphaTauri': 'AT',
+    'Haas F1 Team': 'HAS',
+    'RB F1 Team': 'RB',
+    'Kick Sauber': 'KS',
+  };
+
+  for (const [key, abbr] of Object.entries(abbrMap)) {
+    if (teamName.includes(key)) {
+      return abbr;
+    }
+  }
+
+  // Fallback: first 3 letters
+  return teamName.slice(0, 3).toUpperCase();
 }
