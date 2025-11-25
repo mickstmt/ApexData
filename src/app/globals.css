@@ -19,7 +19,7 @@
   }
 
   .dark {
-    --background: 0 0% 3.9%;
+    --background: 0 0% 7.5%;
     --foreground: 0 0% 98%;
     --primary: 76 100% 50%;
     --primary-foreground: 0 0% 0%;
@@ -39,5 +39,15 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-orbitron), system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .font-display {
+    font-family: var(--font-orbitron), system-ui, sans-serif !important;
   }
 }

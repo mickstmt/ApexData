@@ -1,11 +1,17 @@
 import type { Metadata } from 'next';
-import { Inter, Roboto_Mono } from 'next/font/google';
+import { Orbitron, Inter, Roboto_Mono } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PageTransition } from '@/components/providers/PageTransition';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
+
+const orbitron = Orbitron({
+  subsets: ['latin'],
+  variable: '--font-orbitron',
+  display: 'swap',
+});
 
 const inter = Inter({
   subsets: ['latin'],
@@ -37,8 +43,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${robotoMono.variable}`} suppressHydrationWarning>
-      <body className="flex min-h-screen flex-col">
+    <html lang="en" className={`${orbitron.variable} ${inter.variable} ${robotoMono.variable}`} suppressHydrationWarning>
+      <body className="flex min-h-screen flex-col" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

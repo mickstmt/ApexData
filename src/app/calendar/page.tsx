@@ -24,9 +24,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   try {
     races = await prisma.race.findMany({
       where: {
-        season: {
-          year: displayYear,
-        },
+        year: displayYear,
       },
       select: {
         id: true,
@@ -34,16 +32,12 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         raceName: true,
         date: true,
         url: true,
+        year: true,
         circuit: {
           select: {
             name: true,
             location: true,
             country: true,
-          },
-        },
-        season: {
-          select: {
-            year: true,
           },
         },
       },
@@ -52,42 +46,37 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
       },
     });
 
-    // Si no hay carreras de 2025, buscar la temporada más reciente
+    // Si no hay carreras para el año solicitado, buscar la temporada más reciente
     if (races.length === 0) {
-      const latestSeason = await prisma.season.findFirst({
+      const latestRace = await prisma.race.findFirst({
         orderBy: { year: 'desc' },
-        select: {
-          year: true,
-          races: {
-            select: {
-              id: true,
-              round: true,
-              raceName: true,
-              date: true,
-              url: true,
-              circuit: {
-                select: {
-                  name: true,
-                  location: true,
-                  country: true,
-                },
-              },
-              season: {
-                select: {
-                  year: true,
-                },
-              },
-            },
-            orderBy: {
-              round: 'asc',
-            },
-          },
-        },
+        select: { year: true },
       });
 
-      if (latestSeason && latestSeason.races.length > 0) {
-        races = latestSeason.races;
-        displayYear = latestSeason.year;
+      if (latestRace) {
+        const latestYear = latestRace.year;
+        races = await prisma.race.findMany({
+          where: { year: latestYear },
+          select: {
+            id: true,
+            round: true,
+            raceName: true,
+            date: true,
+            url: true,
+            year: true,
+            circuit: {
+              select: {
+                name: true,
+                location: true,
+                country: true,
+              },
+            },
+          },
+          orderBy: {
+            round: 'asc',
+          },
+        });
+        displayYear = latestYear;
         isCurrentSeason = false;
       } else {
         races = fallbackRaces;
@@ -249,19 +238,19 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
       {races.length > 0 && (
         <div className="mt-12 grid gap-4 rounded-lg border border-border bg-muted/50 p-6 md:grid-cols-3">
           <div className="text-center">
-            <div className="text-3xl font-bold text-primary">
+            <div className="font-display text-3xl font-bold text-primary">
               {races.length}
             </div>
             <div className="text-sm text-muted-foreground">Grandes Premios</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-primary">
+            <div className="font-display text-3xl font-bold text-primary">
               {races.filter((r) => new Date(r.date) < today).length}
             </div>
             <div className="text-sm text-muted-foreground">Finalizados</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-primary">
+            <div className="font-display text-3xl font-bold text-primary">
               {races.filter((r) => new Date(r.date) >= today).length}
             </div>
             <div className="text-sm text-muted-foreground">Próximos</div>

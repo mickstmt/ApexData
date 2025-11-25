@@ -19,7 +19,7 @@ const config: Config = {
         },
         background: {
           DEFAULT: '#FFFFFF', // Blanco
-          dark: '#0A0A0A', // Negro
+          dark: '#131313', // Gris muy oscuro
         },
         accent: {
           DEFAULT: '#000000', // Negro
@@ -54,6 +54,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-orbitron)', 'system-ui', 'sans-serif'], // Para títulos y headings
         mono: ['var(--font-roboto-mono)', 'monospace'],
       },
       keyframes: {
