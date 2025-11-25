@@ -61,25 +61,61 @@ interface JolpicaRace {
   season: string;
   round: string;
   raceName: string;
+  url: string;
   Circuit: {
     circuitId: string;
+    circuitName: string;
+    url: string;
+    Location: {
+      lat: string;
+      long: string;
+      locality: string;
+      country: string;
+    };
   };
   date: string;
+  time?: string;
   Results: JolpicaResult[];
 }
 
 async function fetchRacesWithResults(year: number) {
   console.log(`\n🔍 Obteniendo resultados de la temporada ${year}...`);
 
-  const url = `${JOLPICA_BASE_URL}/${year}/results.json?limit=1000`;
-  const response = await fetch(url);
+  const allRaces: JolpicaRace[] = [];
 
-  if (!response.ok) {
-    throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
+  // Intentar obtener cada ronda individualmente (hasta la ronda 24)
+  // Esto es más confiable que el endpoint con paginación
+  for (let round = 1; round <= 24; round++) {
+    const url = `${JOLPICA_BASE_URL}/${year}/${round}/results.json`;
+
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        // Si una ronda no existe (404), continuar con la siguiente
+        if (response.status === 404) {
+          console.log(`  ⏭️  Ronda ${round}: Sin resultados disponibles aún`);
+          continue;
+        }
+        throw new Error(`Error HTTP en ronda ${round}: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const races = data.MRData.RaceTable.Races as JolpicaRace[];
+
+      if (races.length > 0) {
+        allRaces.push(...races);
+        console.log(`  ✅ Ronda ${round}: ${races[0].raceName}`);
+      }
+    } catch (error) {
+      console.log(`  ⚠️  Error al obtener ronda ${round}:`, error);
+      // Continuar con las siguientes rondas aunque una falle
+      continue;
+    }
   }
 
-  const data = await response.json();
-  return data.MRData.RaceTable.Races as JolpicaRace[];
+  console.log(`\n📊 Total de carreras con resultados: ${allRaces.length}`);
+  return allRaces;
 }
 
 async function ensureDriverExists(jolpicaDriver: JolpicaDriver) {
@@ -88,6 +124,13 @@ async function ensureDriverExists(jolpicaDriver: JolpicaDriver) {
   });
 
   if (existingDriver) {
+    // Update URL if it's missing
+    if (!existingDriver.url && jolpicaDriver.url) {
+      return await prisma.driver.update({
+        where: { id: existingDriver.id },
+        data: { url: jolpicaDriver.url },
+      });
+    }
     return existingDriver;
   }
 
@@ -113,6 +156,13 @@ async function ensureConstructorExists(jolpicaConstructor: JolpicaConstructor) {
   });
 
   if (existingConstructor) {
+    // Update URL if it's missing
+    if (!existingConstructor.url && jolpicaConstructor.url) {
+      return await prisma.constructor.update({
+        where: { id: existingConstructor.id },
+        data: { url: jolpicaConstructor.url },
+      });
+    }
     return existingConstructor;
   }
 
@@ -128,6 +178,45 @@ async function ensureConstructorExists(jolpicaConstructor: JolpicaConstructor) {
   });
 }
 
+async function ensureCircuitExists(jolpicaCircuit: JolpicaRace['Circuit']) {
+  const existingCircuit = await prisma.circuit.findUnique({
+    where: { circuitId: jolpicaCircuit.circuitId },
+  });
+
+  if (existingCircuit) {
+    // Update if it has "Unknown" values
+    if (existingCircuit.location === 'Unknown' || existingCircuit.country === 'Unknown') {
+      console.log(`  🔄 Actualizando circuito: ${jolpicaCircuit.circuitName}`);
+      return await prisma.circuit.update({
+        where: { id: existingCircuit.id },
+        data: {
+          name: jolpicaCircuit.circuitName,
+          location: jolpicaCircuit.Location.locality,
+          country: jolpicaCircuit.Location.country,
+          lat: parseFloat(jolpicaCircuit.Location.lat),
+          lng: parseFloat(jolpicaCircuit.Location.long),
+          url: jolpicaCircuit.url,
+        },
+      });
+    }
+    return existingCircuit;
+  }
+
+  console.log(`  ➕ Creando circuito: ${jolpicaCircuit.circuitName}`);
+
+  return await prisma.circuit.create({
+    data: {
+      circuitId: jolpicaCircuit.circuitId,
+      name: jolpicaCircuit.circuitName,
+      location: jolpicaCircuit.Location.locality,
+      country: jolpicaCircuit.Location.country,
+      lat: parseFloat(jolpicaCircuit.Location.lat),
+      lng: parseFloat(jolpicaCircuit.Location.long),
+      url: jolpicaCircuit.url,
+    },
+  });
+}
+
 async function ensureRaceExists(jolpicaRace: JolpicaRace) {
   const year = parseInt(jolpicaRace.season);
   const round = parseInt(jolpicaRace.round);
@@ -139,29 +228,23 @@ async function ensureRaceExists(jolpicaRace: JolpicaRace) {
   });
 
   if (existingRace) {
+    // Update URL and time if missing
+    if (!existingRace.url || !existingRace.time) {
+      return await prisma.race.update({
+        where: { id: existingRace.id },
+        data: {
+          url: jolpicaRace.url,
+          time: jolpicaRace.time || null,
+        },
+      });
+    }
     return existingRace;
   }
 
   console.log(`  ➕ Creando carrera: ${jolpicaRace.raceName} (Round ${round})`);
 
-  // Ensure circuit exists (basic creation)
-  const circuitId = jolpicaRace.Circuit.circuitId;
-  const existingCircuit = await prisma.circuit.findUnique({
-    where: { circuitId },
-  });
-
-  if (!existingCircuit) {
-    console.log(`  ➕ Creando circuito básico: ${circuitId}`);
-    // Create a minimal circuit entry
-    await prisma.circuit.create({
-      data: {
-        circuitId,
-        name: circuitId.charAt(0).toUpperCase() + circuitId.slice(1),
-        location: 'Unknown',
-        country: 'Unknown',
-      },
-    });
-  }
+  // Ensure circuit exists with complete data
+  await ensureCircuitExists(jolpicaRace.Circuit);
 
   return await prisma.race.create({
     data: {
@@ -169,7 +252,9 @@ async function ensureRaceExists(jolpicaRace: JolpicaRace) {
       round,
       raceName: jolpicaRace.raceName,
       date: new Date(jolpicaRace.date),
-      circuitId,
+      time: jolpicaRace.time || null,
+      url: jolpicaRace.url,
+      circuitId: jolpicaRace.Circuit.circuitId,
     },
   });
 }
