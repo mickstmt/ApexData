@@ -41,6 +41,15 @@ export default async function RaceResultPage({ params }: RaceResultPageProps) {
           positionOrder: 'asc',
         },
       },
+      qualifying: {
+        include: {
+          driver: true,
+          constructor: true,
+        },
+        orderBy: {
+          position: 'asc',
+        },
+      },
     },
   });
 

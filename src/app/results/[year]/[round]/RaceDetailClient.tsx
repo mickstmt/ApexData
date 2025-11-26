@@ -1,13 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Trophy, Calendar, MapPin, Flag, Zap, Construction } from 'lucide-react';
+import { Trophy, Calendar, MapPin, Flag, Zap, Construction, Clock } from 'lucide-react';
 import Link from 'next/link';
-import type { Race, Circuit, Result, Driver, Constructor } from '@prisma/client';
+import type { Race, Circuit, Result, Driver, Constructor, Qualifying } from '@prisma/client';
 
 type RaceWithDetails = Race & {
   circuit: Circuit;
   results: (Result & {
+    driver: Driver;
+    constructor: Constructor;
+  })[];
+  qualifying: (Qualifying & {
     driver: Driver;
     constructor: Constructor;
   })[];
@@ -358,6 +362,238 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
               </div>
             </div>
           </div>
+        </>
+      ) : activeTab === 'qualifying' ? (
+        <>
+          {/* Qualifying Results */}
+          {race.qualifying && race.qualifying.length > 0 ? (
+            <>
+              {/* Pole Position */}
+              {race.qualifying[0] && (
+                <div className="mb-8">
+                  <div className="rounded-lg border border-primary bg-primary/5 p-6">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                      <Trophy className="h-4 w-4 text-primary" />
+                      <span className="font-semibold">POLE POSITION</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-2xl font-bold">
+                          {race.qualifying[0].driver.givenName} {race.qualifying[0].driver.familyName}
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {race.qualifying[0].constructor.name}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-3xl font-bold font-mono text-primary">
+                          {race.qualifying[0].q3 || race.qualifying[0].q2 || race.qualifying[0].q1}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Mejor tiempo</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Qualifying Table */}
+              <div className="rounded-lg border border-border bg-card overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="p-4 text-left text-sm font-semibold text-foreground w-16">POS</th>
+                        <th className="p-4 text-left text-sm font-semibold text-foreground w-20">NO</th>
+                        <th className="p-4 text-left text-sm font-semibold text-foreground">PILOTO</th>
+                        <th className="p-4 text-left text-sm font-semibold text-foreground">EQUIPO</th>
+                        <th className="p-4 text-right text-sm font-semibold text-foreground w-32">Q1</th>
+                        <th className="p-4 text-right text-sm font-semibold text-foreground w-32">Q2</th>
+                        <th className="p-4 text-right text-sm font-semibold text-foreground w-32">Q3</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {race.qualifying.map((result) => {
+                        const isTop3 = result.position <= 3;
+                        const isPole = result.position === 1;
+                        const isQ3 = result.q3 !== null;
+                        const isQ2 = result.q2 !== null && !isQ3;
+
+                        return (
+                          <tr
+                            key={result.id}
+                            className={`border-b border-border transition-colors hover:bg-muted/30 ${
+                              isTop3 ? 'bg-muted/20' : ''
+                            }`}
+                          >
+                            {/* Position */}
+                            <td className="p-4">
+                              <div
+                                className={`flex items-center justify-center h-10 w-10 rounded-md font-bold ${
+                                  isPole
+                                    ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
+                                    : isTop3
+                                    ? 'bg-primary/20 text-primary'
+                                    : 'bg-muted/50 text-foreground'
+                                }`}
+                              >
+                                {result.position}
+                              </div>
+                            </td>
+
+                            {/* Number */}
+                            <td className="p-4">
+                              <div className="text-lg font-bold text-muted-foreground">
+                                {result.driver.permanentNumber || '—'}
+                              </div>
+                            </td>
+
+                            {/* Driver */}
+                            <td className="p-4">
+                              <Link
+                                href={`/drivers/${result.driver.driverId}`}
+                                className="hover:text-primary transition-colors"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">
+                                    {result.driver.code ||
+                                      result.driver.familyName.slice(0, 3).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <div className="font-semibold">
+                                      {result.driver.givenName} {result.driver.familyName}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {result.driver.nationality}
+                                    </div>
+                                  </div>
+                                </div>
+                              </Link>
+                            </td>
+
+                            {/* Constructor */}
+                            <td className="p-4">
+                              <Link
+                                href={`/constructors/${result.constructor.constructorId}`}
+                                className="text-sm hover:text-primary transition-colors"
+                              >
+                                {result.constructor.name}
+                              </Link>
+                            </td>
+
+                            {/* Q1 */}
+                            <td className="p-4 text-right">
+                              <span className="font-mono text-sm font-semibold">
+                                {result.q1 || '—'}
+                              </span>
+                            </td>
+
+                            {/* Q2 */}
+                            <td className="p-4 text-right">
+                              {result.q2 ? (
+                                <span className="font-mono text-sm font-semibold">{result.q2}</span>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">—</span>
+                              )}
+                            </td>
+
+                            {/* Q3 */}
+                            <td className="p-4 text-right">
+                              {result.q3 ? (
+                                <span className="font-mono text-sm font-semibold text-primary">
+                                  {result.q3}
+                                </span>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Additional Info */}
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Top 3 */}
+                <div className="rounded-lg border border-border bg-card p-6">
+                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-primary" />
+                    Top 3 Qualifying
+                  </h2>
+                  <div className="space-y-3">
+                    {race.qualifying.slice(0, 3).map((result, index) => (
+                      <div key={result.id} className="flex items-center gap-3">
+                        <div
+                          className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
+                            index === 0
+                              ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
+                              : index === 1
+                              ? 'bg-gray-400/20 text-gray-600 dark:text-gray-400'
+                              : 'bg-orange-500/20 text-orange-600 dark:text-orange-400'
+                          }`}
+                        >
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold">
+                            {result.driver.givenName} {result.driver.familyName}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {result.constructor.name}
+                          </div>
+                        </div>
+                        <div className="font-mono font-bold text-primary">
+                          {result.q3 || result.q2 || result.q1}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Session Info */}
+                <div className="rounded-lg border border-border bg-card p-6">
+                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-primary" />
+                    Información de Clasificación
+                  </h2>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Q3 (Top 10):</span>
+                      <span className="font-semibold">
+                        {race.qualifying.filter((q) => q.q3).length} pilotos
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Q2 (Top 15):</span>
+                      <span className="font-semibold">
+                        {race.qualifying.filter((q) => q.q2).length} pilotos
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Q1 (Todos):</span>
+                      <span className="font-semibold">
+                        {race.qualifying.filter((q) => q.q1).length} pilotos
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t border-border pt-2 mt-2">
+                      <span className="text-muted-foreground">Total participantes:</span>
+                      <span className="font-semibold">{race.qualifying.length}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-lg border border-border bg-card p-12 text-center">
+              <Clock className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+              <h3 className="mb-2 text-2xl font-bold">Sin Datos de Clasificación</h3>
+              <p className="text-lg text-muted-foreground">
+                No hay datos de clasificación disponibles para esta carrera.
+              </p>
+            </div>
+          )}
         </>
       ) : (
         // Coming Soon for other sessions
