@@ -11,7 +11,7 @@ type RaceWithDetails = Race & {
     driver: Driver;
     constructor: Constructor;
   })[];
-  qualifying: (Qualifying & {
+  qualifyings: (Qualifying & {
     driver: Driver;
     constructor: Constructor;
   })[];
@@ -366,10 +366,10 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
       ) : activeTab === 'qualifying' ? (
         <>
           {/* Qualifying Results */}
-          {race.qualifying && race.qualifying.length > 0 ? (
+          {race.qualifyings && race.qualifyings.length > 0 ? (
             <>
               {/* Pole Position */}
-              {race.qualifying[0] && (
+              {race.qualifyings[0] && (
                 <div className="mb-8">
                   <div className="rounded-lg border border-primary bg-primary/5 p-6">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
@@ -379,15 +379,15 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-2xl font-bold">
-                          {race.qualifying[0].driver.givenName} {race.qualifying[0].driver.familyName}
+                          {race.qualifyings[0].driver.givenName} {race.qualifyings[0].driver.familyName}
                         </div>
                         <div className="text-sm text-muted-foreground mt-1">
-                          {race.qualifying[0].constructor.name}
+                          {race.qualifyings[0].constructor.name}
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="text-3xl font-bold font-mono text-primary">
-                          {race.qualifying[0].q3 || race.qualifying[0].q2 || race.qualifying[0].q1}
+                          {race.qualifyings[0].q3 || race.qualifyings[0].q2 || race.qualifyings[0].q1}
                         </div>
                         <div className="text-sm text-muted-foreground">Mejor tiempo</div>
                       </div>
@@ -412,7 +412,7 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                       </tr>
                     </thead>
                     <tbody>
-                      {race.qualifying.map((result) => {
+                      {race.qualifyings.map((result) => {
                         const isTop3 = result.position <= 3;
                         const isPole = result.position === 1;
                         const isQ3 = result.q3 !== null;
@@ -523,7 +523,7 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                     Top 3 Qualifying
                   </h2>
                   <div className="space-y-3">
-                    {race.qualifying.slice(0, 3).map((result, index) => (
+                    {race.qualifyings.slice(0, 3).map((result, index) => (
                       <div key={result.id} className="flex items-center gap-3">
                         <div
                           className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
@@ -562,24 +562,24 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Q3 (Top 10):</span>
                       <span className="font-semibold">
-                        {race.qualifying.filter((q) => q.q3).length} pilotos
+                        {race.qualifyings.filter((q) => q.q3).length} pilotos
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Q2 (Top 15):</span>
                       <span className="font-semibold">
-                        {race.qualifying.filter((q) => q.q2).length} pilotos
+                        {race.qualifyings.filter((q) => q.q2).length} pilotos
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Q1 (Todos):</span>
                       <span className="font-semibold">
-                        {race.qualifying.filter((q) => q.q1).length} pilotos
+                        {race.qualifyings.filter((q) => q.q1).length} pilotos
                       </span>
                     </div>
                     <div className="flex justify-between border-t border-border pt-2 mt-2">
                       <span className="text-muted-foreground">Total participantes:</span>
-                      <span className="font-semibold">{race.qualifying.length}</span>
+                      <span className="font-semibold">{race.qualifyings.length}</span>
                     </div>
                   </div>
                 </div>
