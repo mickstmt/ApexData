@@ -30,8 +30,22 @@ interface ConstructorStanding {
 
 async function getDriverStandings(year: number): Promise<DriverStanding[]> {
   try {
-    // Get all results for the specified year
+    // Get all race results for the specified year
     const results = await prisma.result.findMany({
+      where: {
+        race: {
+          year: year,
+        },
+      },
+      include: {
+        driver: true,
+        constructor: true,
+        race: true,
+      },
+    });
+
+    // Get all sprint results for the specified year
+    const sprintResults = await prisma.sprintResult.findMany({
       where: {
         race: {
           year: year,
@@ -55,6 +69,7 @@ async function getDriverStandings(year: number): Promise<DriverStanding[]> {
       bestFinish: number;
     }>();
 
+    // Process race results
     for (const result of results) {
       const key = result.driver.id;
       const existing = driverMap.get(key);
@@ -75,6 +90,26 @@ async function getDriverStandings(year: number): Promise<DriverStanding[]> {
           points: result.points,
           wins: wins,
           bestFinish: bestFinish,
+        });
+      }
+    }
+
+    // Process sprint results (add points, don't count as wins)
+    for (const result of sprintResults) {
+      const key = result.driver.id;
+      const existing = driverMap.get(key);
+
+      if (existing) {
+        existing.points += result.points;
+      } else {
+        driverMap.set(key, {
+          driverId: result.driver.id,
+          givenName: result.driver.givenName,
+          familyName: result.driver.familyName,
+          team: result.constructor.name,
+          points: result.points,
+          wins: 0,
+          bestFinish: 999,
         });
       }
     }
@@ -103,8 +138,21 @@ async function getDriverStandings(year: number): Promise<DriverStanding[]> {
 
 async function getConstructorStandings(year: number): Promise<ConstructorStanding[]> {
   try {
-    // Get all results for the specified year
+    // Get all race results for the specified year
     const results = await prisma.result.findMany({
+      where: {
+        race: {
+          year: year,
+        },
+      },
+      include: {
+        constructor: true,
+        race: true,
+      },
+    });
+
+    // Get all sprint results for the specified year
+    const sprintResults = await prisma.sprintResult.findMany({
       where: {
         race: {
           year: year,
@@ -125,6 +173,7 @@ async function getConstructorStandings(year: number): Promise<ConstructorStandin
       bestFinish: number;
     }>();
 
+    // Process race results
     for (const result of results) {
       const key = result.constructor.id;
       const existing = constructorMap.get(key);
@@ -143,6 +192,24 @@ async function getConstructorStandings(year: number): Promise<ConstructorStandin
           points: result.points,
           wins: wins,
           bestFinish: bestFinish,
+        });
+      }
+    }
+
+    // Process sprint results (add points, don't count as wins)
+    for (const result of sprintResults) {
+      const key = result.constructor.id;
+      const existing = constructorMap.get(key);
+
+      if (existing) {
+        existing.points += result.points;
+      } else {
+        constructorMap.set(key, {
+          constructorId: result.constructor.id,
+          name: result.constructor.name,
+          points: result.points,
+          wins: 0,
+          bestFinish: 999,
         });
       }
     }
