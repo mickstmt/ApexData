@@ -6,6 +6,7 @@
 // API Types
 export * from './api/jolpica';
 export * from './api/openf1';
+export * from './api/fastf1';
 
 // Common Types
 export * from './common';

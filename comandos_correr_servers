@@ -1,0 +1,23 @@
+cd c:\projects\node.js\ApexData\python-service
+venv\Scripts\activate
+python run.py
+
+cd c:\projects\node.js\ApexData
+npm run dev
+
+
+Python Service: http://localhost:8000/health
+Next.js App: http://localhost:3000
+Página de Análisis: http://localhost:3000/analysis
+
+
+
+Si tienes errores:
+Python no se inicia:
+# Reinstalar dependencias
+cd c:\projects\node.js\ApexData\python-service
+pip install -r requirements.txt
+Next.js no se inicia:
+# Reinstalar dependencias
+cd c:\projects\node.js\ApexData
+npm install

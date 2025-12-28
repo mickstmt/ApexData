@@ -13,6 +13,7 @@ const navLinks = [
   { href: '/standings', label: 'Standings' },
   { href: '/results', label: 'Resultados' },
   { href: '/telemetry', label: 'Telemetría' },
+  { href: '/analysis', label: 'Análisis' },
   { href: '/compare', label: 'Comparar' },
   { href: '/favorites', label: 'Favoritos' },
 ];
