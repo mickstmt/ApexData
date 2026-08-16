@@ -1,7 +1,7 @@
-# ApexData — Documento de Progreso
+# ApexData — Progreso del Relanzamiento 2026
 
-> **Este es el documento vivo del proyecto.** Se actualiza con cada cambio, por mínimo que sea.
-> Si estás retomando el trabajo desde cualquier máquina (casa u oficina), este archivo + `AUDITORIA_Y_PLAN_RELANZAMIENTO_2026.md` contienen TODO el contexto necesario. Instrucción para Claude: leer ambos documentos completos antes de tocar código.
+> **Documento vivo del plan definido en `AUDITORIA_Y_PLAN_RELANZAMIENTO_2026.md`.** Se actualiza con cada cambio, por mínimo que sea.
+> Si estás retomando el trabajo desde cualquier máquina (casa u oficina), este archivo + el plan de referencia contienen TODO el contexto necesario. Instrucción para Claude: leer ambos documentos completos antes de tocar código.
 
 ---
 
@@ -22,8 +22,10 @@
 
 **Próximo paso**: arrancar **Sprint 0 — Saneamiento** (ver hoja de ruta en `AUDITORIA_Y_PLAN_RELANZAMIENTO_2026.md`, sección 11). El primer punto del S0 es rotar las claves de Supabase — acción de Frank, con guía paso a paso cuando arranquemos.
 
+**Decisiones tomadas**:
+- ✅ **Hosting del microservicio Python: el VPS propio de Frank** (2026-08-16). Frank ya tiene un VPS con varios aplicativos desplegados; el servicio FastF1 (que ya tiene Dockerfile) se despliega ahí en S5. Esto elimina el único coste previsto (~$5/mes de Railway) → **coste total del proyecto: $0/mes**. Pendiente de recabar en S5: proveedor/SO del VPS, RAM/disco disponibles, si usa Docker y qué reverse proxy (Nginx/Caddy/Traefik) sirve los demás aplicativos.
+
 **Decisiones pendientes** (no bloquean el S0):
-- [ ] Hosting del microservicio Python para producción (~$5/mes Railway vs alternativas $0 — ver sección 10 del plan; se decide en S5, no antes).
 - [ ] Dominio propio vs subdominio de Vercel (se decide en S5).
 
 ---
@@ -35,6 +37,10 @@
 ---
 
 ## Bitácora
+
+### 2026-08-16 (2) — Ajustes al plan
+- Renombrado `PROGRESO.md` → `PROGRESO_RELANZAMIENTO_2026.md` para vincularlo explícitamente al plan de referencia.
+- Aclarado el modelo de costes: Jolpica (API de datos históricos) y FastF1 (librería de telemetría) son ambos gratuitos; el único gasto era el hosting del servidor Python. Decidido: se usará el VPS propio de Frank → coste total $0/mes.
 
 ### 2026-08-16 — Auditoría y plan de relanzamiento
 - Auditoría multiagente completa del repo: frontend, capa de datos, servicio Python, historia del proyecto.

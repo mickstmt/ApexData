@@ -169,7 +169,7 @@ Total ~5–10 MB, optimizado por `next/image`. Todo fetch con `User-Agent: "Apex
 | Pieza | Servicio | Coste |
 |---|---|---|
 | Frontend Next.js + PWA | **Vercel Hobby** | $0 |
-| FastAPI + FastF1 | **Railway Hobby** con volumen persistente 2–5GB para el caché (alt.: Fly.io ~$4, Hetzner ~€4.50) | ~$5 |
+| FastAPI + FastF1 | **VPS propio de Frank** (decidido 2026-08-16; ya aloja otros aplicativos — Docker con el Dockerfile existente, disco persistente para el caché FastF1). Alternativas descartadas: Railway ~$5, Fly.io ~$4, Hetzner ~€4.50 | $0 |
 | Base de datos | **Supabase Free** (actual) | $0 |
 | Imágenes | `/public` en git + `next/image` | $0 |
 | CI/CD + datos | **GitHub Actions** | $0 |
