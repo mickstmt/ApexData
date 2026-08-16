@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react';
 import { fallbackRaces } from '@/lib/fallback-data';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
+import { CountryFlag } from '@/components/ui/CountryFlag';
 
 export const metadata = {
   title: 'Calendario F1 | ApexData',
@@ -212,8 +213,8 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                     )}
                   </div>
 
-                  {/* Country/Flag placeholder */}
-                  <div className="flex items-center justify-end">
+                  <div className="flex items-center justify-end gap-2">
+                    <CountryFlag country={race.circuit.country} size={24} />
                     <div className="text-right">
                       <div className="text-sm text-muted-foreground">
                         {race.circuit.country}

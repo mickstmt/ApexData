@@ -11,12 +11,15 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:check": "tsx scripts/check-data.ts",
-    "seed:calendar": "tsx prisma/seed-calendar-2025.ts",
-    "seed:results": "tsx prisma/seed-results-2023.ts && tsx prisma/seed-results-2024.ts && tsx prisma/seed-results-2025.ts",
-    "seed:qualifying": "tsx prisma/seed-qualifying-2023.ts && tsx prisma/seed-qualifying-2024.ts && tsx prisma/seed-qualifying-2025.ts",
-    "seed:sprint": "tsx prisma/seed-sprint-2023.ts && tsx prisma/seed-sprint-2024.ts && tsx prisma/seed-sprint-2025.ts",
-    "seed:images": "tsx prisma/seed-local-images.ts",
-    "seed:all": "npm run db:seed && npm run seed:calendar && npm run seed:results && npm run seed:qualifying && npm run seed:sprint && npm run seed:images"
+    "seed:season": "tsx scripts/seed/season.ts",
+    "seed:standings": "tsx scripts/seed/standings.ts",
+    "images:drivers": "tsx scripts/images/drivers.ts",
+    "images:logos": "tsx scripts/images/logos.ts",
+    "images:circuits": "tsx scripts/images/circuits.ts",
+    "images:flags": "tsx scripts/images/flags.ts",
+    "images:link": "tsx scripts/images/seed-paths.ts",
+    "images:all": "npm run images:drivers && npm run images:logos && npm run images:circuits && npm run images:flags && npm run images:link",
+    "seed:all": "npm run db:seed && npm run seed:season -- 2023 2024 2025 2026 && npm run seed:standings -- 2023 2024 2025 2026 && npm run images:all"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

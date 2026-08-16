@@ -16,11 +16,15 @@
 
 ## Estado actual
 
-**Fase**: ✅ **Sprint 0 completado** (2026-08-16).
+**Fase**: ✅ **Sprint 1 completado** (2026-08-16) · Sprint 0 completado (2026-08-16).
+
+**Cobertura de datos**: temporadas **2023–2026** (resultados, clasificación, sprints y standings oficiales). El nuevo seeder acepta cualquier año, así que ampliar el histórico es solo tiempo de máquina (~10 min por temporada).
+
+**Imágenes**: 29 fotos de pilotos, 36 trazados de circuitos, 36 banderas y 8 logos de equipo, todo autoalojado en `public/images/` y vinculado en la BD.
 
 **El repo está verde**: `npm run lint` (0 errores), `npm run type-check` (limpio por primera vez en el proyecto) y `npm run build` pasan. CI configurado en GitHub Actions.
 
-**Próximo paso**: **Sprint 1 — Datos + imágenes** (ver hoja de ruta en `AUDITORIA_Y_PLAN_RELANZAMIENTO_2026.md`, sección 11): pipeline automático de imágenes reales, temporada 2026 en la BD, y poblar standings.
+**Próximo paso**: **Sprint 2 — PWA shell** (manifest, service worker, iconos y splash, tab bar con safe areas, offline, install hint) para tener ApexData instalada en el iPhone.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - **El modelo se llama `Constructor`**, que colisiona con `Object.prototype.constructor`: TypeScript no resuelve `prisma.constructor` ni el tipo `Constructor` generado. Workaround en `src/lib/prisma.ts` (export `constructors` + tipo `ConstructorModel` escrito a mano). **La solución definitiva es renombrar el modelo a `Team`** (con `@@map("constructors")` para no tocar la BD) — candidato para el Sprint 1 o 3.
@@ -31,18 +35,44 @@
 **Decisiones tomadas**:
 - ✅ **Hosting del microservicio Python: el VPS propio de Frank** (2026-08-16). Frank ya tiene un VPS con varios aplicativos desplegados; el servicio FastF1 (que ya tiene Dockerfile) se despliega ahí en S5. Esto elimina el único coste previsto (~$5/mes de Railway) → **coste total del proyecto: $0/mes**. Pendiente de recabar en S5: proveedor/SO del VPS, RAM/disco disponibles, si usa Docker y qué reverse proxy (Nginx/Caddy/Traefik) sirve los demás aplicativos.
 
-**Decisiones pendientes** (no bloquean el S0):
+**Decisiones pendientes**:
+- [ ] **Cuánto histórico cargar**. Hoy: 2023–2026. El seeder acepta cualquier año a ~10 min por temporada, desatendido. Desde 2000 ≈ 5 h; desde 1950 ≈ 15 h. El tamaño no es problema (todo el histórico ronda 20–40 MB frente a los 500 MB del plan gratuito de Supabase). Recomendación: lanzar 1950–2022 en segundo plano cuando convenga.
 - [ ] Dominio propio vs subdominio de Vercel (se decide en S5).
 
 ---
 
 ## Acciones pendientes de Frank
 
-*(ninguna pendiente — la rotación de claves de Supabase se completó el 2026-08-16)*
+1. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
+2. **Decidir cuánto histórico cargar** (ver "Decisiones pendientes").
 
 ---
 
 ## Bitácora
+
+### 2026-08-16 (4) — Sprint 1: Datos e imágenes ✅
+
+**Pipeline de imágenes** (`scripts/images/`, todo autoalojado, nada de hotlinks):
+- `drivers.ts` — 29 headshots oficiales vía OpenF1 → media service de F1. Resuelve el roster por sesiones (el endpoint no admite filtro por año) y casa nombres contra la BD con tabla de excepciones.
+- `circuits.ts` — 36 trazados SVG: repo CC0 (nombres ya en formato Ergast) con F1DB como respaldo. Incluye **Madrid 2026**.
+- `flags.ts` — 36 banderas circulares (MIT). Los mapas nacionalidad/país→ISO viven en `src/lib/countries.ts`, compartidos con el componente `CountryFlag`.
+- `logos.ts` — 8 logos vía API de Commons (`imageinfo`) con User-Agent. Faltan 6 marcas no libres (Ferrari, Red Bull, Aston Martin, RB, Cadillac, AlphaTauri) → colocación manual en `public/images/constructors/<constructorId>.svg`.
+- `seed-paths.ts` — vincula lo que exista en disco con la BD; limpia rutas huérfanas.
+
+**Datos**:
+- **Temporada 2026 cargada**: 23 carreras, 11 con resultados y clasificación, 4 sprints.
+- **Seeder unificado** `scripts/seed/season.ts <años...>`: sustituye 10 archivos casi idénticos (uno por temporada y tipo). Añade User-Agent (Jolpica devuelve 403 sin él), control de ritmo con reintento ante 429, y rellena por fin las fechas de FP/quali/sprint que el schema tenía vacías.
+- **Standings oficiales** (`scripts/seed/standings.ts`): nuevo modelo `DriverStanding` + `ConstructorStanding` poblados desde Jolpica. La página `/standings` ya no recalcula toda la temporada en memoria (además resolvía mal los desempates).
+
+**Correcciones de modelo**:
+- `permanentNumber` y `code` dejan de ser únicos: el **#1 pasa al campeón** cada año (Norris lo lleva en 2026) y los códigos se reutilizan entre épocas. Rompía el seed de 2026.
+- `position` en standings pasa a nullable: los pilotos sin clasificar llegan como `positionText: "-"`.
+
+**Interfaz**: fotos reales en la ficha de piloto (antes un icono genérico), banderas en tarjetas de piloto y calendario.
+
+**Limpieza**: eliminados 16 scripts obsoletos (10 seeds por temporada + 6 de imágenes), `public/drivers/` con las 20 fotos manuales de diciembre y sus 3 documentos de instrucciones.
+
+**Verificación**: lint 0 errores · type-check limpio · build correcto.
 
 ### 2026-08-16 (3) — Sprint 0: Saneamiento ✅
 **Acción de Frank**: rotó la contraseña de la base de datos en Supabase (la anterior estuvo expuesta en el historial de git desde noviembre). Antes hubo que restaurar el proyecto, que Supabase había pausado por inactividad.

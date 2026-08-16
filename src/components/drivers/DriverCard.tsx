@@ -5,6 +5,7 @@ import { User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { DriverAvatar } from '@/components/ui/OptimizedImage';
+import { CountryFlag } from '@/components/ui/CountryFlag';
 
 interface DriverCardProps {
   driver: {
@@ -74,7 +75,7 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
           {/* Información */}
           <div className="space-y-1 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <span className="text-xs">🏁</span>
+              <CountryFlag nationality={driver.nationality} size={16} />
               <span>{driver.nationality}</span>
             </div>
             {age && (

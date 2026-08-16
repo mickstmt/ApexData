@@ -1,50 +1,72 @@
+/**
+ * Quick inventory of what is actually loaded in the database.
+ *
+ * Usage: npm run db:check
+ */
+
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('=== Checking Database Data ===\n');
+  console.log('=== Estado de la base de datos ===\n');
 
-  // Check seasons
-  const seasons = await prisma.season.findMany({
-    orderBy: { year: 'desc' },
-  });
-  console.log(`📅 Seasons in database: ${seasons.length}`);
-  seasons.forEach((s) => console.log(`  - ${s.year}`));
+  const seasons = await prisma.season.findMany({ orderBy: { year: 'desc' } });
+  const withRaces: Array<{ year: number; races: number }> = [];
 
-  // Check races per season
-  console.log('\n🏁 Races per season:');
   for (const season of seasons) {
-    const raceCount = await prisma.race.count({
-      where: { year: season.year },
-    });
-    console.log(`  - ${season.year}: ${raceCount} races`);
+    const races = await prisma.race.count({ where: { year: season.year } });
+    if (races > 0) withRaces.push({ year: season.year, races });
   }
 
-  // Check drivers
-  const driverCount = await prisma.driver.count();
-  console.log(`\n👤 Total drivers: ${driverCount}`);
+  console.log(`📅 Temporadas registradas: ${seasons.length}`);
+  console.log(`   Con carreras cargadas: ${withRaces.length}\n`);
 
-  // Check a sample driver
-  const sampleDriver = await prisma.driver.findFirst({
-    where: {
-      OR: [
-        { driverId: 'verstappen' },
-        { driverId: 'hamilton' },
-        { familyName: 'Verstappen' },
-      ],
-    },
-  });
-  console.log(`\n Sample driver:`, sampleDriver);
+  console.log('🏁 Cobertura por temporada:');
+  for (const { year, races } of withRaces) {
+    const [results, qualifying, sprints, driverStandings] = await Promise.all([
+      prisma.result.count({ where: { race: { year } } }),
+      prisma.qualifying.count({ where: { race: { year } } }),
+      prisma.sprintResult.count({ where: { race: { year } } }),
+      prisma.driverStanding.count({ where: { year } }),
+    ]);
 
-  // Check constructors
-  const constructorCount = await prisma.constructor.count();
-  console.log(`\n🏎️  Total constructors: ${constructorCount}`);
+    const leader = await prisma.driverStanding.findFirst({
+      where: { year, position: 1 },
+      orderBy: { round: 'desc' },
+      include: { driver: true },
+    });
+
+    console.log(
+      `   ${year}: ${String(races).padStart(2)} carreras · ${String(results).padStart(3)} resultados · ` +
+        `${String(qualifying).padStart(3)} quali · ${String(sprints).padStart(2)} sprint · ` +
+        `${String(driverStandings).padStart(3)} standings` +
+        (leader ? ` · líder: ${leader.driver.familyName} (${leader.points} pts)` : '')
+    );
+  }
+
+  const [drivers, constructors, circuits] = await Promise.all([
+    prisma.driver.count(),
+    prisma.constructor.count(),
+    prisma.circuit.count(),
+  ]);
+
+  const [withPhoto, withLogo, withLayout] = await Promise.all([
+    prisma.driver.count({ where: { imageUrl: { not: null } } }),
+    prisma.constructor.count({ where: { logoUrl: { not: null } } }),
+    prisma.circuit.count({ where: { imageUrl: { not: null } } }),
+  ]);
+
+  console.log('\n👤 Entidades e imágenes:');
+  console.log(`   Pilotos:    ${String(drivers).padStart(4)} · ${withPhoto} con foto`);
+  console.log(`   Equipos:    ${String(constructors).padStart(4)} · ${withLogo} con logo`);
+  console.log(`   Circuitos:  ${String(circuits).padStart(4)} · ${withLayout} con trazado`);
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
+  .catch((error) => {
+    console.error('❌ Error:', error);
     process.exit(1);
   })
   .finally(async () => {

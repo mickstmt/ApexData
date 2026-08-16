@@ -1,4 +1,7 @@
+import Link from 'next/link';
 import { Trophy, Medal, Award } from 'lucide-react';
+import { DriverAvatar, TeamLogo } from '@/components/ui/OptimizedImage';
+import { CountryFlag } from '@/components/ui/CountryFlag';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
 import { prisma } from '@/lib/prisma';
 
@@ -26,210 +29,85 @@ interface ConstructorStanding {
   wins: number;
 }
 
-async function getDriverStandings(year: number): Promise<DriverStanding[]> {
+/**
+ * Standings come straight from the stored championship tables, which Jolpica
+ * publishes after every round. The page used to load a whole season of results
+ * and add them up in memory, which also got the countback tie-breaks wrong.
+ */
+async function getStandings(year: number) {
   try {
-    // Get all race results for the specified year
-    const results = await prisma.result.findMany({
-      where: {
-        race: {
-          year: year,
-        },
-      },
-      include: {
-        driver: true,
-        constructor: true,
-        race: true,
-      },
-    });
+    // Each table is written independently, so take the newest round present
+    // in either one rather than assuming they advanced together.
+    const [latestDriverRound, latestConstructorRound] = await Promise.all([
+      prisma.driverStanding.findFirst({ where: { year }, orderBy: { round: 'desc' }, select: { round: true } }),
+      // `constructor: false` keeps this literal from inheriting
+      // Object.prototype.constructor, which Prisma rejects as a select key.
+      prisma.constructorStanding.findFirst({
+        where: { year },
+        orderBy: { round: 'desc' },
+        select: { round: true, constructor: false },
+      }),
+    ]);
 
-    // Get all sprint results for the specified year
-    const sprintResults = await prisma.sprintResult.findMany({
-      where: {
-        race: {
-          year: year,
-        },
-      },
-      include: {
-        driver: true,
-        constructor: true,
-        race: true,
-      },
-    });
+    const round = Math.max(latestDriverRound?.round ?? 0, latestConstructorRound?.round ?? 0);
 
-    // Group results by driver and calculate total points
-    const driverMap = new Map<string, {
-      driverId: string;
-      givenName: string;
-      familyName: string;
-      team: string;
-      points: number;
-      wins: number;
-      bestFinish: number;
-    }>();
+    if (round === 0) return { drivers: [], constructors: [], round: 0 };
 
-    // Process race results
-    for (const result of results) {
-      const key = result.driver.id;
-      const existing = driverMap.get(key);
+    const [driverRows, constructorRows] = await Promise.all([
+      prisma.driverStanding.findMany({
+        where: { year, round },
+        orderBy: [{ position: 'asc' }],
+        include: { driver: true },
+      }),
+      prisma.constructorStanding.findMany({
+        where: { year, round },
+        orderBy: [{ position: 'asc' }],
+        include: { constructor: true },
+      }),
+    ]);
 
-      const wins = result.position === 1 ? 1 : 0;
-      const bestFinish = result.position || 999;
+    // A driver's team is not part of the standings table, so it is read from
+    // that season's most recent race entry.
+    const teamByDriver = new Map<string, string>();
+    // Walk back from the latest round until every driver has a team, instead of
+    // pulling the whole season into memory.
+    for (let lookup = round; lookup >= 1 && teamByDriver.size < driverRows.length; lookup--) {
+      const entries = await prisma.result.findMany({
+        where: { race: { year, round: lookup } },
+        include: { constructor: true },
+      });
 
-      if (existing) {
-        existing.points += result.points;
-        existing.wins += wins;
-        existing.bestFinish = Math.min(existing.bestFinish, bestFinish);
-      } else {
-        driverMap.set(key, {
-          driverId: result.driver.id,
-          givenName: result.driver.givenName,
-          familyName: result.driver.familyName,
-          team: result.constructor.name,
-          points: result.points,
-          wins: wins,
-          bestFinish: bestFinish,
-        });
+      for (const entry of entries) {
+        if (!teamByDriver.has(entry.driverId)) {
+          teamByDriver.set(entry.driverId, entry.constructor.name);
+        }
       }
     }
 
-    // Process sprint results (add points, don't count as wins)
-    for (const result of sprintResults) {
-      const key = result.driver.id;
-      const existing = driverMap.get(key);
-
-      if (existing) {
-        existing.points += result.points;
-      } else {
-        driverMap.set(key, {
-          driverId: result.driver.id,
-          givenName: result.driver.givenName,
-          familyName: result.driver.familyName,
-          team: result.constructor.name,
-          points: result.points,
-          wins: 0,
-          bestFinish: 999,
-        });
-      }
-    }
-
-    // Convert to array and sort by points (desc), then by wins (desc), then by best finish (asc)
-    const standings = Array.from(driverMap.values())
-      .sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        return a.bestFinish - b.bestFinish;
-      })
-      .map((driver, index) => ({
-        position: index + 1,
-        driver: `${driver.givenName} ${driver.familyName}`,
-        points: driver.points,
-        team: driver.team,
-        wins: driver.wins,
-      }));
-
-    return standings;
+    return {
+      round,
+      drivers: driverRows.map((row) => ({
+        position: row.position,
+        driver: `${row.driver.givenName} ${row.driver.familyName}`,
+        driverId: row.driver.driverId,
+        nationality: row.driver.nationality,
+        imageUrl: row.driver.imageUrl,
+        team: teamByDriver.get(row.driverId) ?? '—',
+        points: row.points,
+        wins: row.wins,
+      })),
+      constructors: constructorRows.map((row) => ({
+        position: row.position,
+        team: row.constructor.name,
+        constructorId: row.constructor.constructorId,
+        logoUrl: row.constructor.logoUrl,
+        points: row.points,
+        wins: row.wins,
+      })),
+    };
   } catch (error) {
-    console.error('Error fetching driver standings:', error);
-    return [];
-  }
-}
-
-async function getConstructorStandings(year: number): Promise<ConstructorStanding[]> {
-  try {
-    // Get all race results for the specified year
-    const results = await prisma.result.findMany({
-      where: {
-        race: {
-          year: year,
-        },
-      },
-      include: {
-        constructor: true,
-        race: true,
-      },
-    });
-
-    // Get all sprint results for the specified year
-    const sprintResults = await prisma.sprintResult.findMany({
-      where: {
-        race: {
-          year: year,
-        },
-      },
-      include: {
-        constructor: true,
-        race: true,
-      },
-    });
-
-    // Group results by constructor and calculate total points
-    const constructorMap = new Map<string, {
-      constructorId: string;
-      name: string;
-      points: number;
-      wins: number;
-      bestFinish: number;
-    }>();
-
-    // Process race results
-    for (const result of results) {
-      const key = result.constructor.id;
-      const existing = constructorMap.get(key);
-
-      const wins = result.position === 1 ? 1 : 0;
-      const bestFinish = result.position || 999;
-
-      if (existing) {
-        existing.points += result.points;
-        existing.wins += wins;
-        existing.bestFinish = Math.min(existing.bestFinish, bestFinish);
-      } else {
-        constructorMap.set(key, {
-          constructorId: result.constructor.id,
-          name: result.constructor.name,
-          points: result.points,
-          wins: wins,
-          bestFinish: bestFinish,
-        });
-      }
-    }
-
-    // Process sprint results (add points, don't count as wins)
-    for (const result of sprintResults) {
-      const key = result.constructor.id;
-      const existing = constructorMap.get(key);
-
-      if (existing) {
-        existing.points += result.points;
-      } else {
-        constructorMap.set(key, {
-          constructorId: result.constructor.id,
-          name: result.constructor.name,
-          points: result.points,
-          wins: 0,
-          bestFinish: 999,
-        });
-      }
-    }
-
-    // Convert to array and sort by points (desc), then by wins (desc), then by best finish (asc)
-    const standings = Array.from(constructorMap.values())
-      .sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        return a.bestFinish - b.bestFinish;
-      })
-      .map((constructor, index) => ({
-        position: index + 1,
-        team: constructor.name,
-        points: constructor.points,
-        wins: constructor.wins,
-      }));
-
-    return standings;
-  } catch (error) {
-    console.error('Error fetching constructor standings:', error);
-    return [];
+    console.error('Error fetching standings:', error);
+    return { drivers: [], constructors: [], round: 0 };
   }
 }
 
@@ -237,9 +115,8 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
   const params = await searchParams;
   const displayYear = params.season ? parseInt(params.season) : new Date().getFullYear();
 
-  // Fetch real standings from database
-  const driversStandings = await getDriverStandings(displayYear);
-  const constructorsStandings = await getConstructorStandings(displayYear);
+  const { drivers: driversStandings, constructors: constructorsStandings, round } =
+    await getStandings(displayYear);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -256,6 +133,7 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
         </div>
         <p className="text-lg text-muted-foreground">
           Campeonato Mundial de Pilotos y Constructores
+          {round > 0 && ` · tras la ronda ${round}`}
         </p>
       </div>
 
@@ -281,10 +159,11 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                   entry.position === 3 ? '🥉' : null;
 
                 return (
-                  <div
-                    key={entry.position}
+                  <Link
+                    key={entry.driverId}
+                    href={`/drivers/${entry.driverId}`}
                     className={`flex items-center gap-4 rounded-lg border p-4 transition-colors ${
-                      entry.position <= 3
+                      entry.position !== null && entry.position <= 3
                         ? 'border-primary bg-primary/5'
                         : 'border-border bg-card hover:border-primary'
                     }`}
@@ -294,24 +173,29 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                       {medalIcon ? (
                         <span className="text-2xl">{medalIcon}</span>
                       ) : (
-                        <span className="text-xl font-bold text-muted-foreground">
-                          {entry.position}
+                        <span className="text-xl font-bold tabular-nums text-muted-foreground">
+                          {entry.position ?? '—'}
                         </span>
                       )}
                     </div>
 
+                    <DriverAvatar src={entry.imageUrl} name={entry.driver} size="sm" />
+
                     {/* Driver info */}
                     <div className="flex-1">
-                      <div className="font-bold">{entry.driver}</div>
+                      <div className="flex items-center gap-2 font-bold">
+                        <CountryFlag nationality={entry.nationality} size={16} />
+                        {entry.driver}
+                      </div>
                       <div className="text-sm text-muted-foreground">{entry.team}</div>
                     </div>
 
                     {/* Points */}
                     <div className="text-right">
-                      <div className="font-display text-2xl font-bold text-primary">{entry.points}</div>
+                      <div className="font-display text-2xl font-bold tabular-nums text-primary">{entry.points}</div>
                       <div className="text-xs text-muted-foreground">pts</div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
@@ -331,10 +215,11 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                   entry.position === 3 ? '🥉' : null;
 
                 return (
-                  <div
-                    key={entry.position}
+                  <Link
+                    key={entry.constructorId}
+                    href={`/constructors/${entry.constructorId}`}
                     className={`flex items-center gap-4 rounded-lg border p-4 transition-colors ${
-                      entry.position <= 3
+                      entry.position !== null && entry.position <= 3
                         ? 'border-primary bg-primary/5'
                         : 'border-border bg-card hover:border-primary'
                     }`}
@@ -344,21 +229,23 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                       {medalIcon ? (
                         <span className="text-2xl">{medalIcon}</span>
                       ) : (
-                        <span className="text-xl font-bold text-muted-foreground">
-                          {entry.position}
+                        <span className="text-xl font-bold tabular-nums text-muted-foreground">
+                          {entry.position ?? '—'}
                         </span>
                       )}
                     </div>
+
+                    <TeamLogo src={entry.logoUrl} name={entry.team} size="sm" />
 
                     {/* Team name */}
                     <div className="flex-1 font-bold">{entry.team}</div>
 
                     {/* Points */}
                     <div className="text-right">
-                      <div className="font-display text-2xl font-bold text-primary">{entry.points}</div>
+                      <div className="font-display text-2xl font-bold tabular-nums text-primary">{entry.points}</div>
                       <div className="text-xs text-muted-foreground">pts</div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

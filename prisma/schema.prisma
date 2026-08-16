@@ -18,8 +18,11 @@ datasource db {
 model Driver {
   id              String   @id @default(cuid())
   driverId        String   @unique // Ergast/Jolpica driver ID (e.g., "hamilton")
-  permanentNumber Int?     @unique // Permanent racing number (e.g., 44)
-  code            String?  @unique // Three-letter code (e.g., "HAM")
+  // Neither of these is unique in practice: #1 moves to the reigning champion
+  // each year, and codes get reused across eras (Michael and Mick Schumacher
+  // both raced as "MSC"). driverId is the only stable identity.
+  permanentNumber Int?     // Racing number for the current season (e.g., 44)
+  code            String?  // Three-letter code (e.g., "HAM")
   givenName       String   // First name
   familyName      String   // Last name
   dateOfBirth     DateTime?
@@ -35,6 +38,7 @@ model Driver {
   results         Result[]
   qualifyings     Qualifying[]
   sprintResults   SprintResult[]
+  standings       DriverStanding[]
 
   @@index([driverId])
   @@index([nationality])
@@ -280,7 +284,7 @@ model ConstructorStanding {
 
   year           Int
   round          Int      // Round number when this standing was recorded
-  position       Int
+  position       Int?     // null when unclassified (positionText is "-")
   positionText   String
   points         Float
   wins           Int      @default(0)
@@ -297,4 +301,29 @@ model ConstructorStanding {
   @@index([year])
   @@index([constructorId])
   @@map("constructor_standings")
+}
+
+/// Represents driver championship standings after a given round
+model DriverStanding {
+  id             String   @id @default(cuid())
+
+  year           Int
+  round          Int      // Round number when this standing was recorded
+  position       Int?     // null when unclassified (positionText is "-")
+  positionText   String
+  points         Float
+  wins           Int      @default(0)
+
+  // Metadata
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  driver         Driver   @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  driverId       String
+
+  @@unique([year, round, driverId])
+  @@index([year])
+  @@index([driverId])
+  @@map("driver_standings")
 }

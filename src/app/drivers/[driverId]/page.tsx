@@ -1,8 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, User, Calendar, Flag, Hash } from 'lucide-react';
+import { ArrowLeft, Calendar, Flag, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DriverAvatar } from '@/components/ui/OptimizedImage';
+import { CountryFlag } from '@/components/ui/CountryFlag';
 
 interface DriverDetailPageProps {
   params: Promise<{
@@ -109,8 +111,12 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
       <div className="mb-12 grid gap-8 md:grid-cols-[200px_1fr]">
         {/* Avatar */}
         <div className="flex items-center justify-center md:items-start">
-          <div className="flex h-48 w-48 items-center justify-center rounded-full border-4 border-primary bg-primary/10">
-            <User className="h-24 w-24 text-primary" />
+          <div className="overflow-hidden rounded-full border-4 border-primary bg-primary/10">
+            <DriverAvatar
+              src={driver!.imageUrl}
+              name={`${driver!.givenName} ${driver!.familyName}`}
+              size="xl"
+            />
           </div>
         </div>
 
@@ -143,7 +149,10 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
                 <Flag className="h-4 w-4" />
                 Nacionalidad
               </div>
-              <div className="text-lg font-semibold">{driver!.nationality}</div>
+              <div className="flex items-center gap-2 text-lg font-semibold">
+                <CountryFlag nationality={driver!.nationality} size={22} />
+                {driver!.nationality}
+              </div>
             </div>
 
             {/* Age */}
