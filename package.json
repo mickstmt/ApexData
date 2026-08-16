@@ -19,7 +19,8 @@
     "images:flags": "tsx scripts/images/flags.ts",
     "images:link": "tsx scripts/images/seed-paths.ts",
     "images:all": "npm run images:drivers && npm run images:logos && npm run images:circuits && npm run images:flags && npm run images:link",
-    "seed:all": "npm run db:seed && npm run seed:season -- 2023 2024 2025 2026 && npm run seed:standings -- 2023 2024 2025 2026 && npm run images:all"
+    "seed:all": "npm run db:seed && npm run seed:season -- 2023 2024 2025 2026 && npm run seed:standings -- 2023 2024 2025 2026 && npm run images:all",
+    "pwa:icons": "tsx scripts/pwa/generate-icons.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -56,6 +57,7 @@
     "eslint-config-next": "^16.0.3",
     "postcss": "^8.5.6",
     "prisma": "^6.19.0",
+    "sharp": "^0.35.3",
     "tailwindcss": "^3.4.18",
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.2",

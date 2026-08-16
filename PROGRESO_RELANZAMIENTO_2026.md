@@ -16,7 +16,7 @@
 
 ## Estado actual
 
-**Fase**: ✅ **Sprint 1 completado** (2026-08-16) · Sprint 0 completado (2026-08-16).
+**Fase**: ✅ **Sprint 2 completado** (2026-08-16) · Sprints 0 y 1 completados (2026-08-16).
 
 **Cobertura de datos**: temporadas **2023–2026** (resultados, clasificación, sprints y standings oficiales). El nuevo seeder acepta cualquier año, así que ampliar el histórico es solo tiempo de máquina (~10 min por temporada).
 
@@ -24,7 +24,9 @@
 
 **El repo está verde**: `npm run lint` (0 errores), `npm run type-check` (limpio por primera vez en el proyecto) y `npm run build` pasan. CI configurado en GitHub Actions.
 
-**Próximo paso**: **Sprint 2 — PWA shell** (manifest, service worker, iconos y splash, tab bar con safe areas, offline, install hint) para tener ApexData instalada en el iPhone.
+**PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
+
+**Próximo paso**: **Sprint 3 — Rediseño visual** (tokens de color carbon + colores de equipo, tipografía nueva, primitivos UI, tablas priority+ para iPhone, Race Hub como home y página de circuitos).
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - **El modelo se llama `Constructor`**, que colisiona con `Object.prototype.constructor`: TypeScript no resuelve `prisma.constructor` ni el tipo `Constructor` generado. Workaround en `src/lib/prisma.ts` (export `constructors` + tipo `ConstructorModel` escrito a mano). **La solución definitiva es renombrar el modelo a `Team`** (con `@@map("constructors")` para no tocar la BD) — candidato para el Sprint 1 o 3.
@@ -49,6 +51,29 @@
 ---
 
 ## Bitácora
+
+### 2026-08-16 (5) — Sprint 2: PWA para iOS ✅
+
+**Instalable y con identidad propia**:
+- Icono maestro `public/icon.svg` (la línea de trazada por el apex con la traza de telemetría) y `scripts/pwa/generate-icons.ts`, que rasteriza los PNG del manifest, el `apple-touch-icon` **opaco** (iOS rechaza transparencia) y **13 splash screens** de Apple con su media query exacta por dispositivo — el hueco de mayor severidad que la auditoría de plastik dejó documentado.
+- `manifest.webmanifest` con `id`, modo standalone, colores carbon y accesos directos a Calendario, Clasificación y Resultados.
+
+**Comportamiento nativo**:
+- **Barra de pestañas inferior** (`MobileTabBar`) con blur, safe area para el home indicator y objetivos táctiles de 44px. Es la navegación principal en móvil, imprescindible porque en modo standalone no hay botón atrás del navegador.
+- Cabecera con safe area para la Dynamic Island; `overscroll-behavior-y: none` para eliminar el rebote de página; sin resaltado gris al tocar; inputs y selects a 16px para evitar el zoom automático de iOS.
+- `ThemeColorSync`: la barra de estado sigue el tema de la app y no el del sistema.
+
+**Service worker** (`public/sw.js`, artesanal, sin librerías): estáticos cache-first, imágenes stale-while-revalidate, API siempre en red, navegación network-first con página `/offline` precacheada.
+- `PwaRegister` avisa con un botón "Actualizar" cuando hay versión nueva y revisa al volver al foreground — evita quedarse clavado en HTML viejo, el incidente que plastik sufrió dos veces en producción.
+- `IosInstallHint`: Safari nunca ofrece botón de instalar, así que se explica la ruta por el menú Compartir.
+
+**Correcciones de la revisión de código** (7 hallazgos, todos reales):
+- El selector de `ThemeColorSync` nunca casaba (Next emite el meta sin atributo `media`), dejando el componente inerte.
+- El aviso de actualización saltaba en la primera instalación: hay que comprobar en estado `installed`, porque `clients.claim()` ya ha fijado el controlador al llegar a `activated`.
+- El footer quedaba debajo de la barra de pestañas, intocable en móvil.
+- El service worker no registraba en desarrollo (cacheaba chunks para siempre), `cache.addAll` atómico podía dejar la app sin worker, la revalidación podía cortarse sin `waitUntil`, y con caché fría y red caída devolvía `undefined` (rompe `respondWith`).
+
+**Verificación**: lint 0 errores · type-check limpio · build correcto · comprobado sirviendo la app real: manifest, service worker, iconos, splash y `/offline` responden 200, las etiquetas de iOS están presentes y el `apple-touch-icon` es RGB opaco.
 
 ### 2026-08-16 (4) — Sprint 1: Datos e imágenes ✅
 

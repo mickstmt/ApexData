@@ -27,11 +27,15 @@ export function SeasonSelector({ currentSeason, availableSeasons }: SeasonSelect
 
   return (
     <div className="flex items-center gap-3">
-      <Calendar className="h-5 w-5 text-muted-foreground" />
+      <Calendar className="h-5 w-5 text-muted-foreground" aria-hidden />
+      <label htmlFor="season-selector" className="sr-only">
+        Temporada
+      </label>
       <select
+        id="season-selector"
         value={currentSeason}
         onChange={(e) => handleSeasonChange(Number(e.target.value))}
-        className="rounded-lg border border-border bg-background px-4 py-2 font-medium transition-colors hover:border-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        className="rounded-lg border border-border bg-background px-4 py-2 text-base font-medium transition-colors hover:border-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 md:text-sm"
       >
         {seasons.map((season) => (
           <option key={season} value={season}>

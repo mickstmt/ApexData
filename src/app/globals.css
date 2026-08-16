@@ -52,9 +52,23 @@
     @apply border-border;
   }
 
+  html {
+    /* Stops the whole page rubber-banding behind the installed app, which is
+       the clearest giveaway that a home-screen app is really a web page. */
+    overscroll-behavior-y: none;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* iOS paints its own grey flash on tap; components define their own
+       pressed states instead. */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Digits that sit in columns or update in place must not reflow. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 
   h1, h2, h3, h4, h5, h6 {
