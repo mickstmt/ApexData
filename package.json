@@ -6,10 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:check": "tsx scripts/check-data.ts",
+    "seed:calendar": "tsx prisma/seed-calendar-2025.ts",
+    "seed:results": "tsx prisma/seed-results-2023.ts && tsx prisma/seed-results-2024.ts && tsx prisma/seed-results-2025.ts",
+    "seed:qualifying": "tsx prisma/seed-qualifying-2023.ts && tsx prisma/seed-qualifying-2024.ts && tsx prisma/seed-qualifying-2025.ts",
+    "seed:sprint": "tsx prisma/seed-sprint-2023.ts && tsx prisma/seed-sprint-2024.ts && tsx prisma/seed-sprint-2025.ts",
+    "seed:images": "tsx prisma/seed-local-images.ts",
+    "seed:all": "npm run db:seed && npm run seed:calendar && npm run seed:results && npm run seed:qualifying && npm run seed:sprint && npm run seed:images"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

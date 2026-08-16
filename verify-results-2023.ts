@@ -80,6 +80,7 @@ async function verifyResults2023() {
     distinct: ['driverId'],
     include: {
       driver: true,
+      constructor: false,
     },
   });
 

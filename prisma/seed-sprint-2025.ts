@@ -204,9 +204,10 @@ async function seedSprint2025() {
             raceId: dbRace.id,
             driverId: driver.id,
             constructorId: constructor.id,
-            position: result.position === 'R' || result.position === 'D' ? null : parseInt(result.position),
+            // Los abandonos vienen marcados en positionText, no en position.
+            position: /^\d+$/.test(result.positionText) ? parseInt(result.positionText) : null,
             positionText: result.positionText,
-            positionOrder: result.position === 'R' || result.position === 'D' ? 99 : parseInt(result.position),
+            positionOrder: parseInt(result.position) || 99,
             points: parseFloat(result.points),
             grid: parseInt(result.grid),
             laps: parseInt(result.laps),

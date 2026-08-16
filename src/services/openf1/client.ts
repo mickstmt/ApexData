@@ -255,6 +255,12 @@ export async function getSessionSummary(sessionKey: number) {
       getRaceControl(sessionKey).catch(() => []),
     ]);
 
+    // getSessions can come back empty (rate limit, or no session for that key),
+    // in which case there is no summary to build.
+    if (!session) {
+      return null;
+    }
+
     return {
       session,
       drivers,

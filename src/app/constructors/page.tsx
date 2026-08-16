@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma, constructors as constructorsModel, type ConstructorModel } from '@/lib/prisma';
 import { ConstructorsSearch } from '@/components/constructors/ConstructorsSearch';
 import { fallbackConstructors } from '@/lib/fallback-data';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
@@ -18,7 +18,7 @@ export default async function ConstructorsPage({ searchParams }: ConstructorsPag
   const displayYear = params.season ? parseInt(params.season) : 2024;
 
   // Obtener constructores que participaron en la temporada seleccionada
-  let constructors: Constructor[];
+  let constructors: ConstructorModel[];
   let usingFallback = false;
 
   try {
@@ -34,7 +34,7 @@ export default async function ConstructorsPage({ searchParams }: ConstructorsPag
 
     // Obtener los datos completos de los constructores
     if (constructorIds.length > 0) {
-      constructors = await prisma.constructor.findMany({
+      constructors = await constructorsModel.findMany({
         where: {
           id: {
             in: constructorIds,
@@ -48,7 +48,7 @@ export default async function ConstructorsPage({ searchParams }: ConstructorsPag
 
     // Si no hay constructores para esa temporada, buscar todos los disponibles
     if (constructors.length === 0) {
-      constructors = await prisma.constructor.findMany({
+      constructors = await constructorsModel.findMany({
         orderBy: { name: 'asc' },
       });
     }

@@ -1,5 +1,8 @@
 import type { Config } from 'tailwindcss';
+import tailwindcssAnimate from 'tailwindcss-animate';
 
+// Every colour resolves through the CSS variables declared in src/app/globals.css
+// so the .dark class can swap themes. Hardcoding values here breaks dark mode.
 const config: Config = {
   darkMode: 'class',
   content: [
@@ -10,41 +13,38 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Paleta ApexData
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
         primary: {
-          DEFAULT: '#CCFF00', // Verde limón
-          dark: '#B8F500',
-          light: '#E0FF66',
-          foreground: '#000000',
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
         },
-        background: {
-          DEFAULT: '#FFFFFF', // Blanco
-          dark: '#131313', // Gris muy oscuro
-        },
-        accent: {
-          DEFAULT: '#000000', // Negro
-          gray: '#1A1A1A',
-          foreground: '#FFFFFF',
-        },
-        border: 'hsl(0 0% 89.8%)',
-        input: 'hsl(0 0% 89.8%)',
-        ring: '#CCFF00',
-        foreground: '#000000',
-        destructive: {
-          DEFAULT: 'hsl(0 84.2% 60.2%)',
-          foreground: 'hsl(0 0% 98%)',
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
         },
         muted: {
-          DEFAULT: 'hsl(0 0% 96.1%)',
-          foreground: 'hsl(0 0% 45.1%)',
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
         },
         popover: {
-          DEFAULT: 'hsl(0 0% 100%)',
-          foreground: 'hsl(0 0% 3.9%)',
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
         },
         card: {
-          DEFAULT: 'hsl(0 0% 100%)',
-          foreground: 'hsl(0 0% 3.9%)',
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
         },
       },
       borderRadius: {
@@ -54,7 +54,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-orbitron)', 'system-ui', 'sans-serif'], // Para títulos y headings
+        display: ['var(--font-orbitron)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-roboto-mono)', 'monospace'],
       },
       keyframes: {
@@ -73,7 +73,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [tailwindcssAnimate],
 };
 
 export default config;

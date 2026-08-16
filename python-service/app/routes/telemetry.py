@@ -6,10 +6,94 @@ from typing import Optional
 import fastf1
 import pandas as pd
 from app.utils.cache_manager import cache_manager
-from app.services.f1_service import F1Service
 
 router = APIRouter()
-f1_service = F1Service()
+
+
+# NOTE: this literal route must stay declared BEFORE /{year}/{event}/{session_type}/{driver},
+# otherwise Starlette matches "compare" as a driver code and the comparison never runs.
+@router.get("/{year}/{event}/{session_type}/compare")
+async def compare_drivers_telemetry(
+    year: int,
+    event: str,
+    session_type: str,
+    driver1: str = Query(..., description="First driver code"),
+    driver2: str = Query(..., description="Second driver code"),
+    lap1: Optional[int] = Query(None, description="Lap for driver1 (fastest if omitted)"),
+    lap2: Optional[int] = Query(None, description="Lap for driver2 (fastest if omitted)"),
+):
+    """
+    Compare telemetry data between two drivers
+
+    Returns synchronized telemetry data for both drivers to allow direct comparison
+    """
+    try:
+        cache_key = f"compare_{year}_{event}_{session_type}_{driver1}_{driver2}_{lap1}_{lap2}"
+
+        cached_data = cache_manager.get(cache_key)
+        if cached_data is not None:
+            return cached_data
+
+        session = fastf1.get_session(year, event, session_type)
+        session.load()
+
+        laps_d1 = session.laps.pick_drivers(driver1)
+        laps_d2 = session.laps.pick_drivers(driver2)
+
+        if laps_d1.empty or laps_d2.empty:
+            raise HTTPException(status_code=404, detail="Laps not found for one or both drivers")
+
+        if lap1:
+            target_d1 = laps_d1[laps_d1['LapNumber'] == lap1]
+            if target_d1.empty:
+                raise HTTPException(status_code=404, detail=f"Lap {lap1} not found for driver {driver1}")
+            lap_d1 = target_d1.iloc[0]
+        else:
+            # pick_fastest() already returns a single Lap (or None); indexing it
+            # with .iloc[0] would yield that lap's first column instead.
+            lap_d1 = laps_d1.pick_fastest()
+            if lap_d1 is None:
+                raise HTTPException(status_code=404, detail=f"No timed lap found for driver {driver1}")
+
+        if lap2:
+            target_d2 = laps_d2[laps_d2['LapNumber'] == lap2]
+            if target_d2.empty:
+                raise HTTPException(status_code=404, detail=f"Lap {lap2} not found for driver {driver2}")
+            lap_d2 = target_d2.iloc[0]
+        else:
+            lap_d2 = laps_d2.pick_fastest()
+            if lap_d2 is None:
+                raise HTTPException(status_code=404, detail=f"No timed lap found for driver {driver2}")
+
+        tel_d1 = lap_d1.get_telemetry()
+        tel_d2 = lap_d2.get_telemetry()
+
+        result = {
+            "driver1": {
+                "code": driver1,
+                "lap_number": int(lap_d1['LapNumber']),
+                "lap_time": str(lap_d1['LapTime']),
+                "compound": str(lap_d1['Compound']) if pd.notna(lap_d1['Compound']) else None,
+                "telemetry": tel_d1.to_dict(orient='records')
+            },
+            "driver2": {
+                "code": driver2,
+                "lap_number": int(lap_d2['LapNumber']),
+                "lap_time": str(lap_d2['LapTime']),
+                "compound": str(lap_d2['Compound']) if pd.notna(lap_d2['Compound']) else None,
+                "telemetry": tel_d2.to_dict(orient='records')
+            },
+            "delta_time": str(lap_d1['LapTime'] - lap_d2['LapTime'])
+        }
+
+        cache_manager.set(cache_key, result)
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error comparing telemetry: {str(e)}")
 
 
 @router.get("/{year}/{event}/{session_type}/{driver}")
@@ -59,8 +143,11 @@ async def get_driver_telemetry(
                 raise HTTPException(status_code=404, detail=f"Lap {lap} not found for driver {driver}")
             lap_data = target_lap.iloc[0]
         else:
-            fastest = driver_laps.pick_fastest()
-            lap_data = fastest.iloc[0] if hasattr(fastest, 'iloc') and len(fastest) > 0 else fastest
+            # pick_fastest() already returns a single Lap (or None); indexing it
+            # with .iloc[0] would yield that lap's first column instead.
+            lap_data = driver_laps.pick_fastest()
+            if lap_data is None:
+                raise HTTPException(status_code=404, detail=f"No timed lap found for driver {driver}")
 
         # Get telemetry
         telemetry = lap_data.get_telemetry()
@@ -84,107 +171,7 @@ async def get_driver_telemetry(
 
         return result
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching telemetry: {str(e)}")
-
-
-@router.get("/{year}/{event}/{session_type}/compare")
-async def compare_drivers_telemetry(
-    year: int,
-    event: str,
-    session_type: str,
-    driver1: str = Query(..., description="First driver code"),
-    driver2: str = Query(..., description="Second driver code"),
-    lap1: Optional[int] = Query(None, description="Lap for driver1 (fastest if omitted)"),
-    lap2: Optional[int] = Query(None, description="Lap for driver2 (fastest if omitted)"),
-):
-    """
-    Compare telemetry data between two drivers
-
-    Returns synchronized telemetry data for both drivers to allow direct comparison
-    """
-    try:
-        print(f"[DEBUG] Comparing telemetry: year={year}, event={event}, session={session_type}, driver1={driver1}, driver2={driver2}")
-
-        cache_key = f"compare_{year}_{event}_{session_type}_{driver1}_{driver2}_{lap1}_{lap2}"
-
-        cached_data = cache_manager.get(cache_key)
-        if cached_data is not None:
-            print(f"[DEBUG] Returning cached data")
-            return cached_data
-
-        print(f"[DEBUG] Loading session...")
-        session = fastf1.get_session(year, event, session_type)
-        session.load()
-        print(f"[DEBUG] Session loaded successfully")
-
-        # Get laps for both drivers (use pick_drivers instead of deprecated pick_driver)
-        print(f"[DEBUG] Getting laps for {driver1}...")
-        laps_d1 = session.laps.pick_drivers(driver1)
-        print(f"[DEBUG] Driver {driver1} laps count: {len(laps_d1)}")
-
-        print(f"[DEBUG] Getting laps for {driver2}...")
-        laps_d2 = session.laps.pick_drivers(driver2)
-        print(f"[DEBUG] Driver {driver2} laps count: {len(laps_d2)}")
-
-        if laps_d1.empty or laps_d2.empty:
-            raise HTTPException(status_code=404, detail="Laps not found for one or both drivers")
-
-        # Select specific laps or fastest
-        print(f"[DEBUG] Selecting laps (lap1={lap1}, lap2={lap2})...")
-        if lap1:
-            lap_d1 = laps_d1[laps_d1['LapNumber'] == lap1].iloc[0]
-        else:
-            print(f"[DEBUG] Getting fastest lap for {driver1}...")
-            fastest_d1 = laps_d1.pick_fastest()
-            print(f"[DEBUG] Fastest lap type: {type(fastest_d1)}, has iloc: {hasattr(fastest_d1, 'iloc')}")
-            lap_d1 = fastest_d1.iloc[0] if hasattr(fastest_d1, 'iloc') and len(fastest_d1) > 0 else fastest_d1
-
-        if lap2:
-            lap_d2 = laps_d2[laps_d2['LapNumber'] == lap2].iloc[0]
-        else:
-            print(f"[DEBUG] Getting fastest lap for {driver2}...")
-            fastest_d2 = laps_d2.pick_fastest()
-            print(f"[DEBUG] Fastest lap type: {type(fastest_d2)}, has iloc: {hasattr(fastest_d2, 'iloc')}")
-            lap_d2 = fastest_d2.iloc[0] if hasattr(fastest_d2, 'iloc') and len(fastest_d2) > 0 else fastest_d2
-
-        print(f"[DEBUG] Lap selected for {driver1}: {lap_d1['LapNumber']}")
-        print(f"[DEBUG] Lap selected for {driver2}: {lap_d2['LapNumber']}")
-
-        # Get telemetry
-        print(f"[DEBUG] Getting telemetry for {driver1}...")
-        tel_d1 = lap_d1.get_telemetry()
-        print(f"[DEBUG] Telemetry {driver1} points: {len(tel_d1)}")
-
-        print(f"[DEBUG] Getting telemetry for {driver2}...")
-        tel_d2 = lap_d2.get_telemetry()
-        print(f"[DEBUG] Telemetry {driver2} points: {len(tel_d2)}")
-
-        result = {
-            "driver1": {
-                "code": driver1,
-                "lap_number": int(lap_d1['LapNumber']),
-                "lap_time": str(lap_d1['LapTime']),
-                "compound": str(lap_d1['Compound']) if pd.notna(lap_d1['Compound']) else None,
-                "telemetry": tel_d1.to_dict(orient='records')
-            },
-            "driver2": {
-                "code": driver2,
-                "lap_number": int(lap_d2['LapNumber']),
-                "lap_time": str(lap_d2['LapTime']),
-                "compound": str(lap_d2['Compound']) if pd.notna(lap_d2['Compound']) else None,
-                "telemetry": tel_d2.to_dict(orient='records')
-            },
-            "delta_time": str(lap_d1['LapTime'] - lap_d2['LapTime'])
-        }
-
-        cache_manager.set(cache_key, result)
-
-        return result
-
     except HTTPException:
         raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error comparing telemetry: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching telemetry: {str(e)}")

@@ -4,8 +4,8 @@ uvicorn[standard]>=0.30.0
 pydantic>=2.9.0
 pydantic-settings>=2.5.0
 
-# F1 Data
-fastf1>=3.4.0
+# F1 Data — 3.8+ adds 2026 season support (schedule, team names and colours)
+fastf1>=3.8.0
 
 # Data processing
 pandas>=2.0.0

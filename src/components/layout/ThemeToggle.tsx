@@ -9,7 +9,10 @@ export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
+  // Documented next-themes hydration guard: the theme is only known on the
+  // client, so the first client render must match the server's placeholder.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

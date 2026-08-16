@@ -16,11 +16,17 @@
 
 ## Estado actual
 
-**Fase**: Pre-Sprint 0 (planificación completada, desarrollo no iniciado).
+**Fase**: ✅ **Sprint 0 completado** (2026-08-16).
 
-**Último trabajo hecho**: auditoría completa + plan de relanzamiento, todo commiteado y pusheado a `main`.
+**El repo está verde**: `npm run lint` (0 errores), `npm run type-check` (limpio por primera vez en el proyecto) y `npm run build` pasan. CI configurado en GitHub Actions.
 
-**Próximo paso**: arrancar **Sprint 0 — Saneamiento** (ver hoja de ruta en `AUDITORIA_Y_PLAN_RELANZAMIENTO_2026.md`, sección 11). El primer punto del S0 es rotar las claves de Supabase — acción de Frank, con guía paso a paso cuando arranquemos.
+**Próximo paso**: **Sprint 1 — Datos + imágenes** (ver hoja de ruta en `AUDITORIA_Y_PLAN_RELANZAMIENTO_2026.md`, sección 11): pipeline automático de imágenes reales, temporada 2026 en la BD, y poblar standings.
+
+### Deuda técnica conocida (documentada, no bloqueante)
+- **El modelo se llama `Constructor`**, que colisiona con `Object.prototype.constructor`: TypeScript no resuelve `prisma.constructor` ni el tipo `Constructor` generado. Workaround en `src/lib/prisma.ts` (export `constructors` + tipo `ConstructorModel` escrito a mano). **La solución definitiva es renombrar el modelo a `Team`** (con `@@map("constructors")` para no tocar la BD) — candidato para el Sprint 1 o 3.
+- La página `/telemetry` (OpenF1) sigue siendo un demo; se fusionará en Telemetría 2.0 (S4).
+- El comparador `/compare` calcula stats sobre las últimas 5 carreras (engañoso); se rehace en S4.
+- 11 warnings de lint (variables sin usar, algún `any`) — limpieza cosmética pendiente.
 
 **Decisiones tomadas**:
 - ✅ **Hosting del microservicio Python: el VPS propio de Frank** (2026-08-16). Frank ya tiene un VPS con varios aplicativos desplegados; el servicio FastF1 (que ya tiene Dockerfile) se despliega ahí en S5. Esto elimina el único coste previsto (~$5/mes de Railway) → **coste total del proyecto: $0/mes**. Pendiente de recabar en S5: proveedor/SO del VPS, RAM/disco disponibles, si usa Docker y qué reverse proxy (Nginx/Caddy/Traefik) sirve los demás aplicativos.
@@ -32,11 +38,30 @@
 
 ## Acciones pendientes de Frank
 
-*(ninguna por ahora — la primera será rotar las claves de Supabase al arrancar el Sprint 0)*
+*(ninguna pendiente — la rotación de claves de Supabase se completó el 2026-08-16)*
 
 ---
 
 ## Bitácora
+
+### 2026-08-16 (3) — Sprint 0: Saneamiento ✅
+**Acción de Frank**: rotó la contraseña de la base de datos en Supabase (la anterior estuvo expuesta en el historial de git desde noviembre). Antes hubo que restaurar el proyecto, que Supabase había pausado por inactividad.
+
+**Correcciones aplicadas**:
+- `.env` actualizado con la nueva contraseña; conexión verificada (6 temporadas, 28 pilotos, 12 equipos intactos).
+- **Bug DNF corregido** en los 6 seeds (results y sprint de 2023/2024/2025): ahora se evalúa `positionText` (que trae 'R'/'D'/'W'...) en vez de `position`. Además se creó `scripts/fix-dnf-positions.ts`, que **reparó 174 filas ya guardadas** (150 results + 24 sprint_results). Verificado: todas las carreras tienen exactamente un ganador.
+- **Servicio Python**: `/compare` movido antes de `/{driver}` (Starlette lo capturaba como un piloto llamado "compare"); corregido el uso de `pick_fastest()`, que devuelve una vuelta y se estaba indexando con `.iloc[0]` (tomaba el primer valor de columna) — esto rompía la comparación aunque se arreglara el orden; prints de debug eliminados; los 404 ya no se convierten en 500; `fastf1>=3.8.0` (soporte 2026).
+- **Nueva página `/constructors/[constructorId]`**: los enlaces desde 4 sitios daban 404. Incluye victorias, podios, puntos, pilotos e historial de resultados.
+- **Configs duplicadas**: eliminados `tailwind.config.js` y `postcss.config.js`. El `.ts` superviviente hardcodeaba colores (habría roto el dark mode), así que ahora resuelve todo con `hsl(var(--token))` y se añadieron a `globals.css` las variables que faltaban (`--card`, `--popover`, `--destructive`, `--secondary`) en ambos temas.
+- **Colisión `SessionType`** resuelta: el enum de `common.ts` pasa a llamarse `SessionName`.
+- **ESLint migrado a flat config** (`eslint.config.mjs`): `next lint` ya no existe en Next 16, así que el CI habría fallado siempre. `npm run lint` → `eslint .`; los 4 errores existentes corregidos.
+- `prisma/seed.ts` con import arreglado; singleton de Prisma en `/standings`; `error.tsx` y `not-found.tsx` globales; página `/test` de debug eliminada; `src/config/site.ts` con las rutas reales; scripts npm `seed:*` con el orden correcto documentado.
+- **`/telemetry` blindada**: reventaba el build cuando OpenF1 no devuelve sesión (pausa entre carreras).
+- **CI** (`.github/workflows/ci.yml`): lint + type-check + build para la web, e import smoke test para el servicio Python.
+
+**Verificación**: lint 0 errores · type-check limpio (primera vez en el proyecto) · build correcto con las 23 rutas.
+
+*Nota de método*: se usó la skill `code-review` sobre el diff completo, que detectó 5 problemas reales — incluidos el bug de `pick_fastest()`, que `next lint` ya no existe, y que borrar `tailwind.config.js` rompía el dark mode. Todos corregidos antes de commitear.
 
 ### 2026-08-16 (2) — Ajustes al plan
 - Renombrado `PROGRESO.md` → `PROGRESO_RELANZAMIENTO_2026.md` para vincularlo explícitamente al plan de referencia.

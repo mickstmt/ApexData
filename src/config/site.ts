@@ -10,40 +10,54 @@ export const siteConfig = {
   url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   ogImage: '/og-image.png',
   links: {
-    github: 'https://github.com/yourusername/apexdata', // TODO: Update with actual repo
+    github: 'https://github.com/mickstmt/ApexData',
   },
-  creator: 'ApexData Team',
+  creator: 'ApexData',
 } as const;
 
+/**
+ * Primary navigation. Keep in sync with the links rendered by
+ * src/components/layout/Header.tsx.
+ */
 export const navItems = [
   {
-    title: 'Dashboard',
+    title: 'Inicio',
     href: '/',
     description: 'Vista general de la temporada actual',
   },
   {
     title: 'Calendario',
-    href: '/calendario',
+    href: '/calendar',
     description: 'Calendario completo de la temporada',
   },
   {
     title: 'Pilotos',
-    href: '/pilotos',
+    href: '/drivers',
     description: 'Información y estadísticas de pilotos',
   },
   {
     title: 'Equipos',
-    href: '/equipos',
+    href: '/constructors',
     description: 'Constructores y sus historiales',
   },
   {
-    title: 'Temporadas',
-    href: '/temporadas',
-    description: 'Explora temporadas históricas',
+    title: 'Clasificación',
+    href: '/standings',
+    description: 'Campeonato de pilotos y constructores',
   },
   {
-    title: 'Circuitos',
-    href: '/circuitos',
-    description: 'Información de todos los circuitos',
+    title: 'Resultados',
+    href: '/results',
+    description: 'Resultados carrera a carrera',
+  },
+  {
+    title: 'Telemetría',
+    href: '/telemetry',
+    description: 'Datos de sesión en tiempo real',
+  },
+  {
+    title: 'Análisis',
+    href: '/analysis',
+    description: 'Telemetría detallada y comparación de vueltas',
   },
 ] as const;

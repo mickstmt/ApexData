@@ -76,7 +76,7 @@ export enum RaceStatus {
   WITHDRAWN = 'Withdrawn',
 }
 
-export enum SessionType {
+export enum SessionName {
   RACE = 'Race',
   QUALIFYING = 'Qualifying',
   SPRINT = 'Sprint',

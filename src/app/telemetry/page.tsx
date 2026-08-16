@@ -42,7 +42,7 @@ export default async function TelemetryPage() {
       </div>
 
       {/* Latest Session Info */}
-      {session && sessionData ? (
+      {session && sessionData?.session ? (
         <div className="space-y-8">
           {/* Session Card */}
           <div className="rounded-lg border border-border bg-card p-6">

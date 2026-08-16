@@ -40,7 +40,7 @@ async function seedDriverImages() {
     console.log('🖼️  Seeding driver images with UI Avatars placeholders...\n');
 
     let updated = 0;
-    let errors: string[] = [];
+    const errors: string[] = [];
 
     // Get all drivers from database
     const drivers = await prisma.driver.findMany({

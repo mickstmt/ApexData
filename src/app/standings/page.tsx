@@ -1,8 +1,6 @@
 import { Trophy, Medal, Award } from 'lucide-react';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export const metadata = {
   title: 'Standings F1 | ApexData',

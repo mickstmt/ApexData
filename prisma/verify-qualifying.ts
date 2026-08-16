@@ -42,7 +42,7 @@ async function verifyQualifyingData() {
 
     if (sample) {
       console.log('\n📝 Ejemplo de registro (2024):');
-      console.log(`  Carrera: ${sample.race.name} (Round ${sample.race.round})`);
+      console.log(`  Carrera: ${sample.race.raceName} (Round ${sample.race.round})`);
       console.log(`  Piloto: ${sample.driver.givenName} ${sample.driver.familyName}`);
       console.log(`  Constructor: ${sample.constructor.name}`);
       console.log(`  Posición: P${sample.position}`);
@@ -70,7 +70,7 @@ async function verifyQualifyingData() {
 
     if (polePosition) {
       console.log('\n🏁 Última pole position 2024:');
-      console.log(`  Carrera: ${polePosition.race.name}`);
+      console.log(`  Carrera: ${polePosition.race.raceName}`);
       console.log(`  Piloto: ${polePosition.driver.givenName} ${polePosition.driver.familyName}`);
       console.log(`  Constructor: ${polePosition.constructor.name}`);
       console.log(`  Q3 Time: ${polePosition.q3}`);

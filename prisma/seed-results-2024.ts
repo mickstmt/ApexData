@@ -299,9 +299,11 @@ async function seedResults2024() {
         }
 
         // Crear el resultado
-        const position = result.position === 'R' || result.position === 'D'
-          ? null
-          : parseInt(result.position);
+        // Jolpica marca DNF/DSQ/DNS en positionText ('R', 'D', 'W', 'E', 'F', 'N');
+        // `position` siempre es numérico, así que no sirve para detectarlos.
+        const position = /^\d+$/.test(result.positionText)
+          ? parseInt(result.positionText)
+          : null;
 
         await prisma.result.create({
           data: {
