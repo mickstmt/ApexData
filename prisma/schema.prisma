@@ -77,6 +77,7 @@ model Circuit {
   lng           Float?   // Longitude
   alt           Int?     // Altitude in meters
   url           String?  // Wikipedia or official URL
+  imageUrl      String?  // Circuit layout image URL
 
   // Circuit details
   length        Float?   // Length in km
