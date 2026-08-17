@@ -71,13 +71,27 @@ jobs:
       # reads like an out-of-memory kill and is not one. This webhook is the
       # single trigger, and it only runs once lint, types and build pass.
       - name: Trigger EasyPanel deploy
+        id: trigger
         env:
           HOOK: ${{ secrets.EASYPANEL_DEPLOY_HOOK }}
-        # The webhook returns 200 as soon as the request is accepted, not when
-        # the build finishes, so the next step confirms the cutover.
-        run: curl -fsS "$HOOK"
+        # Secrets are not readable from a job-level `if`, so the skip is
+        # decided here: until the webhook is configured in EasyPanel, pushes
+        # should not report a red CI for infrastructure that does not exist
+        # yet. The webhook returns 200 as soon as the request is accepted,
+        # not when the build finishes, so the next step confirms the cutover.
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "EASYPANEL_DEPLOY_HOOK is not set — deployment not configured yet."
+            echo "See DEPLOY.md to create the app and register the webhook."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+          curl -fsS "$HOOK"
 
       - name: Wait for cutover
+        if: steps.trigger.outputs.configured == 'true'
         # Succeeds once the container serving production booted after this
         # commit was pushed. Comparing boot time against the push timestamp
         # (rather than an uptime baseline) is immune to who triggered the
