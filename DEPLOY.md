@@ -32,18 +32,29 @@ normal. Se puede desplegar la web primero y añadir la telemetría después.
 En EasyPanel, dentro del proyecto donde vive plastik:
 
 1. **Create → App**, nombre `apexdata`.
-2. **Source**: GitHub, repositorio `mickstmt/ApexData`, rama `main`.
-3. **Build**: Dockerfile, ruta `./Dockerfile`.
-4. **⚠️ Desactiva el auto-deploy / la integración nativa con GitHub.**
-   Es la lección que costó cara en plastik: si EasyPanel construye por su
-   cuenta al detectar el push *y además* llega el webhook de CI, la segunda
-   construcción **cancela la primera a medias**. El log muere sin error propio
-   (`context canceled`) y parece falta de memoria, pero no lo es. Se reconoce
-   porque cada push aparece dos veces en el historial: una de ~4 min y otra de
-   pocos segundos.
-5. **Domains**: añade el dominio (por ejemplo `apexdata.izistoreperu.com`) con
-   HTTPS activado. El puerto interno es `3000`.
-6. **Environment**: ver la tabla de variables más abajo.
+2. **Source**: pestaña **Git** (no la de *Github*), URL completa
+   `https://github.com/mickstmt/ApexData.git`, rama `main`, Build Path `/`.
+
+   La pestaña *Github* usa la integración nativa, que exige un token de cuenta
+   configurado en el panel; el de este VPS está caducado y devuelve *"Cannot
+   find repository and your Github token is invalid"* aunque el repo sea
+   público. La pestaña **Git** clona por HTTPS sin credenciales y, como no
+   tiene integración, **no puede haber auto-deploy** — que es justo lo que hay
+   que evitar. Es la lección que costó cara en plastik: si EasyPanel construye
+   por su cuenta al detectar el push *y además* llega el webhook de CI, la
+   segunda construcción **cancela la primera a medias**. El log muere sin error
+   propio (`context canceled`) y parece falta de memoria, pero no lo es. Se
+   reconoce porque cada push aparece dos veces en el historial: una de ~4 min y
+   otra de pocos segundos.
+
+   (Si algún día se usa la pestaña *Github*, hay que apagar **Auto Deploy** a
+   mano.)
+3. **Build**: Dockerfile, File `/Dockerfile`. El panel lo escribe con barra
+   inicial, no `./Dockerfile`.
+4. **Domains**: añade el dominio con HTTPS activado y **Port `3000`**.
+5. **Environment**: ver la tabla de variables más abajo. **`PORT=3000` es
+   obligatoria**: sin ella el contenedor arrancó escuchando en el 80 mientras
+   el dominio apuntaba al 3000, y el proxy devolvía 502.
 
 ### 2. App del servicio de telemetría
 
@@ -66,17 +77,28 @@ En EasyPanel, dentro del proyecto donde vive plastik:
 | `NEXT_PUBLIC_JOLPICA_API_URL` | `https://api.jolpi.ca/ergast/f1` | |
 | `NEXT_PUBLIC_OPENF1_API_URL` | `https://api.openf1.org/v1` | |
 | `NEXT_PUBLIC_APP_URL` | La URL pública de la web | |
+| `PORT` | `3000` | Obligatoria: sin ella el contenedor escucha en el 80 y el dominio da 502 |
 | `FASTF1_SERVICE_URL` | URL interna del servicio de telemetría | Opcional: sin ella esa sección queda desactivada |
 
 ### 4. Conectar el webhook con GitHub
 
-1. En EasyPanel, dentro de la app `apexdata`, busca **Deploy webhook** (o
-   "Deployment → Webhook URL") y cópiala.
-2. En GitHub: repositorio → **Settings → Secrets and variables → Actions**.
-3. **New repository secret**: nombre `EASYPANEL_DEPLOY_HOOK`, valor la URL.
-4. En la pestaña **Variables** del mismo sitio, crea la variable `APP_URL` con
-   la URL pública (por ejemplo `https://apexdata.izistoreperu.com`). Si no
-   existe, CI se salta la comprobación de cutover en lugar de fallar.
+1. En EasyPanel, dentro de la app `apexdata`, pestaña **Deployments**, **al
+   final de la página**: el recuadro se llama **Deployment Trigger** (no
+   "Deploy webhook"). Copia la URL.
+2. **Cámbiale el principio antes de guardarla.** El panel la ofrece como
+   `http://<ip-del-vps>:3000/api/deploy/<token>` — sin cifrar, así que el token
+   viaja legible y quien lo capture puede lanzar despliegues. El mismo endpoint
+   responde por HTTPS en el dominio del panel: sustituye `http://<ip>:3000` por
+   `https://panel.dittochatbot.com` y deja intacto todo lo demás. Verificado:
+   con un token inválido devuelve `404 {"message":"Invalid Token"}`.
+3. En GitHub: repositorio → **Settings → Secrets and variables → Actions**.
+4. **New repository secret**: nombre `EASYPANEL_DEPLOY_HOOK`, valor la URL
+   `https://…`. Si en algún momento rotas el token con **Refresh Deploy
+   Token**, hay que actualizar este secret.
+5. En la pestaña **Variables** del mismo sitio, crea la variable `APP_URL` con
+   la URL pública (`https://apexdata.meeks.fun`). Va como variable y no como
+   secret porque no es información sensible. Si no existe, CI se salta la
+   comprobación de cutover en lugar de fallar.
 
 **Nunca dispares el webhook desde tu terminal**: quedaría en el historial y
 cualquiera podría lanzar despliegues, además de que construiría el commit que
@@ -121,6 +143,11 @@ qué código reinició.
 | CI falla en "Wait for cutover" pero la app se ve bien | Revisa que `APP_URL` apunte al dominio correcto y que `/api/health` responda |
 | La app carga pero la telemetría da 503 | Normal si `FASTF1_SERVICE_URL` no está configurada; revisa la app de telemetría |
 | `/api/health` responde 503 con `database: error` | Supabase pausado por inactividad, o credenciales mal |
+| **502** y una página de error de EasyPanel, con el contenedor arrancado | Desajuste de puertos. Mira en los logs qué puerto anuncia Next: debe coincidir con el de **Domains**. Falta `PORT=3000` |
+| **503** y esa misma página de error | No hay contenedor sano detrás. Si fuera la app quien responde 503 vendría un JSON, no HTML |
+| El build muere en `npx prisma generate` con `Missing required environment variable` | La config de Prisma exige variables que en el build no existen: EasyPanel las pasa como build args y el `Dockerfile` no declara ningún `ARG` |
+| El contenedor construye pero muere al arrancar con `Cannot find module` | La imagen es `output: "standalone"` y solo lleva lo que la app importa. Cualquier herramienta de desarrollo que se ejecute al arrancar se queda sin sus dependencias — por eso `prisma.config.ts` se borra en el runner |
+| `prisma migrate deploy` se queda colgado sin devolver nada | Está saliendo por el pooler (6543). Las migraciones necesitan la conexión directa (5432) |
 
 ### Volver atrás
 
