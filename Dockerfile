@@ -29,7 +29,14 @@ RUN npx prisma generate
 #
 # Check `free -h` on the host before raising this, and keep it comfortably
 # below MemAvailable — remember plastik builds on the same machine.
-RUN NODE_OPTIONS=--max-old-space-size=2048 npm run build
+# Placeholder connection strings, exactly as CI does it: the build runs no
+# queries, but importing a page constructs the Prisma client, which refuses to
+# be built without a syntactically valid URL. Deliberately NOT the real
+# credentials — EasyPanel offers them as build args, and accepting them would
+# bake the database password into the image's layer history for no gain.
+RUN DATABASE_URL="postgresql://user:password@localhost:5432/apexdata?schema=public" \
+    DIRECT_URL="postgresql://user:password@localhost:5432/apexdata?schema=public" \
+    NODE_OPTIONS=--max-old-space-size=2048 npm run build
 
 # ── runner ──────────────────────────────────────────────────────────────────
 FROM base AS runner
