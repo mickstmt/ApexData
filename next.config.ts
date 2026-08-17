@@ -34,12 +34,10 @@ const nextConfig: NextConfig = {
     // policy below stops any embedded script from running.
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
+    // No remotePatterns on purpose. Every image is self-hosted under
+    // public/images, and allowing arbitrary hosts would turn the optimizer
+    // into an open proxy: anyone could serve their own content from this
+    // domain, and the server would fetch hosts chosen by third parties.
   },
   experimental: {
     // Optimizaciones para production

@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     RELOAD: bool = True
 
+    # Set to "production" when deployed; hides the interactive API docs.
+    ENVIRONMENT: str = "development"
+
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000"
 

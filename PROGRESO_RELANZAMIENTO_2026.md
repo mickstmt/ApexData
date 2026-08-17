@@ -58,6 +58,16 @@
 
 ## Bitácora
 
+### 2026-08-17 (3) — Revisión de seguridad previa al despliegue ✅
+
+Pasada con la skill `security-review` sobre los cambios de despliegue y los tests. **Un hallazgo real** y dos notas de endurecimiento, todas corregidas:
+
+- **Proxy de imágenes abierto** (`next.config.ts`): `remotePatterns` con `hostname: '**'` aceptaba cualquier host, así que cualquiera podía servir su propia imagen **desde tu dominio** (phishing con tu certificado y tu reputación) y el servidor haría peticiones salientes a hosts elegidos por terceros. Como **ninguna imagen de la app es remota**, se eliminó por completo. Verificado: las locales siguen dando 200 y un host externo devuelve 400.
+- **Detalles internos en errores** del servicio Python: los `500` incluían el texto de la excepción, que el proxy de Next reenviaba al cliente y podía revelar rutas del servidor. Ahora se registra en el log y se devuelve un mensaje genérico.
+- **Docs de la API** (`/docs`, `/redoc`, `/openapi.json`): visibles en desarrollo, ocultas cuando `ENVIRONMENT=production`. Además CORS pasa a `allow_credentials=False` y solo `GET`, porque el servicio no maneja cookies ni sesiones.
+
+Verificado y descartado por el revisor: inyección SQL (las tres `$queryRaw` son *tagged templates* con parámetros vinculados), secretos versionados (ninguno), inyección de comandos en el workflow, XSS (cero `dangerouslySetInnerHTML`), deserialización, y que `/api/health` no filtra la URL del servicio ni errores de base de datos.
+
 ### 2026-08-17 (2) — Tests: la Fase 6 que nunca se empezó ✅
 
 El proyecto tenía **cero tests** y el CI solo verificaba que compilara. Antes de exponerlo a internet con despliegue automático en cada push, se añade la red de seguridad que faltaba — y que en plastik ya bloquea despliegues.

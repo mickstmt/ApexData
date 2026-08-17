@@ -1,10 +1,14 @@
 """
 Weather data endpoints
 """
+import logging
+
 from fastapi import APIRouter, HTTPException
 import fastf1
 from app.utils.cache_manager import cache_manager
 from app.utils.serialization import records
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -55,4 +59,5 @@ async def get_session_weather(
         return result
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching weather: {str(e)}")
+        logger.exception("Error fetching weather")
+        raise HTTPException(status_code=500, detail="Error fetching weather")

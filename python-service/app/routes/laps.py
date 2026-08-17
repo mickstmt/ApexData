@@ -1,12 +1,16 @@
 """
 Lap times and lap data endpoints
 """
+import logging
+
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 import fastf1
 import pandas as pd
 from app.utils.cache_manager import cache_manager
 from app.utils.serialization import records
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -80,7 +84,8 @@ async def get_session_laps(
         return result
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching laps: {str(e)}")
+        logger.exception("Error fetching laps")
+        raise HTTPException(status_code=500, detail="Error fetching laps")
 
 
 @router.get("/{year}/{event}/{session_type}/fastest")
@@ -132,7 +137,8 @@ async def get_fastest_laps(
         return result
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching fastest laps: {str(e)}")
+        logger.exception("Error fetching fastest laps")
+        raise HTTPException(status_code=500, detail="Error fetching fastest laps")
 
 
 @router.get("/{year}/{event}/{session_type}/driver/{driver}/analysis")
@@ -205,4 +211,5 @@ async def get_driver_lap_analysis(
         return result
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error analyzing driver laps: {str(e)}")
+        logger.exception("Error analyzing driver laps")
+        raise HTTPException(status_code=500, detail="Error analyzing driver laps")

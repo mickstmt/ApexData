@@ -1,12 +1,16 @@
 """
 Telemetry endpoints - Speed, RPM, Throttle, Brake, etc.
 """
+import logging
+
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 import fastf1
 import pandas as pd
 from app.utils.cache_manager import cache_manager
 from app.utils.serialization import records, format_lap_time
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -94,7 +98,8 @@ async def compare_drivers_telemetry(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error comparing telemetry: {str(e)}")
+        logger.exception("Error comparing telemetry")
+        raise HTTPException(status_code=500, detail="Error comparing telemetry")
 
 
 @router.get("/{year}/{event}/{session_type}/{driver}")
@@ -175,4 +180,5 @@ async def get_driver_telemetry(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching telemetry: {str(e)}")
+        logger.exception("Error fetching telemetry")
+        raise HTTPException(status_code=500, detail="Error fetching telemetry")

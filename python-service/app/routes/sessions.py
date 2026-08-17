@@ -1,10 +1,14 @@
 """
 Session and event information endpoints
 """
+import logging
+
 from fastapi import APIRouter, HTTPException
 import fastf1
 from app.utils.cache_manager import cache_manager
 from app.utils.serialization import records
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -36,7 +40,8 @@ async def get_season_schedule(year: int):
         return result
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching schedule: {str(e)}")
+        logger.exception("Error fetching schedule")
+        raise HTTPException(status_code=500, detail="Error fetching schedule")
 
 
 @router.get("/{year}/{event}")
@@ -65,7 +70,8 @@ async def get_event_info(year: int, event: str):
         return result
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching event: {str(e)}")
+        logger.exception("Error fetching event")
+        raise HTTPException(status_code=500, detail="Error fetching event")
 
 
 @router.get("/{year}/{event}/{session_type}/info")
@@ -104,4 +110,5 @@ async def get_session_info(year: int, event: str, session_type: str):
         return result
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching session info: {str(e)}")
+        logger.exception("Error fetching session info")
+        raise HTTPException(status_code=500, detail="Error fetching session info")

@@ -10,21 +10,28 @@ import fastf1
 # Configure FastF1 cache
 fastf1.Cache.enable_cache(settings.FASTF1_CACHE_DIR)
 
-# Create FastAPI app
+# The interactive docs are useful while developing but describe the whole
+# surface of a service that will be reachable from the internet, so they are
+# only mounted outside production.
+_is_production = settings.ENVIRONMENT == "production"
+
 app = FastAPI(
     title="ApexData F1 Telemetry Service",
     description="Microservice for F1 telemetry data using FastF1",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None if _is_production else "/redoc",
+    openapi_url=None if _is_production else "/openapi.json",
 )
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
+    # The service holds no cookies or sessions, so credentials are not needed
+    # and allowing them would only widen what a browser will send.
+    allow_credentials=False,
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
 
