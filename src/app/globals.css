@@ -13,7 +13,7 @@
     --card-foreground: 240 9% 9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 9% 9%;
-    --primary: 2 100% 38%;
+    --primary: 72 100% 24%;
     --primary-foreground: 0 0% 100%;
     --secondary: 240 6% 93%;
     --secondary-foreground: 240 9% 9%;
@@ -25,7 +25,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 240 8% 88%;
     --input: 240 8% 88%;
-    --ring: 2 100% 44%;
+    --ring: 72 100% 32%;
     --radius: 0.75rem;
 
     /* Broadcast timing convention: purple fastest overall, green personal
@@ -43,8 +43,8 @@
     --card-foreground: 240 11% 96%;
     --popover: 240 10% 12%;
     --popover-foreground: 240 11% 96%;
-    --primary: 2 100% 44%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 72 100% 50%;
+    --primary-foreground: 0 0% 0%;
     --secondary: 240 10% 12%;
     --secondary-foreground: 240 11% 96%;
     --muted: 240 10% 12%;
@@ -55,7 +55,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 240 10% 18%;
     --input: 240 10% 18%;
-    --ring: 3 100% 61%;
+    --ring: 72 100% 50%;
 
     /* Lightened so each one clears 4.5:1 on the carbon ground. */
     --fastest: 270 95% 75%;

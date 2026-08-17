@@ -52,9 +52,19 @@
 
 ## Bitácora
 
+### 2026-08-16 (7) — Corrección de identidad: vuelve el verde
+
+El rediseño había sustituido el verde lima original por rojo F1. Revisada la decisión con Frank, se restaura el verde, que además era la opción correcta técnicamente:
+- El rojo **choca con Ferrari**: el mismo color significaría marca de la app y equipo.
+- El rojo tampoco podía ser el estado "en vivo" si ya era la marca; ahora `--live` es rojo en exclusiva.
+- **Contraste**: `#CCFF00` sobre carbon da 16.7:1 (nivel AAA) frente a ~4:1 del rojo, que obligaba a inventar una variante clara solo para textos.
+- Ningún equipo de 2026 usa verde lima, así que es un color que la app puede hacer suyo.
+
+Detalle importante: en **modo claro** el lima como tinta sobre blanco solo alcanza 2:1, así que ese tema usa `hsl(72 100% 24%)` (4.9:1, mismo tono reconocible). Verificado con cálculo de contraste real y comprobado en el CSS servido. El icono de la app también pasa a verde.
+
 ### 2026-08-16 (6) — Sprint 3: Rediseño visual ✅
 
-**Sistema de diseño**: paleta carbon (`#0B0B0F`) con el rojo F1 reservado a marca y estado en vivo; tokens semánticos de timing (morado vuelta rápida, verde mejor personal, amarillo más lento — la convención de broadcast) con valores distintos por tema para mantener contraste. Todo pasa por variables CSS, así que el modo claro y oscuro se derivan del mismo sistema.
+**Sistema de diseño**: paleta carbon (`#0B0B0F`) con el **verde lima `#CCFF00` como acento de ApexData** y el rojo F1 reservado al estado en vivo; tokens semánticos de timing (morado vuelta rápida, verde mejor personal, amarillo más lento — la convención de broadcast) con valores distintos por tema para mantener contraste. Todo pasa por variables CSS, así que el modo claro y oscuro se derivan del mismo sistema.
 
 **Tipografía**: fuera Orbitron. Ahora **Chakra Petch** para titulares (carácter motorsport sin el cliché sci-fi), **Inter** para interfaz y **JetBrains Mono** para tiempos de vuelta.
 
