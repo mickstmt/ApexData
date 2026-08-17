@@ -6,6 +6,7 @@ from typing import Optional
 import fastf1
 import pandas as pd
 from app.utils.cache_manager import cache_manager
+from app.utils.serialization import records, format_lap_time
 
 router = APIRouter()
 
@@ -72,18 +73,18 @@ async def compare_drivers_telemetry(
             "driver1": {
                 "code": driver1,
                 "lap_number": int(lap_d1['LapNumber']),
-                "lap_time": str(lap_d1['LapTime']),
+                "lap_time": format_lap_time(lap_d1['LapTime']),
                 "compound": str(lap_d1['Compound']) if pd.notna(lap_d1['Compound']) else None,
-                "telemetry": tel_d1.to_dict(orient='records')
+                "telemetry": records(tel_d1)
             },
             "driver2": {
                 "code": driver2,
                 "lap_number": int(lap_d2['LapNumber']),
-                "lap_time": str(lap_d2['LapTime']),
+                "lap_time": format_lap_time(lap_d2['LapTime']),
                 "compound": str(lap_d2['Compound']) if pd.notna(lap_d2['Compound']) else None,
-                "telemetry": tel_d2.to_dict(orient='records')
+                "telemetry": records(tel_d2)
             },
-            "delta_time": str(lap_d1['LapTime'] - lap_d2['LapTime'])
+            "delta_time": format_lap_time(lap_d1['LapTime'] - lap_d2['LapTime'])
         }
 
         cache_manager.set(cache_key, result)
@@ -159,11 +160,11 @@ async def get_driver_telemetry(
         result = {
             "driver": driver,
             "lap_number": int(lap_data['LapNumber']),
-            "lap_time": str(lap_data['LapTime']),
+            "lap_time": format_lap_time(lap_data['LapTime']),
             "is_personal_best": bool(lap_data['IsPersonalBest']),
             "compound": str(lap_data['Compound']) if pd.notna(lap_data['Compound']) else None,
             "tyre_life": int(lap_data['TyreLife']) if pd.notna(lap_data['TyreLife']) else None,
-            "telemetry": telemetry.to_dict(orient='records')
+            "telemetry": records(telemetry)
         }
 
         # Cache result

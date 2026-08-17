@@ -6,6 +6,7 @@ from typing import Optional
 import fastf1
 import pandas as pd
 from app.utils.cache_manager import cache_manager
+from app.utils.serialization import records
 
 router = APIRouter()
 
@@ -71,7 +72,7 @@ async def get_session_laps(
                 "date": str(session.date)
             },
             "total_laps": len(laps_filtered),
-            "laps": laps_filtered.to_dict(orient='records')
+            "laps": records(laps_filtered)
         }
 
         cache_manager.set(cache_key, result)
@@ -119,11 +120,11 @@ async def get_fastest_laps(
                 "type": session_type,
                 "name": session.event['EventName']
             },
-            "fastest_laps": fastest[[
+            "fastest_laps": records(fastest[[
                 'Driver', 'DriverNumber', 'Team', 'LapTime', 'LapNumber',
                 'Compound', 'TyreLife', 'Sector1Time', 'Sector2Time', 'Sector3Time',
                 'SpeedI1', 'SpeedI2', 'SpeedFL', 'SpeedST'
-            ]].to_dict(orient='records')
+            ]])
         }
 
         cache_manager.set(cache_key, result)

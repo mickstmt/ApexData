@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { Trophy, Medal, Award } from 'lucide-react';
 import { DriverAvatar, TeamLogo } from '@/components/ui/OptimizedImage';
+import { teamColor } from '@/lib/team-colors';
 import { CountryFlag } from '@/components/ui/CountryFlag';
+import { PointsEvolution, type EvolutionSeries } from '@/components/charts/PointsEvolution';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
 import { prisma } from '@/lib/prisma';
 
@@ -51,7 +53,7 @@ async function getStandings(year: number) {
 
     const round = Math.max(latestDriverRound?.round ?? 0, latestConstructorRound?.round ?? 0);
 
-    if (round === 0) return { drivers: [], constructors: [], round: 0 };
+    if (round === 0) return { drivers: [], constructors: [], round: 0, evolution: [] as EvolutionSeries[] };
 
     const [driverRows, constructorRows] = await Promise.all([
       prisma.driverStanding.findMany({
@@ -68,23 +70,57 @@ async function getStandings(year: number) {
 
     // A driver's team is not part of the standings table, so it is read from
     // that season's most recent race entry.
-    const teamByDriver = new Map<string, string>();
+    const teamByDriver = new Map<string, { name: string; constructorId: string }>();
     // Walk back from the latest round until every driver has a team, instead of
     // pulling the whole season into memory.
     for (let lookup = round; lookup >= 1 && teamByDriver.size < driverRows.length; lookup--) {
       const entries = await prisma.result.findMany({
         where: { race: { year, round: lookup } },
-        include: { team: true },
+        select: {
+          driverId: true,
+          team: { select: { name: true, constructorId: true } },
+        },
       });
 
       for (const entry of entries) {
         if (!teamByDriver.has(entry.driverId)) {
-          teamByDriver.set(entry.driverId, entry.team.name);
+          teamByDriver.set(entry.driverId, entry.team);
         }
       }
     }
 
+    const topDriverIds = driverRows.slice(0, 5).map((row) => row.driverId);
+
+    const evolutionRows = await prisma.driverStanding.findMany({
+      where: { year, driverId: { in: topDriverIds } },
+      orderBy: { round: 'asc' },
+      include: { driver: { select: { driverId: true, familyName: true } } },
+    });
+
+    const evolution: EvolutionSeries[] = topDriverIds
+      .map((driverId) => {
+        const rows = evolutionRows.filter((row) => row.driverId === driverId);
+
+        // Index by round: a driver who joined mid-season has no entry for the
+        // early rounds, and mapping positionally would shift their whole line.
+        const byRound = new Map(rows.map((row) => [row.round, row.points]));
+        let carried = 0;
+        const points = Array.from({ length: round }, (_, index) => {
+          carried = byRound.get(index + 1) ?? carried;
+          return carried;
+        });
+
+        return {
+          driverId,
+          name: rows[0]?.driver.familyName ?? '',
+          constructorId: teamByDriver.get(driverId)?.constructorId ?? null,
+          points,
+        };
+      })
+      .filter((series) => series.name !== '' && series.points.length > 1);
+
     return {
+      evolution,
       round,
       drivers: driverRows.map((row) => ({
         position: row.position,
@@ -92,7 +128,8 @@ async function getStandings(year: number) {
         driverId: row.driver.driverId,
         nationality: row.driver.nationality,
         imageUrl: row.driver.imageUrl,
-        team: teamByDriver.get(row.driverId) ?? '—',
+        team: teamByDriver.get(row.driverId)?.name ?? '—',
+        constructorId: teamByDriver.get(row.driverId)?.constructorId ?? null,
         points: row.points,
         wins: row.wins,
       })),
@@ -107,7 +144,7 @@ async function getStandings(year: number) {
     };
   } catch (error) {
     console.error('Error fetching standings:', error);
-    return { drivers: [], constructors: [], round: 0 };
+    return { drivers: [], constructors: [], round: 0, evolution: [] as EvolutionSeries[] };
   }
 }
 
@@ -115,8 +152,12 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
   const params = await searchParams;
   const displayYear = params.season ? parseInt(params.season) : new Date().getFullYear();
 
-  const { drivers: driversStandings, constructors: constructorsStandings, round } =
-    await getStandings(displayYear);
+  const {
+    drivers: driversStandings,
+    constructors: constructorsStandings,
+    round,
+    evolution,
+  } = await getStandings(displayYear);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -136,6 +177,19 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
           {round > 0 && ` · tras la ronda ${round}`}
         </p>
       </div>
+
+      {evolution.length > 1 && (
+        <section className="mb-10">
+          <h2 className="mb-1 font-display text-xl font-semibold">Evolución del campeonato</h2>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Puntos acumulados de los cinco primeros. Los compañeros de equipo comparten color, así
+            que el segundo va con línea discontinua.
+          </p>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <PointsEvolution series={evolution} rounds={round} />
+          </div>
+        </section>
+      )}
 
       {driversStandings.length === 0 && constructorsStandings.length === 0 ? (
         <div className="rounded-lg border border-border bg-muted/50 p-12 text-center">
@@ -162,12 +216,17 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                   <Link
                     key={entry.driverId}
                     href={`/drivers/${entry.driverId}`}
-                    className={`flex items-center gap-4 rounded-lg border p-4 transition-colors ${
+                    className={`relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 pl-5 transition-colors ${
                       entry.position !== null && entry.position <= 3
-                        ? 'border-primary bg-primary/5'
+                        ? 'border-primary/40 bg-primary/5'
                         : 'border-border bg-card hover:border-primary'
                     }`}
                   >
+                    <span
+                      aria-hidden
+                      className="absolute inset-y-0 left-0 w-1"
+                      style={{ backgroundColor: teamColor(entry.constructorId).color }}
+                    />
                     {/* Position */}
                     <div className="flex w-12 items-center justify-center">
                       {medalIcon ? (
@@ -218,12 +277,17 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                   <Link
                     key={entry.constructorId}
                     href={`/constructors/${entry.constructorId}`}
-                    className={`flex items-center gap-4 rounded-lg border p-4 transition-colors ${
+                    className={`relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 pl-5 transition-colors ${
                       entry.position !== null && entry.position <= 3
-                        ? 'border-primary bg-primary/5'
+                        ? 'border-primary/40 bg-primary/5'
                         : 'border-border bg-card hover:border-primary'
                     }`}
                   >
+                    <span
+                      aria-hidden
+                      className="absolute inset-y-0 left-0 w-1"
+                      style={{ backgroundColor: teamColor(entry.constructorId).color }}
+                    />
                     {/* Position */}
                     <div className="flex w-12 items-center justify-center">
                       {medalIcon ? (

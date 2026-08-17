@@ -30,9 +30,27 @@ class CacheManager:
         return self.cache.get(cache_key)
 
     def set(self, key: str, value: any, ttl: int = None):
-        """Set value in cache with TTL"""
+        """Set value in cache with TTL.
+
+        The payload is proven JSON-serialisable first. A response containing
+        NaN fails when FastAPI encodes it, and caching it beforehand would
+        make every later request fail from cache with no way to recover short
+        of deleting the cache file.
+        """
         if not settings.CACHE_ENABLED or self.cache is None:
             return
+
+        try:
+            json.dumps(value, allow_nan=False)
+        except ValueError as error:
+            # NaN or Infinity: FastAPI will fail to encode this response, and a
+            # cached copy would keep failing until the cache file is deleted.
+            print(f"[cache] Not caching {key}: {error}")
+            return
+        except TypeError:
+            # Not JSON-native (numpy scalars, tuple keys) but picklable, which
+            # is all diskcache needs. Cached as before.
+            pass
 
         cache_key = self._generate_key(key)
         expire_time = ttl if ttl is not None else settings.CACHE_TTL

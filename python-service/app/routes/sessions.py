@@ -4,6 +4,7 @@ Session and event information endpoints
 from fastapi import APIRouter, HTTPException
 import fastf1
 from app.utils.cache_manager import cache_manager
+from app.utils.serialization import records
 
 router = APIRouter()
 
@@ -27,7 +28,7 @@ async def get_season_schedule(year: int):
         result = {
             "year": year,
             "total_events": len(schedule),
-            "events": schedule.to_dict(orient='records')
+            "events": records(schedule)
         }
 
         cache_manager.set(cache_key, result)
@@ -95,7 +96,7 @@ async def get_session_info(year: int, event: str, session_type: str):
                 "location": session.event['Location'],
                 "country": session.event['Country'],
             },
-            "results": results.to_dict(orient='records') if results is not None and not results.empty else []
+            "results": records(results) if results is not None and not results.empty else []
         }
 
         cache_manager.set(cache_key, result)

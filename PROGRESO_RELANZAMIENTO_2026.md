@@ -16,7 +16,7 @@
 
 ## Estado actual
 
-**Fase**: ✅ **Sprint 3 completado** (2026-08-16) · Sprints 0, 1 y 2 completados (2026-08-16).
+**Fase**: ✅ **Sprint 4 completado** (2026-08-16) · Sprints 0–3 completados (2026-08-16).
 
 **Cobertura de datos**: resultados y clasificación de **2015–2026**; standings oficiales de 2023–2026. Backfill de 2010–2014 y standings de 2015–2022 pendientes de ejecutar (`npm run seed:season -- <años>` y `npm run seed:standings -- <años>`).
 
@@ -26,12 +26,14 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: **Sprint 4 — Telemetría 2.0 y perfiles** (crosshair táctil en canvas, mapa del circuito por velocidad, estrategia de neumáticos, perfil de piloto con stats reales y head-to-head, standings con evolución).
+**Próximo paso**: **Sprint 5 — Producción** (deploy en Vercel + el VPS para el servicio Python, cron semanal de datos, checklist de seguridad, push post-GP, y la pantalla de administración para importar temporadas).
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
-- La página `/telemetry` (OpenF1) sigue siendo un demo; se fusionará en Telemetría 2.0 (S4).
-- El comparador `/compare` calcula stats sobre las últimas 5 carreras (engañoso); se rehace en S4.
+- La página `/telemetry` (OpenF1) sigue siendo un demo; conviene fusionarla con `/analysis`.
+- El comparador `/compare` calcula stats sobre las últimas 5 carreras (engañoso); el head-to-head del perfil de piloto ya lo sustituye, falta retirarlo.
+- El venv local tiene FastF1 3.7.0 aunque `requirements.txt` pide ≥3.8 (necesario para 2026): ejecutar `pip install -r requirements.txt` en el venv.
+- Pendientes de S4 no abordados: mapa del circuito coloreado por velocidad y gráfico de estrategia de neumáticos.
 - 11 warnings de lint (variables sin usar, algún `any`) — limpieza cosmética pendiente.
 
 **Decisiones tomadas**:
@@ -51,6 +53,27 @@
 ---
 
 ## Bitácora
+
+### 2026-08-16 (8) — Sprint 4: Telemetría 2.0 y perfiles ✅
+
+**Perfil de piloto**: pasa de mostrar 10 resultados sueltos a una ficha completa — carreras, victorias, podios, poles, vueltas rápidas y puntos calculados desde la BD (Hamilton: 298/89/165/81), tabla por temporada con posición final y equipo, y **cara a cara con el compañero** en carrera y clasificación (`src/lib/driver-stats.ts`).
+
+**Gráfico de evolución del campeonato** (`PointsEvolution`): puntos acumulados ronda a ronda de los cinco primeros, con crosshair y lectura fuera del área de trazado para que el dedo no tape el dato. El color sigue al equipo, no al puesto, y el segundo compañero va con línea discontinua — la convención de F1 que resuelve que dos pilotos compartan color.
+
+**Telemetría en canvas** (`TelemetryChart`): sustituye los SVG hechos a mano. Velocidad, acelerador y freno apilados con **un solo crosshair compartido**, para leer los tres canales en el mismo punto de la pista. Canvas porque una vuelta son miles de muestras por canal, muy por encima de lo que SVG repinta con fluidez en un móvil.
+
+**Fin de los datos hardcodeados**: `/analysis` se divide en shell de servidor + cliente, y los selectores salen de la base de datos (sesiones desde 2018, que es donde empieza FastF1, y la parrilla de la última carrera) en vez de las 5 sesiones y los 20 pilotos de 2024 escritos a mano.
+
+**Tres bugs del servicio Python, encontrados al probarlo de verdad**:
+- La telemetría contiene `NaN` legítimos (p. ej. distancia al coche de delante cuando vas líder), que **no son JSON válido**: la respuesta moría con 500. Resuelto con `app/utils/serialization.py`.
+- El caché guardaba la respuesta **antes** de que fallara la serialización, así que devolvía el error una y otra vez hasta borrar el archivo. Ahora valida antes de guardar.
+- Los tiempos salían como duraciones ISO (`P0DT0H1M29.165S`) en lugar de `1:29.165`.
+
+Con esto **la comparación de pilotos funciona por primera vez**: Verstappen 1:29.179 vs Leclerc 1:29.165 en Bahréin 2024, delta 0.014.
+
+**Correcciones de la revisión de código** (5 hallazgos): el guardián del caché rechazaba de más y habría desactivado el caché de dos endpoints (30s–2min por petición); la evolución se indexaba por posición en vez de por ronda, desplazando la línea de un piloto que se incorpore a mitad de temporada; `/analysis` reventaba con la lista de sesiones vacía; y las estadísticas por temporada dependían de un orden no garantizado.
+
+**Verificación**: lint 0 errores · type-check limpio · build correcto · servicio Python levantado y probado de punta a punta (telemetría, comparación y vueltas rápidas, también a través del proxy de Next).
 
 ### 2026-08-16 (7) — Corrección de identidad: vuelve el verde
 

@@ -4,6 +4,7 @@ Weather data endpoints
 from fastapi import APIRouter, HTTPException
 import fastf1
 from app.utils.cache_manager import cache_manager
+from app.utils.serialization import records
 
 router = APIRouter()
 
@@ -46,7 +47,7 @@ async def get_session_weather(
                 "type": session_type,
                 "name": session.event['EventName']
             },
-            "weather_data": weather.to_dict(orient='records')
+            "weather_data": records(weather)
         }
 
         cache_manager.set(cache_key, result)

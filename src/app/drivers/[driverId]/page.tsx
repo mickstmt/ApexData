@@ -1,33 +1,58 @@
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, Flag, Hash } from 'lucide-react';
+import { ArrowLeft, Calendar, Flag, Hash, Trophy, Medal, Timer, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DriverAvatar } from '@/components/ui/OptimizedImage';
 import { CountryFlag } from '@/components/ui/CountryFlag';
+import { TimingRow } from '@/components/ui/TimingRow';
+import { getDriverStats, getHeadToHead } from '@/lib/driver-stats';
+import { teamColor } from '@/lib/team-colors';
+
+export const dynamic = 'force-dynamic';
 
 interface DriverDetailPageProps {
-  params: Promise<{
-    driverId: string;
-  }>;
+  params: Promise<{ driverId: string }>;
 }
 
 export async function generateMetadata({ params }: DriverDetailPageProps) {
   const { driverId } = await params;
-  const driver = await prisma.driver.findUnique({
-    where: { driverId },
-  });
 
-  if (!driver) {
-    return {
-      title: 'Piloto no encontrado | ApexData',
-    };
+  try {
+    const driver = await prisma.driver.findUnique({ where: { driverId } });
+
+    if (driver) {
+      return {
+        title: `${driver.givenName} ${driver.familyName} | ApexData`,
+        description: `Estadísticas, temporadas y resultados de ${driver.givenName} ${driver.familyName} en la Fórmula 1.`,
+      };
+    }
+  } catch {
+    // Sin base de datos el título genérico basta.
   }
 
-  return {
-    title: `${driver.givenName} ${driver.familyName} | ApexData`,
-    description: `Información completa de ${driver.givenName} ${driver.familyName}, piloto de Fórmula 1`,
-  };
+  return { title: 'Piloto no encontrado | ApexData' };
+}
+
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Trophy;
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="mb-1.5 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" aria-hidden />
+        {label}
+      </div>
+      <div className="font-mono text-2xl font-bold tabular-nums">{value}</div>
+    </div>
+  );
 }
 
 export default async function DriverDetailPage({ params }: DriverDetailPageProps) {
@@ -44,11 +69,7 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
           take: 10,
           orderBy: { race: { date: 'desc' } },
           include: {
-            race: {
-              include: {
-                circuit: true,
-              },
-            },
+            race: { include: { circuit: true } },
             team: true,
           },
         },
@@ -59,12 +80,9 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
     hasError = true;
   }
 
-  if (!driver && !hasError) {
-    notFound();
-  }
+  if (!driver && !hasError) notFound();
 
-  // Si hay error de conexión, mostrar página de error
-  if (hasError) {
+  if (hasError || !driver) {
     return (
       <div className="container mx-auto px-4 py-12">
         <Link href="/drivers" className="mb-8 inline-block">
@@ -73,175 +91,257 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
             Volver a pilotos
           </Button>
         </Link>
-
-        <div className="mt-12 flex flex-col items-center justify-center rounded-lg border border-red-500/20 bg-red-500/5 p-12">
-          <div className="mb-4 text-6xl">⚠️</div>
-          <h2 className="mb-4 text-2xl font-bold">Base de datos no disponible</h2>
-          <p className="mb-6 max-w-md text-center text-muted-foreground">
-            No se puede conectar a la base de datos en este momento. Por favor, reactiva tu proyecto de Supabase.
+        <div className="mt-12 rounded-xl border border-border bg-card p-12 text-center">
+          <h2 className="mb-3 text-2xl font-bold">Base de datos no disponible</h2>
+          <p className="text-muted-foreground">
+            No se pudo cargar la ficha del piloto. Inténtalo de nuevo en un momento.
           </p>
-          <a
-            href="https://supabase.com/dashboard/projects"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Ir al Dashboard de Supabase
-          </a>
         </div>
       </div>
     );
   }
 
-  const age = driver!.dateOfBirth
-    ? new Date().getFullYear() - new Date(driver!.dateOfBirth).getFullYear()
+  const stats = await getDriverStats(driver.id);
+  const latestSeason = stats.seasons[0];
+  const headToHead = latestSeason ? await getHeadToHead(driver.id, latestSeason.year) : null;
+
+  const age = driver.dateOfBirth
+    ? new Date().getFullYear() - new Date(driver.dateOfBirth).getFullYear()
     : null;
 
+  const accent = teamColor(latestSeason?.constructorId);
+
   return (
-    <div className="container mx-auto px-4 py-12">
-      {/* Back button */}
-      <Link href="/drivers" className="mb-8 inline-block">
+    <div className="container mx-auto px-4 py-8 md:py-12">
+      <Link href="/drivers" className="mb-6 inline-block">
         <Button variant="outline" size="sm">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Volver a pilotos
         </Button>
       </Link>
 
-      {/* Header Section */}
-      <div className="mb-12 grid gap-8 md:grid-cols-[200px_1fr]">
-        {/* Avatar */}
-        <div className="flex items-center justify-center md:items-start">
-          <div className="overflow-hidden rounded-full border-4 border-primary bg-primary/10">
-            <DriverAvatar
-              src={driver!.imageUrl}
-              name={`${driver!.givenName} ${driver!.familyName}`}
-              size="xl"
-            />
-          </div>
+      {/* Cabecera */}
+      <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center">
+        <div
+          className="shrink-0 overflow-hidden rounded-full border-4"
+          style={{ borderColor: accent.color }}
+        >
+          <DriverAvatar
+            src={driver.imageUrl}
+            name={`${driver.givenName} ${driver.familyName}`}
+            size="xl"
+          />
         </div>
 
-        {/* Info */}
-        <div className="space-y-6">
-          {/* Name and Number */}
-          <div>
-            <div className="mb-2 flex items-center gap-3">
-              <h1 className="text-4xl font-bold md:text-5xl">
-                {driver!.givenName} {driver!.familyName}
-              </h1>
-              {driver!.permanentNumber && (
-                <span className="text-5xl font-bold text-primary">
-                  #{driver!.permanentNumber}
-                </span>
-              )}
-            </div>
-            {driver!.code && (
-              <div className="inline-block rounded-md bg-primary/10 px-3 py-1 text-sm font-bold text-primary">
-                {driver!.code}
-              </div>
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-3xl font-bold tracking-tight md:text-5xl">
+              {driver.givenName} {driver.familyName}
+            </h1>
+            {driver.permanentNumber && (
+              <span className="font-mono text-3xl font-bold tabular-nums text-muted-foreground md:text-4xl">
+                #{driver.permanentNumber}
+              </span>
             )}
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Nationality */}
-            <div className="rounded-lg border border-border bg-card p-4">
-              <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-                <Flag className="h-4 w-4" />
-                Nacionalidad
-              </div>
-              <div className="flex items-center gap-2 text-lg font-semibold">
-                <CountryFlag nationality={driver!.nationality} size={22} />
-                {driver!.nationality}
-              </div>
-            </div>
-
-            {/* Age */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-2">
+              <CountryFlag nationality={driver.nationality} size={18} />
+              {driver.nationality}
+            </span>
+            {latestSeason && (
+              <Link
+                href={`/constructors/${latestSeason.constructorId}`}
+                className="inline-flex items-center gap-2 hover:text-foreground"
+              >
+                <span
+                  aria-hidden
+                  className="inline-block h-3.5 w-1 rounded-sm"
+                  style={{ backgroundColor: accent.color }}
+                />
+                {latestSeason.team}
+              </Link>
+            )}
             {age && (
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  Edad
-                </div>
-                <div className="text-lg font-semibold">{age} años</div>
-              </div>
+              <span className="inline-flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" aria-hidden />
+                {age} años
+              </span>
             )}
-
-            {/* Permanent Number */}
-            {driver!.permanentNumber && (
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-                  <Hash className="h-4 w-4" />
-                  Número Permanente
-                </div>
-                <div className="text-lg font-semibold">{driver!.permanentNumber}</div>
-              </div>
+            {driver.code && (
+              <span className="inline-flex items-center gap-1.5">
+                <Hash className="h-4 w-4" aria-hidden />
+                {driver.code}
+              </span>
             )}
           </div>
-
-          {/* Bio */}
-          {driver!.dateOfBirth && (
-            <div className="rounded-lg border border-border bg-muted/50 p-4">
-              <p className="text-sm text-muted-foreground">
-                Nacido el {new Date(driver!.dateOfBirth).toLocaleDateString('es-ES', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </p>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Recent Results */}
-      {driver!.results.length > 0 && (
-        <div className="mb-12">
-          <h2 className="mb-6 text-2xl font-bold">
-            Resultados Recientes
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border text-left text-sm text-muted-foreground">
-                  <th className="pb-3 pr-4">Carrera</th>
-                  <th className="pb-3 pr-4">Circuito</th>
-                  <th className="pb-3 pr-4">Equipo</th>
-                  <th className="pb-3">Posición</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {driver!.results.map((result, index) => (
-                  <tr key={index} className="text-sm hover:bg-muted/50">
-                    <td className="py-3 pr-4 font-medium">
-                      {result.race.raceName}
-                    </td>
-                    <td className="py-3 pr-4 text-muted-foreground">
-                      {result.race.circuit.name}
-                    </td>
-                    <td className="py-3 pr-4 text-muted-foreground">
-                      {result.team.name}
-                    </td>
-                    <td className="py-3">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
-                        {result.position}
+      {/* Estadísticas de carrera */}
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <StatTile icon={Flag} label="Carreras" value={stats.races} />
+        <StatTile icon={Trophy} label="Victorias" value={stats.wins} />
+        <StatTile icon={Medal} label="Podios" value={stats.podiums} />
+        <StatTile icon={Timer} label="Poles" value={stats.poles} />
+        <StatTile icon={Zap} label="V. rápidas" value={stats.fastestLaps} />
+        <StatTile icon={Trophy} label="Puntos" value={stats.points} />
+      </div>
+
+      <p className="mb-10 text-sm text-muted-foreground">
+        Calculado sobre las temporadas cargadas en ApexData
+        {stats.seasons.length > 0 &&
+          ` (${stats.seasons[stats.seasons.length - 1].year}–${stats.seasons[0].year})`}
+        .
+      </p>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Cara a cara con el compañero */}
+        {headToHead && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Cara a cara {headToHead.year}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Frente a{' '}
+                <Link
+                  href={`/drivers/${headToHead.teammateId}`}
+                  className="text-foreground hover:underline"
+                >
+                  {headToHead.teammate}
+                </Link>
+              </p>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-5">
+              {(
+                [
+                  ['En carrera', headToHead.race],
+                  ['En clasificación', headToHead.qualifying],
+                ] as const
+              ).map(([label, duel]) => {
+                const total = duel.driver + duel.teammate;
+                const share = total > 0 ? (duel.driver / total) * 100 : 50;
+
+                return (
+                  <div key={label}>
+                    <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                      <span className="font-mono text-lg font-bold tabular-nums">
+                        {duel.driver}
                       </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                        {label}
+                      </span>
+                      <span className="font-mono text-lg font-bold tabular-nums text-muted-foreground">
+                        {duel.teammate}
+                      </span>
+                    </div>
+                    {/* Two segments with a surface gap, so the split reads at a glance. */}
+                    <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+                      <div
+                        className="rounded-l-full"
+                        style={{ width: `${share}%`, backgroundColor: accent.color }}
+                      />
+                      <div
+                        className="flex-1 rounded-r-full bg-muted"
+                        style={{ minWidth: total > 0 ? undefined : '50%' }}
+                      />
+                    </div>
+                    {total === 0 && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Sin duelos comparables esta temporada.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Temporadas */}
+        {stats.seasons.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Por temporada</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                      <th className="pb-2 pr-3 font-medium">Año</th>
+                      <th className="pb-2 pr-3 font-medium">Equipo</th>
+                      <th className="pb-2 pr-3 text-right font-medium">Pos</th>
+                      <th className="pb-2 pr-3 text-right font-medium">Vict</th>
+                      <th className="pb-2 text-right font-medium">Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {stats.seasons.map((season) => (
+                      <tr key={season.year}>
+                        <td className="py-2 pr-3 font-mono tabular-nums">{season.year}</td>
+                        <td className="py-2 pr-3">
+                          <span className="flex items-center gap-2">
+                            <span
+                              aria-hidden
+                              className="inline-block h-3 w-1 shrink-0 rounded-sm"
+                              style={{ backgroundColor: teamColor(season.constructorId).color }}
+                            />
+                            <span className="truncate">{season.team}</span>
+                          </span>
+                        </td>
+                        <td className="py-2 pr-3 text-right font-mono tabular-nums">
+                          {season.position ?? '—'}
+                        </td>
+                        <td className="py-2 pr-3 text-right font-mono tabular-nums">
+                          {season.wins}
+                        </td>
+                        <td className="py-2 text-right font-mono tabular-nums">
+                          {Math.round(season.points * 10) / 10}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Últimos resultados */}
+      {driver.results.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-3 font-display text-xl font-semibold">Últimos resultados</h2>
+          <div className="flex flex-col gap-2">
+            {driver.results.map((result) => (
+              <TimingRow
+                key={result.id}
+                position={result.position}
+                constructorId={result.team.constructorId}
+                href={`/results/${result.race.year}/${result.race.round}`}
+                value={result.points}
+                valueLabel="pts"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{result.race.raceName}</span>
+                  <span className="block truncate text-sm text-muted-foreground">
+                    {result.race.year} · {result.race.circuit.name}
+                  </span>
+                </span>
+              </TimingRow>
+            ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* External Link */}
-      {driver!.url && (
-        <div className="flex justify-center">
+      {driver.url && (
+        <div className="mt-10 text-center">
           <a
-            href={driver!.url}
+            href={driver.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-primary hover:underline"
+            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
           >
             Ver más información en Wikipedia →
           </a>
