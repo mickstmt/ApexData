@@ -5,12 +5,12 @@ import { useFavorites } from '@/contexts/FavoritesContext';
 import { DriverCard } from '@/components/drivers/DriverCard';
 import { ConstructorCard } from '@/components/constructors/ConstructorCard';
 import { Star, Users, Building2 } from 'lucide-react';
-import type { Driver, Constructor } from '@prisma/client';
+import type { Driver, Team } from '@prisma/client';
 
 export function FavoritesGrid() {
   const { favoriteDrivers, favoriteConstructors } = useFavorites();
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [constructors, setConstructors] = useState<Constructor[]>([]);
+  const [constructors, setConstructors] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function FavoritesGrid() {
           const constructorsRes = await fetch('/api/constructors');
           const constructorsData = await constructorsRes.json();
           const filteredConstructors = constructorsData.data.filter(
-            (c: Constructor) => favoriteConstructors.includes(c.constructorId)
+            (c: Team) => favoriteConstructors.includes(c.constructorId)
           );
           setConstructors(filteredConstructors);
         } else {
@@ -102,7 +102,7 @@ export function FavoritesGrid() {
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {constructors.map((constructor, index) => (
-              <ConstructorCard key={constructor.id} constructor={constructor} index={index} />
+              <ConstructorCard key={constructor.id} team={constructor} index={index} />
             ))}
           </div>
         </div>

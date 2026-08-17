@@ -35,7 +35,7 @@ export default async function RaceResultPage({ params }: RaceResultPageProps) {
       results: {
         include: {
           driver: true,
-          constructor: true,
+          team: true,
         },
         orderBy: {
           positionOrder: 'asc',
@@ -44,7 +44,7 @@ export default async function RaceResultPage({ params }: RaceResultPageProps) {
       qualifyings: {
         include: {
           driver: true,
-          constructor: true,
+          team: true,
         },
         orderBy: {
           position: 'asc',

@@ -1,115 +1,360 @@
 import Link from 'next/link';
+import Image from 'next/image';
+import { ArrowRight, CalendarDays, Flag, Trophy } from 'lucide-react';
+import { prisma } from '@/lib/prisma';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Trophy, Calendar, TrendingUp } from 'lucide-react';
+import { TimingRow } from '@/components/ui/TimingRow';
+import { CountryFlag } from '@/components/ui/CountryFlag';
+import { DriverAvatar } from '@/components/ui/OptimizedImage';
+import { RaceCountdown, LocalDateTime } from '@/components/home/RaceCountdown';
+import { raceStart } from '@/lib/race-time';
 
-export default function Home() {
+// The hub is "what is happening now", so it must never be baked at build time.
+export const dynamic = 'force-dynamic';
+
+export const metadata = {
+  title: 'ApexData | Datos y telemetría de Fórmula 1',
+  description: 'La próxima carrera, resultados y clasificación del campeonato en un vistazo.',
+};
+
+/**
+ * Race hub: what a fan wants on a race weekend — what is next, what just
+ * happened, and where the championship stands.
+ */
+async function getHubData() {
+  const now = new Date();
+
+  try {
+    // Race.date is midnight UTC and the start time lives in Race.time, so the
+    // window is widened by a day and the exact start is resolved in code.
+    const yesterday = new Date(now.getTime() - 86_400_000);
+
+    const [upcoming, lastRace] = await Promise.all([
+      prisma.race.findMany({
+        where: { date: { gte: yesterday } },
+        orderBy: { date: 'asc' },
+        take: 3,
+        include: { circuit: true },
+      }),
+      prisma.race.findFirst({
+        where: { date: { lte: now }, results: { some: {} } },
+        orderBy: { date: 'desc' },
+        include: {
+          circuit: true,
+          results: {
+            where: { position: { lte: 3 } },
+            orderBy: { position: 'asc' },
+            include: { driver: true, team: true },
+          },
+        },
+      }),
+    ]);
+
+    const nextRace = upcoming.find((race) => raceStart(race).getTime() >= now.getTime()) ?? null;
+
+    const year = lastRace?.year ?? nextRace?.year ?? now.getFullYear();
+
+    const latestStandingRound = await prisma.driverStanding.findFirst({
+      where: { year },
+      orderBy: { round: 'desc' },
+      select: { round: true },
+    });
+
+    const [driverStandings, constructorStandings] = latestStandingRound
+      ? await Promise.all([
+          prisma.driverStanding.findMany({
+            where: { year, round: latestStandingRound.round, position: { lte: 5 } },
+            orderBy: { position: 'asc' },
+            include: { driver: true },
+          }),
+          prisma.constructorStanding.findMany({
+            where: { year, round: latestStandingRound.round, position: { lte: 5 } },
+            orderBy: { position: 'asc' },
+            include: { team: true },
+          }),
+        ])
+      : [[], []];
+
+    // Each driver's current team, for the colour stripe. Reads the season's
+    // entries newest-first so a driver who sat out the last round still
+    // resolves, rather than falling back to the grey placeholder.
+    const teamByDriver = new Map<string, { name: string; constructorId: string }>();
+
+    if (driverStandings.length > 0) {
+      const entries = await prisma.result.findMany({
+        where: {
+          race: { year },
+          driverId: { in: driverStandings.map((entry) => entry.driverId) },
+        },
+        orderBy: { race: { round: 'desc' } },
+        select: {
+          driverId: true,
+          team: { select: { name: true, constructorId: true } },
+        },
+      });
+
+      for (const entry of entries) {
+        if (!teamByDriver.has(entry.driverId)) {
+          teamByDriver.set(entry.driverId, {
+            name: entry.team.name,
+            constructorId: entry.team.constructorId,
+          });
+        }
+      }
+    }
+
+    return { nextRace, lastRace, year, driverStandings, constructorStandings, teamByDriver };
+  } catch (error) {
+    console.error('Error loading race hub:', error);
+    return null;
+  }
+}
+
+export default async function Home() {
+  const data = await getHubData();
+
+  if (!data) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="mb-3 text-3xl font-bold">ApexData</h1>
+        <p className="text-muted-foreground">
+          No se pudo conectar con la base de datos. Vuelve a intentarlo en un momento.
+        </p>
+      </div>
+    );
+  }
+
+  const { nextRace, lastRace, year, driverStandings, constructorStandings, teamByDriver } = data;
+
+  const nextSessions = nextRace
+    ? (
+        [
+          ['Práctica 1', nextRace.fp1Date],
+          ['Práctica 2', nextRace.fp2Date],
+          ['Práctica 3', nextRace.fp3Date],
+          ['Sprint', nextRace.sprintDate],
+          ['Clasificación', nextRace.qualiDate],
+          ['Carrera', raceStart(nextRace)],
+        ] as const
+      ).filter(([, date]) => date !== null)
+    : [];
+
   return (
-    <div className="flex flex-col">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-background to-muted/20 px-4 py-20 md:py-32">
-        {/* Animated background pattern */}
-        <div className="absolute inset-0 -z-10 opacity-30">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
-          <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-        </div>
-        <div className="container relative mx-auto">
-          <div className="mx-auto max-w-4xl text-center">
-            <h1 className="mb-6 text-5xl font-bold tracking-tight md:text-7xl">
-              <span className="text-foreground">Apex</span>
-              <span className="text-primary">Data</span>
-            </h1>
-            <p className="mb-8 text-xl text-muted-foreground md:text-2xl">
-              Plataforma moderna de datos de Fórmula 1
-            </p>
-            <p className="mb-10 text-lg text-muted-foreground">
-              Información histórica desde 1950 y telemetría en tiempo real. Todo lo que necesitas para
-              seguir el mundo de la F1.
-            </p>
-            <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-              <Link href="/drivers">
-                <Button size="lg" className="w-full sm:w-auto">
-                  Explorar Pilotos
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+    <div className="container mx-auto px-4 py-8 md:py-12">
+      {/* Next race */}
+      {nextRace && (
+        <section className="mb-10">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+              Próxima carrera
+            </span>
+          </div>
+
+          <Card className="overflow-hidden">
+            <div className="grid gap-6 p-5 sm:p-6 md:grid-cols-[1fr_auto] md:items-center">
+              <div className="min-w-0">
+                <div className="mb-2 flex items-center gap-2">
+                  <CountryFlag country={nextRace.circuit.country} size={22} />
+                  <span className="truncate text-sm text-muted-foreground">
+                    {nextRace.circuit.name} · {nextRace.circuit.location}
+                  </span>
+                </div>
+
+                <h1 className="mb-3 font-display text-3xl font-bold tracking-tight md:text-4xl">
+                  {nextRace.raceName}
+                </h1>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <CalendarDays className="h-4 w-4" aria-hidden />
+                    <LocalDateTime value={raceStart(nextRace).toISOString()} />
+                  </span>
+                  <RaceCountdown target={raceStart(nextRace).toISOString()} />
+                </div>
+              </div>
+
+              {nextRace.circuit.imageUrl && (
+                <div className="justify-self-center md:justify-self-end">
+                  <Image
+                    src={nextRace.circuit.imageUrl}
+                    alt={`Trazado de ${nextRace.circuit.name}`}
+                    width={220}
+                    height={140}
+                    className="h-28 w-auto opacity-80 dark:invert"
+                  />
+                </div>
+              )}
+            </div>
+
+            {nextSessions.length > 1 && (
+              <div className="border-t border-border">
+                <ul className="grid grid-cols-2 divide-border sm:grid-cols-3 lg:grid-cols-6">
+                  {nextSessions.map(([label, date]) => (
+                    <li key={label} className="border-b border-r border-border p-3 last:border-r-0">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {label}
+                      </div>
+                      <div className="mt-0.5 text-sm">
+                        <LocalDateTime value={date!.toISOString()} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </Card>
+        </section>
+      )}
+
+      <div className="grid gap-8 lg:grid-cols-2">
+        {/* Last result */}
+        {lastRace && lastRace.results.length > 0 && (
+          <section>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 font-display text-xl font-semibold">
+                <Flag className="h-5 w-5 text-primary" aria-hidden />
+                Último resultado
+              </h2>
+              <Link
+                href={`/results/${lastRace.year}/${lastRace.round}`}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Ver todo
               </Link>
-              <Link href="/standings">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                  Ver Standings
-                </Button>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CountryFlag country={lastRace.circuit.country} size={18} />
+                  {lastRace.raceName}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                {lastRace.results.map((result) => (
+                  <TimingRow
+                    key={result.id}
+                    position={result.position}
+                    constructorId={result.team.constructorId}
+                    href={`/drivers/${result.driver.driverId}`}
+                    value={result.points}
+                    valueLabel="pts"
+                  >
+                    <DriverAvatar
+                      src={result.driver.imageUrl}
+                      name={`${result.driver.givenName} ${result.driver.familyName}`}
+                      size="sm"
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">
+                        {result.driver.givenName} {result.driver.familyName}
+                      </span>
+                      <span className="block truncate text-sm text-muted-foreground">
+                        {result.team.name}
+                      </span>
+                    </span>
+                  </TimingRow>
+                ))}
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
+        {/* Championship */}
+        {driverStandings.length > 0 && (
+          <section>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 font-display text-xl font-semibold">
+                <Trophy className="h-5 w-5 text-primary" aria-hidden />
+                Campeonato {year}
+              </h2>
+              <Link
+                href={`/standings?season=${year}`}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Ver todo
               </Link>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Features Section */}
-      <section className="border-b border-border px-4 py-16 md:py-24">
-        <div className="container mx-auto">
-          <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold md:text-4xl">
-              Todo sobre <span className="text-primary">Fórmula 1</span>
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Acceso completo a datos históricos y en tiempo real
-            </p>
-          </div>
+            <Card>
+              <CardContent className="flex flex-col gap-2 pt-4 sm:pt-5">
+                {driverStandings.map((entry) => {
+                  const team = teamByDriver.get(entry.driverId);
 
-          <div className="grid gap-8 md:grid-cols-3">
-            {/* Feature 1 */}
-            <div className="rounded-lg border border-border bg-card p-6 transition-colors hover:border-primary">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                <Trophy className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold">Pilotos & Equipos</h3>
-              <p className="text-muted-foreground">
-                Información completa de todos los pilotos y constructores desde 1950 hasta la actualidad.
-              </p>
-            </div>
+                  return (
+                    <TimingRow
+                      key={entry.id}
+                      position={entry.position}
+                      constructorId={team?.constructorId}
+                      href={`/drivers/${entry.driver.driverId}`}
+                      value={entry.points}
+                      valueLabel="pts"
+                    >
+                      <DriverAvatar
+                        src={entry.driver.imageUrl}
+                        name={`${entry.driver.givenName} ${entry.driver.familyName}`}
+                        size="sm"
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold">
+                          {entry.driver.givenName} {entry.driver.familyName}
+                        </span>
+                        <span className="block truncate text-sm text-muted-foreground">
+                          {team?.name ?? '—'}
+                        </span>
+                      </span>
+                    </TimingRow>
+                  );
+                })}
+              </CardContent>
+            </Card>
 
-            {/* Feature 2 */}
-            <div className="rounded-lg border border-border bg-card p-6 transition-colors hover:border-primary">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                <Calendar className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold">Calendario & Resultados</h3>
-              <p className="text-muted-foreground">
-                Calendario completo de la temporada con resultados de carreras, clasificación y sprints.
-              </p>
-            </div>
+            {constructorStandings.length > 0 && (
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle className="text-base">Constructores</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2">
+                  {constructorStandings.map((entry) => (
+                    <TimingRow
+                      key={entry.id}
+                      position={entry.position}
+                      constructorId={entry.team.constructorId}
+                      href={`/constructors/${entry.team.constructorId}`}
+                      value={entry.points}
+                      valueLabel="pts"
+                    >
+                      <span className="truncate font-semibold">{entry.team.name}</span>
+                    </TimingRow>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </section>
+        )}
+      </div>
 
-            {/* Feature 3 */}
-            <div className="rounded-lg border border-border bg-card p-6 transition-colors hover:border-primary">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                <TrendingUp className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold">Estadísticas & Análisis</h3>
-              <p className="text-muted-foreground">
-                Análisis detallado de rendimiento, standings y telemetría en tiempo real.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="px-4 py-16 md:py-24">
-        <div className="container mx-auto">
-          <div className="mx-auto max-w-3xl rounded-lg border border-border bg-muted/50 p-8 text-center md:p-12">
-            <h2 className="mb-4 text-3xl font-bold md:text-4xl">
-              ¿Listo para explorar?
-            </h2>
-            <p className="mb-8 text-lg text-muted-foreground">
-              Descubre toda la información de Fórmula 1 en un solo lugar
-            </p>
-            <Link href="/drivers">
-              <Button size="lg">
-                Comenzar ahora
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
+      {/* Entry points to the rest of the app */}
+      <section className="mt-12 flex flex-wrap gap-3">
+        <Link href="/calendar">
+          <Button variant="outline">
+            Calendario completo
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
+        <Link href="/circuits">
+          <Button variant="outline">
+            Circuitos
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
+        <Link href="/analysis">
+          <Button variant="outline">
+            Telemetría
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
       </section>
     </div>
   );

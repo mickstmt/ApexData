@@ -14,4 +14,4 @@ export * from './api/fastf1';
 export * from './common';
 
 // Re-export Prisma types for convenience
-export type { Driver, Constructor, Circuit, Season, Race, Result, Qualifying, SprintResult, ConstructorStanding } from '@prisma/client';
+export type { Driver, Team, Circuit, Season, Race, Result, Qualifying, SprintResult, ConstructorStanding } from '@prisma/client';

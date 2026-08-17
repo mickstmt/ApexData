@@ -46,8 +46,11 @@ model Driver {
   @@map("drivers")
 }
 
-/// Represents a Formula 1 constructor/team
-model Constructor {
+/// Represents a Formula 1 constructor/team.
+/// Named Team rather than Constructor because `prisma.constructor` collides
+/// with Object.prototype.constructor, which breaks both the delegate lookup
+/// and the generated row type.
+model Team {
   id             String   @id @default(cuid())
   constructorId  String   @unique // Ergast/Jolpica constructor ID (e.g., "mercedes")
   name           String
@@ -201,7 +204,7 @@ model Result {
   raceId          String
   driver          Driver       @relation(fields: [driverId], references: [id], onDelete: Restrict)
   driverId        String
-  constructor     Constructor  @relation(fields: [constructorId], references: [id], onDelete: Restrict)
+  team            Team         @relation(fields: [constructorId], references: [id], onDelete: Restrict)
   constructorId   String
 
   @@unique([raceId, driverId])
@@ -230,7 +233,7 @@ model Qualifying {
   raceId        String
   driver        Driver       @relation(fields: [driverId], references: [id], onDelete: Restrict)
   driverId      String
-  constructor   Constructor  @relation(fields: [constructorId], references: [id], onDelete: Restrict)
+  team          Team         @relation(fields: [constructorId], references: [id], onDelete: Restrict)
   constructorId String
 
   @@unique([raceId, driverId])
@@ -265,7 +268,7 @@ model SprintResult {
   raceId          String
   driver          Driver       @relation(fields: [driverId], references: [id], onDelete: Restrict)
   driverId        String
-  constructor     Constructor  @relation(fields: [constructorId], references: [id], onDelete: Restrict)
+  team            Team         @relation(fields: [constructorId], references: [id], onDelete: Restrict)
   constructorId   String
 
   @@unique([raceId, driverId])
@@ -294,7 +297,7 @@ model ConstructorStanding {
   updatedAt      DateTime @updatedAt
 
   // Relations
-  constructor    Constructor @relation(fields: [constructorId], references: [id], onDelete: Restrict)
+  team           Team        @relation(fields: [constructorId], references: [id], onDelete: Restrict)
   constructorId  String
 
   @@unique([year, round, constructorId])

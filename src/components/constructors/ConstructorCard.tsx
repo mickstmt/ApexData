@@ -6,7 +6,7 @@ import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { TeamLogo } from '@/components/ui/OptimizedImage';
 
 interface ConstructorCardProps {
-  constructor: {
+  team: {
     id: string;
     constructorId: string;
     name: string;
@@ -17,9 +17,9 @@ interface ConstructorCardProps {
   index?: number;
 }
 
-export function ConstructorCard({ constructor, index = 0 }: ConstructorCardProps) {
+export function ConstructorCard({ team, index = 0 }: ConstructorCardProps) {
   return (
-    <Link href={`/constructors/${constructor.constructorId}`}>
+    <Link href={`/constructors/${team.constructorId}`}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -30,28 +30,28 @@ export function ConstructorCard({ constructor, index = 0 }: ConstructorCardProps
       >
         {/* Favorite button */}
         <div className="absolute right-2 top-2 z-10">
-          <FavoriteButton id={constructor.constructorId} type="constructor" />
+          <FavoriteButton id={team.constructorId} type="constructor" />
         </div>
 
         {/* Logo */}
         <div className="mb-4">
           <TeamLogo
-            src={constructor.logoUrl}
-            name={constructor.name}
+            src={team.logoUrl}
+            name={team.name}
             size="md"
           />
         </div>
 
         {/* Nombre del equipo */}
         <h3 className="mb-3 text-xl font-bold text-foreground group-hover:text-primary transition-colors">
-          {constructor.name}
+          {team.name}
         </h3>
 
         {/* Información */}
         <div className="space-y-2 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <span className="text-xs">🌍</span>
-            <span>{constructor.nationality}</span>
+            <span>{team.nationality}</span>
           </div>
         </div>
 

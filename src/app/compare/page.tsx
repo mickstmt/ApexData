@@ -20,7 +20,7 @@ export default async function ComparePage() {
           take: 5,
           orderBy: { race: { date: 'desc' } },
           include: {
-            constructor: true,
+            team: true,
             race: {
               include: {
                 season: true,

@@ -81,7 +81,7 @@ async function main() {
 
   console.log('🏎️  Logos de equipos\n');
 
-  const constructors = (await prisma.constructor.findMany({
+  const constructors = (await prisma.team.findMany({
     orderBy: { constructorId: 'asc' },
   })) as Array<{ constructorId: string; name: string }>;
 

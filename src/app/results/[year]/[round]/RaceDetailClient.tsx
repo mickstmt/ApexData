@@ -3,17 +3,17 @@
 import { useState } from 'react';
 import { Trophy, Calendar, MapPin, Flag, Zap, Construction, Clock } from 'lucide-react';
 import Link from 'next/link';
-import type { Race, Circuit, Result, Driver, Constructor, Qualifying } from '@prisma/client';
+import type { Race, Circuit, Result, Driver, Team, Qualifying } from '@prisma/client';
 
 type RaceWithDetails = Race & {
   circuit: Circuit;
   results: (Result & {
     driver: Driver;
-    constructor: Constructor;
+    team: Team;
   })[];
   qualifyings: (Qualifying & {
     driver: Driver;
-    constructor: Constructor;
+    team: Team;
   })[];
 };
 
@@ -144,7 +144,7 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                   {race.results[0].driver.givenName} {race.results[0].driver.familyName}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  {race.results[0].constructor.name}
+                  {race.results[0].team.name}
                 </div>
               </div>
             )}
@@ -252,13 +252,13 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                           </Link>
                         </td>
 
-                        {/* Constructor */}
+                        {/* Team */}
                         <td className="p-4">
                           <Link
-                            href={`/constructors/${result.constructor.constructorId}`}
+                            href={`/constructors/${result.team.constructorId}`}
                             className="text-sm hover:text-primary transition-colors"
                           >
-                            {result.constructor.name}
+                            {result.team.name}
                           </Link>
                         </td>
 
@@ -321,7 +321,7 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                         {result.driver.givenName} {result.driver.familyName}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {result.constructor.name}
+                        {result.team.name}
                       </div>
                     </div>
                     <div className="font-bold text-primary">{result.points} pts</div>
@@ -382,7 +382,7 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                           {race.qualifyings[0].driver.givenName} {race.qualifyings[0].driver.familyName}
                         </div>
                         <div className="text-sm text-muted-foreground mt-1">
-                          {race.qualifyings[0].constructor.name}
+                          {race.qualifyings[0].team.name}
                         </div>
                       </div>
                       <div className="text-right">
@@ -470,13 +470,13 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                               </Link>
                             </td>
 
-                            {/* Constructor */}
+                            {/* Team */}
                             <td className="p-4">
                               <Link
-                                href={`/constructors/${result.constructor.constructorId}`}
+                                href={`/constructors/${result.team.constructorId}`}
                                 className="text-sm hover:text-primary transition-colors"
                               >
-                                {result.constructor.name}
+                                {result.team.name}
                               </Link>
                             </td>
 
@@ -541,7 +541,7 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                             {result.driver.givenName} {result.driver.familyName}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {result.constructor.name}
+                            {result.team.name}
                           </div>
                         </div>
                         <div className="font-mono font-bold text-primary">

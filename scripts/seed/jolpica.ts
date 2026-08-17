@@ -149,7 +149,7 @@ export async function upsertDriver(driver: JolpicaDriver) {
 }
 
 export async function upsertConstructor(constructor: JolpicaConstructor) {
-  const model = prisma.constructor;
+  const model = prisma.team;
 
   return model.upsert({
     where: { constructorId: constructor.constructorId },

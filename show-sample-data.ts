@@ -18,7 +18,7 @@ async function showSampleData() {
         take: 3,
         include: {
           driver: true,
-          constructor: true,
+          team: true,
         },
         orderBy: {
           positionOrder: 'asc',
@@ -53,8 +53,8 @@ async function showSampleData() {
       console.log(`      Nacionalidad:     ${result.driver.nationality}`);
       console.log(`      Fecha Nac.:       ${result.driver.dateOfBirth || 'N/A'}`);
       console.log(`      URL Wikipedia:    ${result.driver.url}`);
-      console.log(`      Constructor:      ${result.constructor.name}`);
-      console.log(`      Constructor URL:  ${result.constructor.url}`);
+      console.log(`      Constructor:      ${result.team.name}`);
+      console.log(`      Constructor URL:  ${result.team.url}`);
       console.log(`      Posición:         P${result.positionText}`);
       console.log(`      Grid:             ${result.grid}`);
       console.log(`      Puntos:           ${result.points}`);

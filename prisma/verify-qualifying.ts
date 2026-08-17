@@ -36,7 +36,7 @@ async function verifyQualifyingData() {
       include: {
         driver: true,
         race: true,
-        constructor: true
+        team: true
       }
     });
 
@@ -44,7 +44,7 @@ async function verifyQualifyingData() {
       console.log('\n📝 Ejemplo de registro (2024):');
       console.log(`  Carrera: ${sample.race.raceName} (Round ${sample.race.round})`);
       console.log(`  Piloto: ${sample.driver.givenName} ${sample.driver.familyName}`);
-      console.log(`  Constructor: ${sample.constructor.name}`);
+      console.log(`  Constructor: ${sample.team.name}`);
       console.log(`  Posición: P${sample.position}`);
       console.log(`  Q1: ${sample.q1 || 'N/A'}`);
       console.log(`  Q2: ${sample.q2 || 'N/A'}`);
@@ -61,7 +61,7 @@ async function verifyQualifyingData() {
       include: {
         driver: true,
         race: true,
-        constructor: true
+        team: true
       },
       orderBy: {
         race: { round: 'desc' }
@@ -72,7 +72,7 @@ async function verifyQualifyingData() {
       console.log('\n🏁 Última pole position 2024:');
       console.log(`  Carrera: ${polePosition.race.raceName}`);
       console.log(`  Piloto: ${polePosition.driver.givenName} ${polePosition.driver.familyName}`);
-      console.log(`  Constructor: ${polePosition.constructor.name}`);
+      console.log(`  Constructor: ${polePosition.team.name}`);
       console.log(`  Q3 Time: ${polePosition.q3}`);
       console.log('='.repeat(60));
     }

@@ -49,7 +49,7 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
                 circuit: true,
               },
             },
-            constructor: true,
+            team: true,
           },
         },
       },
@@ -219,7 +219,7 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
                       {result.race.circuit.name}
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">
-                      {result.constructor.name}
+                      {result.team.name}
                     </td>
                     <td className="py-3">
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">

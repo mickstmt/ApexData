@@ -28,7 +28,7 @@ export function transformDriver(jolpicaDriver: JolpicaDriver): Prisma.DriverCrea
 // CONSTRUCTOR TRANSFORMER
 // ============================================================================
 
-export function transformConstructor(jolpicaConstructor: JolpicaConstructor): Prisma.ConstructorCreateInput {
+export function transformConstructor(jolpicaConstructor: JolpicaConstructor): Prisma.TeamCreateInput {
   return {
     constructorId: jolpicaConstructor.constructorId,
     name: jolpicaConstructor.name,

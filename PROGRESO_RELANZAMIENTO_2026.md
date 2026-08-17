@@ -16,9 +16,9 @@
 
 ## Estado actual
 
-**Fase**: ✅ **Sprint 2 completado** (2026-08-16) · Sprints 0 y 1 completados (2026-08-16).
+**Fase**: ✅ **Sprint 3 completado** (2026-08-16) · Sprints 0, 1 y 2 completados (2026-08-16).
 
-**Cobertura de datos**: temporadas **2023–2026** (resultados, clasificación, sprints y standings oficiales). El nuevo seeder acepta cualquier año, así que ampliar el histórico es solo tiempo de máquina (~10 min por temporada).
+**Cobertura de datos**: resultados y clasificación de **2015–2026**; standings oficiales de 2023–2026. Backfill de 2010–2014 y standings de 2015–2022 pendientes de ejecutar (`npm run seed:season -- <años>` y `npm run seed:standings -- <años>`).
 
 **Imágenes**: 29 fotos de pilotos, 36 trazados de circuitos, 36 banderas y 8 logos de equipo, todo autoalojado en `public/images/` y vinculado en la BD.
 
@@ -26,10 +26,10 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: **Sprint 3 — Rediseño visual** (tokens de color carbon + colores de equipo, tipografía nueva, primitivos UI, tablas priority+ para iPhone, Race Hub como home y página de circuitos).
+**Próximo paso**: **Sprint 4 — Telemetría 2.0 y perfiles** (crosshair táctil en canvas, mapa del circuito por velocidad, estrategia de neumáticos, perfil de piloto con stats reales y head-to-head, standings con evolución).
 
 ### Deuda técnica conocida (documentada, no bloqueante)
-- **El modelo se llama `Constructor`**, que colisiona con `Object.prototype.constructor`: TypeScript no resuelve `prisma.constructor` ni el tipo `Constructor` generado. Workaround en `src/lib/prisma.ts` (export `constructors` + tipo `ConstructorModel` escrito a mano). **La solución definitiva es renombrar el modelo a `Team`** (con `@@map("constructors")` para no tocar la BD) — candidato para el Sprint 1 o 3.
+- ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
 - La página `/telemetry` (OpenF1) sigue siendo un demo; se fusionará en Telemetría 2.0 (S4).
 - El comparador `/compare` calcula stats sobre las últimas 5 carreras (engañoso); se rehace en S4.
 - 11 warnings de lint (variables sin usar, algún `any`) — limpieza cosmética pendiente.
@@ -51,6 +51,31 @@
 ---
 
 ## Bitácora
+
+### 2026-08-16 (6) — Sprint 3: Rediseño visual ✅
+
+**Sistema de diseño**: paleta carbon (`#0B0B0F`) con el rojo F1 reservado a marca y estado en vivo; tokens semánticos de timing (morado vuelta rápida, verde mejor personal, amarillo más lento — la convención de broadcast) con valores distintos por tema para mantener contraste. Todo pasa por variables CSS, así que el modo claro y oscuro se derivan del mismo sistema.
+
+**Tipografía**: fuera Orbitron. Ahora **Chakra Petch** para titulares (carácter motorsport sin el cliché sci-fi), **Inter** para interfaz y **JetBrains Mono** para tiempos de vuelta.
+
+**Colores de equipo** (`src/lib/team-colors.ts`): los 11 equipos de 2026 más las identidades históricas, cada uno con su color de identidad y una variante legible sobre fondo oscuro. Se usan como **barra vertical** en las filas de timing, nunca como tinta — por eso funcionan el negro de Mercedes o el blanco de Haas. Incluye los colores de compuesto de FastF1.
+
+**Componentes nuevos**: `Card` (cada página reimplementaba el mismo borde y fondo), `TimingRow` (fila de torre de tiempos con barra de equipo, posición y valor) y `CountryFlag`.
+
+**Race Hub**: la home deja de ser una landing de marketing y pasa a mostrar la próxima carrera con cuenta atrás en tu zona horaria, los horarios del fin de semana, el trazado del circuito, el podio de la última carrera y el top 5 de ambos campeonatos.
+
+**Página de circuitos**: sección nueva con los 36 trazados descargados, contador de carreras e historial.
+
+**Renombrado `Constructor` → `Team`**: la colisión con `Object.prototype.constructor` que arrastrábamos desde el S0 queda eliminada de raíz. El modelo mantiene `@@map("constructors")`, así que la base de datos no cambió; se actualizaron 22 archivos y desapareció el workaround de `src/lib/prisma.ts`.
+
+**Correcciones de la revisión de código** (8 hallazgos):
+- La home se habría **congelado en el momento del build** (sin `dynamic`), dejando la "próxima carrera" fija hasta el siguiente despliegue.
+- `Race.date` se guarda a medianoche UTC y la hora real vive en `Race.time`: la carrera se anunciaba con un día de antelación y la cuenta atrás expiraba ~15h antes. Resuelto con `src/lib/race-time.ts`.
+- Las fechas mostraban guiones en el HTML servido hasta la hidratación (y en la copia offline); ahora se renderiza UTC en servidor y se ajusta a la zona local en cliente.
+- La navegación de escritorio con 11 enlaces desbordaba en iPad; ahora `site.ts` es la única fuente de verdad y solo los principales van en la barra.
+- Consultas más ligeras en circuitos (`_count` en vez de traer 1.100 filas) y en el equipo actual de cada piloto.
+
+**Verificación**: lint 0 errores · type-check limpio · build correcto · páginas comprobadas en la app real (home, circuitos, equipos, detalle de equipo, clasificación, resultados históricos y ficha de piloto).
 
 ### 2026-08-16 (5) — Sprint 2: PWA para iOS ✅
 

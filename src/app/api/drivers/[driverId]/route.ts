@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 circuit: true,
               },
             },
-            constructor: true,
+            team: true,
           },
         },
       },

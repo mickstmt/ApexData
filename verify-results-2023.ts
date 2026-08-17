@@ -46,7 +46,7 @@ async function verifyResults2023() {
       results: {
         include: {
           driver: true,
-          constructor: true,
+          team: true,
         },
         orderBy: {
           positionOrder: 'asc',
@@ -65,7 +65,7 @@ async function verifyResults2023() {
     if (firstRace2023.results.length > 0) {
       console.log(`\n   Podio:`);
       firstRace2023.results.forEach((result, index) => {
-        console.log(`   ${index + 1}. ${result.driver.givenName} ${result.driver.familyName} (${result.constructor.name}) - ${result.points} pts`);
+        console.log(`   ${index + 1}. ${result.driver.givenName} ${result.driver.familyName} (${result.team.name}) - ${result.points} pts`);
       });
     }
   }
@@ -80,7 +80,7 @@ async function verifyResults2023() {
     distinct: ['driverId'],
     include: {
       driver: true,
-      constructor: false,
+      team: false,
     },
   });
 
@@ -97,13 +97,13 @@ async function verifyResults2023() {
     },
     distinct: ['constructorId'],
     include: {
-      constructor: true,
+      team: true,
     },
   });
 
   console.log(`\n🏎️  EQUIPOS EN 2023:\n`);
   console.log(`   Total de equipos: ${uniqueConstructors2023.length}`);
-  console.log(`   Equipos: ${uniqueConstructors2023.map(r => r.constructor.name).sort().join(', ')}`);
+  console.log(`   Equipos: ${uniqueConstructors2023.map(r => r.team.name).sort().join(', ')}`);
 
   console.log('\n' + '='.repeat(70));
   console.log('\n✅ VERIFICACIÓN COMPLETADA!\n');

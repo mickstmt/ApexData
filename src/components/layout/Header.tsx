@@ -1,83 +1,80 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { navItems } from '@/config/site';
+import { cn } from '@/lib/utils';
 
-const navLinks = [
-  { href: '/', label: 'Inicio' },
-  { href: '/drivers', label: 'Pilotos' },
-  { href: '/constructors', label: 'Equipos' },
-  { href: '/calendar', label: 'Calendario' },
-  { href: '/standings', label: 'Standings' },
-  { href: '/results', label: 'Resultados' },
-  { href: '/telemetry', label: 'Telemetría' },
-  { href: '/analysis', label: 'Análisis' },
-  { href: '/compare', label: 'Comparar' },
-  { href: '/favorites', label: 'Favoritos' },
-];
+const primaryItems = navItems.filter((item) => item.primary);
 
 export function Header() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
 
   return (
     // The safe-area padding pushes this below the notch / Dynamic Island once
     // the app runs standalone; on the web the inset is 0 and nothing changes.
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <nav className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2">
-          <div className="text-2xl font-bold">
+      <nav className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
+        <Link href="/" className="flex shrink-0 items-center">
+          <span className="font-display text-2xl font-bold tracking-tight">
             <span className="text-foreground">Apex</span>
             <span className="text-primary">Data</span>
-          </div>
+          </span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex md:items-center md:gap-6">
-          {navLinks.map((link) => (
+        {/* Only the primary entries sit in the bar; the rest are behind "Más",
+            which keeps the row from wrapping on iPads and small laptops. */}
+        <div className="hidden items-center gap-5 lg:flex">
+          {primaryItems.map((item) => (
             <Link
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium text-foreground/60 transition-colors hover:text-foreground hover:text-primary"
+              key={item.href}
+              href={item.href}
+              aria-current={isActive(item.href) ? 'page' : undefined}
+              className={cn(
+                'text-sm font-medium transition-colors hover:text-primary',
+                isActive(item.href) ? 'text-foreground' : 'text-foreground/60'
+              )}
             >
-              {link.label}
+              {item.title}
             </Link>
           ))}
-          <ThemeToggle />
         </div>
 
-        {/* Mobile menu button and theme toggle */}
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-2">
           <ThemeToggle />
           <button
             type="button"
             className="rounded-md p-2 text-foreground hover:bg-accent"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={menuOpen}
           >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
+            {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
       </nav>
 
-      {/* Mobile Navigation */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-border bg-background">
-          <div className="container mx-auto space-y-1 px-4 py-4">
-            {navLinks.map((link) => (
+      {menuOpen && (
+        <div className="border-t border-border bg-background">
+          <div className="container mx-auto grid grid-cols-2 gap-1 px-4 py-4 sm:grid-cols-3">
+            {navItems.map((item) => (
               <Link
-                key={link.href}
-                href={link.href}
-                className="block rounded-md px-3 py-2 text-base font-medium text-foreground/60 hover:bg-accent hover:text-primary"
-                onClick={() => setMobileMenuOpen(false)}
+                key={item.href}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                className={cn(
+                  'rounded-md px-3 py-2 text-base font-medium hover:bg-accent hover:text-primary',
+                  isActive(item.href) ? 'text-foreground' : 'text-foreground/60'
+                )}
               >
-                {link.label}
+                {item.title}
               </Link>
             ))}
           </div>

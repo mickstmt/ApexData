@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Orbitron, Inter, Roboto_Mono } from 'next/font/google';
+import { Chakra_Petch, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -12,9 +12,12 @@ import { ThemeColorSync } from '@/components/pwa/ThemeColorSync';
 import { IosInstallHint } from '@/components/pwa/IosInstallHint';
 import { APPLE_STARTUP_IMAGES } from '@/lib/apple-splash';
 
-const orbitron = Orbitron({
+// Chakra Petch carries the motorsport character without the sci-fi cliché
+// Orbitron brings; its real italics give headings the forward lean F1 uses.
+const display = Chakra_Petch({
   subsets: ['latin'],
-  variable: '--font-orbitron',
+  weight: ['500', '600', '700'],
+  variable: '--font-display',
   display: 'swap',
 });
 
@@ -24,9 +27,10 @@ const inter = Inter({
   display: 'swap',
 });
 
-const robotoMono = Roboto_Mono({
+// Lap times are read digit by digit, so they get a true monospace.
+const mono = JetBrains_Mono({
   subsets: ['latin'],
-  variable: '--font-roboto-mono',
+  variable: '--font-mono',
   display: 'swap',
 });
 
@@ -79,7 +83,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${orbitron.variable} ${inter.variable} ${robotoMono.variable}`} suppressHydrationWarning>
+    <html lang="es" className={`${display.variable} ${inter.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="flex min-h-dvh flex-col" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"

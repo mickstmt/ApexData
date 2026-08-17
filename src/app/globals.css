@@ -3,49 +3,65 @@
 @tailwind utilities;
 
 @layer base {
+  /* Carbon canvas, F1 red reserved for brand and live state. Everything that
+     carries meaning — team colours, tyre compounds, sector deltas — is defined
+     alongside so colour always encodes data rather than decoration. */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --primary: 76 100% 50%;
-    --primary-foreground: 0 0% 0%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 76 100% 50%;
-    --radius: 0.5rem;
+    --background: 240 5% 97%;
+    --foreground: 240 9% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 240 9% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
+    --popover-foreground: 240 9% 9%;
+    --primary: 2 100% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 6% 93%;
+    --secondary-foreground: 240 9% 9%;
+    --muted: 240 6% 93%;
+    --muted-foreground: 240 5% 35%;
+    --accent: 240 6% 93%;
+    --accent-foreground: 240 9% 9%;
+    --destructive: 2 100% 38%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 8% 88%;
+    --input: 240 8% 88%;
+    --ring: 2 100% 44%;
+    --radius: 0.75rem;
+
+    /* Broadcast timing convention: purple fastest overall, green personal
+       best, yellow slower. Fans read these without a legend. */
+    --fastest: 271 81% 46%;
+    --personal-best: 160 84% 30%;
+    --slower: 38 92% 38%;
+    --live: 2 100% 44%;
   }
 
   .dark {
-    --background: 0 0% 7.5%;
-    --foreground: 0 0% 98%;
-    --primary: 76 100% 50%;
-    --primary-foreground: 0 0% 0%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 76 100% 50%;
-    --card: 0 0% 10.2%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 10.2%;
-    --popover-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
+    --background: 240 15% 5%;
+    --foreground: 240 11% 96%;
+    --card: 240 9% 9%;
+    --card-foreground: 240 11% 96%;
+    --popover: 240 10% 12%;
+    --popover-foreground: 240 11% 96%;
+    --primary: 2 100% 44%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 10% 12%;
+    --secondary-foreground: 240 11% 96%;
+    --muted: 240 10% 12%;
+    --muted-foreground: 240 6% 65%;
+    --accent: 240 10% 15%;
+    --accent-foreground: 240 11% 96%;
+    --destructive: 3 100% 61%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 3 100% 61%;
+
+    /* Lightened so each one clears 4.5:1 on the carbon ground. */
+    --fastest: 270 95% 75%;
+    --personal-best: 158 64% 52%;
+    --slower: 43 96% 56%;
+    --live: 3 100% 61%;
   }
 
   * {
@@ -72,12 +88,12 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-orbitron), system-ui, sans-serif;
+    font-family: var(--font-display), system-ui, sans-serif;
     font-weight: 700;
     letter-spacing: -0.02em;
   }
 
   .font-display {
-    font-family: var(--font-orbitron), system-ui, sans-serif !important;
+    font-family: var(--font-display), system-ui, sans-serif !important;
   }
 }

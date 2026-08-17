@@ -1,22 +1,13 @@
 'use client';
 
+import type { Team } from '@prisma/client';
+
 import { useState, useMemo } from 'react';
 import { ConstructorCard } from './ConstructorCard';
 import { Search } from 'lucide-react';
 
-interface Constructor {
-  id: string;
-  constructorId: string;
-  name: string;
-  nationality: string;
-  url: string | null;
-  logoUrl: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 interface ConstructorsSearchProps {
-  constructors: Constructor[];
+  constructors: Team[];
 }
 
 export function ConstructorsSearch({ constructors }: ConstructorsSearchProps) {
@@ -84,7 +75,7 @@ export function ConstructorsSearch({ constructors }: ConstructorsSearchProps) {
       {filteredConstructors.length > 0 ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredConstructors.map((constructor, index) => (
-            <ConstructorCard key={constructor.id} constructor={constructor} index={index} />
+            <ConstructorCard key={constructor.id} team={constructor} index={index} />
           ))}
         </div>
       ) : (

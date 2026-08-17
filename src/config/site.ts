@@ -16,48 +16,20 @@ export const siteConfig = {
 } as const;
 
 /**
- * Primary navigation. Keep in sync with the links rendered by
- * src/components/layout/Header.tsx.
+ * Primary navigation, consumed by the header (desktop bar and mobile sheet).
+ * `primary: false` keeps an entry out of the always-visible desktop row, which
+ * otherwise overflows its container on narrow laptops and iPads.
  */
 export const navItems = [
-  {
-    title: 'Inicio',
-    href: '/',
-    description: 'Vista general de la temporada actual',
-  },
-  {
-    title: 'Calendario',
-    href: '/calendar',
-    description: 'Calendario completo de la temporada',
-  },
-  {
-    title: 'Pilotos',
-    href: '/drivers',
-    description: 'Información y estadísticas de pilotos',
-  },
-  {
-    title: 'Equipos',
-    href: '/constructors',
-    description: 'Constructores y sus historiales',
-  },
-  {
-    title: 'Clasificación',
-    href: '/standings',
-    description: 'Campeonato de pilotos y constructores',
-  },
-  {
-    title: 'Resultados',
-    href: '/results',
-    description: 'Resultados carrera a carrera',
-  },
-  {
-    title: 'Telemetría',
-    href: '/telemetry',
-    description: 'Datos de sesión en tiempo real',
-  },
-  {
-    title: 'Análisis',
-    href: '/analysis',
-    description: 'Telemetría detallada y comparación de vueltas',
-  },
+  { title: 'Inicio', href: '/', primary: true },
+  { title: 'Pilotos', href: '/drivers', primary: true },
+  { title: 'Equipos', href: '/constructors', primary: true },
+  { title: 'Calendario', href: '/calendar', primary: true },
+  { title: 'Clasificación', href: '/standings', primary: true },
+  { title: 'Resultados', href: '/results', primary: true },
+  { title: 'Circuitos', href: '/circuits', primary: false },
+  { title: 'Telemetría', href: '/analysis', primary: false },
+  { title: 'En vivo', href: '/telemetry', primary: false },
+  { title: 'Comparar', href: '/compare', primary: false },
+  { title: 'Favoritos', href: '/favorites', primary: false },
 ] as const;

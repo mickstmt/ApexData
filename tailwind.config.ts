@@ -46,6 +46,11 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        // Timing semantics, kept apart from the brand accent.
+        fastest: 'hsl(var(--fastest))',
+        'personal-best': 'hsl(var(--personal-best))',
+        slower: 'hsl(var(--slower))',
+        live: 'hsl(var(--live))',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -54,8 +59,8 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-orbitron)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-roboto-mono)', 'monospace'],
+        display: ['var(--font-display)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
       },
       keyframes: {
         'accordion-down': {

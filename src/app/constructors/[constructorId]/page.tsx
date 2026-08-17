@@ -1,4 +1,4 @@
-import { constructors as constructorsModel } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Flag, Trophy, Medal, Users } from 'lucide-react';
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: ConstructorDetailPageProps) {
   const { constructorId } = await params;
 
   try {
-    const constructor = await constructorsModel.findUnique({
+    const constructor = await prisma.team.findUnique({
       where: { constructorId },
     });
 
@@ -39,7 +39,7 @@ export default async function ConstructorDetailPage({ params }: ConstructorDetai
   let hasError = false;
 
   try {
-    constructor = await constructorsModel.findUnique({
+    constructor = await prisma.team.findUnique({
       where: { constructorId },
       include: {
         results: {
@@ -49,7 +49,7 @@ export default async function ConstructorDetailPage({ params }: ConstructorDetai
             driver: true,
             // Explícito para que TypeScript no herede Object.prototype.constructor
             // al comparar este literal con ResultInclude. Ver src/lib/prisma.ts.
-            constructor: false,
+            team: false,
           },
         },
       },

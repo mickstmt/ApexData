@@ -15,8 +15,7 @@ import { PUBLIC_IMAGES } from './lib';
 
 const prisma = new PrismaClient();
 
-// prisma.constructor collides with Object.prototype.constructor; see src/lib/prisma.ts.
-const constructorsModel = prisma.constructor;
+// prisma.team collides with Object.prototype.constructor; see src/lib/prisma.ts.
 
 /** Maps "<id>.<ext>" filenames to `{ id: "/images/<folder>/<file>" }`. */
 async function indexFolder(folder: string): Promise<Map<string, string>> {
@@ -42,7 +41,7 @@ async function main() {
 
   const [drivers, constructors, circuits] = await Promise.all([
     prisma.driver.findMany({ select: { id: true, driverId: true, imageUrl: true } }),
-    constructorsModel.findMany(),
+    prisma.team.findMany(),
     prisma.circuit.findMany({ select: { id: true, circuitId: true, imageUrl: true } }),
   ]);
 
@@ -62,7 +61,7 @@ async function main() {
     const path = constructorImages.get(constructor.constructorId) ?? null;
     if (path === constructor.logoUrl) continue;
 
-    await prisma.constructor.update({ where: { id: constructor.id }, data: { logoUrl: path } });
+    await prisma.team.update({ where: { id: constructor.id }, data: { logoUrl: path } });
     path ? linked++ : cleared++;
   }
   console.log(`   Equipos:    ${constructorImages.size} logos disponibles`);

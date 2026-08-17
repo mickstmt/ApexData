@@ -83,7 +83,7 @@ async function verifyCompleteData() {
 
   // Check constructors
   console.log('\n\n🏎️  CONSTRUCTORES:');
-  const constructors = await prisma.constructor.findMany({
+  const constructors = await prisma.team.findMany({
     orderBy: { name: 'asc' },
   });
 

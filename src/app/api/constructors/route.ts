@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     // Try database first
     if (!year || year === 'current') {
-      const constructorsFromDb = await prisma.constructor.findMany({
+      const constructorsFromDb = await prisma.team.findMany({
         where: nationality ? { nationality } : undefined,
         take: limit ? parseInt(limit) : 50,
         skip: offset ? parseInt(offset) : 0,

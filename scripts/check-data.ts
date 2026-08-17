@@ -48,13 +48,13 @@ async function main() {
 
   const [drivers, constructors, circuits] = await Promise.all([
     prisma.driver.count(),
-    prisma.constructor.count(),
+    prisma.team.count(),
     prisma.circuit.count(),
   ]);
 
   const [withPhoto, withLogo, withLayout] = await Promise.all([
     prisma.driver.count({ where: { imageUrl: { not: null } } }),
-    prisma.constructor.count({ where: { logoUrl: { not: null } } }),
+    prisma.team.count({ where: { logoUrl: { not: null } } }),
     prisma.circuit.count({ where: { imageUrl: { not: null } } }),
   ]);
 

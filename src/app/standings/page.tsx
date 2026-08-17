@@ -40,12 +40,12 @@ async function getStandings(year: number) {
     // in either one rather than assuming they advanced together.
     const [latestDriverRound, latestConstructorRound] = await Promise.all([
       prisma.driverStanding.findFirst({ where: { year }, orderBy: { round: 'desc' }, select: { round: true } }),
-      // `constructor: false` keeps this literal from inheriting
+      // `team: false` keeps this literal from inheriting
       // Object.prototype.constructor, which Prisma rejects as a select key.
       prisma.constructorStanding.findFirst({
         where: { year },
         orderBy: { round: 'desc' },
-        select: { round: true, constructor: false },
+        select: { round: true, team: false },
       }),
     ]);
 
@@ -62,7 +62,7 @@ async function getStandings(year: number) {
       prisma.constructorStanding.findMany({
         where: { year, round },
         orderBy: [{ position: 'asc' }],
-        include: { constructor: true },
+        include: { team: true },
       }),
     ]);
 
@@ -74,12 +74,12 @@ async function getStandings(year: number) {
     for (let lookup = round; lookup >= 1 && teamByDriver.size < driverRows.length; lookup--) {
       const entries = await prisma.result.findMany({
         where: { race: { year, round: lookup } },
-        include: { constructor: true },
+        include: { team: true },
       });
 
       for (const entry of entries) {
         if (!teamByDriver.has(entry.driverId)) {
-          teamByDriver.set(entry.driverId, entry.constructor.name);
+          teamByDriver.set(entry.driverId, entry.team.name);
         }
       }
     }
@@ -98,9 +98,9 @@ async function getStandings(year: number) {
       })),
       constructors: constructorRows.map((row) => ({
         position: row.position,
-        team: row.constructor.name,
-        constructorId: row.constructor.constructorId,
-        logoUrl: row.constructor.logoUrl,
+        team: row.team.name,
+        constructorId: row.team.constructorId,
+        logoUrl: row.team.logoUrl,
         points: row.points,
         wins: row.wins,
       })),

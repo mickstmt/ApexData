@@ -26,7 +26,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
       results: {
         include: {
           driver: true,
-          constructor: true,
+          team: true,
         },
         orderBy: {
           positionOrder: 'asc',
@@ -134,16 +134,16 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
                       </td>
                       <td className="p-4">
                         <Link
-                          href={`/constructors/${winner.constructor.constructorId}`}
+                          href={`/constructors/${winner.team.constructorId}`}
                           className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
                         >
                           <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/20">
                             <span className="text-xs font-bold text-primary">
-                              {getTeamAbbr(winner.constructor.name)}
+                              {getTeamAbbr(winner.team.name)}
                             </span>
                           </div>
                           <span className="text-muted-foreground">
-                            {winner.constructor.name}
+                            {winner.team.name}
                           </span>
                         </Link>
                       </td>
