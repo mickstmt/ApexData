@@ -18,7 +18,7 @@
 
 **Fase**: ✅ **Sprint 4 completado** (2026-08-16) · Sprints 0–3 completados (2026-08-16).
 
-**Cobertura de datos**: resultados y clasificación de **2010–2026** (17 temporadas); standings oficiales de 2015–2026 (2010–2014 en curso). 84 pilotos, 25 equipos, 55 circuitos.
+**Cobertura de datos**: **2010–2026 completo** (17 temporadas) — resultados, clasificación y standings oficiales. 84 pilotos, 25 equipos, 55 circuitos.
 
 **Imágenes**: 29 fotos de pilotos, 36 trazados de circuitos, 36 banderas y 8 logos de equipo, todo autoalojado en `public/images/` y vinculado en la BD.
 
@@ -41,15 +41,16 @@
 - ✅ **Hosting del microservicio Python: el mismo VPS** (2026-08-16). Frank ya tiene un VPS con varios aplicativos desplegados; el servicio FastF1 (que ya tiene Dockerfile) se despliega ahí en S5. Esto elimina el único coste previsto (~$5/mes de Railway) → **coste total del proyecto: $0/mes**. Pendiente de recabar en S5: proveedor/SO del VPS, RAM/disco disponibles, si usa Docker y qué reverse proxy (Nginx/Caddy/Traefik) sirve los demás aplicativos.
 
 **Decisiones pendientes**:
-- [ ] **Cuánto histórico cargar**. Hoy: 2023–2026. El seeder acepta cualquier año a ~10 min por temporada, desatendido. Desde 2000 ≈ 5 h; desde 1950 ≈ 15 h. El tamaño no es problema (todo el histórico ronda 20–40 MB frente a los 500 MB del plan gratuito de Supabase). Recomendación: lanzar 1950–2022 en segundo plano cuando convenga.
-- [ ] Dominio propio vs subdominio de Vercel (se decide en S5).
+- [ ] Ampliar el histórico más atrás de 2010 (opcional; ~10 min por temporada, desatendido).
+- [ ] Subdominio para la app (p. ej. `apexdata.izistoreperu.com`) — se elige al crear la app en EasyPanel.
 
 ---
 
 ## Acciones pendientes de Frank
 
-1. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
-2. **Decidir cuánto histórico cargar** (ver "Decisiones pendientes").
+1. **Desplegar en EasyPanel** (pendiente de tener acceso al panel). Guía completa paso a paso en **`DEPLOY.md`**: crear las dos apps, variables de entorno, y conectar el webhook como secret de GitHub. Dato a comprobar al entrar: RAM libre del VPS, para confirmar que soporta ApexData además de plastik.
+2. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
+3. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
 
 ---
 
