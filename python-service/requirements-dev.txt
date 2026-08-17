@@ -1,0 +1,4 @@
+# Development and CI only — not installed in the production image.
+-r requirements.txt
+
+pytest>=8.0.0

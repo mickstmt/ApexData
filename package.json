@@ -20,7 +20,9 @@
     "images:link": "tsx scripts/images/seed-paths.ts",
     "images:all": "npm run images:drivers && npm run images:logos && npm run images:circuits && npm run images:flags && npm run images:link",
     "seed:all": "npm run db:seed && npm run seed:season -- 2023 2024 2025 2026 && npm run seed:standings -- 2023 2024 2025 2026 && npm run images:all",
-    "pwa:icons": "tsx scripts/pwa/generate-icons.ts"
+    "pwa:icons": "tsx scripts/pwa/generate-icons.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -62,6 +64,7 @@
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   }
 }

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { aggregateSeasons, compareDuels, type SeasonAggregate } from '@/lib/results';
 
 /**
  * Career and per-season figures for a driver, plus the head-to-head against
@@ -8,16 +9,7 @@ import { prisma } from '@/lib/prisma';
  * the numbers stay correct when a season is re-seeded.
  */
 
-export interface SeasonRow {
-  year: number;
-  team: string;
-  constructorId: string;
-  races: number;
-  wins: number;
-  podiums: number;
-  points: number;
-  position: number | null;
-}
+export type SeasonRow = SeasonAggregate;
 
 export interface HeadToHead {
   teammate: string;
@@ -68,31 +60,7 @@ export async function getDriverStats(driverPk: string): Promise<DriverStats> {
     if (!finalPosition.has(standing.year)) finalPosition.set(standing.year, standing.position);
   }
 
-  const bySeason = new Map<number, SeasonRow>();
-
-  for (const result of results) {
-    const year = result.race.year;
-    const row = bySeason.get(year) ?? {
-      year,
-      team: result.team.name,
-      constructorId: result.team.constructorId,
-      races: 0,
-      wins: 0,
-      podiums: 0,
-      points: 0,
-      position: finalPosition.get(year) ?? null,
-    };
-
-    row.races += 1;
-    row.points += result.points;
-    if (result.position === 1) row.wins += 1;
-    if (result.position !== null && result.position <= 3) row.podiums += 1;
-    // Mid-season moves are common; the latest team is the one shown.
-    row.team = result.team.name;
-    row.constructorId = result.team.constructorId;
-
-    bySeason.set(year, row);
-  }
+  const seasons = aggregateSeasons(results, finalPosition);
 
   const finished = results.filter((r) => r.position !== null).map((r) => r.position!);
 
@@ -104,7 +72,7 @@ export async function getDriverStats(driverPk: string): Promise<DriverStats> {
     points: Math.round(results.reduce((sum, r) => sum + r.points, 0) * 100) / 100,
     bestFinish: finished.length > 0 ? Math.min(...finished) : null,
     fastestLaps: results.filter((r) => r.rank === 1).length,
-    seasons: [...bySeason.values()].sort((a, b) => b.year - a.year),
+    seasons,
     headToHead: null,
   };
 }
@@ -159,36 +127,11 @@ export async function getHeadToHead(
 
   const teammate = teamResults.find((entry) => entry.driverId === teammatePk)!.driver;
 
-  const compare = (
-    rows: Array<{ driverId: string; position: number | null; race: { round: number } }>
-  ) => {
-    const byRound = new Map<number, { driver?: number | null; teammate?: number | null }>();
-
-    for (const row of rows) {
-      const slot = byRound.get(row.race.round) ?? {};
-      if (row.driverId === driverPk) slot.driver = row.position;
-      if (row.driverId === teammatePk) slot.teammate = row.position;
-      byRound.set(row.race.round, slot);
-    }
-
-    let driverAhead = 0;
-    let teammateAhead = 0;
-
-    for (const { driver, teammate: mate } of byRound.values()) {
-      // Only rounds where both were classified can be compared.
-      if (driver == null || mate == null) continue;
-      if (driver < mate) driverAhead++;
-      else if (mate < driver) teammateAhead++;
-    }
-
-    return { driver: driverAhead, teammate: teammateAhead };
-  };
-
   return {
     teammate: `${teammate.givenName} ${teammate.familyName}`,
     teammateId: teammate.driverId,
     year,
-    race: compare(teamResults),
-    qualifying: compare(teamQualifying),
+    race: compareDuels(teamResults, driverPk, teammatePk),
+    qualifying: compareDuels(teamQualifying, driverPk, teammatePk),
   };
 }

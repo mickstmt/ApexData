@@ -28,6 +28,8 @@
 
 **Próximo paso**: **Sprint 5 — Producción** (deploy en Vercel + el VPS para el servicio Python, cron semanal de datos, checklist de seguridad, push post-GP, y la pantalla de administración para importar temporadas).
 
+**Tests**: 36 unitarios (TypeScript) + 14 (Python). Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, y serialización de telemetría.
+
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
 - La página `/telemetry` (OpenF1) sigue siendo un demo; conviene fusionarla con `/analysis`.
@@ -55,6 +57,25 @@
 ---
 
 ## Bitácora
+
+### 2026-08-17 (2) — Tests: la Fase 6 que nunca se empezó ✅
+
+El proyecto tenía **cero tests** y el CI solo verificaba que compilara. Antes de exponerlo a internet con despliegue automático en cada push, se añade la red de seguridad que faltaba — y que en plastik ya bloquea despliegues.
+
+**Vitest, 36 tests** sobre lógica pura (sin BD ni red, así corren en CI en segundos):
+- `classifiedPosition` — los seis marcadores de abandono de Jolpica, y el caso que demuestra el bug original: el mismo registro trae `position: "18"` y `positionText: "R"`.
+- `raceStart` / `isUpcoming` — que a las 09:00 UTC del domingo la carrera de las 13:00 **sigue siendo futura**, que era exactamente el fallo de la home.
+- `aggregateSeasons` — victorias, podios, cambio de equipo a mitad de temporada, orden.
+- `compareDuels` — solo cuentan las rondas donde ambos fueron clasificados.
+- Colores de equipo (los 11 de 2026 con color propio y distinto), compuestos, y que cada nacionalidad tenga bandera descargada.
+
+**Pytest, 14 tests** sobre la serialización del servicio Python: `NaN` → null, tiempos formateados como `1:29.165` y no como duración ISO, y que el resultado sea codificable con `allow_nan=False` (lo que FastAPI exige de facto).
+
+**Refactor para poder probar**: la lógica delicada sale a `src/lib/results.ts`, un módulo puro que comparten el seeder y la app, así ambos leen un resultado igual.
+
+**Verificación de que los tests sirven**: se reintrodujo el bug original de los abandonos a propósito y **5 tests fallaron de inmediato**; restaurado el código, los 36 vuelven a pasar.
+
+**CI**: `npm test` y `pytest -q` ahora son requisito para que el job de despliegue se ejecute.
 
 ### 2026-08-17 — Preparación del despliegue en EasyPanel
 

@@ -91,14 +91,8 @@ export interface JolpicaQualifyingResult {
   Q3?: string;
 }
 
-/**
- * A finishing position only counts when positionText is numeric. Retirements
- * and disqualifications carry 'R', 'D', 'W', 'E', 'F' or 'N' there, while
- * `position` stays numeric and would silently look like a real result.
- */
-export function classifiedPosition(positionText: string): number | null {
-  return /^\d+$/.test(positionText) ? parseInt(positionText, 10) : null;
-}
+// Shared with the app so both read a result the same way.
+export { classifiedPosition } from '../../src/lib/results';
 
 export async function fetchJolpica<T>(path: string): Promise<T | null> {
   const url = `${BASE_URL}${path}`;
