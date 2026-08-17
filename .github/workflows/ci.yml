@@ -12,8 +12,9 @@ jobs:
     name: Next.js (lint, types, build)
     runs-on: ubuntu-latest
     env:
-      # The build only needs a syntactically valid URL: no query runs at build time.
+      # The build runs no queries, so a syntactically valid URL is enough.
       DATABASE_URL: postgresql://user:password@localhost:5432/apexdata?schema=public
+      DIRECT_URL: postgresql://user:password@localhost:5432/apexdata?schema=public
       NEXT_PUBLIC_JOLPICA_API_URL: https://api.jolpi.ca/ergast/f1
       NEXT_PUBLIC_OPENF1_API_URL: https://api.openf1.org/v1
       NEXT_PUBLIC_APP_URL: http://localhost:3000
@@ -54,3 +55,63 @@ jobs:
 
       # No test suite yet, so at least prove the app and its routes import cleanly.
       - run: python -c "from app.main import app; print(f'{len(app.routes)} routes registered')"
+
+  deploy:
+    name: Deploy to EasyPanel
+    runs-on: ubuntu-latest
+    needs: [web, service]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: deploy-easypanel-apexdata
+      cancel-in-progress: false
+    steps:
+      # IMPORTANT: EasyPanel's own GitHub integration must stay DISABLED for
+      # this app. If both fire, the webhook build cancels the one already in
+      # progress and the log dies mid-step with "context canceled" — which
+      # reads like an out-of-memory kill and is not one. This webhook is the
+      # single trigger, and it only runs once lint, types and build pass.
+      - name: Trigger EasyPanel deploy
+        env:
+          HOOK: ${{ secrets.EASYPANEL_DEPLOY_HOOK }}
+        # The webhook returns 200 as soon as the request is accepted, not when
+        # the build finishes, so the next step confirms the cutover.
+        run: curl -fsS "$HOOK"
+
+      - name: Wait for cutover
+        # Succeeds once the container serving production booted after this
+        # commit was pushed. Comparing boot time against the push timestamp
+        # (rather than an uptime baseline) is immune to who triggered the
+        # deploy, and the 60s of slack absorbs clock skew with the VPS.
+        env:
+          PUSHED_AT: ${{ github.event.head_commit.timestamp }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "APP_URL repository variable is not set; skipping cutover check."
+            exit 0
+          fi
+
+          pushed_epoch=$(( $(date -d "$PUSHED_AT" +%s) - 60 ))
+          echo "commit pushed at: $PUSHED_AT"
+
+          for i in $(seq 1 30); do
+            resp=$(curl -fsS "$APP_URL/api/health" 2>/dev/null || true)
+            boot=$(echo "$resp" | sed -n 's/.*"startedAt":"\([^"]*\)".*/\1/p')
+
+            if [ -n "$boot" ]; then
+              boot_epoch=$(date -d "$boot" +%s)
+              if [ "$boot_epoch" -gt "$pushed_epoch" ]; then
+                build=$(echo "$resp" | sed -n 's/.*"buildId":"\([^"]*\)".*/\1/p')
+                echo "Serving a container booted at $boot (buildId=${build:-unknown})"
+                exit 0
+              fi
+              echo "[$i/30] still the pre-push container (startedAt=$boot)"
+            else
+              echo "[$i/30] no response yet — cutover in progress"
+            fi
+
+            sleep 30
+          done
+
+          echo "No cutover detected after 15 minutes. Check the EasyPanel build log."
+          exit 1

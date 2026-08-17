@@ -1,0 +1,18 @@
+node_modules
+.next
+.git
+.github
+.env
+.env.local
+*.log
+
+# Documentation and planning
+*.md
+!README.md
+
+# The telemetry service is a separate EasyPanel app with its own image.
+python-service
+
+# Local tooling
+.claude
+.vscode

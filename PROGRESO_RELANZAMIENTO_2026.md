@@ -37,7 +37,8 @@
 - 11 warnings de lint (variables sin usar, algún `any`) — limpieza cosmética pendiente.
 
 **Decisiones tomadas**:
-- ✅ **Hosting del microservicio Python: el VPS propio de Frank** (2026-08-16). Frank ya tiene un VPS con varios aplicativos desplegados; el servicio FastF1 (que ya tiene Dockerfile) se despliega ahí en S5. Esto elimina el único coste previsto (~$5/mes de Railway) → **coste total del proyecto: $0/mes**. Pendiente de recabar en S5: proveedor/SO del VPS, RAM/disco disponibles, si usa Docker y qué reverse proxy (Nginx/Caddy/Traefik) sirve los demás aplicativos.
+- ✅ **Todo en el VPS de Frank vía EasyPanel** (2026-08-17). Se descartó Vercel al descubrir que plastik ya se despliega en ese VPS con `git push` → GitHub Actions → webhook de EasyPanel, **sin necesitar acceso SSH**: el panel es web (`panel.dittochatbot.com`). El argumento a favor de Vercel era precisamente poder desplegar desde casa, y eso ya estaba resuelto.
+- ✅ **Hosting del microservicio Python: el mismo VPS** (2026-08-16). Frank ya tiene un VPS con varios aplicativos desplegados; el servicio FastF1 (que ya tiene Dockerfile) se despliega ahí en S5. Esto elimina el único coste previsto (~$5/mes de Railway) → **coste total del proyecto: $0/mes**. Pendiente de recabar en S5: proveedor/SO del VPS, RAM/disco disponibles, si usa Docker y qué reverse proxy (Nginx/Caddy/Traefik) sirve los demás aplicativos.
 
 **Decisiones pendientes**:
 - [ ] **Cuánto histórico cargar**. Hoy: 2023–2026. El seeder acepta cualquier año a ~10 min por temporada, desatendido. Desde 2000 ≈ 5 h; desde 1950 ≈ 15 h. El tamaño no es problema (todo el histórico ronda 20–40 MB frente a los 500 MB del plan gratuito de Supabase). Recomendación: lanzar 1950–2022 en segundo plano cuando convenga.
@@ -53,6 +54,18 @@
 ---
 
 ## Bitácora
+
+### 2026-08-17 — Preparación del despliegue en EasyPanel
+
+Frank preguntó por qué desplegar en Vercel si el VPS ya estaba decidido, y tenía razón: la recomendación partía de una suposición equivocada. Plastik ya se despliega en ese VPS con `git push` → GitHub Actions → webhook de EasyPanel, y **EasyPanel es un panel web**, así que no hace falta acceso SSH ni estar en una red concreta. Se adopta el mismo patrón para ApexData.
+
+Preparado en el repo (siguiendo el Dockerfile de plastik y sus lecciones documentadas):
+- **`Dockerfile`** con `output: 'standalone'` y el tope de heap en 2048 MB, deliberadamente **por debajo** de la RAM del host: ponerlo por encima hace que el OOM killer mate el build sin mensaje, y el síntoma se confunde con otra cosa.
+- **`/api/health`** que reporta `buildId` y `startedAt`, para que "¿está mi código en producción?" sea una comparación y no una suposición.
+- **Job `deploy` en CI** que dispara el webhook solo si lint, tipos y build pasan, y espera el cutover comparando el arranque del contenedor con la marca de tiempo del push. Documentado el aviso de plastik: **la integración nativa de EasyPanel con GitHub debe quedar desactivada**, o las dos construcciones se cancelan entre sí.
+- `.dockerignore` que excluye `python-service` (será una app aparte en EasyPanel).
+
+Pendiente de Frank en el panel: crear las dos apps, configurar variables, obtener el webhook y añadirlo como secret.
 
 ### 2026-08-16 (9) — Preparación para despliegue
 

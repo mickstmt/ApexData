@@ -24,6 +24,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Traces only the modules the app imports, so the Docker image ships a
+  // fraction of a full node_modules and the build's memory peak stays lower.
+  output: 'standalone',
   images: {
     // Flags, circuit layouts and most team logos are SVG. next/image refuses to
     // optimise SVG unless this is set, which would break every one of them.
