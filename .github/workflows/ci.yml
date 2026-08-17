@@ -108,11 +108,22 @@ jobs:
             exit 0
           fi
 
+          # Trailing whitespace or a stray slash in the repository variable is
+          # invisible in the GitHub UI and would silently break every request.
+          APP_URL=$(echo "$APP_URL" | tr -d '[:space:]')
+          APP_URL="${APP_URL%/}"
+
           pushed_epoch=$(( $(date -d "$PUSHED_AT" +%s) - 60 ))
           echo "commit pushed at: $PUSHED_AT"
+          echo "polling: $APP_URL/api/health"
 
           for i in $(seq 1 30); do
-            resp=$(curl -fsS "$APP_URL/api/health" 2>/dev/null || true)
+            # -L because an http:// value would otherwise return a redirect body
+            # with no JSON in it. Errors are NOT silenced: hiding curl's stderr
+            # is what turned a broken health check into thirty identical lines
+            # of "no response yet" with no way to tell why.
+            resp=$(curl -fsSL --max-time 20 "$APP_URL/api/health" 2>/tmp/curl_err) || true
+            code=$?
             boot=$(echo "$resp" | sed -n 's/.*"startedAt":"\([^"]*\)".*/\1/p')
 
             if [ -n "$boot" ]; then
@@ -123,8 +134,10 @@ jobs:
                 exit 0
               fi
               echo "[$i/30] still the pre-push container (startedAt=$boot)"
+            elif [ -n "$resp" ]; then
+              echo "[$i/30] answered, but with no startedAt: $(echo "$resp" | head -c 200)"
             else
-              echo "[$i/30] no response yet — cutover in progress"
+              echo "[$i/30] no answer (curl exit $code): $(head -c 200 /tmp/curl_err)"
             fi
 
             sleep 30

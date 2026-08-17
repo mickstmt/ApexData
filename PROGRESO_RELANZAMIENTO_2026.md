@@ -16,7 +16,7 @@
 
 ## Estado actual
 
-**Fase**: ✅ **Sprint 4 completado** (2026-08-16) · Sprints 0–3 completados (2026-08-16).
+**Fase**: 🟡 **Sprint 5 en curso** (2026-08-17) — **la web está en producción**: https://apexdata.meeks.fun · Sprints 0–4 completados (2026-08-16).
 
 **Cobertura de datos**: **2010–2026 completo** (17 temporadas) — resultados, clasificación y standings oficiales. 84 pilotos, 25 equipos, 55 circuitos.
 
@@ -26,7 +26,7 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: **Sprint 5 — Producción** (deploy en Vercel + el VPS para el servicio Python, cron semanal de datos, checklist de seguridad, push post-GP, y la pantalla de administración para importar temporadas).
+**Próximo paso**: **Sprint 5 — Producción** (deploy en Vercel + el VPS para el servicio Python, cron semanal de datos, checklist de seguridad, push post-GP, y la pantalla de administración para importar temporadas). Después, **Sprint 6 — Auditoría de experiencia de uso**, añadido el 2026-08-17.
 
 **Tests**: 36 unitarios (TypeScript) + 14 (Python). Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, y serialización de telemetría.
 
@@ -37,6 +37,8 @@
 - El venv local tiene FastF1 3.7.0 aunque `requirements.txt` pide ≥3.8 (necesario para 2026): ejecutar `pip install -r requirements.txt` en el venv.
 - Pendientes de S4 no abordados: mapa del circuito coloreado por velocidad y gráfico de estrategia de neumáticos.
 - 11 warnings de lint (variables sin usar, algún `any`) — limpieza cosmética pendiente.
+- 🔴 **Faltan estados de carga en la mayoría de la app** (detectado por Frank el 2026-08-17 probando en local): solo 6 de 14 páginas tienen `loading.tsx` y no hay un solo `<Suspense>` en el proyecto, así que al navegar a `/`, `/results`, `/circuits`, `/compare`, `/favorites`, `/analysis` o una ficha de equipo el navegador se queda sin ningún indicio hasta que termina la consulta. Tampoco hay caché (`revalidate`) en ninguna página. → **Sprint 6**, ver el plan de referencia.
+- 🔴 **Auditoría triple del 2026-08-17** (retroalimentación · accesibilidad/móvil · veracidad de la documentación): el alcance completo quedó consolidado en la sección **"S6 — alcance completo"** del plan de referencia. Lo más grave: `useReducedMotion` inexistente, foco de teclado invisible, zoom bloqueado, tokens de timing definidos pero sin usar (tiempos ilegibles en tema claro y semántica broadcast invertida), gráficos invisibles en tema claro, ninguna tabla con priority+, Favoritos roto a partir del piloto 51, y **9 promesas del plan sin implementar ni registrar como deuda** (personalización por equipo, Table/Chip/Sheet, ficha de circuito, FLIP, `seed:all` incompleto…). La documentación resultó veraz en lo que afirma e incompleta en lo que omite: el cierre de cada sprint nunca se contrastó contra su alcance original.
 
 **Decisiones tomadas**:
 - ✅ **Todo en el VPS de Frank vía EasyPanel** (2026-08-17). Se descartó Vercel al descubrir que plastik ya se despliega en ese VPS con `git push` → GitHub Actions → webhook de EasyPanel, **sin necesitar acceso SSH**: el panel es web (`panel.dittochatbot.com`). El argumento a favor de Vercel era precisamente poder desplegar desde casa, y eso ya estaba resuelto.
@@ -50,13 +52,47 @@
 
 ## Acciones pendientes de Frank
 
-1. **Desplegar en EasyPanel** (pendiente de tener acceso al panel). Guía completa paso a paso en **`DEPLOY.md`**: crear las dos apps, variables de entorno, y conectar el webhook como secret de GitHub. Dato a comprobar al entrar: RAM libre del VPS, para confirmar que soporta ApexData además de plastik.
+1. ~~**Desplegar la web en EasyPanel**~~ → hecho el 2026-08-17: https://apexdata.meeks.fun. **Queda pendiente el servicio de telemetría**: app aparte con `python-service/Dockerfile`, **volumen en `/app/cache`** (sin él, FastF1 vuelve a descargar cientos de MB en cada reinicio), puerto 8000, `CORS_ORIGINS` con el dominio de la web y `ENVIRONMENT=production` para ocultar la documentación de la API. Después, añadir `FASTF1_SERVICE_URL` a las variables de la web. Y resolver la comprobación de cutover del CI, que sigue fallando.
 2. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
 3. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
 
 ---
 
 ## Bitácora
+
+### 2026-08-17 (5) — Auditoría triple de experiencia de uso 🔍
+
+A raíz del hallazgo de los estados de carga, Frank pidió auditar el proyecto con agentes expertos en busca de más omisiones del mismo tipo. Tres agentes en paralelo: **retroalimentación al usuario**, **accesibilidad/móvil contra las reglas del propio plan**, y **veracidad de la documentación** (contrastó lo declarado contra el código y la BD reales — los conteos declarados son exactos y los 36 tests pasan).
+
+**Los tres informes íntegros están en `docs/AUDITORIA_UX_2026-08-17.md`** (guardados en el repo precisamente para poder trabajar desde cualquier máquina sin el contexto de la conversación). El alcance consolidado y priorizado, en la sección **"S6 — alcance completo"** del plan de referencia.
+
+Diagnóstico transversal: **la infraestructura de diseño se construyó bien, pero las páginas no la consumen** (tokens sin usar, componentes modelo que el resto no imita). Y una segunda corrección de método: la documentación es veraz en lo que afirma pero incompleta en lo que omite — 9 promesas del plan desaparecieron sin quedar registradas como deuda, y eso solo lo detecta **contrastar el cierre de cada sprint contra su lista de alcance original**, que desde ahora es parte del cierre junto con el recorrido real de la app.
+
+También de Frank, mismo día: mostrar la **fecha de nacimiento** de los pilotos junto a la edad (ya está en BD; `/compare` ya la muestra). Al verificarlo se encontró que el cálculo de edad es `año − año`: todo piloto que no ha cumplido aparece un año más viejo. Ambos en S6.
+
+### 2026-08-17 (4) — La web, en producción 🟡
+
+**ApexData está publicada en https://apexdata.meeks.fun**, servida desde el VPS vía EasyPanel, con HTTPS y consultando Supabase (`/api/health` responde `database: ok`). Queda pendiente el servicio de telemetría.
+
+**Dominio propio.** Frank descartó `apexdata.izistoreperu.com`: el dominio es de la empresa donde trabaja y la app es suya. Tampoco quiso pagar por uno. Se revisó qué opciones gratuitas existen (subdominios de terceros tipo `is-a.dev`, `eu.org`, DuckDNS) y se aclaró que Cloudflare no regala dominios: solo gestiona zonas que ya poseas. Finalmente **compró `meeks.fun` en Hostinger**, lo delegó a Cloudflare y creó `apexdata.meeks.fun` → `161.132.4.18`, **con el proxy desactivado (nube gris)**, sin lo cual Let's Encrypt no puede validar el dominio.
+
+**Cinco fallos encadenados antes de que arrancara.** El `Dockerfile` se había escrito el día anterior copiando el patrón de plastik, pero **nunca se había construido**. Cada intento destapó el siguiente:
+
+1. `prisma migrate deploy` salía por el pooler y **se colgaba sin error**. Causa: el `datasource` de `prisma.config.ts` tiene precedencia sobre el schema y **descartaba su `directUrl`**, añadido en su día justo para esto. Como el arranque es `migrate deploy && node server.js`, el servidor no se habría ejecutado nunca.
+2. `prisma generate` moría en el build con `Missing required environment variable`: el helper `env()` resuelve al cargar la config, y en la construcción no hay variables de base de datos. EasyPanel las pasa como *build args*, pero el `Dockerfile` no declara ningún `ARG`.
+3. Al arrancar: `Cannot find module 'dotenv/config'`.
+4. Y después: `Cannot find module 'prisma/config'`.
+5. Ya arrancado, **502**: el contenedor escuchaba en el puerto 80 y el dominio apuntaba al 3000. Faltaba `PORT=3000` entre las variables.
+
+Los fallos 2, 3 y 4 eran **el mismo problema**: `prisma.config.ts` viaja dentro de la salida `standalone`, que solo incluye lo que la aplicación importa, y la CLI lo carga al arrancar exigiendo dependencias de desarrollo que la imagen no lleva. Se resolvió **borrándolo en el runner**, con lo que la CLI cae en `prisma/schema.prisma` — que ya declara `url` (pooler) y `directUrl` (directa). **Es exactamente lo que hace plastik, que no tiene ese archivo.** Leer su Dockerfile antes habría ahorrado tres intentos.
+
+**Despliegue automático a medias.** El *Deployment Trigger* (así se llama en el panel, al final de la pestaña *Deployments*) se guardó como secret. Dos incidencias: se copió por error **el de plastik**, lo que provocó un despliegue no solicitado de esa app — se verificó que quedó sana y que, al no haber cambios en su código, un despliegue equivale a un reinicio. Y la comprobación de cutover **falla sin explicar por qué**: repite `no response yet` treinta veces aunque `/api/health` responda 200 desde fuera. Descartados por comprobación directa: la variable `APP_URL` (correcta, con `https`), la barra final, y el certificado (cadena completa, `Verify return code: 0`). **El paso mandaba los errores de `curl` a `/dev/null`**, así que se instrumentó para que la próxima ejecución diga la causa real. **Pendiente de resolver.**
+
+**Seguridad**: el *Deployment Trigger* se ofrece como `http://<ip>:3000/...` con el token en claro; se comprobó que el mismo endpoint responde por HTTPS en `panel.dittochatbot.com` y se usa esa forma. Nota aparte: el panel está expuesto sin cifrar en el puerto 3000 del VPS.
+
+**`DEPLOY.md` reescrito** con lo aprendido: casi todos sus pasos del panel eran inexactos (nombre del webhook, pestaña de origen, ruta del Dockerfile, `PORT`), y la tabla de diagnóstico incorpora seis síntomas reales de esta sesión.
+
+**Recursos del VPS**: 6,6 GB de 15,3 GB en uso y 30,9 GB de 298,9 GB de disco. El tope de heap de 2048 MB del `Dockerfile` queda muy por debajo de lo disponible; no hubo que tocarlo.
 
 ### 2026-08-17 (3) — Revisión de seguridad previa al despliegue ✅
 

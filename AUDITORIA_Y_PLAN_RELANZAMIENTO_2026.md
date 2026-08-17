@@ -181,7 +181,7 @@ Total ~5–10 MB, optimizado por `next/image`. Todo fetch con `User-Agent: "Apex
 
 ---
 
-## 11. Hoja de ruta — 6 sprints
+## 11. Hoja de ruta — 7 sprints
 
 | Sprint | Contenido | Estimación |
 |---|---|---|
@@ -191,6 +191,55 @@ Total ~5–10 MB, optimizado por `next/image`. Todo fetch con `User-Agent: "Apex
 | **S3 — Rediseño visual** | Tokens (carbon + team colors), tipografía nueva, primitivos UI (Card/Table/Chip/Sheet), tablas priority+, **Race Hub**, página de circuitos | ~2–3 sesiones |
 | **S4 — Telemetría 2.0 + perfiles** | Crosshair canvas, mapa por velocidad, estrategia de neumáticos, perfil piloto + H2H, standings con evolución | ~2–3 sesiones |
 | **S5 — Producción** | Deploy Vercel + Railway, cron semanal, checklist de seguridad, push post-GP | ~1 sesión |
+| **S6 — Auditoría de experiencia de uso** | Estados de carga y transición en toda la app, caché/`revalidate`, y barrido en busca de omisiones del mismo tipo | ~1–2 sesiones |
+
+### S6 — por qué existe este sprint
+
+Detectado por Frank el 2026-08-17 probando la app en local: **no hay estados de carga en la mayoría de rutas**. Verificado en el código: 6 de 14 páginas tienen `loading.tsx` (`/calendar`, `/constructors`, `/drivers`, `/drivers/[driverId]`, `/standings`, `/telemetry`) y **no existe un solo `<Suspense>` en el proyecto**. Sin `loading.tsx` ni `Suspense`, una página que hace `await prisma…` deja el navegador en la pantalla anterior, sin ningún indicio, hasta que la consulta termina: la app parece colgada. El caso peor es la home, que además es `force-dynamic`, y `/circuits`.
+
+**Cómo se escapó, que es lo importante**: la auditoría de agosto listó "skeletons" entre lo bueno del código (§3.1) y dio el tema por resuelto — pero esos skeletons eran los del proyecto original de 2025; las páginas nuevas de S3 y S4 (Race Hub, circuitos, ficha de equipo) nacieron sin ninguno. Y la verificación de cada sprint fue siempre *lint + type-check + build*, tres comprobaciones que **no pueden detectar un hueco de comportamiento en ejecución**: la app compila igual de bien sin estados de carga. La auditoría multiagente leyó el código; nadie recorrió la aplicación haciendo clic.
+
+**Corrección del método, aplicable desde ya**: ningún sprint se cierra solo con lint/tipos/build. Cierra con un **recorrido real de la app**, ruta por ruta, incluyendo lo que se siente y no solo lo que compila: navegación entre páginas, estados vacíos, errores, y la app instalada en el móvil.
+
+**Idea de Frank (2026-08-17), sin decidir**: que el estado de carga sea un coche de carreras cruzando la pantalla de lado a lado, en vez de un skeleton genérico. Viable y barato — es una animación CSS de `transform`, que es justo lo que la sección 6 exige (solo `transform`/`opacity`) y respeta `useReducedMotion`. A valorar en S6 dónde encaja: como indicador de navegación, o combinado con los skeletons, que siguen siendo mejores para transmitir la forma de la página que va a llegar.
+
+### S6 — alcance completo (auditoría triple del 2026-08-17)
+
+La pasada sistemática se hizo esa misma noche con tres agentes (retroalimentación, accesibilidad/móvil, veracidad de la documentación). **Los tres informes íntegros, con archivo:línea de cada hallazgo, están en [`docs/AUDITORIA_UX_2026-08-17.md`](docs/AUDITORIA_UX_2026-08-17.md)**; esto es el alcance consolidado. El diagnóstico transversal: **la infraestructura de diseño se construyó bien, pero las páginas no la consumen** — tokens definidos que nadie usa, componentes modelo (`TimingRow`, `AnalysisClient`, `button.tsx`, la tabla del perfil de piloto) que el resto no imita.
+
+**A. Retroalimentación (el hallazgo original, ampliado)**
+- `SeasonSelector` sin `useTransition`/spinner/disabled — afecta a 5 páginas; al cambiar de temporada no pasa nada visible hasta que Supabase responde.
+- Los 8 `loading.tsx` que faltan (`/`, `/results`, `/results/[year]/[round]`, `/circuits`, `/compare`, `/favorites`, `/analysis`, `/constructors/[constructorId]`). `/analysis` es pestaña fija del móvil.
+- `Suspense` para streaming: home (4 viajes secuenciales a BD antes del primer byte), `/drivers/[driverId]` (5 queries secuenciales), `/standings` (hasta 24 round-trips en un bucle).
+- Caché: ni un `revalidate` en páginas. Las históricas (`/circuits`, `/results`…) van a Virginia en cada visita; y al revés, `/compare`, `/favorites` y `/results/[year]/[round]` no declaran `dynamic` y pueden quedarse congeladas en el Full Route Cache.
+- Bugs funcionales: **Favoritos muestra "No hay favoritos" cuando la API falla o el piloto está fuera del top-50 alfabético** (`take: 50` en `/api/drivers`, con 84 en BD); precedencia `!driver1 || !driver2 && (...)` en `DriverSelector.tsx:282` que anula el estado vacío; `/standings` reporta un fallo de BD como "no hay datos"; carrera sin resultados = tabla fantasma sin mensaje; `PageTransition` retrasa 300 ms todos los skeletons; consultas sin `take` (`/compare` trae todos los pilotos con joins; la ficha de equipo, ~1.000 filas para tres contadores).
+- El patrón a copiar ya existe en el propio repo: `AnalysisClient` (carga por acción, botón con spinner y disabled, banner de error legible).
+
+**B. Accesibilidad y móvil (contrastado contra las reglas de §5 y §6)**
+- `useReducedMotion`/`prefers-reduced-motion`: **cero usos** con framer-motion animando en 6 componentes. Prioridad 1.
+- Foco de teclado invisible: `focus:outline-none` con anillo al 20% de alfa (1,2:1) o sin sustituto. El patrón correcto ya está en `button.tsx:8`.
+- `userScalable: false` + `maximumScale: 1` en `layout.tsx` — regresión de accesibilidad innecesaria (el focus-zoom ya se resuelve con `text-base md:text-sm`).
+- Los tokens `--fastest/--personal-best/--slower` existen pero los componentes usan `text-purple-400` etc. a pelo: contrastes de 1,3–2,9:1 en tema claro. Y **la semántica broadcast está invertida** en `LapTimesTable` (morado en el personal best; debe ser verde).
+- Gráficos con la variante `onDark` sobre lienzo claro (Mercedes 1,4:1, Renault 1,15:1): falta un tercer token `onLight` o forzar fondo oscuro en los gráficos.
+- Tablas: ninguna aplica priority+; 7-8 columnas → ~1.000 px de arrastre en un iPhone y la columna POS se pierde. Sin `scope` ni `caption`; pestañas de sesión sin roles ARIA; combobox casero sin ARIA ni teclado; compuesto de neumático codificado solo por color.
+- Selects de `/analysis` sin nombre accesible (sin `htmlFor`/`id`) y a 14 px; objetivos táctiles de 24–40 px en varios controles; `<button>` dentro de `<Link>` en las tarjetas; ni un `aria-live`/`role="alert"`; menú del header sin gestión de foco; idioma mezclado (cabeceras y mensajes en inglés con `lang="es"`).
+
+**C. Huecos silenciosos** (prometido en este plan, no hecho, no registrado — detectados contrastando el cierre de cada sprint contra su alcance original):
+1. Personalización por equipo favorito (§8.7) — cero implementación.
+2. Primitivos Table/Chip/Sheet (S3) — solo se hizo Card; el cierre de S3 redefinió el entregable sin decirlo.
+3. Tablas priority+ (S3/§6) — solo `overflow-x-auto`.
+4. Ficha de circuito `/circuits/[circuitId]` con historial de ganadores (§8.2) — solo existe el grid.
+5. Animación FLIP + number ticking en standings (§8.5/§6).
+6. `useReducedMotion` global (§6) — también es el punto B.1.
+7. `seed:all` solo reproduce 4 de las 17 temporadas pobladas — la BD está bien, pero no es reproducible.
+8. `/favorites` limitada a 50 pilotos — defecto conocido desde la auditoría (§3.1) que S1 empeoró al subir a 84 pilotos.
+9. Código muerto que §9.8 mandaba limpiar: `jolpica/transformers.ts`, `SpeedChart`, `TelemetryComparison`, `src/hooks/` vacío. Menor: `williams` es `.webp` (§7 promete SVG), `COMPOUND_COLORS` duplicado en `LapTimesTable`.
+
+**D. Arrastres de S4** (ya declarados como deuda, entran aquí): mapa del circuito coloreado por velocidad y gráfico de estrategia de neumáticos/stints. Y las retiradas pendientes: fusionar `/telemetry` en `/analysis` y retirar `/compare` (§8, "Se retira/fusiona").
+
+**E. Datos visibles** (petición de Frank, 2026-08-17): mostrar la **fecha de nacimiento** de los pilotos junto a la edad (el dato ya está en BD y `/compare` ya lo muestra), corrigiendo de paso el **cálculo de edad**, que hoy es `año − año` y suma un año a todo piloto que no haya cumplido (DriverCard.tsx:26, drivers/[driverId]/page.tsx:108).
+
+**Segunda corrección del método** (de la auditoría de veracidad): el recorrido real de la app no habría detectado los huecos C.1–C.3. Lo que los detecta es **contrastar el cierre de cada sprint contra su lista de alcance original**, punto por punto, y anotar explícitamente lo que se recorta. Desde S5, ambas cosas son parte del cierre: recorrido + contraste de alcance.
 
 **Método de trabajo acordado**: agentes especializados por ámbito, skills de Claude Code (dataviz para gráficos, code-review y security-review antes de cada merge), investigación en internet cuando haga falta. Cada sprint cierra con la app corriendo y verificada.
 
