@@ -30,9 +30,11 @@ const SESSION_TYPES: { value: SessionType; label: string }[] = [
 export function AnalysisClient({
   sessions,
   drivers,
+  serviceConfigured,
 }: {
   sessions: SessionOption[];
   drivers: DriverOption[];
+  serviceConfigured: boolean;
 }) {
   const DEMO_SESSIONS = sessions.map((session) => ({
     year: session.year,
@@ -153,7 +155,9 @@ export function AnalysisClient({
           Análisis detallado de telemetría usando datos de FastF1
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          ⚡ Asegúrate de que el microservicio Python esté corriendo en localhost:8000
+          {serviceConfigured
+            ? '⚡ Los datos vienen del microservicio FastF1; la primera consulta de una sesión tarda porque se descarga entera.'
+            : '⚠️ La telemetría necesita el microservicio FastF1, que todavía no está conectado. El resto de la app funciona con normalidad.'}
         </p>
       </div>
 

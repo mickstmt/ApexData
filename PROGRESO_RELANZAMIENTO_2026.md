@@ -18,7 +18,7 @@
 
 **Fase**: ✅ **Sprint 4 completado** (2026-08-16) · Sprints 0–3 completados (2026-08-16).
 
-**Cobertura de datos**: resultados y clasificación de **2015–2026**; standings oficiales de 2023–2026. Backfill de 2010–2014 y standings de 2015–2022 pendientes de ejecutar (`npm run seed:season -- <años>` y `npm run seed:standings -- <años>`).
+**Cobertura de datos**: resultados y clasificación de **2010–2026** (17 temporadas); standings oficiales de 2015–2026 (2010–2014 en curso). 84 pilotos, 25 equipos, 55 circuitos.
 
 **Imágenes**: 29 fotos de pilotos, 36 trazados de circuitos, 36 banderas y 8 logos de equipo, todo autoalojado en `public/images/` y vinculado en la BD.
 
@@ -53,6 +53,16 @@
 ---
 
 ## Bitácora
+
+### 2026-08-16 (9) — Preparación para despliegue
+
+Frank no tiene acceso al VPS desde casa, así que se adelanta la parte del Sprint 5 que **no lo necesita**: el frontend en Vercel (Vercel y Supabase son ambos servicios en la nube; el VPS solo aloja el microservicio Python).
+
+- **`DIRECT_URL`** añadida al datasource de Prisma: el pooler de Supabase no soporta los prepared statements que necesitan las migraciones.
+- **La telemetría deja de ser un punto único de fallo**: sin `FASTF1_SERVICE_URL` configurada, el cliente lanza `TelemetryUnavailableError`, las rutas proxy responden **503 con un mensaje legible** y la página de análisis avisa de que esa sección está pendiente. Verificado simulando producción: las 6 páginas responden 200 sin el servicio Python levantado.
+- **Encabezados de seguridad** en `next.config.ts` (HSTS, nosniff, Referrer-Policy, Permissions-Policy, `frame-ancestors 'none'`) y `Cache-Control: must-revalidate` en `/sw.js`, para que un service worker cacheado no siga sirviendo la app antigua tras un despliegue.
+- `.env.example` reescrito y documentado.
+- **Backfill histórico completado**: 2010–2026 con resultados y clasificación.
 
 ### 2026-08-16 (8) — Sprint 4: Telemetría 2.0 y perfiles ✅
 

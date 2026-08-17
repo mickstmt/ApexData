@@ -1,5 +1,28 @@
 import type { NextConfig } from 'next';
 
+/**
+ * Security headers.
+ *
+ * `frame-ancestors 'none'` (rather than X-Frame-Options) also covers the
+ * service worker and manifest, which a framing attack could otherwise reach.
+ * HSTS is only meaningful over HTTPS, which is what the hosting provides.
+ */
+const securityHeaders = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'X-DNS-Prefetch-Control', value: 'on' },
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  {
+    // The app needs no camera, microphone or geolocation.
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+  },
+  { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+];
+
 const nextConfig: NextConfig = {
   images: {
     // Flags, circuit layouts and most team logos are SVG. next/image refuses to
@@ -18,6 +41,20 @@ const nextConfig: NextConfig = {
   experimental: {
     // Optimizaciones para production
     optimizePackageImports: ['lucide-react'],
+  },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: securityHeaders,
+      },
+      {
+        // The worker must always be revalidated, otherwise a cached copy keeps
+        // serving an old app after a deploy.
+        source: '/sw.js',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' }],
+      },
+    ];
   },
 };
 

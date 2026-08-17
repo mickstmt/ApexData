@@ -20,7 +20,25 @@ import type {
 // CONFIGURATION
 // ============================================================================
 
-const FASTF1_SERVICE_URL = process.env.FASTF1_SERVICE_URL || 'http://localhost:8000';
+/**
+ * The telemetry service is optional infrastructure: without it the rest of the
+ * app is unaffected, so its absence is reported as "not configured" rather
+ * than left to fail as a connection error. In production the localhost default
+ * would point at the serverless function itself, so it only applies in dev.
+ */
+const FASTF1_SERVICE_URL =
+  process.env.FASTF1_SERVICE_URL ||
+  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8000');
+
+export const isTelemetryServiceConfigured = Boolean(FASTF1_SERVICE_URL);
+
+export class TelemetryUnavailableError extends Error {
+  constructor(message = 'El servicio de telemetría no está disponible.') {
+    super(message);
+    this.name = 'TelemetryUnavailableError';
+  }
+}
+
 const DEFAULT_TIMEOUT = 30000; // 30 seconds (telemetry requests can be slow)
 
 // ============================================================================
@@ -36,10 +54,21 @@ class FastF1Client {
     this.timeout = DEFAULT_TIMEOUT;
   }
 
+  /** Throws when no service URL is configured, so callers can explain why. */
+  private assertConfigured() {
+    if (!this.baseURL) {
+      throw new TelemetryUnavailableError(
+        'La telemetría necesita el microservicio FastF1, que aún no está configurado.'
+      );
+    }
+  }
+
   /**
    * Generic fetch method with error handling
    */
   private async fetch<T>(endpoint: string, timeout?: number): Promise<T> {
+    this.assertConfigured();
+
     const controller = new AbortController();
     const timeoutId = setTimeout(
       () => controller.abort(),

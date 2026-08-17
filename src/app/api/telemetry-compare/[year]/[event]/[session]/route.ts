@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { fastf1Client } from '@/services';
+import { TelemetryUnavailableError } from '@/services/fastf1/client';
 import type { SessionType } from '@/types';
 
 interface RouteParams {
@@ -60,6 +61,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(comparison);
   } catch (error) {
+    if (error instanceof TelemetryUnavailableError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
+
     console.error('Telemetry comparison API error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to compare telemetry' },
