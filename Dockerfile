@@ -63,13 +63,13 @@ RUN npm install -g prisma@6.19.0
 
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# `output: "standalone"` traces what the app imports, and nothing in the app
-# imports dotenv — only prisma.config.ts does, which the CLI loads before
-# `migrate deploy` runs. Without this the boot command dies on
-# "Cannot find module 'dotenv/config'" and `node server.js` is never reached.
-# In the container it finds no .env and does nothing, which is correct: the
-# real variables come from the environment.
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
+# prisma.config.ts is a development-time file and rides along in the standalone
+# output. Left in place, the CLI loads it before `migrate deploy` and needs its
+# imports — dotenv, prisma/config — which a runtime-only image does not carry,
+# so the boot command dies and `node server.js` is never reached. Deleted, the
+# CLI falls back to prisma/schema.prisma, whose datasource already declares
+# `url` (pooled, for the app) and `directUrl` (direct, for migrations).
+RUN rm -f prisma.config.ts
 
 USER nextjs
 EXPOSE 3000
