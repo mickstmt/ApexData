@@ -19,9 +19,9 @@ jobs:
       NEXT_PUBLIC_OPENF1_API_URL: https://api.openf1.org/v1
       NEXT_PUBLIC_APP_URL: http://localhost:3000
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -40,7 +40,7 @@ jobs:
       run:
         working-directory: python-service
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-python@v5
         with:
@@ -59,10 +59,58 @@ jobs:
       # Also prove the app and all its routes import cleanly.
       - run: python -c "from app.main import app; print(f'{len(app.routes)} routes registered')"
 
+  e2e:
+    name: Pruebas de navegador (Playwright)
+    runs-on: ubuntu-latest
+    needs: web
+    env:
+      # A diferencia del job `web`, aquí sí hace falta la base de datos: estas
+      # pruebas recorren la app servida, no la compilan. El build se sigue
+      # haciendo con credenciales falsas, para no perder la garantía de que
+      # compila sin base de datos.
+      NEXT_PUBLIC_JOLPICA_API_URL: https://api.jolpi.ca/ergast/f1
+      NEXT_PUBLIC_OPENF1_API_URL: https://api.openf1.org/v1
+      NEXT_PUBLIC_APP_URL: http://localhost:3100
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Build (sin base de datos, como en el job web)
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/apexdata?schema=public
+          DIRECT_URL: postgresql://user:password@localhost:5432/apexdata?schema=public
+        run: npm run build
+
+      # El navegador pesa; solo se instala el que usa la configuración.
+      - run: npx playwright install --with-deps chromium
+
+      - name: Ejecutar las pruebas contra el servidor de producción
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: npm run test:e2e
+
+      # Sin esto, un fallo solo dice qué aserción falló y no qué se veía.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   deploy:
     name: Deploy to EasyPanel
     runs-on: ubuntu-latest
-    needs: [web, service]
+    needs: [web, service, e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     concurrency:
       group: deploy-easypanel-apexdata

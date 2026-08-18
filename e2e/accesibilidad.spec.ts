@@ -123,8 +123,56 @@ test.describe('retroalimentación al navegar (informe 1)', () => {
     await selector.selectOption({ label: otra });
 
     await expect(selector).toHaveAttribute('aria-busy', 'true');
-    await expect(page.getByText(/cargando temporada/i)).toBeVisible();
     await expect(selector).toBeDisabled();
+
+    // El aviso dejó de ser texto visible —empujaba el layout al aparecer— y
+    // pasó a ser el indicador dentro de la propia caja más un anuncio para
+    // lectores de pantalla. Se comprueban los dos.
+    await expect(page.getByRole('status')).toHaveText(/cargando la temporada/i);
+    await expect(page.locator('.animate-spin')).toBeVisible();
+
+    // Y lo que va a ser sustituido queda velado mientras tanto.
+    await expect(page.locator('html')).toHaveAttribute('data-season-pending', 'true');
+
+    // Sin coche: cambiar de temporada no es cambiar de página, y anunciarlo
+    // dos veces sería ruido.
+    await expect(page.locator('svg[viewBox="0 0 130 40"]')).toHaveCount(0);
+  });
+
+  test('el coche cruza cuando la página nueva se hace esperar', async ({ page }) => {
+    // Se anula el prefetch de Next y se frena la respuesta: así se reproduce a
+    // quien pulsa antes de que llegue nada, que es cuando el indicador existe.
+    await page.route('**/*', async (route) => {
+      const headers = route.request().headers();
+      if (headers['next-router-prefetch'] === '1') return route.abort();
+      if (headers['rsc'] === '1') await new Promise((r) => setTimeout(r, 2500));
+      return route.continue();
+    });
+
+    await page.goto('/drivers', { waitUntil: 'domcontentloaded' });
+    await page.locator('a[href^="/drivers/"]').first().click();
+
+    const aviso = page.getByText('Cargando la página…');
+    await expect(aviso).toHaveCount(1);
+
+    const coche = page.locator('svg[viewBox="0 0 130 40"]').first();
+    await expect(coche).toBeVisible();
+
+    // Y se mueve de verdad: una silueta parada no comunica nada.
+    const antes = (await coche.boundingBox())?.x ?? 0;
+    await page.waitForTimeout(400);
+    const despues = (await coche.boundingBox())?.x ?? 0;
+    expect(despues).not.toBe(antes);
+  });
+
+  test('una navegación rápida no interrumpe con el coche', async ({ page }) => {
+    // Con prefetch, ir a una ficha de piloto ronda los 70 ms. Sacar un coche
+    // por encima de eso haría la app más lenta a la vista, no más informativa.
+    await page.goto('/drivers');
+    await page.locator('a[href^="/drivers/"]').first().click();
+    await page.waitForURL('**/drivers/*');
+
+    await expect(page.getByText('Cargando la página…')).toHaveCount(0);
   });
 
   test('/compare recibe al usuario con instrucciones', async ({ page }) => {

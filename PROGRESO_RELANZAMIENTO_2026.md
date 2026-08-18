@@ -26,9 +26,9 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: **Sprint 6 — Auditoría de experiencia de uso**, por el “Orden de ataque sugerido” del informe 1 de `docs/AUDITORIA_UX_2026-08-17.md`.
+**Próximo paso**: **cerrar el Sprint 6** con lo que queda de su alcance: `<Suspense>` en la ficha de piloto y en `/standings` (bucle de hasta 24 consultas), `global-error.tsx`, las consultas sin `take` de `/compare` y de la ficha de equipo, `/standings` distinguiendo un fallo de base de datos de una temporada vacía, la carrera sin resultados, las tablas priority+ y el resto del ARIA (pestañas, tablas, combobox).
 
-**Tests**: 52 unitarios (TypeScript) + 14 (Python). Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 52 unitarios (TypeScript) + 14 (Python) + **10 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -42,15 +42,19 @@
   - **Push post-GP** (§8.8 del plan): sin `push` ni `notificationclick` en `public/sw.js`.
   - **Pantalla de administración para importar temporadas**: no existe `src/app/admin`.
   - **Checklist de seguridad de §10, incompleto**: faltan *secret scanning* y *push protection* en GitHub, backup mensual con `pg_dump` y *rate limiting* (`slowapi`) en el servicio Python. El RLS de Supabase, que estaba en esta lista, dejó de estar recortado el mismo día — ver la bitácora.
+- 🟡 **Logos de equipo** (detectado por el usuario el 2026-08-18 mirando `/constructors`). Resueltos dos de los tres defectos: el **encuadre** —la caja era cuadrada de 48 px y los logos van de 1,09:1 a 4,8:1, así que un wordmark se dibujaba a 48×10 px— y la **legibilidad por tema**, porque el archivo trae la tinta fija; ahora se pintan como silueta monocroma, negra en claro y blanca en oscuro. De paso se quitó de `sauber.svg` un fondo blanco que cubría el lienzo. **Sigue pendiente** lo que exige acción manual: las **6 marcas sin logo** (Ferrari, Red Bull, Aston Martin, RB, Cadillac, AlphaTauri) y que `williams` es `.webp` en vez de SVG.
+- 🔴 **Latencia de la base de datos: el pooler cuesta 5× lo que la conexión directa** (medido el 2026-08-18; no se ha cambiado nada, por decisión del usuario). Sobre el mismo host `aws-1-us-east-1`: una `SELECT 1` por el **pooler (6543)** tarda **506 ms**; por la **conexión directa (5432)**, **101 ms**, que es exactamente el ida y vuelta de red hasta Virginia. Además `connection_limit=1` serializa: cinco consultas en paralelo tardan lo mismo que en fila india. Se nota donde no hay caché: la home, con 4 consultas encadenadas, tarda **1,4 s**, y `/api/health`, con una sola, **540 ms**; las páginas con `unstable_cache` responden en 55-90 ms y estaban tapando el problema. El pooler tiene sentido en serverless, donde cada petición es un proceso nuevo; aquí hay un contenedor permanente.
 - **El servicio de telemetría no tiene despliegue automático**: el CI solo dispara el webhook de la web, así que un cambio en `python-service/` exige pulsar *Deploy* a mano en el panel.
 - 🔴 **Auditoría triple del 2026-08-17** (retroalimentación · accesibilidad/móvil · veracidad de la documentación): el alcance completo quedó consolidado en la sección **"S6 — alcance completo"** del plan de referencia. Resuelto el 2026-08-18: `useReducedMotion`, el foco de teclado, el zoom bloqueado, Favoritos a partir del piloto 51, y los tokens de timing, los gráficos en tema claro y la edad de los pilotos. **Sigue pendiente**: ninguna tabla con priority+, y **9 promesas del plan sin implementar ni registrar como deuda** (personalización por equipo, Table/Chip/Sheet, ficha de circuito, FLIP, `seed:all` incompleto…). La documentación resultó veraz en lo que afirma e incompleta en lo que omite: el cierre de cada sprint nunca se contrastó contra su alcance original.
 
 **Decisiones tomadas**:
+- ✅ **Las pruebas de navegador corren en CI** (2026-08-18). El job `e2e` construye con credenciales falsas —como el job `web`, para no perder la garantía de que la app compila sin base de datos— y sirve la app con el secret `DATABASE_URL` que ya existía para el cron. El despliegue depende ahora de las tres cosas: tipos, tests y navegador.
+- ✅ **Estados de carga elegidos sobre un mockup en vivo** (2026-08-18): al **navegar entre páginas**, un coche cruzando la pantalla con barra de avance arriba; al **cambiar de temporada**, indicador dentro de la caja del selector y contenido velado. El usuario pidió que las decisiones de interfaz y animación se propongan siempre así, viéndolas, y no descritas por escrito.
 - ✅ **Todo en el VPS del usuario vía EasyPanel** (2026-08-17). Se descartó Vercel al descubrir que plastik ya se despliega en ese VPS con `git push` → GitHub Actions → webhook de EasyPanel, **sin necesitar acceso SSH**: el panel es web (`panel.dittochatbot.com`). El argumento a favor de Vercel era precisamente poder desplegar desde casa, y eso ya estaba resuelto.
 - ✅ **Hosting del microservicio Python: el mismo VPS** (2026-08-16). El usuario ya tiene un VPS con varios aplicativos desplegados; el servicio FastF1 (que ya tiene Dockerfile) se despliega ahí en S5. Esto elimina el único coste previsto (~$5/mes de Railway) → **coste total del proyecto: $0/mes**. Pendiente de recabar en S5: proveedor/SO del VPS, RAM/disco disponibles, si usa Docker y qué reverse proxy (Nginx/Caddy/Traefik) sirve los demás aplicativos.
 
 **Decisiones pendientes**:
-- [ ] **Dar acceso a base de datos a las pruebas de navegador en CI**: existen ocho pruebas de Playwright (`npm run test:e2e`) que hoy solo se ejecutan en local, porque el CI construye sin base de datos a propósito. El secret `DATABASE_URL` ya existe desde el cron, así que es viable; falta decidir si conviene acoplar el CI a Supabase.
+- [ ] **Qué hacer con la latencia de la base de datos**, con las medidas ya sobre la mesa (ver la deuda técnica): pasar la app a la conexión directa —5× más rápido, gratis, una variable en EasyPanel— o llevarse Postgres al VPS —~1 ms, pero los backups y las actualizaciones pasan a ser cosa nuestra—. El usuario pidió medir primero y decidir después.
 - [ ] Ampliar el histórico más atrás de 2010 (opcional; ~10 min por temporada, desatendido).
 - [ ] Subdominio para la app (p. ej. `apexdata.izistoreperu.com`) — se elige al crear la app en EasyPanel.
 
@@ -65,6 +69,28 @@
 ---
 
 ## Bitácora
+
+### 2026-08-18 (6) — El coche en pista, los logos y la factura del pooler ✅
+
+**Los estados de carga se eligieron viéndolos, no leyéndolos.** El indicador del selector de temporada que se había puesto por la mañana —un spinner y un «Cargando temporada…» colgados a la derecha del control— le pareció al usuario horrible, con razón: además de ruido, empujaba el layout al aparecer. De ahí una regla nueva de método: **lo visual se propone en un mockup navegable**, con las variantes lado a lado y animadas, y se decide sobre lo que se ve.
+
+**Al navegar entre páginas: el coche.** Era una idea del usuario registrada el 2026-08-17 y sin decidir; ahora es la elegida, en su versión completa — coche grande cruzando el centro, barra de avance arriba y la página anterior velada detrás. Tres decisiones que conviene no perder: **solo cambios de ruta**, porque cambiar de temporada ya lo señala el selector y anunciarlo dos veces sería ruido; **no aparece antes de 250 ms**, porque una navegación resuelta en 70 ms con un coche por encima se siente más lenta, no más informada; y el arranque se detecta **interceptando el clic**, porque el router del App Router no emite eventos.
+
+**Al cambiar de temporada: indicador en la caja y contenido velado.** El hueco de la flecha del desplegable ya estaba reservado, así que el indicador no mueve nada. El velo es un pseudoelemento sobre `main` y no `opacity` sobre el contenedor, para que el propio selector quede por encima, nítido: es la señal de «te he oído» y atenuarla sería quitarle el sentido. El texto visible pasa a `sr-only`, que era lo único que aportaba de verdad.
+
+**Y la verificación pagó dos veces.** La primera medición dijo que el coche no aparecía nunca: la navegación real tardaba **69 ms** porque Next la había *prefetcheado*, así que el indicador estaba haciendo justo lo correcto — y la prueba estaba mal montada, con el retardo puesto en una petición que nunca llegaba a ocurrir. Repetida anulando el prefetch, el coche sale, cruza y se mueve. Las dos situaciones quedan como pruebas de navegador: **que aparece cuando la página tarda** y **que no interrumpe cuando es rápida**.
+
+**Logos de equipo: tres defectos, no uno.** El usuario los vio mal en `/constructors`. (1) Seis marcas sin logo — marcas registradas, sigue siendo acción manual. (2) Invisibles en tema oscuro, porque el archivo trae la tinta fija. (3) «Súper chiquitos», que tenía una causa concreta: `TeamLogo` metía todos los logos en una **caja cuadrada de 48 px** y ninguno es cuadrado — `alfa` es 4,8:1 y se dibujaba a **48×10 px**. Ahora manda el alto, el ancho acompaña, y se pintan como **silueta monocroma**: la identidad del equipo ya la lleva su barra de color, que es donde el sistema de diseño dice que debe vivir. Al hacerlo apareció otro defecto que solo se ve mirando: **`sauber.svg` traía un fondo blanco que cubría el lienzo**, así que la silueta salía como un rectángulo macizo. Eliminado del archivo.
+
+**Un dato que di mal y corrijo**: inspeccionando los logos con `grep` leí el primer `viewBox` de cada archivo y dije que `sauber` era vertical (916×1958). Su elemento raíz declara 722×193, que es lo que el navegador usa: es apaisado como los demás. El síntoma era el mismo; el motivo, no.
+
+**Contrastes que faltaban por cerrar**: `--primary` en claro baja de 24% a 20% de luminosidad —los badges de dorsal y posición pasan de 3,52:1 a 4,51:1, y el blanco sobre el verde sólido de 4,86 a 6,45— y `--live` de 44% a 35% (3,27 → 4,59). Mismo tono; solo se mueve la luminosidad.
+
+**Las pruebas de navegador entran en CI.** El job construye con credenciales falsas, como el de siempre, para no perder la garantía de que la app compila sin base de datos, y sirve la app con el secret que ya existía para el cron. De paso, `actions/checkout` y `setup-node` suben a v5, que era el aviso de retirada de Node 20.
+
+**La lentitud tenía nombre, y no era Supabase.** El usuario preguntó si los tiempos de carga venían de Supabase y si un Postgres en el VPS iría más rápido. Medido: sobre el **mismo host**, una `SELECT 1` por el **pooler (6543)** cuesta **506 ms** y por la **conexión directa (5432)**, **101 ms** — que es exactamente el ida y vuelta de red hasta Virginia. La distancia pone 101 ms; **la configuración pone los otros 400**. Con `connection_limit=1`, además, cinco consultas en paralelo tardan lo mismo que en serie. Se ve en la app: la home, con 4 consultas encadenadas, tarda 1,4 s, y `/api/health`, con una sola, 540 ms, mientras las páginas con caché responden en 55-90 ms y tapaban el problema. **No se ha cambiado nada**: el usuario pidió saberlo primero y decidir después.
+
+**Verificación**: build reproduciendo el CI sin base de datos, 52 tests unitarios, **10 de navegador**, y recorrido real en los dos temas con capturas — que es donde salió el rectángulo blanco de Sauber, algo que ninguna comprobación automática habría visto.
 
 ### 2026-08-18 (5) — Los tokens que nadie usaba, y una edad mal contada ✅
 

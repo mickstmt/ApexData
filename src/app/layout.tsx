@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PageTransition } from '@/components/providers/PageTransition';
+import { NavigationProgress } from '@/components/providers/NavigationProgress';
 import { MotionProvider } from '@/components/providers/MotionProvider';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
@@ -93,6 +94,7 @@ export default function RootLayout({
         >
           <MotionProvider>
             <FavoritesProvider>
+              <NavigationProgress />
               <Header />
               <main className="flex-1">
                 <PageTransition>{children}</PageTransition>
