@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { DriverAvatar } from '@/components/ui/OptimizedImage';
 import { CountryFlag } from '@/components/ui/CountryFlag';
+import { driverAge, formatBirthDate } from '@/lib/driver-age';
 
 interface DriverCardProps {
   driver: {
@@ -23,9 +24,8 @@ interface DriverCardProps {
 }
 
 export function DriverCard({ driver, index = 0 }: DriverCardProps) {
-  const age = driver.dateOfBirth
-    ? new Date().getFullYear() - new Date(driver.dateOfBirth).getFullYear()
-    : null;
+  const age = driverAge(driver.dateOfBirth);
+  const bornOn = formatBirthDate(driver.dateOfBirth);
 
   return (
     <Link href={`/drivers/${driver.driverId}`}>
@@ -78,10 +78,13 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
               <CountryFlag nationality={driver.nationality} size={16} />
               <span>{driver.nationality}</span>
             </div>
-            {age && (
+            {age !== null && (
               <div className="flex items-center gap-2">
                 <span className="text-xs">🎂</span>
-                <span>{age} años</span>
+                <span>
+                  {age} años
+                  {bornOn && <span className="text-muted-foreground/80"> · {bornOn}</span>}
+                </span>
               </div>
             )}
             {driver.permanentNumber && (

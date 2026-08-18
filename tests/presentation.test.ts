@@ -1,13 +1,43 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { compoundColor, teamColor } from '@/lib/team-colors';
+import { TEAM_IDS, compoundColor, teamColor } from '@/lib/team-colors';
 import { COUNTRY_TO_ISO, NATIONALITY_TO_ISO } from '@/lib/countries';
+
+/**
+ * Contrast against the lightest ground a chart actually sits on. Not white:
+ * `--background` in the light theme is 240 5% 97%, and being the darker of the
+ * two surfaces it is the one that has to clear the threshold.
+ */
+const LIGHT_GROUND_LUMINANCE = 0.9303;
+
+function contrastOnLightGround(hex: string): number {
+  const channels = [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+  const luminance = 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  return (LIGHT_GROUND_LUMINANCE + 0.05) / (luminance + 0.05);
+}
 
 describe('teamColor', () => {
   it('returns the identity and on-dark pair for a known team', () => {
     expect(teamColor('mclaren').color).toBe('#FF8000');
     expect(teamColor('ferrari').onDark).toBeTruthy();
+  });
+
+  it('gives every team a light variant that a chart line can be seen at', () => {
+    // The bug this guards: charts drew `onDark` on the light ground, where
+    // Mercedes read at 1.4:1 and Renault at 1.15:1 — invisible.
+    for (const id of TEAM_IDS) {
+      expect(contrastOnLightGround(teamColor(id).onLight)).toBeGreaterThanOrEqual(3);
+    }
+
+    expect(contrastOnLightGround(teamColor('unknown-team').onLight)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('leaves an identity colour alone when it is already legible there', () => {
+    expect(teamColor('ferrari').onLight).toBe('#E80020');
+    expect(teamColor('minardi').onLight).toBe('#000000');
   });
 
   it('falls back to a neutral for unknown or missing teams', () => {

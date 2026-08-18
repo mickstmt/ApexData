@@ -212,7 +212,7 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                           <div
                             className={`flex items-center justify-center h-10 w-10 rounded-md font-bold ${
                               isWinner
-                                ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
+                                ? 'bg-podium-gold/20 text-podium-gold'
                                 : isPodium
                                 ? 'bg-primary/20 text-primary'
                                 : 'bg-muted/50 text-foreground'
@@ -308,10 +308,10 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                     <div
                       className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
                         index === 0
-                          ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
+                          ? 'bg-podium-gold/20 text-podium-gold'
                           : index === 1
-                          ? 'bg-gray-400/20 text-gray-600 dark:text-gray-400'
-                          : 'bg-orange-500/20 text-orange-600 dark:text-orange-400'
+                          ? 'bg-podium-silver/20 text-podium-silver'
+                          : 'bg-podium-bronze/20 text-podium-bronze'
                       }`}
                     >
                       {index + 1}
@@ -430,7 +430,7 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                               <div
                                 className={`flex items-center justify-center h-10 w-10 rounded-md font-bold ${
                                   isPole
-                                    ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
+                                    ? 'bg-podium-gold/20 text-podium-gold'
                                     : isTop3
                                     ? 'bg-primary/20 text-primary'
                                     : 'bg-muted/50 text-foreground'
@@ -528,10 +528,10 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                         <div
                           className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
                             index === 0
-                              ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
+                              ? 'bg-podium-gold/20 text-podium-gold'
                               : index === 1
-                              ? 'bg-gray-400/20 text-gray-600 dark:text-gray-400'
-                              : 'bg-orange-500/20 text-orange-600 dark:text-orange-400'
+                              ? 'bg-podium-silver/20 text-podium-silver'
+                              : 'bg-podium-bronze/20 text-podium-bronze'
                           }`}
                         >
                           {index + 1}

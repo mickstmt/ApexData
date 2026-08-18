@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import { teamColor } from '@/lib/team-colors';
+import { teamInk } from '@/lib/team-colors';
 
 /**
  * Championship points, round by round.
@@ -134,7 +134,6 @@ export function PointsEvolution({
 
           <g clipPath={`url(#${clipId})`}>
             {series.map((s) => {
-              const { onDark } = teamColor(s.constructorId);
               const path = s.points
                 .map((points, index) => `${index === 0 ? 'M' : 'L'} ${x(index + 1)} ${y(points)}`)
                 .join(' ');
@@ -143,8 +142,10 @@ export function PointsEvolution({
                 <path
                   key={s.driverId}
                   d={path}
+                  className="team-ink"
+                  style={teamInk(s.constructorId)}
                   fill="none"
-                  stroke={onDark}
+                  stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -157,12 +158,18 @@ export function PointsEvolution({
           {/* Direct labels at the line end beat a legend box: the name sits
               where the eye already is. */}
           {series.map((s) => {
-            const { onDark } = teamColor(s.constructorId);
             const last = s.points.length;
 
             return (
               <g key={s.driverId}>
-                <circle cx={x(last)} cy={y(s.points[last - 1])} r="3.5" fill={onDark} />
+                <circle
+                  cx={x(last)}
+                  cy={y(s.points[last - 1])}
+                  r="3.5"
+                  className="team-ink"
+                  style={teamInk(s.constructorId)}
+                  fill="currentColor"
+                />
                 <text
                   x={x(last) + 8}
                   y={y(s.points[last - 1])}
@@ -177,7 +184,6 @@ export function PointsEvolution({
 
           {hoverRound !== null &&
             series.map((s) => {
-              const { onDark } = teamColor(s.constructorId);
               const value = s.points[hoverRound - 1];
               if (value === undefined) return null;
 
@@ -187,7 +193,9 @@ export function PointsEvolution({
                   cx={x(hoverRound)}
                   cy={y(value)}
                   r="4"
-                  fill={onDark}
+                  className="team-ink"
+                  style={teamInk(s.constructorId)}
+                  fill="currentColor"
                   stroke="hsl(var(--card))"
                   strokeWidth="2"
                 />
@@ -207,8 +215,8 @@ export function PointsEvolution({
               <span key={s.driverId} className="inline-flex items-center gap-1.5">
                 <span
                   aria-hidden
-                  className="inline-block h-2.5 w-2.5 rounded-sm"
-                  style={{ backgroundColor: teamColor(s.constructorId).onDark }}
+                  className="team-ink inline-block h-2.5 w-2.5 rounded-sm"
+                  style={{ ...teamInk(s.constructorId), backgroundColor: 'currentColor' }}
                 />
                 {s.name}
                 <span className="font-mono tabular-nums text-foreground">

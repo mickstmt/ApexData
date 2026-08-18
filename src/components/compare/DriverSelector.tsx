@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, X, Trophy, Flag, Calendar, TrendingUp, GitCompare } from 'lucide-react';
 import type { Driver, Result, Race, Season } from '@prisma/client';
+import { formatBirthDate } from '@/lib/driver-age';
 
 type DriverWithResults = Driver & {
   results: (Result & {
@@ -372,9 +373,7 @@ function DriverInfoCard({
         {driver.dateOfBirth && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Fecha de Nacimiento:</span>
-            <span className="font-semibold">
-              {new Date(driver.dateOfBirth).toLocaleDateString('es-ES')}
-            </span>
+            <span className="font-semibold">{formatBirthDate(driver.dateOfBirth)}</span>
           </div>
         )}
         {stats.avgPosition && (

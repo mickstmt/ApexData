@@ -51,6 +51,11 @@ const config: Config = {
         'personal-best': 'hsl(var(--personal-best))',
         slower: 'hsl(var(--slower))',
         live: 'hsl(var(--live))',
+        podium: {
+          gold: 'hsl(var(--podium-gold))',
+          silver: 'hsl(var(--podium-silver))',
+          bronze: 'hsl(var(--podium-bronze))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

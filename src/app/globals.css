@@ -29,11 +29,22 @@
     --radius: 0.75rem;
 
     /* Broadcast timing convention: purple fastest overall, green personal
-       best, yellow slower. Fans read these without a legend. */
+       best, yellow slower. Fans read these without a legend. The light values
+       are darkened until each clears 4.5:1 even as ink on a 20% tint of
+       itself, which is how the badges use them — the green and the amber sat
+       at 4.2 and 3.6 on plain white, so the times were unreadable here while
+       being fine in dark. */
     --fastest: 271 81% 46%;
-    --personal-best: 160 84% 30%;
-    --slower: 38 92% 38%;
+    --personal-best: 160 84% 22%;
+    --slower: 38 95% 26%;
     --live: 2 100% 44%;
+
+    /* Medal colours. "Gold" was hand-written in five places as a Tailwind
+       shade and read at 2.6:1 here; defining it once means the next component
+       cannot invent its own. */
+    --podium-gold: 45 90% 24%;
+    --podium-silver: 240 6% 38%;
+    --podium-bronze: 25 75% 32%;
   }
 
   .dark {
@@ -62,6 +73,10 @@
     --personal-best: 158 64% 52%;
     --slower: 43 96% 56%;
     --live: 3 100% 61%;
+
+    --podium-gold: 45 95% 62%;
+    --podium-silver: 240 8% 72%;
+    --podium-bronze: 25 85% 62%;
   }
 
   * {
@@ -107,6 +122,20 @@
 
    Va FUERA de `@layer base` a propósito: dentro, Tailwind no llegaba a
    emitirla y la regla no existía en el CSS servido. */
+/* Team colour that follows the theme without JavaScript. The element carries
+   both variants and the theme picks one, so a chart line never flashes the
+   wrong colour while React hydrates — and a canvas, which cannot do this, is
+   the only place that has to read the theme in code.
+
+   Outside `@layer base` for the same reason as the rule below it. */
+.team-ink {
+  color: var(--team-on-light);
+}
+
+.dark .team-ink {
+  color: var(--team-on-dark);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

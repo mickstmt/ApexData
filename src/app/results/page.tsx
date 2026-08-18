@@ -124,7 +124,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
                           href={`/drivers/${winner.driver.driverId}`}
                           className="flex items-center gap-2 hover:text-primary transition-colors"
                         >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-500/20 text-sm font-bold text-yellow-600 dark:text-yellow-400">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-podium-gold/20 text-sm font-bold text-podium-gold">
                             {winner.driver.code || winner.driver.familyName.slice(0, 3).toUpperCase()}
                           </div>
                           <span className="font-medium">

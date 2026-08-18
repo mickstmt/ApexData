@@ -28,7 +28,7 @@
 
 **Próximo paso**: **Sprint 6 — Auditoría de experiencia de uso**, por el “Orden de ataque sugerido” del informe 1 de `docs/AUDITORIA_UX_2026-08-17.md`.
 
-**Tests**: 36 unitarios (TypeScript) + 14 (Python). Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, y serialización de telemetría.
+**Tests**: 52 unitarios (TypeScript) + 14 (Python). Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -43,7 +43,7 @@
   - **Pantalla de administración para importar temporadas**: no existe `src/app/admin`.
   - **Checklist de seguridad de §10, incompleto**: faltan *secret scanning* y *push protection* en GitHub, backup mensual con `pg_dump` y *rate limiting* (`slowapi`) en el servicio Python. El RLS de Supabase, que estaba en esta lista, dejó de estar recortado el mismo día — ver la bitácora.
 - **El servicio de telemetría no tiene despliegue automático**: el CI solo dispara el webhook de la web, así que un cambio en `python-service/` exige pulsar *Deploy* a mano en el panel.
-- 🔴 **Auditoría triple del 2026-08-17** (retroalimentación · accesibilidad/móvil · veracidad de la documentación): el alcance completo quedó consolidado en la sección **"S6 — alcance completo"** del plan de referencia. Resuelto el 2026-08-18: `useReducedMotion`, el foco de teclado, el zoom bloqueado y Favoritos a partir del piloto 51. **Sigue pendiente**: tokens de timing definidos pero sin usar (tiempos ilegibles en tema claro y semántica broadcast invertida), gráficos invisibles en tema claro, ninguna tabla con priority+, y **9 promesas del plan sin implementar ni registrar como deuda** (personalización por equipo, Table/Chip/Sheet, ficha de circuito, FLIP, `seed:all` incompleto…). La documentación resultó veraz en lo que afirma e incompleta en lo que omite: el cierre de cada sprint nunca se contrastó contra su alcance original.
+- 🔴 **Auditoría triple del 2026-08-17** (retroalimentación · accesibilidad/móvil · veracidad de la documentación): el alcance completo quedó consolidado en la sección **"S6 — alcance completo"** del plan de referencia. Resuelto el 2026-08-18: `useReducedMotion`, el foco de teclado, el zoom bloqueado, Favoritos a partir del piloto 51, y los tokens de timing, los gráficos en tema claro y la edad de los pilotos. **Sigue pendiente**: ninguna tabla con priority+, y **9 promesas del plan sin implementar ni registrar como deuda** (personalización por equipo, Table/Chip/Sheet, ficha de circuito, FLIP, `seed:all` incompleto…). La documentación resultó veraz en lo que afirma e incompleta en lo que omite: el cierre de cada sprint nunca se contrastó contra su alcance original.
 
 **Decisiones tomadas**:
 - ✅ **Todo en el VPS del usuario vía EasyPanel** (2026-08-17). Se descartó Vercel al descubrir que plastik ya se despliega en ese VPS con `git push` → GitHub Actions → webhook de EasyPanel, **sin necesitar acceso SSH**: el panel es web (`panel.dittochatbot.com`). El argumento a favor de Vercel era precisamente poder desplegar desde casa, y eso ya estaba resuelto.
@@ -65,6 +65,28 @@
 ---
 
 ## Bitácora
+
+### 2026-08-18 (5) — Los tokens que nadie usaba, y una edad mal contada ✅
+
+**La infraestructura de diseño llevaba desde el S3 sin consumirse**, que es el diagnóstico transversal de la auditoría. Los tokens `--fastest/--personal-best/--slower` existían y ningún componente los usaba: los tiempos se pintaban con `text-purple-400` a pelo, que en tema claro da **2,34:1**. Migrados en `LapTimesTable` y `AnalysisClient`.
+
+**Pero sustituir el color por el token no bastaba: dos de los tres tokens tampoco cumplían.** `--personal-best` daba 4,21:1 y `--slower` 3,61:1 sobre la tarjeta blanca. Y menos aún en su uso real, porque los badges ponen la tinta **sobre un tinte de sí misma al 20 %**, que resta ~1,3 puntos. Oscurecidos hasta cumplir en ese peor caso: **6,88:1** y **6,60:1** sobre blanco, **4,73** y **4,60** sobre el tinte. Se ven más profundos que antes; es el precio de leerse.
+
+**La semántica de broadcast estaba invertida.** `LapTimesTable` pintaba de morado el *mejor personal*, cuando morado es el mejor absoluto y verde el personal. Arreglarlo destapó que la tabla **no sabía cuál era la vuelta más rápida**: solo recibía el flag `IsPersonalBest`. De ahí `src/lib/lap-times.ts`, con la trampa que justifica un módulo aparte y sus tests: comparados como texto, `"59.900"` ordena *después* de `"1:29.165"`.
+
+**Los gráficos desaparecían en tema claro** porque pintaban la variante `onDark` sobre lienzo blanco: Mercedes 1,40:1, Renault 1,15:1. Añadido el tercer valor `onLight`, **derivado y no escrito a mano** — oscurecer la identidad hasta superar 3:1 conserva el tono y garantiza que un equipo añadido mañana no llegue sin variante legible. Ferrari y Red Bull se quedan igual, porque ya se leían.
+
+**Cómo lo consumen los dos gráficos, que era la decisión de fondo.** El SVG (`PointsEvolution`) lo hace **sin JavaScript**: el elemento lleva las dos variantes como variables CSS y la clase `.team-ink` deja que el tema elija, así que no hay parpadeo del color equivocado durante la hidratación. El canvas (`TelemetryChart`) no puede heredar una variable CSS, así que es el único sitio que lee el tema en código — y al hacerlo apareció un fallo latente: **no redibujaba al cambiar de tema**, de modo que rejilla y etiquetas se quedaban con los colores del tema anterior.
+
+**Decisión del usuario: tokens de podio.** El oro estaba escrito a mano en cinco sitios y daba 2,58:1. Se valoró contra la alternativa barata (tonos de Tailwind más oscuros) y se eligió el sistema: `--podium-gold/silver/bronze`, un solo sitio donde se define qué es "oro". Ahora 4,77–5,00:1.
+
+**La edad de los pilotos era `año − año`**, así que todo el que no había cumplido salía un año más viejo: Verstappen, nacido el 30/09/1997, aparecía con 29. Corregido en las dos pantallas y añadida la fecha de nacimiento junto a la edad, que era la otra mitad de la petición. Al medirlo apareció un tercer fallo, latente: la fecha se guarda a **medianoche UTC** y `/compare` la renderizaba en hora local, **mostrando el día anterior** (29/9/1997) para cualquiera al oeste de Greenwich. Los tres pasan ahora por `src/lib/driver-age.ts`, con tests del día del cumpleaños, del 29 de febrero y de la zona horaria.
+
+**Dos decisiones delegadas por el usuario**: `TelemetryComparison.tsx` **no se migra** —es código muerto que ninguna página importa y que debe morir en la limpieza, no repintarse—, y el `COMPOUND_COLORS` duplicado de `LapTimesTable` **sí se centraliza**, porque no era solo duplicación: el mapa local usaba colores de Tailwind y el central tiene los valores Pirelli exactos. Al centralizarlo salió otro dato invisible: el compuesto HARD es `#F0F0EC`, un punto casi blanco sobre tarjeta blanca (**1,14:1**); lleva anillo, y el nombre del compuesto en `sr-only` porque el color era su única codificación.
+
+**Verificación, y la lección de la sesión.** Build reproduciendo el CI **sin base de datos**; recorrido real en navegador **midiendo el color computado**, no a ojo; 52 tests unitarios, las 8 pruebas de navegador, y una pasada en tema oscuro para comprobar que no había regresión (las líneas siguen usando exactamente los valores `onDark`). **El navegador desmintió una suposición propia**: `onLight` se derivó contra blanco puro, pero el gráfico se dibuja sobre `--background` (`#F7F7F8`), que es más oscuro; McLaren pasaba el umbral en el cálculo (3,08) y lo fallaba en la página real (**2,88**). Retocado el suelo de referencia al que la app usa de verdad. Es el mismo patrón que el servidor viejo en el puerto: el cálculo era correcto, el entorno contra el que se medía no era el real.
+
+**Detectado y no abordado** (queda anotado, no desaparece): el token `--live` no cumple sobre su propio tinte (3,48:1), y `text-primary` sobre `bg-primary/20` da 3,75:1 en los badges de dorsal y posición. Ninguno es de timing; no se tocan sin decisión.
 
 ### 2026-08-18 (4) — El cron, probado; y Next 16.3.1 por una vulnerabilidad crítica ✅
 

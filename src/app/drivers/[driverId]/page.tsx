@@ -9,6 +9,7 @@ import { CountryFlag } from '@/components/ui/CountryFlag';
 import { TimingRow } from '@/components/ui/TimingRow';
 import { getDriverStats, getHeadToHead } from '@/lib/driver-stats';
 import { teamColor } from '@/lib/team-colors';
+import { driverAge, formatBirthDate } from '@/lib/driver-age';
 
 // Los datos de esta página cambian como mucho una vez por carrera, así que
 // una hora de caché evita ir a Virginia en cada visita sin que nadie note
@@ -108,9 +109,8 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
   const latestSeason = stats.seasons[0];
   const headToHead = latestSeason ? await getHeadToHead(driver.id, latestSeason.year) : null;
 
-  const age = driver.dateOfBirth
-    ? new Date().getFullYear() - new Date(driver.dateOfBirth).getFullYear()
-    : null;
+  const age = driverAge(driver.dateOfBirth);
+  const bornOn = formatBirthDate(driver.dateOfBirth);
 
   const accent = teamColor(latestSeason?.constructorId);
 
@@ -166,10 +166,10 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
                 {latestSeason.team}
               </Link>
             )}
-            {age && (
+            {age !== null && (
               <span className="inline-flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" aria-hidden />
-                {age} años
+                {bornOn ? `${bornOn} · ${age} años` : `${age} años`}
               </span>
             )}
             {driver.code && (

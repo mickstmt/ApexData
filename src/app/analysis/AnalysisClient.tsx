@@ -10,6 +10,7 @@ import { Activity, BarChart3, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LapTimesTable } from '@/components/telemetry';
 import { TelemetryChart, type TelemetryTrace } from '@/components/telemetry/TelemetryChart';
+import { compoundColor } from '@/lib/team-colors';
 import type { SessionOption, DriverOption } from './options';
 import type {
   DriverTelemetryResponse,
@@ -310,7 +311,7 @@ export function AnalysisClient({
 
         {/* Error Message */}
         {error && (
-          <div className="mt-4 rounded-md border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
+          <div className="mt-4 rounded-md border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
             {error}
           </div>
         )}
@@ -333,20 +334,16 @@ export function AnalysisClient({
                 Tiempo: {telemetry.lap_time}
               </span>
               {telemetry.compound && (
-                <span
-                  className={`rounded px-3 py-1 ${
-                    telemetry.compound === 'SOFT'
-                      ? 'bg-red-500/20 text-red-400'
-                      : telemetry.compound === 'MEDIUM'
-                        ? 'bg-yellow-500/20 text-yellow-400'
-                        : 'bg-slate-500/20 text-slate-400'
-                  }`}
-                >
+                <span className="flex items-center gap-2 rounded bg-muted px-3 py-1">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full ring-1 ring-border"
+                    style={{ backgroundColor: compoundColor(telemetry.compound) }}
+                  />
                   {telemetry.compound}
                 </span>
               )}
               {telemetry.is_personal_best && (
-                <span className="rounded bg-purple-500/20 px-3 py-1 text-purple-400">
+                <span className="rounded bg-personal-best/10 px-3 py-1 text-personal-best">
                   Personal Best
                 </span>
               )}

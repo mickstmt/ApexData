@@ -1,20 +1,74 @@
+import type { CSSProperties } from 'react';
+
 /**
  * Team colour system.
  *
- * Each team carries two values: `color` is the identity, used as a solid block
- * (the vertical bar on a timing row, a chip background) where any hue works;
- * `onDark` is the version safe as ink or as a chart line on the carbon ground.
- * They differ where the identity colour cannot be read on a dark background —
- * Mercedes' black, the white liveries, Williams' navy — which is exactly why
- * team colour is never applied directly to text.
+ * Each team carries three values: `color` is the identity, used as a solid
+ * block (the vertical bar on a timing row, a chip background) where any hue
+ * works; `onDark` is the version safe as ink or as a chart line on the carbon
+ * ground; `onLight` is the same for the white one. They differ where the
+ * identity colour cannot be read on a given background — Mercedes' turquoise
+ * vanishes on white at 1.4:1, Renault's yellow at 1.15:1 — which is exactly
+ * why team colour is never applied directly to text.
+ *
+ * `onLight` is derived rather than hand-written: darkening the identity colour
+ * until it clears 3:1 on the light ground keeps the hue recognisable, and means
+ * a team added later cannot arrive without a legible light variant.
  */
 
 export interface TeamColor {
   color: string;
   onDark: string;
+  onLight: string;
 }
 
-const TEAM_COLORS: Record<string, TeamColor> = {
+/** Contrast a line or a swatch has to clear against its ground (WCAG 1.4.11). */
+const GRAPHIC_CONTRAST = 3;
+
+/**
+ * The lightest ground is not white: charts sit on `--background` (240 5% 97%)
+ * as often as on a white card, and that is the darker of the two, so it is the
+ * one worth clearing. Measuring against white passed McLaren at 3.08:1 that
+ * read 2.88:1 on the real page.
+ */
+const LIGHT_GROUND_LUMINANCE = 0.9303;
+
+function toRgb(hex: string): [number, number, number] {
+  const value = hex.replace('#', '');
+  return [0, 2, 4].map((i) => parseInt(value.slice(i, i + 2), 16) / 255) as [number, number, number];
+}
+
+function relativeLuminance(hex: string): number {
+  const [r, g, b] = toRgb(hex).map((channel) =>
+    channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4)
+  );
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastOnLightGround(hex: string): number {
+  return (LIGHT_GROUND_LUMINANCE + 0.05) / (relativeLuminance(hex) + 0.05);
+}
+
+/** Scales every channel towards black, which holds the hue. */
+function scale(hex: string, factor: number): string {
+  const channels = toRgb(hex).map((channel) =>
+    Math.round(Math.min(255, Math.max(0, channel * 255 * factor)))
+  );
+  return `#${channels.map((c) => c.toString(16).padStart(2, '0')).join('')}`.toUpperCase();
+}
+
+/** Identity colour darkened just enough to be visible on the white canvas. */
+export function readableOnLight(hex: string): string {
+  let candidate = hex.toUpperCase();
+
+  for (let step = 0; step < 40 && contrastOnLightGround(candidate) < GRAPHIC_CONTRAST; step++) {
+    candidate = scale(hex, 1 - (step + 1) * 0.05);
+  }
+
+  return candidate;
+}
+
+const IDENTITIES: Record<string, Omit<TeamColor, 'onLight'>> = {
   mclaren: { color: '#FF8000', onDark: '#FF9A33' },
   ferrari: { color: '#E80020', onDark: '#FF4155' },
   red_bull: { color: '#3671C6', onDark: '#5B93E8' },
@@ -62,11 +116,34 @@ const TEAM_COLORS: Record<string, TeamColor> = {
 };
 
 /** Neutral used for teams with no palette of their own. */
-const FALLBACK: TeamColor = { color: '#8A8A94', onDark: '#A0A0AB' };
+const FALLBACK_IDENTITY: Omit<TeamColor, 'onLight'> = { color: '#8A8A94', onDark: '#A0A0AB' };
+
+const withLightVariant = (identity: Omit<TeamColor, 'onLight'>): TeamColor => ({
+  ...identity,
+  onLight: readableOnLight(identity.color),
+});
+
+const TEAM_COLORS: Record<string, TeamColor> = Object.fromEntries(
+  Object.entries(IDENTITIES).map(([id, identity]) => [id, withLightVariant(identity)])
+);
+
+const FALLBACK: TeamColor = withLightVariant(FALLBACK_IDENTITY);
+
+/** Every team with a palette of its own, current and historical. */
+export const TEAM_IDS = Object.keys(TEAM_COLORS);
 
 export function teamColor(constructorId: string | null | undefined): TeamColor {
   if (!constructorId) return FALLBACK;
   return TEAM_COLORS[constructorId] ?? FALLBACK;
+}
+
+/**
+ * Both variants as custom properties, to pair with the `.team-ink` class:
+ * `currentColor` then resolves to whichever the theme calls for.
+ */
+export function teamInk(constructorId: string | null | undefined): CSSProperties {
+  const { onDark, onLight } = teamColor(constructorId);
+  return { '--team-on-dark': onDark, '--team-on-light': onLight } as CSSProperties;
 }
 
 /**

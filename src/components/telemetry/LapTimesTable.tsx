@@ -5,6 +5,8 @@
  * Displays lap times for a session
  */
 
+import { fastestLapIndex } from '@/lib/lap-times';
+import { compoundColor } from '@/lib/team-colors';
 import type { LapData } from '@/types';
 
 interface LapTimesTableProps {
@@ -12,16 +14,12 @@ interface LapTimesTableProps {
   showDriver?: boolean;
 }
 
-// Compound colors
-const COMPOUND_COLORS: Record<string, string> = {
-  SOFT: 'bg-red-500',
-  MEDIUM: 'bg-yellow-500',
-  HARD: 'bg-slate-400',
-  INTERMEDIATE: 'bg-green-500',
-  WET: 'bg-blue-500',
-};
-
 export function LapTimesTable({ laps, showDriver = true }: LapTimesTableProps) {
+  // Broadcast convention: purple for the quickest lap shown, green for a
+  // personal best. The table used to paint personal bests purple, which reads
+  // as "session best" to anyone who follows the sport.
+  const fastest = fastestLapIndex(laps.map((lap) => lap.LapTime));
+
   if (!laps.length) {
     return (
       <div className="flex items-center justify-center rounded-lg border border-border bg-card p-8">
@@ -69,7 +67,11 @@ export function LapTimesTable({ laps, showDriver = true }: LapTimesTableProps) {
               <tr
                 key={`${lap.Driver}-${lap.LapNumber}-${index}`}
                 className={`transition-colors hover:bg-muted/50 ${
-                  lap.IsPersonalBest ? 'bg-purple-500/10' : ''
+                  index === fastest
+                    ? 'bg-fastest/10'
+                    : lap.IsPersonalBest
+                      ? 'bg-personal-best/10'
+                      : ''
                 }`}
               >
                 <td className="px-4 py-3 font-mono text-foreground">
@@ -90,9 +92,11 @@ export function LapTimesTable({ laps, showDriver = true }: LapTimesTableProps) {
                 <td className="px-4 py-3">
                   <span
                     className={`font-mono ${
-                      lap.IsPersonalBest
-                        ? 'font-semibold text-purple-400'
-                        : 'text-foreground'
+                      index === fastest
+                        ? 'font-semibold text-fastest'
+                        : lap.IsPersonalBest
+                          ? 'font-semibold text-personal-best'
+                          : 'text-foreground'
                     }`}
                   >
                     {lap.LapTime || '-'}
@@ -111,10 +115,10 @@ export function LapTimesTable({ laps, showDriver = true }: LapTimesTableProps) {
                   {lap.Compound && (
                     <div className="flex items-center justify-center gap-2">
                       <div
-                        className={`h-3 w-3 rounded-full ${
-                          COMPOUND_COLORS[lap.Compound] || 'bg-gray-500'
-                        }`}
+                        className="h-3 w-3 rounded-full ring-1 ring-border"
+                        style={{ backgroundColor: compoundColor(lap.Compound) }}
                       />
+                      <span className="sr-only">{lap.Compound}</span>
                       <span className="text-xs text-muted-foreground">
                         {lap.TyreLife ? `L${lap.TyreLife}` : ''}
                       </span>

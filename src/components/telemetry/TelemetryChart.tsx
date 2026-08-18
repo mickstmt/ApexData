@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { teamColor } from '@/lib/team-colors';
+import { useTheme } from 'next-themes';
+import { teamColor, teamInk } from '@/lib/team-colors';
 
 /**
  * Telemetry traces along a lap, drawn on canvas.
@@ -51,6 +52,9 @@ export function TelemetryChart({ traces }: { traces: TelemetryTrace[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [cursor, setCursor] = useState<number | null>(null);
+  // A canvas cannot inherit a CSS variable, so this is the one place that has
+  // to read the theme in code — and to repaint when it changes.
+  const { resolvedTheme } = useTheme();
 
   const maxDistance = useMemo(
     () => Math.max(...traces.map((trace) => trace.distance[trace.distance.length - 1] ?? 0)),
@@ -86,6 +90,11 @@ export function TelemetryChart({ traces }: { traces: TelemetryTrace[] }) {
     const styles = getComputedStyle(document.documentElement);
     const ink = `hsl(${styles.getPropertyValue('--muted-foreground').trim()})`;
     const grid = `hsl(${styles.getPropertyValue('--border').trim()})`;
+    // The class is on the document before first paint; resolvedTheme arrives
+    // a tick later, so the document is what the first draw goes by.
+    const isDark = resolvedTheme
+      ? resolvedTheme === 'dark'
+      : document.documentElement.classList.contains('dark');
 
     const plotWidth = width - PADDING.left - PADDING.right;
     const xOf = (distance: number) => PADDING.left + (plotWidth * distance) / maxDistance;
@@ -119,8 +128,8 @@ export function TelemetryChart({ traces }: { traces: TelemetryTrace[] }) {
         const series = readChannel(trace, channel.key);
         if (!series) continue;
 
-        const { onDark } = teamColor(trace.constructorId);
-        ctx.strokeStyle = onDark;
+        const { onDark, onLight } = teamColor(trace.constructorId);
+        ctx.strokeStyle = isDark ? onDark : onLight;
         ctx.lineWidth = 2;
         // Team-mates and same-colour cars stay apart via a dashed second line.
         ctx.setLineDash(index > 0 && traces[0].constructorId === trace.constructorId ? [6, 4] : []);
@@ -150,7 +159,7 @@ export function TelemetryChart({ traces }: { traces: TelemetryTrace[] }) {
       ctx.stroke();
       ctx.setLineDash([]);
     }
-  }, [traces, cursor, maxDistance, totalHeight, visibleChannels]);
+  }, [traces, cursor, maxDistance, totalHeight, visibleChannels, resolvedTheme]);
 
   useEffect(() => {
     draw();
@@ -199,8 +208,8 @@ export function TelemetryChart({ traces }: { traces: TelemetryTrace[] }) {
           <span key={trace.driver} className="inline-flex items-center gap-2">
             <span
               aria-hidden
-              className="inline-block h-3 w-3 rounded-sm"
-              style={{ backgroundColor: teamColor(trace.constructorId).onDark }}
+              className="team-ink inline-block h-3 w-3 rounded-sm"
+              style={{ ...teamInk(trace.constructorId), backgroundColor: 'currentColor' }}
             />
             <span className="font-medium">{trace.driver}</span>
             <span className="font-mono tabular-nums text-muted-foreground">
