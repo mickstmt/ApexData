@@ -8,7 +8,7 @@
 ## Reglas de trabajo acordadas
 
 1. **Este documento se actualiza siempre**: cada sesión de trabajo termina con una entrada en la bitácora y el estado actualizado, y se commitea/pushea para que esté disponible desde cualquier lugar.
-2. **Acciones del usuario (Frank)**: cuando algo requiera acción manual suya, se indica con máximo detalle, sin asumir conocimientos ni pasos previos. Si son varios pasos: primero un resumen corto de qué se va a hacer, y después SIEMPRE paso a paso, uno por uno, esperando confirmación antes de seguir, para evitar errores y estancamientos.
+2. **Acciones del usuario**: cuando algo requiera acción manual suya, se indica con máximo detalle, sin asumir conocimientos ni pasos previos. Si son varios pasos: primero un resumen corto de qué se va a hacer, y después SIEMPRE paso a paso, uno por uno, esperando confirmación antes de seguir, para evitar errores y estancamientos.
 3. **Herramientas**: se usan agentes especializados por ámbito, skills de Claude Code (dataviz, code-review, security-review), e investigación en internet cuando haga falta.
 4. **Cada sprint cierra con la app corriendo y verificada**, no con promesas.
 
@@ -16,7 +16,7 @@
 
 ## Estado actual
 
-**Fase**: 🟡 **Sprint 5 en curso** (2026-08-17) — **la web está en producción**: https://apexdata.meeks.fun · Sprints 0–4 completados (2026-08-16).
+**Fase**: 🟢 **Sprint 5 cerrado con recortes anotados** (2026-08-18) — **la web y la telemetría están en producción**: https://apexdata.meeks.fun · Sprints 0–4 completados (2026-08-16).
 
 **Cobertura de datos**: **2010–2026 completo** (17 temporadas) — resultados, clasificación y standings oficiales. 84 pilotos, 25 equipos, 55 circuitos.
 
@@ -26,7 +26,7 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: **Sprint 5 — Producción** (deploy en Vercel + el VPS para el servicio Python, cron semanal de datos, checklist de seguridad, push post-GP, y la pantalla de administración para importar temporadas). Después, **Sprint 6 — Auditoría de experiencia de uso**, añadido el 2026-08-17.
+**Próximo paso**: **Sprint 6 — Auditoría de experiencia de uso**, por el “Orden de ataque sugerido” del informe 1 de `docs/AUDITORIA_UX_2026-08-17.md`.
 
 **Tests**: 36 unitarios (TypeScript) + 14 (Python). Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, y serialización de telemetría.
 
@@ -36,13 +36,18 @@
 - El comparador `/compare` calcula stats sobre las últimas 5 carreras (engañoso); el head-to-head del perfil de piloto ya lo sustituye, falta retirarlo.
 - El venv local tiene FastF1 3.7.0 aunque `requirements.txt` pide ≥3.8 (necesario para 2026): ejecutar `pip install -r requirements.txt` en el venv.
 - Pendientes de S4 no abordados: mapa del circuito coloreado por velocidad y gráfico de estrategia de neumáticos.
-- 11 warnings de lint (variables sin usar, algún `any`) — limpieza cosmética pendiente.
-- 🔴 **Faltan estados de carga en la mayoría de la app** (detectado por Frank el 2026-08-17 probando en local): solo 6 de 14 páginas tienen `loading.tsx` y no hay un solo `<Suspense>` en el proyecto, así que al navegar a `/`, `/results`, `/circuits`, `/compare`, `/favorites`, `/analysis` o una ficha de equipo el navegador se queda sin ningún indicio hasta que termina la consulta. Tampoco hay caché (`revalidate`) en ninguna página. → **Sprint 6**, ver el plan de referencia.
+- 15 warnings de lint (variables sin usar, algún `any`) — limpieza cosmética pendiente.
+- 🔴 **Faltan estados de carga en la mayoría de la app** (detectado por el usuario el 2026-08-17 probando en local): solo 6 de 14 páginas tienen `loading.tsx` y no hay un solo `<Suspense>` en el proyecto, así que al navegar a `/`, `/results`, `/circuits`, `/compare`, `/favorites`, `/analysis` o una ficha de equipo el navegador se queda sin ningún indicio hasta que termina la consulta. Tampoco hay caché (`revalidate`) en ninguna página. → **Sprint 6**, ver el plan de referencia.
+- **Recortado de S5 el 2026-08-18, decisión del usuario** (se registra en lugar de desaparecer, que era justo el fallo de método diagnosticado):
+  - **Push post-GP** (§8.8 del plan): sin `push` ni `notificationclick` en `public/sw.js`.
+  - **Pantalla de administración para importar temporadas**: no existe `src/app/admin`.
+  - **Checklist de seguridad de §10, incompleto**: faltan *secret scanning* y *push protection* en GitHub, backup mensual con `pg_dump` y *rate limiting* (`slowapi`) en el servicio Python. El RLS de Supabase, que estaba en esta lista, dejó de estar recortado el mismo día — ver la bitácora.
+- **El servicio de telemetría no tiene despliegue automático**: el CI solo dispara el webhook de la web, así que un cambio en `python-service/` exige pulsar *Deploy* a mano en el panel.
 - 🔴 **Auditoría triple del 2026-08-17** (retroalimentación · accesibilidad/móvil · veracidad de la documentación): el alcance completo quedó consolidado en la sección **"S6 — alcance completo"** del plan de referencia. Lo más grave: `useReducedMotion` inexistente, foco de teclado invisible, zoom bloqueado, tokens de timing definidos pero sin usar (tiempos ilegibles en tema claro y semántica broadcast invertida), gráficos invisibles en tema claro, ninguna tabla con priority+, Favoritos roto a partir del piloto 51, y **9 promesas del plan sin implementar ni registrar como deuda** (personalización por equipo, Table/Chip/Sheet, ficha de circuito, FLIP, `seed:all` incompleto…). La documentación resultó veraz en lo que afirma e incompleta en lo que omite: el cierre de cada sprint nunca se contrastó contra su alcance original.
 
 **Decisiones tomadas**:
-- ✅ **Todo en el VPS de Frank vía EasyPanel** (2026-08-17). Se descartó Vercel al descubrir que plastik ya se despliega en ese VPS con `git push` → GitHub Actions → webhook de EasyPanel, **sin necesitar acceso SSH**: el panel es web (`panel.dittochatbot.com`). El argumento a favor de Vercel era precisamente poder desplegar desde casa, y eso ya estaba resuelto.
-- ✅ **Hosting del microservicio Python: el mismo VPS** (2026-08-16). Frank ya tiene un VPS con varios aplicativos desplegados; el servicio FastF1 (que ya tiene Dockerfile) se despliega ahí en S5. Esto elimina el único coste previsto (~$5/mes de Railway) → **coste total del proyecto: $0/mes**. Pendiente de recabar en S5: proveedor/SO del VPS, RAM/disco disponibles, si usa Docker y qué reverse proxy (Nginx/Caddy/Traefik) sirve los demás aplicativos.
+- ✅ **Todo en el VPS del usuario vía EasyPanel** (2026-08-17). Se descartó Vercel al descubrir que plastik ya se despliega en ese VPS con `git push` → GitHub Actions → webhook de EasyPanel, **sin necesitar acceso SSH**: el panel es web (`panel.dittochatbot.com`). El argumento a favor de Vercel era precisamente poder desplegar desde casa, y eso ya estaba resuelto.
+- ✅ **Hosting del microservicio Python: el mismo VPS** (2026-08-16). El usuario ya tiene un VPS con varios aplicativos desplegados; el servicio FastF1 (que ya tiene Dockerfile) se despliega ahí en S5. Esto elimina el único coste previsto (~$5/mes de Railway) → **coste total del proyecto: $0/mes**. Pendiente de recabar en S5: proveedor/SO del VPS, RAM/disco disponibles, si usa Docker y qué reverse proxy (Nginx/Caddy/Traefik) sirve los demás aplicativos.
 
 **Decisiones pendientes**:
 - [ ] Ampliar el histórico más atrás de 2010 (opcional; ~10 min por temporada, desatendido).
@@ -50,9 +55,9 @@
 
 ---
 
-## Acciones pendientes de Frank
+## Acciones pendientes del usuario
 
-1. ~~**Desplegar la web en EasyPanel**~~ → hecho el 2026-08-17: https://apexdata.meeks.fun. **Queda pendiente el servicio de telemetría**: app aparte con `python-service/Dockerfile`, **volumen en `/app/cache`** (sin él, FastF1 vuelve a descargar cientos de MB en cada reinicio), puerto 8000, `CORS_ORIGINS` con el dominio de la web y `ENVIRONMENT=production` para ocultar la documentación de la API. Después, añadir `FASTF1_SERVICE_URL` a las variables de la web. Y resolver la comprobación de cutover del CI, que sigue fallando.
+1. ~~**Desplegar la web y el servicio de telemetría en EasyPanel**~~ → ambos hechos: la web el 2026-08-17 y la telemetría el 2026-08-18, con el volumen en `/app/cache` y `FASTF1_SERVICE_URL` ya configurada. ~~Comprobación de cutover del CI~~ → resuelta.
 2. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
 3. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
 
@@ -60,21 +65,39 @@
 
 ## Bitácora
 
+### 2026-08-18 — Telemetría en producción, cron de datos y un fallo de concurrencia ✅
+
+**El servicio de telemetría ya sirve datos reales.** Desplegado en EasyPanel como app aparte (`apexdata-telemetry`, proyecto `ditto`), con volumen en `/app/cache` y **sin dominio público**: solo accesible por la red interna, porque la web le habla de servidor a servidor y exponerlo únicamente añadiría superficie de ataque sobre un servicio que todavía no tiene *rate limiting*. Verificado de punta a punta contra producción: Leclerc 1:29.165 y Verstappen 1:29.179 en la Q de Bahréin 2024. La primera llamada tardó 36 s y la segunda 78 ms — el volumen cumple exactamente su función.
+
+**La guía estaba equivocada justo en el punto que más importaba.** `DEPLOY.md` mandaba construir con la ruta `./python-service/Dockerfile` desde la raíz, y eso no puede funcionar: el Dockerfile del servicio hace `COPY requirements.txt .`, así que su contexto tiene que ser esa carpeta, y además el `.dockerignore` de la raíz excluye `python-service` entero. Lo correcto es **Build Path `/python-service`** con File `/Dockerfile`. Se detectó leyendo el Dockerfile *antes* de tocar el panel, así que no costó ni un intento fallido: es la lección de la sesión anterior —leer el Dockerfile de plastik habría ahorrado tres intentos— aplicada esta vez a tiempo.
+
+**Un fallo real de producción, encontrado al abrir la consola del contenedor**: `P2024 Timed out fetching a new connection from the connection pool (connection limit: 1)`, repetido, sobre `prisma.race.findUnique()`. La causa era `connection_limit=1`, un valor heredado del plan cuando el destino era Vercel: en serverless cada invocación es un proceso aparte y una conexión por proceso es lo correcto, pero aquí hay **un contenedor permanente** atendiendo a todos los visitantes, y las peticiones concurrentes se encolaban hasta morir a los 10 segundos con la pantalla de “Algo salió mal” en las fichas de carrera. Subido a 5 y verificado con seis peticiones simultáneas: las seis en 200, ningún `P2024`. No podía detectarse en local ni en CI; solo aparece con concurrencia real.
+
+**Cutover del CI: resuelto.** La instrumentación añadida el día anterior cumplió su función y las dos últimas ejecuciones del job de despliegue terminan en verde.
+
+**Cron semanal de datos** (`.github/workflows/data-refresh.yml`): los lunes a las 06:00 UTC siembra la temporada en curso y calienta el caché de telemetría de la última carrera; de paso, esa escritura semanal evita que Supabase vuelva a pausar el proyecto. Tres decisiones que conviene recordar: el año se **deriva** (`date -u +%Y`), porque uno fijo seguiría sembrando en enero una temporada terminada; el caché se calienta **a través de las rutas proxy de la web**, no llamando al servicio, porque este ya no es accesible desde internet; y el calentamiento es *best effort*, para que su lentitud no invalide el sembrado. Validado antes de commitear: YAML, sintaxis bash de los cuatro bloques, la rama de “secrets ausentes”, la extracción de temporada y ronda contra `/api/standings/current` (2026, ronda 11) y el paso completo ejecutado contra producción.
+
+**Aviso de seguridad de Supabase, atendido el mismo día.** Llegó un correo marcando las tablas como *publicly accessible* por no tener Row Level Security. Comprobado con una consulta directa: **las 11 tablas sin RLS y sin una sola política**. La exposición real era menor de lo que sugiere el aviso —ninguna clave JWT del proyecto ha estado nunca en el repositorio (`git log -S'eyJ'` no devuelve nada) y la app no usa el cliente de Supabase, solo Prisma con usuario y contraseña—, pero en el modelo de Supabase la clave anónima **está pensada para ser pública**: que no se haya filtrado es suerte, no diseño. Resuelto con la migración `20260818153000_enable_rls`, versionada en lugar de aplicada a mano en el panel, para que se reproduzca sola en cada despliegue.
+
+**El riesgo de esa migración era silencioso, así que se ensayó antes.** Si el rol de la app no fuera propietario de las tablas, activar RLS devolvería **cero filas sin ningún error** y la web quedaría vacía sin que nada lo delatara en los logs. Se ejecutaron las diez sentencias contra la base de datos real **dentro de una transacción revertida**: la app sigue leyendo (84 pilotos, 352 carreras, 7.113 resultados) y el rol `postgres` tiene `bypassrls`. `_prisma_migrations` se deja fuera a propósito: el contenedor arranca con `migrate deploy && node server.js`, así que un problema de permisos en esa tabla impediría arrancar la app entera, y a cambio solo protegenía nombres y checksums de migraciones. Queda el script `npm run db:rls` para auditar el estado cuando haga falta.
+
+**Contraste con el alcance original del Sprint 5**, que es el método que exigió la auditoría de veracidad: hechos el despliegue de ambas apps, el cutover y el cron semanal. **Se recortan explícitamente** el push post-GP, la pantalla de administración y el resto del checklist de seguridad —el RLS sí se hizo, empujado por el aviso—, y quedan registrados arriba como deuda con su motivo. No desaparecen sin dejar rastro, que era justo el fallo diagnosticado.
+
 ### 2026-08-17 (5) — Auditoría triple de experiencia de uso 🔍
 
-A raíz del hallazgo de los estados de carga, Frank pidió auditar el proyecto con agentes expertos en busca de más omisiones del mismo tipo. Tres agentes en paralelo: **retroalimentación al usuario**, **accesibilidad/móvil contra las reglas del propio plan**, y **veracidad de la documentación** (contrastó lo declarado contra el código y la BD reales — los conteos declarados son exactos y los 36 tests pasan).
+A raíz del hallazgo de los estados de carga, el usuario pidió auditar el proyecto con agentes expertos en busca de más omisiones del mismo tipo. Tres agentes en paralelo: **retroalimentación al usuario**, **accesibilidad/móvil contra las reglas del propio plan**, y **veracidad de la documentación** (contrastó lo declarado contra el código y la BD reales — los conteos declarados son exactos y los 36 tests pasan).
 
 **Los tres informes íntegros están en `docs/AUDITORIA_UX_2026-08-17.md`** (guardados en el repo precisamente para poder trabajar desde cualquier máquina sin el contexto de la conversación). El alcance consolidado y priorizado, en la sección **"S6 — alcance completo"** del plan de referencia.
 
 Diagnóstico transversal: **la infraestructura de diseño se construyó bien, pero las páginas no la consumen** (tokens sin usar, componentes modelo que el resto no imita). Y una segunda corrección de método: la documentación es veraz en lo que afirma pero incompleta en lo que omite — 9 promesas del plan desaparecieron sin quedar registradas como deuda, y eso solo lo detecta **contrastar el cierre de cada sprint contra su lista de alcance original**, que desde ahora es parte del cierre junto con el recorrido real de la app.
 
-También de Frank, mismo día: mostrar la **fecha de nacimiento** de los pilotos junto a la edad (ya está en BD; `/compare` ya la muestra). Al verificarlo se encontró que el cálculo de edad es `año − año`: todo piloto que no ha cumplido aparece un año más viejo. Ambos en S6.
+También del usuario, mismo día: mostrar la **fecha de nacimiento** de los pilotos junto a la edad (ya está en BD; `/compare` ya la muestra). Al verificarlo se encontró que el cálculo de edad es `año − año`: todo piloto que no ha cumplido aparece un año más viejo. Ambos en S6.
 
 ### 2026-08-17 (4) — La web, en producción 🟡
 
 **ApexData está publicada en https://apexdata.meeks.fun**, servida desde el VPS vía EasyPanel, con HTTPS y consultando Supabase (`/api/health` responde `database: ok`). Queda pendiente el servicio de telemetría.
 
-**Dominio propio.** Frank descartó `apexdata.izistoreperu.com`: el dominio es de la empresa donde trabaja y la app es suya. Tampoco quiso pagar por uno. Se revisó qué opciones gratuitas existen (subdominios de terceros tipo `is-a.dev`, `eu.org`, DuckDNS) y se aclaró que Cloudflare no regala dominios: solo gestiona zonas que ya poseas. Finalmente **compró `meeks.fun` en Hostinger**, lo delegó a Cloudflare y creó `apexdata.meeks.fun` → `161.132.4.18`, **con el proxy desactivado (nube gris)**, sin lo cual Let's Encrypt no puede validar el dominio.
+**Dominio propio.** El usuario descartó `apexdata.izistoreperu.com`: el dominio es de la empresa donde trabaja y la app es suya. Tampoco quiso pagar por uno. Se revisó qué opciones gratuitas existen (subdominios de terceros tipo `is-a.dev`, `eu.org`, DuckDNS) y se aclaró que Cloudflare no regala dominios: solo gestiona zonas que ya poseas. Finalmente **compró `meeks.fun` en Hostinger**, lo delegó a Cloudflare y creó `apexdata.meeks.fun` → `161.132.4.18`, **con el proxy desactivado (nube gris)**, sin lo cual Let's Encrypt no puede validar el dominio.
 
 **Cinco fallos encadenados antes de que arrancara.** El `Dockerfile` se había escrito el día anterior copiando el patrón de plastik, pero **nunca se había construido**. Cada intento destapó el siguiente:
 
@@ -125,7 +148,7 @@ El proyecto tenía **cero tests** y el CI solo verificaba que compilara. Antes d
 
 ### 2026-08-17 — Preparación del despliegue en EasyPanel
 
-Frank preguntó por qué desplegar en Vercel si el VPS ya estaba decidido, y tenía razón: la recomendación partía de una suposición equivocada. Plastik ya se despliega en ese VPS con `git push` → GitHub Actions → webhook de EasyPanel, y **EasyPanel es un panel web**, así que no hace falta acceso SSH ni estar en una red concreta. Se adopta el mismo patrón para ApexData.
+El usuario preguntó por qué desplegar en Vercel si el VPS ya estaba decidido, y tenía razón: la recomendación partía de una suposición equivocada. Plastik ya se despliega en ese VPS con `git push` → GitHub Actions → webhook de EasyPanel, y **EasyPanel es un panel web**, así que no hace falta acceso SSH ni estar en una red concreta. Se adopta el mismo patrón para ApexData.
 
 Preparado en el repo (siguiendo el Dockerfile de plastik y sus lecciones documentadas):
 - **`Dockerfile`** con `output: 'standalone'` y el tope de heap en 2048 MB, deliberadamente **por debajo** de la RAM del host: ponerlo por encima hace que el OOM killer mate el build sin mensaje, y el síntoma se confunde con otra cosa.
@@ -133,11 +156,11 @@ Preparado en el repo (siguiendo el Dockerfile de plastik y sus lecciones documen
 - **Job `deploy` en CI** que dispara el webhook solo si lint, tipos y build pasan, y espera el cutover comparando el arranque del contenedor con la marca de tiempo del push. Documentado el aviso de plastik: **la integración nativa de EasyPanel con GitHub debe quedar desactivada**, o las dos construcciones se cancelan entre sí.
 - `.dockerignore` que excluye `python-service` (será una app aparte en EasyPanel).
 
-Pendiente de Frank en el panel: crear las dos apps, configurar variables, obtener el webhook y añadirlo como secret.
+Pendiente del usuario en el panel: crear las dos apps, configurar variables, obtener el webhook y añadirlo como secret.
 
 ### 2026-08-16 (9) — Preparación para despliegue
 
-Frank no tiene acceso al VPS desde casa, así que se adelanta la parte del Sprint 5 que **no lo necesita**: el frontend en Vercel (Vercel y Supabase son ambos servicios en la nube; el VPS solo aloja el microservicio Python).
+El usuario no tiene acceso al VPS desde casa, así que se adelanta la parte del Sprint 5 que **no lo necesita**: el frontend en Vercel (Vercel y Supabase son ambos servicios en la nube; el VPS solo aloja el microservicio Python).
 
 - **`DIRECT_URL`** añadida al datasource de Prisma: el pooler de Supabase no soporta los prepared statements que necesitan las migraciones.
 - **La telemetría deja de ser un punto único de fallo**: sin `FASTF1_SERVICE_URL` configurada, el cliente lanza `TelemetryUnavailableError`, las rutas proxy responden **503 con un mensaje legible** y la página de análisis avisa de que esa sección está pendiente. Verificado simulando producción: las 6 páginas responden 200 sin el servicio Python levantado.
@@ -168,7 +191,7 @@ Con esto **la comparación de pilotos funciona por primera vez**: Verstappen 1:2
 
 ### 2026-08-16 (7) — Corrección de identidad: vuelve el verde
 
-El rediseño había sustituido el verde lima original por rojo F1. Revisada la decisión con Frank, se restaura el verde, que además era la opción correcta técnicamente:
+El rediseño había sustituido el verde lima original por rojo F1. Revisada la decisión con el usuario, se restaura el verde, que además era la opción correcta técnicamente:
 - El rojo **choca con Ferrari**: el mismo color significaría marca de la app y equipo.
 - El rojo tampoco podía ser el estado "en vivo" si ya era la marca; ahora `--live` es rojo en exclusiva.
 - **Contraste**: `#CCFF00` sobre carbon da 16.7:1 (nivel AAA) frente a ~4:1 del rojo, que obligaba a inventar una variante clara solo para textos.
@@ -249,7 +272,7 @@ Detalle importante: en **modo claro** el lima como tinta sobre blanco solo alcan
 **Verificación**: lint 0 errores · type-check limpio · build correcto.
 
 ### 2026-08-16 (3) — Sprint 0: Saneamiento ✅
-**Acción de Frank**: rotó la contraseña de la base de datos en Supabase (la anterior estuvo expuesta en el historial de git desde noviembre). Antes hubo que restaurar el proyecto, que Supabase había pausado por inactividad.
+**Acción del usuario**: rotó la contraseña de la base de datos en Supabase (la anterior estuvo expuesta en el historial de git desde noviembre). Antes hubo que restaurar el proyecto, que Supabase había pausado por inactividad.
 
 **Correcciones aplicadas**:
 - `.env` actualizado con la nueva contraseña; conexión verificada (6 temporadas, 28 pilotos, 12 equipos intactos).
@@ -269,7 +292,7 @@ Detalle importante: en **modo claro** el lima como tinta sobre blanco solo alcan
 
 ### 2026-08-16 (2) — Ajustes al plan
 - Renombrado `PROGRESO.md` → `PROGRESO_RELANZAMIENTO_2026.md` para vincularlo explícitamente al plan de referencia.
-- Aclarado el modelo de costes: Jolpica (API de datos históricos) y FastF1 (librería de telemetría) son ambos gratuitos; el único gasto era el hosting del servidor Python. Decidido: se usará el VPS propio de Frank → coste total $0/mes.
+- Aclarado el modelo de costes: Jolpica (API de datos históricos) y FastF1 (librería de telemetría) son ambos gratuitos; el único gasto era el hosting del servidor Python. Decidido: se usará el VPS propio del usuario → coste total $0/mes.
 
 ### 2026-08-16 — Auditoría y plan de relanzamiento
 - Auditoría multiagente completa del repo: frontend, capa de datos, servicio Python, historia del proyecto.

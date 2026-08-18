@@ -1,0 +1,90 @@
+name: Weekly data refresh
+
+on:
+  schedule:
+    # Mondays at 06:00 UTC: every grand prix has finished and Jolpica has
+    # published its results by then. The side effect matters as much as the
+    # data — a weekly write keeps Supabase from pausing the project for
+    # inactivity, which already happened once and cost a restore.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    name: Seed the current season
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Seed results and standings
+        id: seed
+        # Secrets cannot be read from a job-level `if`, so the skip is decided
+        # here: until the database secrets exist, a scheduled run should report
+        # what is missing instead of a red cross with a stack trace.
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL secret is not set — nothing to refresh yet."
+            echo "See DEPLOY.md, 'Mantener los datos al día'."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+          # The season is derived, never hardcoded: a pinned year would keep
+          # seeding a finished season every Monday from January onwards.
+          YEAR=$(date -u +%Y)
+          echo "Seeding season $YEAR"
+          npm run seed:season -- "$YEAR"
+          npm run seed:standings -- "$YEAR"
+
+      - name: Warm the telemetry cache
+        if: steps.seed.outputs.configured == 'true'
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        # The telemetry service is only reachable from inside the VPS, so its
+        # cache is warmed through the web's own proxy routes rather than by
+        # calling it directly. Best effort by design: a cold FastF1 session
+        # downloads hundreds of MB and can outlast the client timeout, and the
+        # seeding above is what must not be lost if this part is slow.
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "APP_URL repository variable is not set; skipping cache warm-up."
+            exit 0
+          fi
+
+          APP_URL=$(echo "$APP_URL" | tr -d '[:space:]')
+          APP_URL="${APP_URL%/}"
+
+          standings=$(curl -fsSL --max-time 30 "$APP_URL/api/standings/current") || true
+          season=$(echo "$standings" | grep -o '"season":"[0-9]\{4\}"' | head -1 | grep -o '[0-9]\{4\}')
+          round=$(echo "$standings" | grep -o '"round":"[0-9]\{1,2\}"' | head -1 | grep -o '[0-9]\{1,2\}')
+
+          if [ -z "$season" ] || [ -z "$round" ]; then
+            echo "Could not read the last round from /api/standings/current; skipping."
+            exit 0
+          fi
+
+          echo "Warming $season round $round"
+
+          for endpoint in "/api/laps/$season/$round/R" "/api/laps/$season/$round/Q/fastest?limit=10"; do
+            for attempt in 1 2 3; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 240 "$APP_URL$endpoint")
+              echo "[$attempt/3] $endpoint -> $code"
+              if [ "$code" = "200" ]; then
+                break
+              fi
+              sleep 20
+            done
+          done

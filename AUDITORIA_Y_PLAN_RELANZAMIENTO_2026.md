@@ -169,7 +169,7 @@ Total ~5–10 MB, optimizado por `next/image`. Todo fetch con `User-Agent: "Apex
 | Pieza | Servicio | Coste |
 |---|---|---|
 | Frontend Next.js + PWA | **Vercel Hobby** | $0 |
-| FastAPI + FastF1 | **VPS propio de Frank** (decidido 2026-08-16; ya aloja otros aplicativos — Docker con el Dockerfile existente, disco persistente para el caché FastF1). Alternativas descartadas: Railway ~$5, Fly.io ~$4, Hetzner ~€4.50 | $0 |
+| FastAPI + FastF1 | **VPS propio del usuario** (decidido 2026-08-16; ya aloja otros aplicativos — Docker con el Dockerfile existente, disco persistente para el caché FastF1). Alternativas descartadas: Railway ~$5, Fly.io ~$4, Hetzner ~€4.50 | $0 |
 | Base de datos | **Supabase Free** (actual) | $0 |
 | Imágenes | `/public` en git + `next/image` | $0 |
 | CI/CD + datos | **GitHub Actions** | $0 |
@@ -195,13 +195,13 @@ Total ~5–10 MB, optimizado por `next/image`. Todo fetch con `User-Agent: "Apex
 
 ### S6 — por qué existe este sprint
 
-Detectado por Frank el 2026-08-17 probando la app en local: **no hay estados de carga en la mayoría de rutas**. Verificado en el código: 6 de 14 páginas tienen `loading.tsx` (`/calendar`, `/constructors`, `/drivers`, `/drivers/[driverId]`, `/standings`, `/telemetry`) y **no existe un solo `<Suspense>` en el proyecto**. Sin `loading.tsx` ni `Suspense`, una página que hace `await prisma…` deja el navegador en la pantalla anterior, sin ningún indicio, hasta que la consulta termina: la app parece colgada. El caso peor es la home, que además es `force-dynamic`, y `/circuits`.
+Detectado por el usuario el 2026-08-17 probando la app en local: **no hay estados de carga en la mayoría de rutas**. Verificado en el código: 6 de 14 páginas tienen `loading.tsx` (`/calendar`, `/constructors`, `/drivers`, `/drivers/[driverId]`, `/standings`, `/telemetry`) y **no existe un solo `<Suspense>` en el proyecto**. Sin `loading.tsx` ni `Suspense`, una página que hace `await prisma…` deja el navegador en la pantalla anterior, sin ningún indicio, hasta que la consulta termina: la app parece colgada. El caso peor es la home, que además es `force-dynamic`, y `/circuits`.
 
 **Cómo se escapó, que es lo importante**: la auditoría de agosto listó "skeletons" entre lo bueno del código (§3.1) y dio el tema por resuelto — pero esos skeletons eran los del proyecto original de 2025; las páginas nuevas de S3 y S4 (Race Hub, circuitos, ficha de equipo) nacieron sin ninguno. Y la verificación de cada sprint fue siempre *lint + type-check + build*, tres comprobaciones que **no pueden detectar un hueco de comportamiento en ejecución**: la app compila igual de bien sin estados de carga. La auditoría multiagente leyó el código; nadie recorrió la aplicación haciendo clic.
 
 **Corrección del método, aplicable desde ya**: ningún sprint se cierra solo con lint/tipos/build. Cierra con un **recorrido real de la app**, ruta por ruta, incluyendo lo que se siente y no solo lo que compila: navegación entre páginas, estados vacíos, errores, y la app instalada en el móvil.
 
-**Idea de Frank (2026-08-17), sin decidir**: que el estado de carga sea un coche de carreras cruzando la pantalla de lado a lado, en vez de un skeleton genérico. Viable y barato — es una animación CSS de `transform`, que es justo lo que la sección 6 exige (solo `transform`/`opacity`) y respeta `useReducedMotion`. A valorar en S6 dónde encaja: como indicador de navegación, o combinado con los skeletons, que siguen siendo mejores para transmitir la forma de la página que va a llegar.
+**Idea del usuario (2026-08-17), sin decidir**: que el estado de carga sea un coche de carreras cruzando la pantalla de lado a lado, en vez de un skeleton genérico. Viable y barato — es una animación CSS de `transform`, que es justo lo que la sección 6 exige (solo `transform`/`opacity`) y respeta `useReducedMotion`. A valorar en S6 dónde encaja: como indicador de navegación, o combinado con los skeletons, que siguen siendo mejores para transmitir la forma de la página que va a llegar.
 
 ### S6 — alcance completo (auditoría triple del 2026-08-17)
 
@@ -237,7 +237,7 @@ La pasada sistemática se hizo esa misma noche con tres agentes (retroalimentaci
 
 **D. Arrastres de S4** (ya declarados como deuda, entran aquí): mapa del circuito coloreado por velocidad y gráfico de estrategia de neumáticos/stints. Y las retiradas pendientes: fusionar `/telemetry` en `/analysis` y retirar `/compare` (§8, "Se retira/fusiona").
 
-**E. Datos visibles** (petición de Frank, 2026-08-17): mostrar la **fecha de nacimiento** de los pilotos junto a la edad (el dato ya está en BD y `/compare` ya lo muestra), corrigiendo de paso el **cálculo de edad**, que hoy es `año − año` y suma un año a todo piloto que no haya cumplido (DriverCard.tsx:26, drivers/[driverId]/page.tsx:108).
+**E. Datos visibles** (petición del usuario, 2026-08-17): mostrar la **fecha de nacimiento** de los pilotos junto a la edad (el dato ya está en BD y `/compare` ya lo muestra), corrigiendo de paso el **cálculo de edad**, que hoy es `año − año` y suma un año a todo piloto que no haya cumplido (DriverCard.tsx:26, drivers/[driverId]/page.tsx:108).
 
 **Segunda corrección del método** (de la auditoría de veracidad): el recorrido real de la app no habría detectado los huecos C.1–C.3. Lo que los detecta es **contrastar el cierre de cada sprint contra su lista de alcance original**, punto por punto, y anotar explícitamente lo que se recorta. Desde S5, ambas cosas son parte del cierre: recorrido + contraste de alcance.
 

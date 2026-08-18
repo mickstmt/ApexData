@@ -11,6 +11,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:check": "tsx scripts/check-data.ts",
+    "db:rls": "tsx scripts/check-rls.ts",
     "seed:season": "tsx scripts/seed/season.ts",
     "seed:standings": "tsx scripts/seed/standings.ts",
     "images:drivers": "tsx scripts/images/drivers.ts",

@@ -58,27 +58,74 @@ En EasyPanel, dentro del proyecto donde vive plastik:
 
 ### 2. App del servicio de telemetría
 
+Desplegada el 2026-08-18 en el proyecto `ditto`, junto a la web.
+
 1. **Create → App**, nombre `apexdata-telemetry`.
-2. **Source**: mismo repositorio y rama.
-3. **Build**: Dockerfile, ruta `./python-service/Dockerfile`.
-4. **Volumes**: monta un volumen en `/app/cache` — **imprescindible**. FastF1
+2. **Source**: pestaña **Git**, mismo repositorio y rama, y **Build Path
+   `/python-service`**. Esto último no es opcional: el `Dockerfile` del
+   servicio hace `COPY requirements.txt .`, así que su contexto de
+   construcción tiene que ser esa carpeta, no la raíz. Además el
+   `.dockerignore` de la raíz excluye `python-service` entero, de modo que
+   con Build Path `/` no habría ni siquiera código que copiar.
+3. **Build**: Dockerfile, File `/Dockerfile` — relativo al Build Path
+   anterior, así que **sin** `python-service` delante.
+4. **Storage** (en este panel no se llama *Volumes* ni *Mounts*): **Add Volume
+   Mount**, Name `cache`, Mount Path `/app/cache` — **imprescindible**. FastF1
    descarga cientos de MB por sesión; sin volumen persistente cada reinicio
-   obliga a descargarlo todo otra vez y las consultas tardan minutos.
-5. **Domains**: puerto interno `8000`. Puede ser un subdominio propio o quedar
-   accesible solo por la red interna del proyecto.
-6. **Environment**: `CORS_ORIGINS` con el dominio de la web.
+   obliga a descargarlo todo otra vez y las consultas tardan minutos. La ruta
+   coincide con los valores por defecto de `app/config.py` (`./cache` y
+   `./cache/fastf1` sobre un WORKDIR `/app`), así que no hay que declarar
+   ninguna variable de caché.
+5. **Domains**: **sin dominio**. Decidido el 2026-08-18 dejarlo accesible solo
+   por la red interna del proyecto: la web le habla de servidor a servidor, así
+   que exponerlo a internet solo añadiría superficie de ataque sobre un
+   servicio que todavía no tiene *rate limiting*. Si algún día hiciera falta
+   depurarlo desde fuera, añadir el dominio son dos minutos y no obliga a
+   reconstruir la imagen.
+6. **Environment**:
+
+   ```
+   ENVIRONMENT=production
+   CORS_ORIGINS=https://apexdata.meeks.fun
+   ```
+
+   `ENVIRONMENT=production` es lo que oculta `/docs`, `/redoc` y
+   `/openapi.json`. **`PORT` no hace falta** aquí, al revés que en la web: el
+   `Dockerfile` fija el 8000 en el propio comando de arranque.
+
+**Para verificarlo** hay que usar la consola de la app (icono `>_`), y ahí la
+imagen `python:3.11-slim` **no trae `curl`**. Con Python basta:
+
+```bash
+python -c "import urllib.request as u; print(u.urlopen('http://localhost:8000/health').read().decode())"
+python -c "import urllib.request as u; u.urlopen('http://localhost:8000/docs')"   # debe dar 404
+df -h /app/cache && ls -la /app/cache
+```
+
+El 404 de `/docs` es el resultado correcto: confirma que `ENVIRONMENT` llegó.
+
+**Esta app no tiene despliegue automático.** El CI solo dispara el webhook de
+la web, así que un cambio en `python-service/` exige pulsar **Deploy** a mano
+en el panel.
 
 ### 3. Variables de entorno de la web
 
 | Variable | Valor | Notas |
 |---|---|---|
-| `DATABASE_URL` | Cadena del pooler de Supabase | Añade `?pgbouncer=true&connection_limit=1` |
+| `DATABASE_URL` | Cadena del pooler de Supabase | Añade `?pgbouncer=true&connection_limit=5` |
 | `DIRECT_URL` | Cadena directa de Supabase (puerto 5432) | La usan las migraciones; el pooler no las soporta |
 | `NEXT_PUBLIC_JOLPICA_API_URL` | `https://api.jolpi.ca/ergast/f1` | |
 | `NEXT_PUBLIC_OPENF1_API_URL` | `https://api.openf1.org/v1` | |
 | `NEXT_PUBLIC_APP_URL` | La URL pública de la web | |
 | `PORT` | `3000` | Obligatoria: sin ella el contenedor escucha en el 80 y el dominio da 502 |
-| `FASTF1_SERVICE_URL` | URL interna del servicio de telemetría | Opcional: sin ella esa sección queda desactivada |
+| `FASTF1_SERVICE_URL` | `http://ditto_apexdata-telemetry:8000` | Opcional: sin ella esa sección queda desactivada. Es el nombre interno `<proyecto>_<app>`, en `http` (tráfico interno, sin certificado) y **sin barra final**: el cliente concatena rutas que ya empiezan por `/` |
+
+**Sobre `connection_limit`**: el plan original decía `1`, y era correcto para
+Vercel, donde cada invocación serverless es un proceso aparte. Aquí hay **un
+contenedor permanente** atendiendo a todos los visitantes a la vez: con una
+sola conexión las peticiones concurrentes se encolan y las que esperan más de
+10 segundos mueren con `P2024`, y el usuario ve la pantalla de error. Ocurrió
+en producción el 2026-08-18 y se corrigió subiéndolo a `5`.
 
 ### 4. Conectar el webhook con GitHub
 
@@ -148,6 +195,9 @@ qué código reinició.
 | El build muere en `npx prisma generate` con `Missing required environment variable` | La config de Prisma exige variables que en el build no existen: EasyPanel las pasa como build args y el `Dockerfile` no declara ningún `ARG` |
 | El contenedor construye pero muere al arrancar con `Cannot find module` | La imagen es `output: "standalone"` y solo lleva lo que la app importa. Cualquier herramienta de desarrollo que se ejecute al arrancar se queda sin sus dependencias — por eso `prisma.config.ts` se borra en el runner |
 | `prisma migrate deploy` se queda colgado sin devolver nada | Está saliendo por el pooler (6543). Las migraciones necesitan la conexión directa (5432) |
+| `P2024 Timed out fetching a new connection from the connection pool`, repetido | `connection_limit` demasiado bajo para un contenedor permanente. Ver la nota bajo la tabla de variables |
+| El build del servicio de telemetría falla con `requirements.txt: not found` | El *Build Path* de esa app no es `/python-service` |
+| La consola del servicio de telemetría dice `curl: command not found` | La imagen `slim` no lo trae; usa `python -c "import urllib.request…"` |
 
 ### Volver atrás
 
@@ -161,12 +211,30 @@ despliegue anterior y hacer redeploy de esa imagen — sin reconstruir.
 
 ## Mantener los datos al día
 
-Pendiente de montar (Sprint 5): un cron de GitHub Actions los lunes que
-ejecute los seeds de la última carrera y llame al servicio de telemetría para
-precalentar su caché. De paso evita que Supabase pause el proyecto por
-inactividad, que ya ocurrió una vez.
+Lo hace solo el workflow **`.github/workflows/data-refresh.yml`**: los lunes a
+las 06:00 UTC siembra la temporada en curso (resultados, clasificación y
+standings) y después calienta el caché de telemetría de la última carrera. De
+paso, esa escritura semanal evita que Supabase pause el proyecto por
+inactividad, que ya ocurrió una vez y costó una restauración.
 
-Mientras tanto, a mano:
+También se puede lanzar a mano desde la pestaña **Actions** del repositorio,
+con **Run workflow** (`workflow_dispatch`).
+
+**Necesita dos secrets** en *Settings → Secrets and variables → Actions*:
+`DATABASE_URL` y `DIRECT_URL`, con los mismos valores que la app de la web.
+Sin ellos el workflow no falla: avisa de que no están y termina en verde.
+
+Dos detalles de diseño, por si hay que tocarlo:
+
+- **El año no está escrito en ninguna parte**: se deriva con `date -u +%Y`. Un
+  año fijo seguiría sembrando cada lunes una temporada terminada.
+- **El caché se calienta a través de la web, no llamando al servicio**, porque
+  este solo es accesible desde dentro del VPS. El workflow pregunta a
+  `/api/standings/current` cuál fue la última ronda y pide sus vueltas por las
+  rutas proxy. Es explícitamente *best effort*: si esa parte va lenta o falla,
+  no invalida el sembrado, que es lo que no se puede perder.
+
+Si hiciera falta hacerlo a mano:
 
 ```bash
 npm run seed:season -- 2026

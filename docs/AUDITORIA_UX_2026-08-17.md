@@ -1,6 +1,6 @@
 # Auditoría triple de experiencia de uso — 2026-08-17
 
-> **Origen**: Frank detectó probando en local que la mayoría de la app no tiene
+> **Origen**: el usuario detectó probando en local que la mayoría de la app no tiene
 > estados de carga, y pidió auditar el proyecto con agentes expertos en busca
 > de más omisiones del mismo tipo. Tres agentes en paralelo, misma noche del
 > primer despliegue en producción.
