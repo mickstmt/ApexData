@@ -1,11 +1,35 @@
 import { GitCompare } from 'lucide-react';
+import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { DriverSelector } from '@/components/compare/DriverSelector';
 import { fallbackDrivers } from '@/lib/fallback-data';
 
-// Sin esto la página se prerenderiza en el build y la lista de pilotos queda
-// congelada en la que hubiera ese día, sin caducidad.
-export const revalidate = 3600;
+// Se cachean los DATOS, no la página. Marcarla como estática con
+// `revalidate` la hacía consultar la base durante el build, y el build no
+// tiene base de datos: el CI construye con credenciales falsas a propósito, y
+// la página se habría horneado con el contenido de reserva. Con la página
+// dinámica y la consulta en `unstable_cache`, Supabase recibe una consulta por
+// hora en vez de una por visita, y el build no toca la base.
+export const dynamic = 'force-dynamic';
+
+const getDriversForComparison = unstable_cache(
+  () =>
+    prisma.driver.findMany({
+      include: {
+        results: {
+          take: 5,
+          orderBy: { race: { date: 'desc' } },
+          include: {
+            team: true,
+            race: { include: { season: true } },
+          },
+        },
+      },
+      orderBy: [{ familyName: 'asc' }],
+    }),
+  ['compare-drivers'],
+  { revalidate: 3600 }
+);
 
 export const metadata = {
   title: 'Comparador de Pilotos | ApexData',
@@ -17,26 +41,7 @@ export default async function ComparePage() {
   let usingFallback = false;
 
   try {
-    // Get all drivers with their results for comparison
-    drivers = await prisma.driver.findMany({
-      include: {
-        results: {
-          take: 5,
-          orderBy: { race: { date: 'desc' } },
-          include: {
-            team: true,
-            race: {
-              include: {
-                season: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: [
-        { familyName: 'asc' },
-      ],
-    });
+    drivers = await getDriversForComparison();
 
     if (drivers.length === 0) {
       drivers = fallbackDrivers;

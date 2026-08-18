@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -23,7 +24,7 @@ export interface DriverOption {
   constructorId: string | null;
 }
 
-export async function getTelemetryOptions(): Promise<{
+async function loadTelemetryOptions(): Promise<{
   sessions: SessionOption[];
   drivers: DriverOption[];
 }> {
@@ -67,3 +68,24 @@ export async function getTelemetryOptions(): Promise<{
 
   return { sessions, drivers };
 }
+
+/**
+ * Una consulta por hora en lugar de una por visita. Se cachean los datos y no
+ * la página: la página tiene que seguir siendo dinámica porque el build se
+ * ejecuta sin base de datos.
+ *
+ * Si la base no responde, se devuelven listas vacías en vez de tumbar la
+ * página entera: la telemetría es una sección, no la app.
+ */
+export const getTelemetryOptions = unstable_cache(
+  async () => {
+    try {
+      return await loadTelemetryOptions();
+    } catch (error) {
+      console.error('Error loading telemetry options:', error);
+      return { sessions: [], drivers: [] };
+    }
+  },
+  ['telemetry-options'],
+  { revalidate: 3600 }
+);

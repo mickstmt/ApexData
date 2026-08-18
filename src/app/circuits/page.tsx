@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin } from 'lucide-react';
+import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { Card } from '@/components/ui/card';
 import { CountryFlag } from '@/components/ui/CountryFlag';
@@ -10,10 +11,28 @@ export const metadata = {
   description: 'Trazados, ubicación e historial de los circuitos del Mundial de Fórmula 1.',
 };
 
-// Los datos de esta página cambian como mucho una vez por carrera, así que
-// una hora de caché evita ir a Virginia en cada visita sin que nadie note
-// nunca un dato viejo.
-export const revalidate = 3600;
+// Se cachean los DATOS, no la página. Marcarla como estática con
+// `revalidate` la hacía consultar la base durante el build, y el build no
+// tiene base de datos: el CI construye con credenciales falsas a propósito, y
+// la página se habría horneado con el contenido de reserva. Con la página
+// dinámica y la consulta en `unstable_cache`, Supabase recibe una consulta por
+// hora en vez de una por visita, y el build no toca la base.
+export const dynamic = 'force-dynamic';
+
+// Only a count and the latest year are needed, so the race rows themselves
+// never leave the database.
+const getCircuits = unstable_cache(
+  () =>
+    prisma.circuit.findMany({
+      orderBy: { name: 'asc' },
+      include: {
+        _count: { select: { races: true } },
+        races: { orderBy: { year: 'desc' }, take: 1, select: { year: true } },
+      },
+    }),
+  ['circuits-with-race-counts'],
+  { revalidate: 3600 }
+);
 
 export default async function CircuitsPage() {
   let circuits: Array<{
@@ -29,15 +48,7 @@ export default async function CircuitsPage() {
   let hasError = false;
 
   try {
-    // Only a count and the latest year are needed, so the race rows themselves
-    // never leave the database.
-    const rows = await prisma.circuit.findMany({
-      orderBy: { name: 'asc' },
-      include: {
-        _count: { select: { races: true } },
-        races: { orderBy: { year: 'desc' }, take: 1, select: { year: true } },
-      },
-    });
+    const rows = await getCircuits();
 
     circuits = rows.map((circuit) => ({
       id: circuit.id,
