@@ -2,6 +2,11 @@ import RaceDetailClient from './RaceDetailClient';
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 
+// Los datos de esta página cambian como mucho una vez por carrera, así que
+// una hora de caché evita ir a Virginia en cada visita sin que nadie note
+// nunca un dato viejo.
+export const revalidate = 3600;
+
 interface RaceResultPageProps {
   params: Promise<{
     year: string;

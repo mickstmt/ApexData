@@ -17,6 +17,28 @@ export async function GET(request: NextRequest) {
     const offset = searchParams.get('offset');
     const nationality = searchParams.get('nationality');
 
+    // Ver la nota de /api/drivers: los favoritos se piden por identificador.
+    const ids = searchParams.get('ids');
+
+    if (ids) {
+      const constructorIds = ids
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .slice(0, 100);
+
+      const favorites = await prisma.team.findMany({
+        where: { constructorId: { in: constructorIds } },
+        orderBy: { name: 'asc' },
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: favorites,
+        source: 'database',
+      });
+    }
+
     // Try database first
     if (!year || year === 'current') {
       const constructorsFromDb = await prisma.team.findMany({

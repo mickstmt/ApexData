@@ -17,6 +17,31 @@ export async function GET(request: NextRequest) {
     const offset = searchParams.get('offset');
     const nationality = searchParams.get('nationality');
 
+    // Favoritos: se piden exactamente los guardados en vez de la primera
+    // página de la tabla. Antes se traían 50 pilotos por orden alfabético y se
+    // filtraba en el cliente, así que cualquier favorito por debajo del puesto
+    // 50 desaparecía de /favorites sin explicación — y en la base hay 84.
+    const ids = searchParams.get('ids');
+
+    if (ids) {
+      const driverIds = ids
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .slice(0, 100);
+
+      const favorites = await prisma.driver.findMany({
+        where: { driverId: { in: driverIds } },
+        orderBy: { familyName: 'asc' },
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: favorites,
+        source: 'database',
+      });
+    }
+
     // Try to get from database first
     if (!year || year === 'current') {
       const driversFromDb = await prisma.driver.findMany({

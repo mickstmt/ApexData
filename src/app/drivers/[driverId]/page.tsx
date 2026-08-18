@@ -10,7 +10,10 @@ import { TimingRow } from '@/components/ui/TimingRow';
 import { getDriverStats, getHeadToHead } from '@/lib/driver-stats';
 import { teamColor } from '@/lib/team-colors';
 
-export const dynamic = 'force-dynamic';
+// Los datos de esta página cambian como mucho una vez por carrera, así que
+// una hora de caché evita ir a Virginia en cada visita sin que nadie note
+// nunca un dato viejo.
+export const revalidate = 3600;
 
 interface DriverDetailPageProps {
   params: Promise<{ driverId: string }>;

@@ -10,7 +10,10 @@ export const metadata = {
   description: 'Trazados, ubicación e historial de los circuitos del Mundial de Fórmula 1.',
 };
 
-export const dynamic = 'force-dynamic';
+// Los datos de esta página cambian como mucho una vez por carrera, así que
+// una hora de caché evita ir a Virginia en cada visita sin que nadie note
+// nunca un dato viejo.
+export const revalidate = 3600;
 
 export default async function CircuitsPage() {
   let circuits: Array<{

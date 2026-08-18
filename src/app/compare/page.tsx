@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { DriverSelector } from '@/components/compare/DriverSelector';
 import { fallbackDrivers } from '@/lib/fallback-data';
 
+// Sin esto la página se prerenderiza en el build y la lista de pilotos queda
+// congelada en la que hubiera ese día, sin caducidad.
+export const revalidate = 3600;
+
 export const metadata = {
   title: 'Comparador de Pilotos | ApexData',
   description: 'Compara estadísticas y rendimiento entre pilotos de Fórmula 1',

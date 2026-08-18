@@ -1,6 +1,7 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, CalendarDays, Flag, Trophy } from 'lucide-react';
+import { ArrowRight, CalendarDays, Flag } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { TimingRow } from '@/components/ui/TimingRow';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { DriverAvatar } from '@/components/ui/OptimizedImage';
 import { RaceCountdown, LocalDateTime } from '@/components/home/RaceCountdown';
+import { Championship, ChampionshipSkeleton } from '@/components/home/Championship';
 import { raceStart } from '@/lib/race-time';
 
 // The hub is "what is happening now", so it must never be baked at build time.
@@ -55,56 +57,7 @@ async function getHubData() {
 
     const year = lastRace?.year ?? nextRace?.year ?? now.getFullYear();
 
-    const latestStandingRound = await prisma.driverStanding.findFirst({
-      where: { year },
-      orderBy: { round: 'desc' },
-      select: { round: true },
-    });
-
-    const [driverStandings, constructorStandings] = latestStandingRound
-      ? await Promise.all([
-          prisma.driverStanding.findMany({
-            where: { year, round: latestStandingRound.round, position: { lte: 5 } },
-            orderBy: { position: 'asc' },
-            include: { driver: true },
-          }),
-          prisma.constructorStanding.findMany({
-            where: { year, round: latestStandingRound.round, position: { lte: 5 } },
-            orderBy: { position: 'asc' },
-            include: { team: true },
-          }),
-        ])
-      : [[], []];
-
-    // Each driver's current team, for the colour stripe. Reads the season's
-    // entries newest-first so a driver who sat out the last round still
-    // resolves, rather than falling back to the grey placeholder.
-    const teamByDriver = new Map<string, { name: string; constructorId: string }>();
-
-    if (driverStandings.length > 0) {
-      const entries = await prisma.result.findMany({
-        where: {
-          race: { year },
-          driverId: { in: driverStandings.map((entry) => entry.driverId) },
-        },
-        orderBy: { race: { round: 'desc' } },
-        select: {
-          driverId: true,
-          team: { select: { name: true, constructorId: true } },
-        },
-      });
-
-      for (const entry of entries) {
-        if (!teamByDriver.has(entry.driverId)) {
-          teamByDriver.set(entry.driverId, {
-            name: entry.team.name,
-            constructorId: entry.team.constructorId,
-          });
-        }
-      }
-    }
-
-    return { nextRace, lastRace, year, driverStandings, constructorStandings, teamByDriver };
+    return { nextRace, lastRace, year };
   } catch (error) {
     console.error('Error loading race hub:', error);
     return null;
@@ -125,7 +78,7 @@ export default async function Home() {
     );
   }
 
-  const { nextRace, lastRace, year, driverStandings, constructorStandings, teamByDriver } = data;
+  const { nextRace, lastRace, year } = data;
 
   const nextSessions = nextRace
     ? (
@@ -261,78 +214,10 @@ export default async function Home() {
           </section>
         )}
 
-        {/* Championship */}
-        {driverStandings.length > 0 && (
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 font-display text-xl font-semibold">
-                <Trophy className="h-5 w-5 text-primary" aria-hidden />
-                Campeonato {year}
-              </h2>
-              <Link
-                href={`/standings?season=${year}`}
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Ver todo
-              </Link>
-            </div>
-
-            <Card>
-              <CardContent className="flex flex-col gap-2 pt-4 sm:pt-5">
-                {driverStandings.map((entry) => {
-                  const team = teamByDriver.get(entry.driverId);
-
-                  return (
-                    <TimingRow
-                      key={entry.id}
-                      position={entry.position}
-                      constructorId={team?.constructorId}
-                      href={`/drivers/${entry.driver.driverId}`}
-                      value={entry.points}
-                      valueLabel="pts"
-                    >
-                      <DriverAvatar
-                        src={entry.driver.imageUrl}
-                        name={`${entry.driver.givenName} ${entry.driver.familyName}`}
-                        size="sm"
-                      />
-                      <span className="min-w-0">
-                        <span className="block truncate font-semibold">
-                          {entry.driver.givenName} {entry.driver.familyName}
-                        </span>
-                        <span className="block truncate text-sm text-muted-foreground">
-                          {team?.name ?? '—'}
-                        </span>
-                      </span>
-                    </TimingRow>
-                  );
-                })}
-              </CardContent>
-            </Card>
-
-            {constructorStandings.length > 0 && (
-              <Card className="mt-4">
-                <CardHeader>
-                  <CardTitle className="text-base">Constructores</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2">
-                  {constructorStandings.map((entry) => (
-                    <TimingRow
-                      key={entry.id}
-                      position={entry.position}
-                      constructorId={entry.team.constructorId}
-                      href={`/constructors/${entry.team.constructorId}`}
-                      value={entry.points}
-                      valueLabel="pts"
-                    >
-                      <span className="truncate font-semibold">{entry.team.name}</span>
-                    </TimingRow>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-          </section>
-        )}
+        {/* Championship: se transmite aparte para no retrasar lo de arriba */}
+        <Suspense fallback={<ChampionshipSkeleton />}>
+          <Championship year={year} />
+        </Suspense>
       </div>
 
       {/* Entry points to the rest of the app */}
