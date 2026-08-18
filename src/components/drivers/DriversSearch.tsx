@@ -61,7 +61,7 @@ export function DriversSearch({ drivers }: DriversSearchProps) {
             placeholder="Buscar piloto por nombre, código o número..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-4 text-base md:text-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-4 text-base md:text-sm transition-colors placeholder:text-muted-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           />
         </div>
 
@@ -70,7 +70,7 @@ export function DriversSearch({ drivers }: DriversSearchProps) {
           <select
             value={selectedNationality}
             onChange={(e) => setSelectedNationality(e.target.value)}
-            className="rounded-md border border-input bg-background px-4 py-2 text-base md:text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="rounded-md border border-input bg-background px-4 py-2 text-base md:text-sm transition-colors ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <option value="all">Todas las nacionalidades</option>
             {nationalities.map((nationality) => (

@@ -96,4 +96,24 @@
   .font-display {
     font-family: var(--font-display), system-ui, sans-serif !important;
   }
+
+}
+
+/* Quien pide "reducir movimiento" en su sistema deja de recibirlo, incluidas
+   las animaciones escritas en CSS que no pasan por framer-motion (de esas se
+   encarga `MotionProvider`). No se ocultan los indicadores de carga: se quedan
+   quietos, y el texto que los acompaña ("Cargando…") es el que sigue
+   comunicando que algo está en marcha.
+
+   Va FUERA de `@layer base` a propósito: dentro, Tailwind no llegaba a
+   emitirla y la regla no existía en el CSS servido. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

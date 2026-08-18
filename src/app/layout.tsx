@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PageTransition } from '@/components/providers/PageTransition';
+import { MotionProvider } from '@/components/providers/MotionProvider';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
 import { PwaRegister } from '@/components/pwa/PwaRegister';
@@ -69,10 +70,9 @@ export const viewport: Viewport = {
   themeColor: '#0B0B0F',
   width: 'device-width',
   initialScale: 1,
-  // Stops iOS from zooming in when a field is focused. Inputs are set at 16px
-  // so nothing is unreadable as a result.
-  maximumScale: 1,
-  userScalable: false,
+  // Sin `maximumScale` ni `userScalable: false`: bloquear el zoom incumple
+  // WCAG 1.4.4 y no hacía falta, porque el zoom al enfocar un campo ya se
+  // evita dando 16px a inputs y selects (`text-base md:text-sm`).
   // Required for env(safe-area-inset-*) to report anything at all.
   viewportFit: 'cover',
 };
@@ -91,21 +91,23 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <FavoritesProvider>
-            <Header />
-            <main className="flex-1">
-              <PageTransition>{children}</PageTransition>
-            </main>
-            {/* Clearance for the fixed tab bar, below the last element on the
-                page so the footer stays reachable on phones. */}
-            <div className="pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-              <Footer />
-            </div>
-            <MobileTabBar />
-            <IosInstallHint />
-            <PwaRegister />
-            <ThemeColorSync />
-          </FavoritesProvider>
+          <MotionProvider>
+            <FavoritesProvider>
+              <Header />
+              <main className="flex-1">
+                <PageTransition>{children}</PageTransition>
+              </main>
+              {/* Clearance for the fixed tab bar, below the last element on the
+                  page so the footer stays reachable on phones. */}
+              <div className="pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+                <Footer />
+              </div>
+              <MobileTabBar />
+              <IosInstallHint />
+              <PwaRegister />
+              <ThemeColorSync />
+            </FavoritesProvider>
+          </MotionProvider>
         </ThemeProvider>
       </body>
     </html>

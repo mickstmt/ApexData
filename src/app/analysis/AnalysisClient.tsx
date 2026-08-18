@@ -168,11 +168,15 @@ export function AnalysisClient({
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Event Selection */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-muted-foreground">
+            <label
+              htmlFor="analysis-event"
+              className="mb-2 block text-sm font-medium text-muted-foreground"
+            >
               Gran Premio
             </label>
             <select
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              id="analysis-event"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               value={`${selectedSession.year}-${selectedSession.event}`}
               onChange={(e) => {
                 const [year, event] = e.target.value.split('-');
@@ -195,11 +199,15 @@ export function AnalysisClient({
 
           {/* Session Type */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-muted-foreground">
+            <label
+              htmlFor="analysis-session"
+              className="mb-2 block text-sm font-medium text-muted-foreground"
+            >
               Sesión
             </label>
             <select
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              id="analysis-session"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               value={sessionType}
               onChange={(e) => setSessionType(e.target.value as SessionType)}
             >
@@ -213,11 +221,15 @@ export function AnalysisClient({
 
           {/* Driver 1 */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-muted-foreground">
+            <label
+              htmlFor="analysis-driver-1"
+              className="mb-2 block text-sm font-medium text-muted-foreground"
+            >
               Piloto 1
             </label>
             <select
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              id="analysis-driver-1"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               value={driver1}
               onChange={(e) => setDriver1(e.target.value)}
             >
@@ -231,11 +243,15 @@ export function AnalysisClient({
 
           {/* Driver 2 */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-muted-foreground">
+            <label
+              htmlFor="analysis-driver-2"
+              className="mb-2 block text-sm font-medium text-muted-foreground"
+            >
               Piloto 2
             </label>
             <select
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              id="analysis-driver-2"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               value={driver2}
               onChange={(e) => setDriver2(e.target.value)}
             >

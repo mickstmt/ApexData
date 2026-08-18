@@ -112,7 +112,7 @@ export function DriverSelector({ drivers }: DriverSelectorProps) {
                       setShowDropdown1(true);
                     }}
                     onFocus={() => setShowDropdown1(true)}
-                    className="w-full rounded-lg border border-border bg-background py-3 pl-10 pr-4 focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-background py-3 pl-10 pr-4 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   />
                 </div>
 
@@ -186,7 +186,7 @@ export function DriverSelector({ drivers }: DriverSelectorProps) {
                       setShowDropdown2(true);
                     }}
                     onFocus={() => setShowDropdown2(true)}
-                    className="w-full rounded-lg border border-border bg-background py-3 pl-10 pr-4 focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-background py-3 pl-10 pr-4 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   />
                 </div>
 

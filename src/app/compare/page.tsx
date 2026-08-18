@@ -13,8 +13,8 @@ import { fallbackDrivers } from '@/lib/fallback-data';
 export const dynamic = 'force-dynamic';
 
 const getDriversForComparison = unstable_cache(
-  () =>
-    prisma.driver.findMany({
+  async () => {
+    const drivers = await prisma.driver.findMany({
       include: {
         results: {
           take: 5,
@@ -26,7 +26,18 @@ const getDriversForComparison = unstable_cache(
         },
       },
       orderBy: [{ familyName: 'asc' }],
-    }),
+    });
+
+    // `Result.milliseconds` es un BigInt, y la caché guarda serializando en
+    // JSON, que no sabe representarlo: dejarlo pasar lanzaba un
+    // `unhandledRejection` en el servidor cada vez que se poblaba la caché.
+    // Esta pantalla solo usa la posición de cada resultado, así que el campo
+    // se descarta en lugar de arrastrarlo hasta el navegador.
+    return drivers.map((driver) => ({
+      ...driver,
+      results: driver.results.map((result) => ({ ...result, milliseconds: null })),
+    }));
+  },
   ['compare-drivers'],
   { revalidate: 3600 }
 );
