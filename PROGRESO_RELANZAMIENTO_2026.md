@@ -43,13 +43,14 @@
   - **Pantalla de administración para importar temporadas**: no existe `src/app/admin`.
   - **Checklist de seguridad de §10, incompleto**: faltan *secret scanning* y *push protection* en GitHub, backup mensual con `pg_dump` y *rate limiting* (`slowapi`) en el servicio Python. El RLS de Supabase, que estaba en esta lista, dejó de estar recortado el mismo día — ver la bitácora.
 - **El servicio de telemetría no tiene despliegue automático**: el CI solo dispara el webhook de la web, así que un cambio en `python-service/` exige pulsar *Deploy* a mano en el panel.
-- 🔴 **Auditoría triple del 2026-08-17** (retroalimentación · accesibilidad/móvil · veracidad de la documentación): el alcance completo quedó consolidado en la sección **"S6 — alcance completo"** del plan de referencia. Lo más grave: `useReducedMotion` inexistente, foco de teclado invisible, zoom bloqueado, tokens de timing definidos pero sin usar (tiempos ilegibles en tema claro y semántica broadcast invertida), gráficos invisibles en tema claro, ninguna tabla con priority+, Favoritos roto a partir del piloto 51, y **9 promesas del plan sin implementar ni registrar como deuda** (personalización por equipo, Table/Chip/Sheet, ficha de circuito, FLIP, `seed:all` incompleto…). La documentación resultó veraz en lo que afirma e incompleta en lo que omite: el cierre de cada sprint nunca se contrastó contra su alcance original.
+- 🔴 **Auditoría triple del 2026-08-17** (retroalimentación · accesibilidad/móvil · veracidad de la documentación): el alcance completo quedó consolidado en la sección **"S6 — alcance completo"** del plan de referencia. Resuelto el 2026-08-18: `useReducedMotion`, el foco de teclado, el zoom bloqueado y Favoritos a partir del piloto 51. **Sigue pendiente**: tokens de timing definidos pero sin usar (tiempos ilegibles en tema claro y semántica broadcast invertida), gráficos invisibles en tema claro, ninguna tabla con priority+, y **9 promesas del plan sin implementar ni registrar como deuda** (personalización por equipo, Table/Chip/Sheet, ficha de circuito, FLIP, `seed:all` incompleto…). La documentación resultó veraz en lo que afirma e incompleta en lo que omite: el cierre de cada sprint nunca se contrastó contra su alcance original.
 
 **Decisiones tomadas**:
 - ✅ **Todo en el VPS del usuario vía EasyPanel** (2026-08-17). Se descartó Vercel al descubrir que plastik ya se despliega en ese VPS con `git push` → GitHub Actions → webhook de EasyPanel, **sin necesitar acceso SSH**: el panel es web (`panel.dittochatbot.com`). El argumento a favor de Vercel era precisamente poder desplegar desde casa, y eso ya estaba resuelto.
 - ✅ **Hosting del microservicio Python: el mismo VPS** (2026-08-16). El usuario ya tiene un VPS con varios aplicativos desplegados; el servicio FastF1 (que ya tiene Dockerfile) se despliega ahí en S5. Esto elimina el único coste previsto (~$5/mes de Railway) → **coste total del proyecto: $0/mes**. Pendiente de recabar en S5: proveedor/SO del VPS, RAM/disco disponibles, si usa Docker y qué reverse proxy (Nginx/Caddy/Traefik) sirve los demás aplicativos.
 
 **Decisiones pendientes**:
+- [ ] **Dar acceso a base de datos a las pruebas de navegador en CI**: existen ocho pruebas de Playwright (`npm run test:e2e`) que hoy solo se ejecutan en local, porque el CI construye sin base de datos a propósito. El secret `DATABASE_URL` ya existe desde el cron, así que es viable; falta decidir si conviene acoplar el CI a Supabase.
 - [ ] Ampliar el histórico más atrás de 2010 (opcional; ~10 min por temporada, desatendido).
 - [ ] Subdominio para la app (p. ej. `apexdata.izistoreperu.com`) — se elige al crear la app en EasyPanel.
 
@@ -64,6 +65,29 @@
 ---
 
 ## Bitácora
+
+### 2026-08-18 (3) — Accesibilidad, y por fin un navegador de verdad ✅
+
+**Playwright, ocho pruebas** contra el servidor de producción local (`npm run test:e2e`). Existen por lo que originó este sprint: lint, tipos y build **no pueden ver un hueco de comportamiento**, y hasta hoy toda la verificación del proyecto era eso. Cada prueba cita el hallazgo del informe que cubre, para que se sepa qué defiende.
+
+**Prioridad 1 del informe 2, reducir movimiento.** No había **ni un solo** soporte de `prefers-reduced-motion` en el proyecto, con framer-motion animando en seis componentes: cada navegación desplazaba la página entera y las listas entraban en cascada, sin escape posible para quien sufre trastorno vestibular. Resuelto en dos frentes: `MotionProvider` con `MotionConfig reducedMotion=“user”` para todo lo de framer-motion, y un bloque `@media (prefers-reduced-motion: reduce)` para lo escrito en CSS.
+
+**Prioridad 2, el foco de teclado.** Diez controles tenían el anillo al 20 % de alfa —1,2:1 de contraste, invisible— o directamente `focus:outline-none` sin sustituto. Todos pasan al patrón de `button.tsx`, que ya lo hacía bien.
+
+**Prioridad 3, el zoom.** `maximumScale: 1` y `userScalable: false` salían del `viewport`: incumplían WCAG 1.4.4 y no hacían falta, porque el zoom al enfocar un campo ya se evita dando 16 px a inputs y selects.
+
+**Punto 7, nombres accesibles.** Los cuatro `<select>` de `/analysis` se atan a su etiqueta con `htmlFor`/`id` —VoiceOver los anunciaba como “menú emergente”, sin decir de qué— y suben a 16 px en móvil.
+
+**Y las pruebas se pagaron solas el mismo día en que se escribieron, con dos fallos reales:**
+
+1. **La media query de `prefers-reduced-motion` no llegaba al CSS servido.** Estaba dentro de `@layer base` y Tailwind no la emitía: la regla sencillamente no existía. El código fuente parecía correcto, así que sin navegador se habría dado por hecha — exactamente el patrón de omisión que este sprint persigue.
+2. **La caché de `/compare` lanzaba un `unhandledRejection`** al serializar `Result.milliseconds`, que es un `BigInt` y JSON no sabe representar. Lo había introducido ese mismo día al añadir `unstable_cache`, y afectaba a un campo que esa pantalla ni siquiera usa.
+
+Y una suposición propia desmentida: **`MotionConfig` global no basta para `PageTransition`**. Se dio por bueno, la prueba lo negó mostrando que la página seguía desplazándose, y hubo que anular el salto explícitamente con `useReducedMotion`.
+
+**Verificación**: ocho pruebas en verde en tres tandas seguidas, una de ellas desde caché fría tras reconstruir, más tipos limpios, lint sin errores y los 36 tests unitarios.
+
+**Queda abierto**: las pruebas de navegador **no corren en CI**, porque el CI construye sin base de datos a propósito. Con el secret que ya existe para el cron sería viable; está anotado como decisión pendiente, sin tomar.
 
 ### 2026-08-18 (2) — Sprint 6: retroalimentación al navegar 🟡
 
