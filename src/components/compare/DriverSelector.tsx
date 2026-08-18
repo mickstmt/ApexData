@@ -279,7 +279,11 @@ export function DriverSelector({ drivers }: DriverSelectorProps) {
         </motion.div>
       )}
 
-      {!driver1 || !driver2 && (
+      {/* Los parentesis no son decorativos: sin ellos esto se agrupa como
+          `!driver1 || (!driver2 && jsx)`, que al entrar sin nadie elegido vale
+          `true` y React no pinta nada. El mensaje solo aparecia despues de
+          elegir al primer piloto, justo cuando ya no hacia falta. */}
+      {(!driver1 || !driver2) && (
         <div className="rounded-lg border border-border bg-muted/50 p-12 text-center">
           <GitCompare className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
           <p className="text-muted-foreground">
