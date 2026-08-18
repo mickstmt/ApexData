@@ -66,6 +66,18 @@
 
 ## Bitácora
 
+### 2026-08-18 (4) — El cron, probado; y Next 16.3.1 por una vulnerabilidad crítica ✅
+
+**El cron se ejecutó por primera vez y terminó en éxito**, lanzado a mano desde Actions: sembró la temporada 2026 completa (calendario, resultados, clasificación y sprints) y después calentó el caché de telemetría de la última carrera. Con esto queda cerrado lo último que faltaba del Sprint 5.
+
+**Y su log traíia, casi de pasada, `16 vulnerabilities … 1 critical`.** La crítica era de **Next.js**: la 16.0.3 que corría en producción está afectada por *RCE in React flight protocol* —ejecución remota de código—, además de una lista larga de denegaciones de servicio, *bypass* de middleware y envenenamiento de caché. Actualizado a **16.3.1**, dentro de la misma versión mayor: la crítica desaparece y los avisos bajan de 16 a 13; los que quedan son herramientas de construcción y desarrollo, mucho menos expuestas.
+
+Conviene distinguirlo de la contraseña de Supabase que se decidió no rotar: allí el peor caso era que alguien leyera datos públicos de Fórmula 1; aquí, que alguien ejecutara código en el VPS donde viven otros aplicativos.
+
+**Verificado con la versión nueva**: lint sin errores, tipos limpios, 36 tests unitarios y **las ocho pruebas de navegador**.
+
+**Pendiente menor**, detectado en el mismo log: GitHub está retirando Node 20 de sus acciones y `actions/checkout@v4` y `setup-node@v4` todavía lo usan. Hoy solo avisa, pero conviene subirlas a la v5.
+
 ### 2026-08-18 (3) — Accesibilidad, y por fin un navegador de verdad ✅
 
 **Playwright, ocho pruebas** contra el servidor de producción local (`npm run test:e2e`). Existen por lo que originó este sprint: lint, tipos y build **no pueden ver un hueco de comportamiento**, y hasta hoy toda la verificación del proyecto era eso. Cada prueba cita el hallazgo del informe que cubre, para que se sepa qué defiende.
