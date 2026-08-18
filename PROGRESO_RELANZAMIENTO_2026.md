@@ -16,7 +16,7 @@
 
 ## Estado actual
 
-**Fase**: 🟢 **Sprint 5 cerrado con recortes anotados** (2026-08-18) — **la web y la telemetría están en producción**: https://apexdata.meeks.fun · Sprints 0–4 completados (2026-08-16).
+**Fase**: 🟡 **Sprint 6 en curso** (2026-08-18) — la web y la telemetría en producción: https://apexdata.meeks.fun · Sprint 5 cerrado con recortes anotados · Sprints 0–4 completados (2026-08-16).
 
 **Cobertura de datos**: **2010–2026 completo** (17 temporadas) — resultados, clasificación y standings oficiales. 84 pilotos, 25 equipos, 55 circuitos.
 
@@ -37,7 +37,7 @@
 - El venv local tiene FastF1 3.7.0 aunque `requirements.txt` pide ≥3.8 (necesario para 2026): ejecutar `pip install -r requirements.txt` en el venv.
 - Pendientes de S4 no abordados: mapa del circuito coloreado por velocidad y gráfico de estrategia de neumáticos.
 - 15 warnings de lint (variables sin usar, algún `any`) — limpieza cosmética pendiente.
-- 🔴 **Faltan estados de carga en la mayoría de la app** (detectado por el usuario el 2026-08-17 probando en local): solo 6 de 14 páginas tienen `loading.tsx` y no hay un solo `<Suspense>` en el proyecto, así que al navegar a `/`, `/results`, `/circuits`, `/compare`, `/favorites`, `/analysis` o una ficha de equipo el navegador se queda sin ningún indicio hasta que termina la consulta. Tampoco hay caché (`revalidate`) en ninguna página. → **Sprint 6**, ver el plan de referencia.
+- 🟡 **Estados de carga: la mayor parte, resuelta el 2026-08-18**. De 6 páginas con `loading.tsx` se pasa a 12, la home transmite por partes con `<Suspense>` y las páginas históricas tienen caché de una hora. Queda pendiente el `<Suspense>` de la ficha de piloto (5 consultas secuenciales), que es la mitad del punto 6 del orden de ataque.
 - **Recortado de S5 el 2026-08-18, decisión del usuario** (se registra en lugar de desaparecer, que era justo el fallo de método diagnosticado):
   - **Push post-GP** (§8.8 del plan): sin `push` ni `notificationclick` en `public/sw.js`.
   - **Pantalla de administración para importar temporadas**: no existe `src/app/admin`.
@@ -64,6 +64,26 @@
 ---
 
 ## Bitácora
+
+### 2026-08-18 (2) — Sprint 6: retroalimentación al navegar 🟡
+
+Los seis puntos del “Orden de ataque sugerido” del informe 1, uno a uno.
+
+**1. El selector de temporada** pasa a `useTransition` con `useOptimistic`: al elegir un año, el desplegable muestra ya el elegido en vez de revertir visiblemente al anterior, se deshabilita y aparece un indicador. Arregla las cinco páginas que lo usan de una sola edición. La navegación es solo de query dentro del mismo segmento, así que no era fiable que el `loading.tsx` de la ruta volviera a mostrarse: el aviso tenía que salir del propio componente.
+
+**2. Los seis `loading.tsx`** que faltaban, con el esqueleto **espejando la página real** — la auditoría había señalado que los existentes no se parecían a su página y producían un salto visual al resolverse. Cada uno anuncia además la carga a los lectores de pantalla, que hasta ahora no se enteraban de nada.
+
+**3. Un paréntesis en `/compare`**: `!driver1 || !driver2 && (...)` se agrupaba como `!driver1 || (!driver2 && jsx)`, así que el mensaje “Selecciona dos pilotos” no aparecía nunca al entrar.
+
+**4. Favoritos deja de mentir dos veces.** Las rutas de API aceptan ahora `?ids=`, así que la página pide exactamente los favoritos guardados en lugar de traer los 50 primeros por orden alfabético y filtrarlos en el cliente: con 84 pilotos en la base, Verstappen o Zhou eran **inalcanzables desde Favoritos**. Y un fallo de red ya no se disfraza de “No hay favoritos”: hay aviso con reintento, y el estado de carga son tarjetas esqueleto en vez de texto centrado.
+
+**5. Caché de una hora** en lo que cambia como mucho una vez por carrera: `/circuits`, `/analysis` y la ficha de piloto dejan de ser `force-dynamic`, y `/compare` deja de quedarse congelada en el build. `/favorites` se deja estática a propósito: es un armazón que carga en cliente. Las páginas con `?season=` no se tocan: son dinámicas por definición y abaratarlas exige cachear las consultas, no declarar `revalidate`.
+
+**6. La home transmite el campeonato aparte**, en un `<Suspense>`: la próxima carrera ya no espera por dos o tres viajes más a la base de datos. **La otra mitad de este punto, los `<Suspense>` de la ficha de piloto (5 consultas secuenciales), no está hecha** y es lo primero de la próxima sesión.
+
+**Una lección de verificación, porque estuvo a punto de colarse.** Las primeras mediciones dieron dos falsos negativos —el campeonato “no se transmitía” y `?ids=` “se ignoraba”— y ambos eran mentira: **el servidor local anterior seguía escuchando en el puerto**, así que se estaba midiendo el build viejo. Se descubrió porque el arranque del servidor nuevo falló con `EADDRINUSE`. Verificar contra un proceso vivo obliga a comprobar que es el proceso que uno cree.
+
+**Sigue sin verificarse en un navegador** lo que solo se ve pulsando: el indicador del selector en movimiento, el foco de teclado y las animaciones. No hay Playwright instalado y no se instaló sin decisión previa. Es justo el hueco que originó este sprint.
 
 ### 2026-08-18 — Telemetría en producción, cron de datos y un fallo de concurrencia ✅
 
