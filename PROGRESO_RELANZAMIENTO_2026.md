@@ -26,9 +26,9 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: **las tablas priority+**, lo último que queda del alcance del Sprint 6. Es una decisión de diseño, así que se propone en mockup antes de tocar código.
+**Próximo paso**: **cerrar el Sprint 6 formalmente**, contrastando su alcance completo punto por punto y anotando lo que se recorte. Después, los arrastres del S4 (mapa del circuito por velocidad, estrategia de neumáticos) y las retiradas pendientes (`/telemetry` en `/analysis`, jubilar `/compare`).
 
-**Tests**: 52 unitarios (TypeScript) + 14 (Python) + **14 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 52 unitarios (TypeScript) + 14 (Python) + **17 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -43,6 +43,7 @@
   - **Pantalla de administración para importar temporadas**: no existe `src/app/admin`.
   - **Checklist de seguridad de §10, incompleto**: faltan *secret scanning* y *push protection* en GitHub, backup mensual con `pg_dump` y *rate limiting* (`slowapi`) en el servicio Python. El RLS de Supabase, que estaba en esta lista, dejó de estar recortado el mismo día — ver la bitácora.
 - 🟡 **Logos de equipo** (detectado por el usuario el 2026-08-18 mirando `/constructors`). Resueltos dos de los tres defectos: el **encuadre** —la caja era cuadrada de 48 px y los logos van de 1,09:1 a 4,8:1, así que un wordmark se dibujaba a 48×10 px— y la **legibilidad por tema**, porque el archivo trae la tinta fija; ahora se pintan como silueta monocroma, negra en claro y blanca en oscuro. De paso se quitó de `sauber.svg` un fondo blanco que cubría el lienzo. **Sigue pendiente** lo que exige acción manual: las **6 marcas sin logo** (Ferrari, Red Bull, Aston Martin, RB, Cadillac, AlphaTauri) y que `williams` es `.webp` en vez de SVG.
+- 🟢 **Tablas priority+: resueltas el 2026-08-19**, sobre mockup y con la opción elegida por el usuario. En móvil, cada fila enseña lo esencial —posición, piloto y tiempo— y despliega el resto al tocarla; a partir de `md`, la tabla de siempre. El ancho del documento pasa de ~900 px a **390** en `/results` y en la ficha de carrera, y las cuatro tablas anchas comparten un primitivo nuevo, `PriorityRows`, que es además parte de la deuda «primitivos Table/Chip/Sheet» del informe 3.
 - 🟢 **Semántica, teclado e idioma: resueltos el 2026-08-19**. Las pestañas de sesión son pestañas de verdad (`tablist`/`tab`/`tabpanel`, con flechas); las 6 tablas asocian celda y cabecera (**37 `scope="col"` y 6 leyendas**, donde antes había cero de ambas); el buscador de `/compare` es un combobox manejable con teclado y su botón de quitar tiene nombre; ningún control baja de 44 px en móvil —con la densidad de escritorio intacta a partir de `md`—; y las cabeceras, fechas y mensajes que estaban en inglés pasan al español de la app.
 - 🟢 **Estados de error y vacío: resueltos el 2026-08-19**. Existe `global-error.tsx` —hasta ahora un fallo del layout raíz daba la pantalla en blanco del navegador—, `/standings` distingue un fallo de base de datos de una temporada sin sembrar, y una carrera sin resultados avisa en vez de pintar una tabla con cabeceras y ninguna fila.
 - ⚪ **`PageTransition`: medido y descartado**. La auditoría lo acusaba de retrasar 300 ms todos los esqueletos. Medido en navegador contra la implementación alternativa: **96-123 ms antes, 81-85 ms después**. La penalización real era de ~20 ms, y quitar `mode="wait"` hace que la página que sale y la que entra convivan en el flujo, con riesgo de duplicar el alto un instante. No compensa: se deja como estaba.
@@ -73,6 +74,20 @@
 ---
 
 ## Bitácora
+
+### 2026-08-19 (4) — Las tablas, en un teléfono ✅
+
+**Decidido sobre un mockup, no por escrito.** Cuatro tratamientos con los datos reales de Baréin 2024 dentro de un teléfono de 390 px y funcionando de verdad: expandir la fila, congelar las dos primeras columnas, una tarjeta por piloto, y como estaba. Cada uno con su medida honesta al pie —cuánto ancho ocupa y cuánto hay que arrastrar—. El usuario eligió **expandir la fila**, que es también lo que pide §6 del plan.
+
+**Qué cambia.** En móvil, la fila enseña posición, piloto y tiempo, con la barra de color del equipo —que estas tablas no mostraban pese a estar en el sistema de diseño— y despliega equipo, dorsal, vueltas, puntos y parrilla al tocarla. A partir de `md` no cambia nada: la tabla de siete columnas cabe de sobra y ahí apunta un ratón.
+
+**Un primitivo, cuatro tablas.** `PriorityRows` concentra el plegado, el `aria-expanded`, el foco y el detalle como lista de definiciones —cada dato con su etiqueta, que es lo que sustituye a la cabecera cuando esta ya no está a la vista—. Con él quedan cubiertas `/results`, las dos de la ficha de carrera y la de vueltas de `/analysis`. Es además el primero de los «primitivos Table/Chip/Sheet» que el informe 3 señalaba como prometidos y no hechos.
+
+**Una restricción que decidió la forma del componente**: `/results` es una página de servidor y `PriorityRows` recibe funciones para pintar cada fila, que no cruzan la frontera servidor→cliente. De ahí `SeasonResultRows`, un componente de cliente al que solo llegan datos planos; la tabla de escritorio se queda en la página. Las otras tres tablas ya vivían en componentes de cliente y lo usan directamente.
+
+**Y una regla dentro del primitivo que conviene no romper**: en la parte visible de la fila no van enlaces ni botones, porque es el contenido de un `<button>` y anidar controles produce HTML inválido y paradas de teclado duplicadas — el mismo defecto que la auditoría señaló en las tarjetas de piloto. Los enlaces viven en el detalle.
+
+**Verificación**: el ancho del documento pasa de ~900 px a **390** en las dos rutas, en escritorio sigue habiendo una tabla con sus `scope`, y tres pruebas de navegador nuevas lo fijan (17 en total).
 
 ### 2026-08-19 (3) — Semántica, teclado, dedos e idioma ✅
 

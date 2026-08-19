@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Trophy, Calendar, MapPin, Flag, Zap, Construction, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { teamColor } from '@/lib/team-colors';
+import { PriorityRows } from '@/components/ui/PriorityRows';
 import type { Race, Circuit, Result, Driver, Team, Qualifying } from '@prisma/client';
 
 type RaceWithDetails = Race & {
@@ -217,7 +219,67 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
 
           {/* Results Table */}
           <div className="rounded-lg border border-border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
+            {/* En móvil, la fila enseña posición, piloto y tiempo, y guarda el
+                resto tras un toque: la tabla entera mide ~900 px y obligaba a
+                arrastrarla perdiendo de vista la posición. */}
+            <PriorityRows
+              rows={race.results}
+              getKey={(result) => result.id}
+              label={(result) => `${result.driver.givenName} ${result.driver.familyName}`}
+              lead={(result) => (
+                <>
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-bold ${
+                      result.position === 1
+                        ? 'bg-podium-gold/20 text-podium-gold'
+                        : result.position && result.position <= 3
+                          ? 'bg-primary/20 text-primary'
+                          : 'bg-muted/50 text-foreground'
+                    }`}
+                  >
+                    {result.positionText}
+                  </span>
+                  <span
+                    aria-hidden
+                    className="h-8 w-1 shrink-0 rounded-sm"
+                    style={{ backgroundColor: teamColor(result.team.constructorId).color }}
+                  />
+                  <span className="min-w-0 flex-1 truncate font-semibold">
+                    {result.driver.familyName}
+                  </span>
+                  <span className="shrink-0 font-mono text-sm tabular-nums text-muted-foreground">
+                    {result.time || result.status}
+                  </span>
+                </>
+              )}
+              detail={(result) => [
+                {
+                  label: 'Piloto',
+                  value: (
+                    <Link href={`/drivers/${result.driver.driverId}`} className="hover:text-primary">
+                      {result.driver.givenName} {result.driver.familyName}
+                    </Link>
+                  ),
+                },
+                {
+                  label: 'Equipo',
+                  value: (
+                    <Link
+                      href={`/constructors/${result.team.constructorId}`}
+                      className="hover:text-primary"
+                    >
+                      {result.team.name}
+                    </Link>
+                  ),
+                },
+                { label: 'Dorsal', value: result.driver.permanentNumber ?? '—' },
+                { label: 'Vueltas', value: result.laps },
+                { label: 'Puntos', value: result.points },
+                { label: 'Parrilla', value: result.grid || '—' },
+              ]}
+            />
+
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full">
                   <caption className="sr-only">Resultado de la carrera por piloto</caption>
                 <thead>
@@ -436,7 +498,63 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
 
               {/* Qualifying Table */}
               <div className="rounded-lg border border-border bg-card overflow-hidden">
-                <div className="overflow-x-auto">
+                <PriorityRows
+                  rows={race.qualifyings}
+                  getKey={(entry) => entry.id}
+                  label={(entry) => `${entry.driver.givenName} ${entry.driver.familyName}`}
+                  lead={(entry) => (
+                    <>
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-bold ${
+                          entry.position === 1
+                            ? 'bg-podium-gold/20 text-podium-gold'
+                            : entry.position <= 3
+                              ? 'bg-primary/20 text-primary'
+                              : 'bg-muted/50 text-foreground'
+                        }`}
+                      >
+                        {entry.position}
+                      </span>
+                      <span
+                        aria-hidden
+                        className="h-8 w-1 shrink-0 rounded-sm"
+                        style={{ backgroundColor: teamColor(entry.team.constructorId).color }}
+                      />
+                      <span className="min-w-0 flex-1 truncate font-semibold">
+                        {entry.driver.familyName}
+                      </span>
+                      <span className="shrink-0 font-mono text-sm tabular-nums text-muted-foreground">
+                        {entry.q3 || entry.q2 || entry.q1 || '—'}
+                      </span>
+                    </>
+                  )}
+                  detail={(entry) => [
+                    {
+                      label: 'Piloto',
+                      value: (
+                        <Link href={`/drivers/${entry.driver.driverId}`} className="hover:text-primary">
+                          {entry.driver.givenName} {entry.driver.familyName}
+                        </Link>
+                      ),
+                    },
+                    {
+                      label: 'Equipo',
+                      value: (
+                        <Link
+                          href={`/constructors/${entry.team.constructorId}`}
+                          className="hover:text-primary"
+                        >
+                          {entry.team.name}
+                        </Link>
+                      ),
+                    },
+                    { label: 'Q1', value: <span className="font-mono">{entry.q1 || '—'}</span> },
+                    { label: 'Q2', value: <span className="font-mono">{entry.q2 || '—'}</span> },
+                    { label: 'Q3', value: <span className="font-mono">{entry.q3 || '—'}</span> },
+                  ]}
+                />
+
+                <div className="hidden overflow-x-auto md:block">
                   <table className="w-full">
                       <caption className="sr-only">Clasificación por piloto, con los tiempos de Q1, Q2 y Q3</caption>
                     <thead>

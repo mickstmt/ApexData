@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
+import { SeasonResultRows } from './SeasonResultRows';
 
 export const metadata = {
   title: 'Resultados | ApexData',
@@ -63,7 +64,38 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
       {/* Results Table */}
       {racesWithResults.length > 0 ? (
         <div className="overflow-hidden rounded-lg border border-border bg-card">
-          <div className="overflow-x-auto">
+          <SeasonResultRows
+            rows={racesWithResults.flatMap((race) => {
+              const winner = race.results[0];
+              if (!winner) return [];
+
+              return [
+                {
+                  id: race.id,
+                  round: race.round,
+                  year: displayYear,
+                  raceName: race.raceName,
+                  country: race.circuit.country,
+                  flag: getFlagEmoji(race.circuit.country),
+                  fecha: new Date(race.date).toLocaleDateString('es-ES', {
+                    day: '2-digit',
+                    month: 'short',
+                    timeZone: 'UTC',
+                  }),
+                  winnerName: `${winner.driver.givenName} ${winner.driver.familyName}`,
+                  winnerId: winner.driver.driverId,
+                  winnerCode:
+                    winner.driver.code || winner.driver.familyName.slice(0, 3).toUpperCase(),
+                  teamName: winner.team.name,
+                  teamId: winner.team.constructorId,
+                  laps: winner.laps,
+                  time: winner.time || winner.status,
+                },
+              ];
+            })}
+          />
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full">
                 <caption className="sr-only">Resultados de cada gran premio de la temporada</caption>
               <thead>

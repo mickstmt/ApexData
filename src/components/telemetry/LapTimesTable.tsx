@@ -7,6 +7,7 @@
 
 import { fastestLapIndex } from '@/lib/lap-times';
 import { compoundColor } from '@/lib/team-colors';
+import { PriorityRows } from '@/components/ui/PriorityRows';
 import type { LapData } from '@/types';
 
 interface LapTimesTableProps {
@@ -30,7 +31,69 @@ export function LapTimesTable({ laps, showDriver = true }: LapTimesTableProps) {
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">
-      <div className="overflow-x-auto">
+      {/* Ocho columnas no caben en un teléfono: en móvil se ve la vuelta, el
+          piloto y el tiempo, y los parciales quedan a un toque. */}
+      <PriorityRows
+        rows={laps}
+        getKey={(lap) => `${lap.Driver}-${lap.LapNumber}`}
+        label={(lap) => `la vuelta ${lap.LapNumber} de ${lap.Driver}`}
+        lead={(lap) => {
+          const posicion = laps.indexOf(lap);
+          return (
+            <>
+              <span className="w-8 shrink-0 font-mono text-sm tabular-nums text-muted-foreground">
+                {lap.LapNumber}
+              </span>
+              {showDriver && (
+                <span className="min-w-0 flex-1 truncate font-semibold">{lap.Driver}</span>
+              )}
+              <span
+                className={`shrink-0 font-mono text-sm tabular-nums ${
+                  posicion === fastest
+                    ? 'font-semibold text-fastest'
+                    : lap.IsPersonalBest
+                      ? 'font-semibold text-personal-best'
+                      : 'text-foreground'
+                }`}
+              >
+                {lap.LapTime || '—'}
+              </span>
+            </>
+          );
+        }}
+        detail={(lap) => [
+          { label: 'Sector 1', value: <span className="font-mono">{lap.Sector1Time || '—'}</span> },
+          { label: 'Sector 2', value: <span className="font-mono">{lap.Sector2Time || '—'}</span> },
+          { label: 'Sector 3', value: <span className="font-mono">{lap.Sector3Time || '—'}</span> },
+          {
+            label: 'Neumático',
+            value: lap.Compound ? (
+              <span className="inline-flex items-center gap-2">
+                <span
+                  className="h-3 w-3 rounded-full ring-1 ring-border"
+                  style={{ backgroundColor: compoundColor(lap.Compound) }}
+                  aria-hidden
+                />
+                {lap.Compound}
+                {lap.TyreLife ? ` · L${lap.TyreLife}` : ''}
+              </span>
+            ) : (
+              '—'
+            ),
+          },
+          {
+            label: 'Vel. máx.',
+            value: lap.SpeedST ? (
+              <span className="font-mono">{`${lap.SpeedST.toFixed(0)} km/h`}</span>
+            ) : (
+              '—'
+            ),
+          },
+          ...(lap.Team ? [{ label: 'Equipo', value: lap.Team }] : []),
+        ]}
+      />
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm">
                 <caption className="sr-only">Vueltas más rápidas de la sesión, con sus parciales y el neumático</caption>
           <thead className="border-b border-border bg-muted/50">

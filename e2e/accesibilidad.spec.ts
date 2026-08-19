@@ -149,6 +149,44 @@ test.describe('semántica y objetivos táctiles (informe 2, puntos 6, 9, 12-14)'
     await expect(page.getByRole('button', { name: /Quitar a .+ de la comparación/ })).toHaveCount(1);
   });
 
+  test('en móvil las tablas anchas no obligan a arrastrar', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    for (const ruta of ['/results?season=2024', '/results/2024/1']) {
+      await page.goto(ruta);
+
+      // El defecto original: ~900 px de tabla en una pantalla de 390, con la
+      // posición perdiéndose por la izquierda al arrastrar.
+      const ancho = await page.evaluate(() => document.documentElement.scrollWidth);
+      expect(ancho).toBeLessThanOrEqual(390);
+
+      await expect(page.locator('table:visible')).toHaveCount(0);
+      expect(await page.locator('button[aria-expanded="false"]').count()).toBeGreaterThan(0);
+    }
+  });
+
+  test('la fila desplegada muestra las columnas que se ocultaron', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/results/2024/1');
+
+    const fila = page.locator('button[aria-expanded]').filter({ hasText: 'Verstappen' }).first();
+    await fila.click();
+
+    await expect(fila).toHaveAttribute('aria-expanded', 'true');
+    const etiquetas = await page.locator('dl:visible dt').allInnerTexts();
+    expect(etiquetas).toEqual(
+      expect.arrayContaining(['Piloto', 'Equipo', 'Dorsal', 'Vueltas', 'Puntos'])
+    );
+  });
+
+  test('en escritorio la tabla sigue siendo una tabla', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/results/2024/1');
+
+    await expect(page.locator('table:visible')).toHaveCount(1);
+    await expect(page.locator('table:visible th[scope="col"]').first()).toBeVisible();
+  });
+
   test('en móvil no queda ningún control por debajo de 44 px', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/drivers');
