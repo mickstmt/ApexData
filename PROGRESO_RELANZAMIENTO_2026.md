@@ -26,16 +26,16 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: los **arrastres del S4** —mapa del circuito coloreado por velocidad y gráfico de estrategia de neumáticos— y las **retiradas pendientes**: fusionar `/telemetry` en `/analysis` y jubilar `/compare`.
+**Próximo paso**: las **retiradas pendientes** —fusionar `/telemetry` en `/analysis` y jubilar `/compare`— y después los huecos del informe 3 (equipo favorito, ficha de circuito, FLIP en standings, `seed:all`, código muerto).
 
-**Tests**: 52 unitarios (TypeScript) + 14 (Python) + **17 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 52 unitarios (TypeScript) + 24 (Python) + **17 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
 - La página `/telemetry` (OpenF1) sigue siendo un demo; conviene fusionarla con `/analysis`.
 - El comparador `/compare` calcula stats sobre las últimas 5 carreras (engañoso); el head-to-head del perfil de piloto ya lo sustituye, falta retirarlo.
-- El venv local tiene FastF1 3.7.0 aunque `requirements.txt` pide ≥3.8 (necesario para 2026): ejecutar `pip install -r requirements.txt` en el venv.
-- Pendientes de S4 no abordados: mapa del circuito coloreado por velocidad y gráfico de estrategia de neumáticos.
+- ~~El venv local tiene FastF1 3.7.0~~ → resuelto el 2026-08-19: se creó `python-service/.venv` desde `requirements-dev.txt`, con **FastF1 3.8.3**. Está en `.gitignore`, así que es de esta máquina.
+- ~~Pendientes de S4: mapa del circuito por velocidad y estrategia de neumáticos~~ → **hechos el 2026-08-19**, con dos endpoints nuevos en el servicio Python. **Exigen pulsar *Deploy* a mano en el panel**: sin eso, los dos botones nuevos de `/analysis` responden con error en producción.
 - 15 warnings de lint (variables sin usar, algún `any`) — limpieza cosmética pendiente.
 - 🟡 **Estados de carga: la mayor parte, resuelta el 2026-08-18**. De 6 páginas con `loading.tsx` se pasa a 12, la home transmite por partes con `<Suspense>` y las páginas históricas tienen caché de una hora. Queda pendiente el `<Suspense>` de la ficha de piloto (5 consultas secuenciales), que es la mitad del punto 6 del orden de ataque.
 - **Recortado de S5 el 2026-08-18, decisión del usuario** (se registra en lugar de desaparecer, que era justo el fallo de método diagnosticado):
@@ -68,12 +68,29 @@
 ## Acciones pendientes del usuario
 
 1. ~~**Desplegar la web y el servicio de telemetría en EasyPanel**~~ → ambos hechos: la web el 2026-08-17 y la telemetría el 2026-08-18, con el volumen en `/app/cache` y `FASTF1_SERVICE_URL` ya configurada. ~~Comprobación de cutover del CI~~ → resuelta.
-2. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
-3. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
+2. 🔴 **Pulsar *Deploy* en el servicio de telemetría** (`apexdata-telemetry`, proyecto `ditto`, en panel.dittochatbot.com). El código nuevo ya está en el repo, pero ese servicio no se despliega solo: hasta entonces, los botones «Trazado» y «Estrategia de neumáticos» de `/analysis` dan error en producción.
+3. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
+4. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
 
 ---
 
 ## Bitácora
+
+### 2026-08-19 (6) — El mapa de velocidad y la estrategia de neumáticos ✅
+
+Los dos arrastres del Sprint 4, que llevaban declarados como deuda desde el 16 de agosto. Ambos necesitaban datos que solo tiene FastF1, así que **el servicio Python crece por primera vez desde que está en producción**.
+
+**Dos endpoints nuevos.** `/api/telemetry/{año}/{evento}/{sesión}/{piloto}/track` devuelve el trazado que recorrió el coche con la velocidad en cada punto, y `/api/laps/{año}/{evento}/{sesión}/stints`, los tramos de neumático de cada piloto. La lógica que convierte lo que da FastF1 —miles de muestras por vuelta, una fila por vuelta— en algo que quepa en una respuesta vive en `app/utils/track.py`, separada de las rutas **para poder probarla sin bajar una sesión entera de internet**: 10 tests nuevos (24 en total en Python).
+
+**Tres decisiones dentro de esa conversión.** El trazado se **submuestrea a 600 puntos** conservando el primero y el último —a partir de ahí la línea no gana forma y sí peso, y ese peso viaja hasta el móvil: 29 KB para una vuelta de Baréin—; las coordenadas se devuelven **sin girar ni escalar**, con la rotación aparte, porque quien dibuja es el único que sabe el tamaño del lienzo; y los tramos se agrupan **en el orden de llegada**, no alfabético, porque una estrategia se lee comparando al ganador con los de atrás.
+
+**El mapa, en canvas y con una escala de color que no depende de distinguir rojo y verde.** Va de azul frío a amarillo cálido y la luminosidad crece con la velocidad, así que el gradiente se sigue leyendo en escala de grises. El gráfico de estrategia tampoco codifica el compuesto solo con color: cada tramo lleva su inicial dentro, la leyenda los nombra y hay una tabla equivalente en `sr-only` — que era justo el defecto que la auditoría señaló en la tabla de vueltas.
+
+**Verificado de punta a punta contra datos reales**, con el servicio corriendo en local: Verstappen, vuelta 16 de la Q de Baréin 2024 en **1:29.179** —el mismo tiempo con el que se validó el despliegue en agosto—, rotación 92°, de 71 a 322 km/h en 600 puntos; y la estrategia real de la carrera: **VER SOFT 1-17 | HARD 18-37 | SOFT 38-57**, 20 pilotos. En el navegador, el lienzo pinta 18.039 píxeles con 4.138 colores distintos: el gradiente existe, no es una línea de un solo tono.
+
+**De paso**, el venv local queda creado desde `requirements-dev.txt` con **FastF1 3.8.3**, que era otra deuda anotada: la máquina tenía la 3.7.
+
+**Acción pendiente del usuario**: el servicio de telemetría **no tiene despliegue automático**. Hasta que se pulse *Deploy* en el panel, los dos botones nuevos de `/analysis` responderán con error en producción, porque la web ya estará desplegada y el servicio no.
 
 ### 2026-08-19 (5) — Cierre del Sprint 6, contrastado punto por punto ✅
 

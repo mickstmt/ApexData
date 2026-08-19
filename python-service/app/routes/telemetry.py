@@ -9,6 +9,7 @@ import fastf1
 import pandas as pd
 from app.utils.cache_manager import cache_manager
 from app.utils.serialization import records, format_lap_time
+from app.utils.track import track_points
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +101,83 @@ async def compare_drivers_telemetry(
     except Exception as e:
         logger.exception("Error comparing telemetry")
         raise HTTPException(status_code=500, detail="Error comparing telemetry")
+
+
+@router.get("/{year}/{event}/{session_type}/{driver}/track")
+async def get_driver_track(
+    year: int,
+    event: str,
+    session_type: str,
+    driver: str,
+    lap: Optional[int] = Query(None, description="Specific lap number. If not provided, uses fastest lap"),
+):
+    """
+    Trazado del circuito recorrido por un piloto, con la velocidad en cada punto.
+
+    Es el mapa de velocidad que faltaba del Sprint 4. Devuelve las coordenadas
+    tal y como las graba FastF1, sin girar ni escalar: la rotación del circuito
+    viaja aparte para que la dibuje quien conoce el tamaño del lienzo.
+    """
+    try:
+        cache_key = f"track_{year}_{event}_{session_type}_{driver}_{lap}"
+
+        cached_data = cache_manager.get(cache_key)
+        if cached_data is not None:
+            return cached_data
+
+        session = fastf1.get_session(year, event, session_type)
+        session.load()
+
+        driver_laps = session.laps.pick_drivers(driver)
+        if driver_laps.empty:
+            raise HTTPException(status_code=404, detail=f"No laps found for driver {driver}")
+
+        if lap is not None:
+            target_lap = driver_laps[driver_laps["LapNumber"] == lap]
+            if target_lap.empty:
+                raise HTTPException(status_code=404, detail=f"Lap {lap} not found for driver {driver}")
+            lap_data = target_lap.iloc[0]
+        else:
+            lap_data = driver_laps.pick_fastest()
+            if lap_data is None:
+                raise HTTPException(status_code=404, detail=f"No timed lap found for driver {driver}")
+
+        telemetry = lap_data.get_telemetry()
+        points = track_points(telemetry)
+
+        if not points:
+            # Las sesiones anteriores a 2018 no traen posición: es un "no hay",
+            # no un fallo del servicio.
+            raise HTTPException(status_code=404, detail="No position data available for this lap")
+
+        speeds = [p["speed"] for p in points]
+
+        # La rotación es opcional: si FastF1 no la trae, el mapa se dibuja sin
+        # girar en vez de no dibujarse.
+        try:
+            rotation = float(session.get_circuit_info().rotation)
+        except Exception:
+            logger.warning("Circuit rotation unavailable for %s %s", year, event)
+            rotation = 0.0
+
+        result = {
+            "driver": driver,
+            "lap_number": int(lap_data["LapNumber"]),
+            "lap_time": format_lap_time(lap_data["LapTime"]),
+            "rotation": rotation,
+            "min_speed": min(speeds),
+            "max_speed": max(speeds),
+            "points": points,
+        }
+
+        cache_manager.set(cache_key, result)
+        return result
+
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error fetching track map")
+        raise HTTPException(status_code=500, detail="Error fetching track map")
 
 
 @router.get("/{year}/{event}/{session_type}/{driver}")

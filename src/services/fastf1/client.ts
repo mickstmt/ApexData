@@ -14,6 +14,8 @@ import type {
   SessionInfoResponse,
   HealthCheckResponse,
   SessionType,
+  TrackMapResponse,
+  StintsResponse,
 } from '@/types';
 
 // ============================================================================
@@ -192,6 +194,34 @@ class FastF1Client {
   /**
    * Get fastest laps from a session
    */
+  /**
+   * Trazado recorrido por un piloto, con la velocidad punto a punto.
+   *
+   * Un minuto de espera como las vueltas rápidas: la primera petición de una
+   * sesión obliga al servicio a descargarla entera de la F1.
+   */
+  async getTrackMap(
+    year: number,
+    event: string | number,
+    sessionType: SessionType,
+    driver: string,
+    lap?: number
+  ): Promise<TrackMapResponse> {
+    const query = lap ? `?lap=${lap}` : '';
+    const endpoint = `/api/telemetry/${year}/${event}/${sessionType}/${driver}/track${query}`;
+    return this.fetch<TrackMapResponse>(endpoint, 60000);
+  }
+
+  /** Estrategia de neumáticos de la sesión, por piloto y en orden de llegada. */
+  async getStints(
+    year: number,
+    event: string | number,
+    sessionType: SessionType
+  ): Promise<StintsResponse> {
+    const endpoint = `/api/laps/${year}/${event}/${sessionType}/stints`;
+    return this.fetch<StintsResponse>(endpoint, 60000);
+  }
+
   async getFastestLaps(
     year: number,
     event: string | number,

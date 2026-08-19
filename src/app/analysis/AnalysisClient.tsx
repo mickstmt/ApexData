@@ -6,10 +6,12 @@
  */
 
 import { useState } from 'react';
-import { Activity, BarChart3, Clock, Loader2 } from 'lucide-react';
+import { Activity, BarChart3, Clock, Layers, Loader2, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LapTimesTable } from '@/components/telemetry';
 import { TelemetryChart, type TelemetryTrace } from '@/components/telemetry/TelemetryChart';
+import { TrackMap } from '@/components/telemetry/TrackMap';
+import { StintChart } from '@/components/telemetry/StintChart';
 import { compoundColor } from '@/lib/team-colors';
 import type { SessionOption, DriverOption } from './options';
 import type {
@@ -17,6 +19,8 @@ import type {
   TelemetryComparisonResponse,
   FastestLapsResponse,
   SessionType,
+  StintsResponse,
+  TrackMapResponse,
 } from '@/types';
 
 const SESSION_TYPES: { value: SessionType; label: string }[] = [
@@ -59,16 +63,22 @@ export function AnalysisClient({
   const [telemetry, setTelemetry] = useState<DriverTelemetryResponse | null>(null);
   const [comparison, setComparison] = useState<TelemetryComparisonResponse | null>(null);
   const [fastestLaps, setFastestLaps] = useState<FastestLapsResponse | null>(null);
+  const [trackMap, setTrackMap] = useState<TrackMapResponse | null>(null);
+  const [stints, setStints] = useState<StintsResponse | null>(null);
 
   // Loading state
   const [loading, setLoading] = useState<{
     telemetry: boolean;
     comparison: boolean;
     laps: boolean;
+    track: boolean;
+    stints: boolean;
   }>({
     telemetry: false,
     comparison: false,
     laps: false,
+    track: false,
+    stints: false,
   });
 
   // Error state
@@ -118,6 +128,48 @@ export function AnalysisClient({
     }
   };
 
+  // Trazado del circuito coloreado por velocidad
+  const fetchTrackMap = async () => {
+    setLoading((prev) => ({ ...prev, track: true }));
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/telemetry/${selectedSession.year}/${selectedSession.event}/${sessionType}/${driver1}/track`
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'No se pudo cargar el trazado');
+      }
+      setTrackMap(await res.json());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar el trazado');
+      setTrackMap(null);
+    } finally {
+      setLoading((prev) => ({ ...prev, track: false }));
+    }
+  };
+
+  // Estrategia de neumáticos de la sesión
+  const fetchStints = async () => {
+    setLoading((prev) => ({ ...prev, stints: true }));
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/laps/${selectedSession.year}/${selectedSession.event}/${sessionType}/stints`
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'No se pudo cargar la estrategia');
+      }
+      setStints(await res.json());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar la estrategia');
+      setStints(null);
+    } finally {
+      setLoading((prev) => ({ ...prev, stints: false }));
+    }
+  };
+
   // Fetch fastest laps
   const fetchFastestLaps = async () => {
     setLoading((prev) => ({ ...prev, laps: true }));
@@ -140,7 +192,8 @@ export function AnalysisClient({
     }
   };
 
-  const isAnyLoading = loading.telemetry || loading.comparison || loading.laps;
+  const isAnyLoading =
+    loading.telemetry || loading.comparison || loading.laps || loading.track || loading.stints;
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -307,6 +360,34 @@ export function AnalysisClient({
             )}
             Vueltas Más Rápidas
           </Button>
+
+          <Button
+            onClick={fetchTrackMap}
+            disabled={isAnyLoading}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            {loading.track ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Map className="h-4 w-4" aria-hidden />
+            )}
+            Trazado de {driver1}
+          </Button>
+
+          <Button
+            onClick={fetchStints}
+            disabled={isAnyLoading}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            {loading.stints ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Layers className="h-4 w-4" aria-hidden />
+            )}
+            Estrategia de neumáticos
+          </Button>
         </div>
 
         {/* Error Message */}
@@ -394,6 +475,44 @@ export function AnalysisClient({
               Vueltas Más Rápidas - {fastestLaps.session.name}
             </h2>
             <LapTimesTable laps={fastestLaps.fastest_laps} showDriver={true} />
+          </div>
+        )}
+
+        {/* Trazado coloreado por velocidad */}
+        {trackMap && (
+          <div>
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
+              <Map className="h-5 w-5 text-primary" aria-hidden />
+              Trazado - {trackMap.driver}
+              {trackMap.lap_time && (
+                <span className="font-mono text-base font-normal text-muted-foreground">
+                  {trackMap.lap_time}
+                </span>
+              )}
+            </h2>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <TrackMap
+                points={trackMap.points}
+                rotation={trackMap.rotation}
+                minSpeed={trackMap.min_speed}
+                maxSpeed={trackMap.max_speed}
+                driver={trackMap.driver}
+                lapTime={trackMap.lap_time}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Estrategia de neumáticos */}
+        {stints && (
+          <div>
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
+              <Layers className="h-5 w-5 text-primary" aria-hidden />
+              Estrategia de neumáticos
+            </h2>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <StintChart drivers={stints.drivers} totalLaps={stints.total_laps} />
+            </div>
           </div>
         )}
 

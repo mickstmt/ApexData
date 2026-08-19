@@ -224,3 +224,54 @@ export interface HealthCheckResponse {
 // ============================================================================
 
 export type SessionType = 'FP1' | 'FP2' | 'FP3' | 'Q' | 'S' | 'R';
+
+/** Un punto del trazado, con la velocidad a la que se pasó por él. */
+export interface TrackPoint {
+  x: number;
+  y: number;
+  speed: number;
+}
+
+/**
+ * Trazado del circuito coloreado por velocidad.
+ *
+ * Las coordenadas llegan como las graba FastF1: sin girar ni escalar. La
+ * rotación viaja aparte porque quien dibuja es el único que sabe el tamaño del
+ * lienzo.
+ */
+export interface TrackMapResponse {
+  driver: string;
+  lap_number: number;
+  lap_time: string | null;
+  /** Grados que hay que girar el trazado para verlo como en televisión. */
+  rotation: number;
+  min_speed: number;
+  max_speed: number;
+  points: TrackPoint[];
+}
+
+/** Un juego de neumáticos, desde que se monta hasta que se quita. */
+export interface Stint {
+  driver: string;
+  stint: number;
+  compound: string;
+  start_lap: number;
+  end_lap: number;
+  laps: number;
+}
+
+export interface DriverStints {
+  driver: string;
+  stints: Stint[];
+}
+
+export interface StintsResponse {
+  session: {
+    year: number;
+    event: string;
+    name: string;
+  };
+  total_laps: number;
+  /** En el orden en que terminaron, no alfabético. */
+  drivers: DriverStints[];
+}
