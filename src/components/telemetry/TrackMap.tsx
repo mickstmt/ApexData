@@ -43,6 +43,8 @@ export function TrackMap({
   maxSpeed,
   driver,
   lapTime,
+  cursor,
+  onCursor,
 }: {
   points: TrackPoint[];
   rotation: number;
@@ -50,11 +52,15 @@ export function TrackMap({
   maxSpeed: number;
   driver: string;
   lapTime: string | null;
+  /** Metros de vuelta señalados por las trazas de telemetría, si las hay. */
+  cursor?: number | null;
+  onCursor?: (distancia: number | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
   const [size, setSize] = useState({ width: 0, height: 360 });
+  const proyeccion = useRef<{ px: (x: number) => number; py: (y: number) => number } | null>(null);
 
   /** Coordenadas ya giradas: FastF1 las graba en la orientación del GPS. */
   const rotated = useMemo(() => {
@@ -66,6 +72,7 @@ export function TrackMap({
       x: point.x * cos - point.y * sin,
       y: point.x * sin + point.y * cos,
       speed: point.speed,
+      distance: point.distance,
     }));
   }, [points, rotation]);
 
@@ -109,6 +116,10 @@ export function TrackMap({
     // El eje Y del lienzo crece hacia abajo y el del circuito hacia arriba.
     const py = (y: number) => height - ((y - minY) * escala + desplazamientoY);
 
+    // Se guardan para que el puntero pueda traducir píxeles a distancia de
+    // vuelta sin repetir el cálculo de escala.
+    proyeccion.current = { px, py };
+
     const rango = Math.max(1, maxSpeed - minSpeed);
     const oscuro = resolvedTheme
       ? resolvedTheme === 'dark'
@@ -129,7 +140,21 @@ export function TrackMap({
       ctx.lineTo(px(actual.x), py(actual.y));
       ctx.stroke();
     }
-  }, [rotated, size.height, minSpeed, maxSpeed, resolvedTheme]);
+
+    // El punto que señalan las trazas. Anillo del color del lienzo alrededor:
+    // sobre una línea de siete píxeles con su propio color, un punto a secas se
+    // confunde con el trazado.
+    const senalado = puntoEn(rotated, cursor);
+    if (senalado) {
+      ctx.beginPath();
+      ctx.arc(px(senalado.x), py(senalado.y), 7, 0, Math.PI * 2);
+      ctx.fillStyle = oscuro ? '#F5F5F7' : '#15151A';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = oscuro ? '#0B0B0F' : '#FFFFFF';
+      ctx.stroke();
+    }
+  }, [rotated, size.height, minSpeed, maxSpeed, resolvedTheme, cursor]);
 
   useEffect(() => {
     draw();
@@ -145,9 +170,42 @@ export function TrackMap({
     return () => window.removeEventListener('resize', alRedimensionar);
   }, []);
 
+  /** Traduce un toque sobre el mapa a la distancia de vuelta más cercana. */
+  const alSenalar = (evento: React.PointerEvent<HTMLDivElement>) => {
+    const caja = wrapperRef.current?.getBoundingClientRect();
+    const proyectar = proyeccion.current;
+    if (!caja || !proyectar || !onCursor) return;
+
+    const x = evento.clientX - caja.left;
+    const y = evento.clientY - caja.top;
+
+    let mejor: number | null = null;
+    let distanciaMinima = Infinity;
+
+    for (const punto of rotated) {
+      if (punto.distance === null) continue;
+      const dx = proyectar.px(punto.x) - x;
+      const dy = proyectar.py(punto.y) - y;
+      const separacion = dx * dx + dy * dy;
+      if (separacion < distanciaMinima) {
+        distanciaMinima = separacion;
+        mejor = punto.distance;
+      }
+    }
+
+    onCursor(mejor);
+  };
+
   return (
     <figure className="m-0">
-      <div ref={wrapperRef} className="w-full">
+      <div
+        ref={wrapperRef}
+        className="w-full touch-pan-y"
+        onPointerMove={onCursor ? alSenalar : undefined}
+        onPointerDown={onCursor ? alSenalar : undefined}
+        // Sin `onPointerLeave`: el marcador se queda donde lo dejaste, y así
+        // no se pisa con el cursor de las trazas al pasar de un gráfico a otro.
+      >
         <canvas
           ref={canvasRef}
           role="img"
@@ -173,6 +231,28 @@ export function TrackMap({
       </figcaption>
     </figure>
   );
+}
+
+/** El punto del trazado más cercano a una distancia de vuelta. */
+function puntoEn(
+  puntos: { x: number; y: number; distance: number | null }[],
+  distancia: number | null | undefined
+) {
+  if (distancia === null || distancia === undefined) return null;
+
+  let mejor: (typeof puntos)[number] | null = null;
+  let diferencia = Infinity;
+
+  for (const punto of puntos) {
+    if (punto.distance === null) continue;
+    const separacion = Math.abs(punto.distance - distancia);
+    if (separacion < diferencia) {
+      diferencia = separacion;
+      mejor = punto;
+    }
+  }
+
+  return mejor;
 }
 
 /** Interpola entre las paradas de la rampa del tema. */

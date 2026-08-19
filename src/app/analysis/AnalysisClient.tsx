@@ -81,6 +81,16 @@ export function AnalysisClient({
   const [raceLaps, setRaceLaps] = useState<SessionLapsResponse | null>(null);
   const [weather, setWeather] = useState<SessionWeatherResponse | null>(null);
 
+  /**
+   * Metros de vuelta señalados, compartidos por las trazas y el mapa.
+   *
+   * Vive aquí y no dentro de cada gráfico porque es exactamente lo que los une:
+   * mover el dedo sobre la velocidad mueve el punto sobre el asfalto, y al
+   * revés. Es la función que distingue a f1-tempo, y no necesitaba más dato
+   * nuevo que la distancia de cada punto del trazado.
+   */
+  const [cursorVuelta, setCursorVuelta] = useState<number | null>(null);
+
   // Loading state
   const [loading, setLoading] = useState<{
     telemetry: boolean;
@@ -117,6 +127,7 @@ export function AnalysisClient({
       }
       const data = await res.json();
       setTelemetry(data);
+      setCursorVuelta(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error fetching telemetry');
       setTelemetry(null);
@@ -160,6 +171,7 @@ export function AnalysisClient({
         throw new Error(err.error || 'No se pudo cargar el trazado');
       }
       setTrackMap(await res.json());
+      setCursorVuelta(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar el trazado');
       setTrackMap(null);
@@ -529,6 +541,8 @@ export function AnalysisClient({
               )}
             </div>
             <TelemetryChart
+              cursor={cursorVuelta}
+              onCursor={setCursorVuelta}
               traces={[
                 {
                   driver: telemetry.driver,
@@ -586,8 +600,16 @@ export function AnalysisClient({
                 </span>
               )}
             </h2>
+            {telemetry && telemetry.driver === trackMap.driver && (
+              <p className="mb-3 text-sm text-muted-foreground">
+                Pasa el dedo o el cursor por el mapa o por las trazas: las dos cosas señalan el
+                mismo punto de la vuelta.
+              </p>
+            )}
             <div className="rounded-lg border border-border bg-card p-4">
               <TrackMap
+                cursor={cursorVuelta}
+                onCursor={setCursorVuelta}
                 points={trackMap.points}
                 rotation={trackMap.rotation}
                 minSpeed={trackMap.min_speed}

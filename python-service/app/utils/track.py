@@ -43,13 +43,19 @@ def track_points(telemetry, limit: int = 600) -> list[dict]:
     if telemetry is None or telemetry.empty or not columnas.issubset(telemetry.columns):
         return []
 
-    limpio = telemetry.dropna(subset=["X", "Y", "Speed"])
+    # `Distance` es lo que permite unir este trazado con las trazas de
+    # telemetría: sin ella, un cursor sobre la gráfica de velocidad no se puede
+    # situar en el mapa más que a ojo.
+    con_distancia = "Distance" in telemetry.columns
+    requeridas = ["X", "Y", "Speed"] + (["Distance"] if con_distancia else [])
+    limpio = telemetry.dropna(subset=requeridas)
 
     puntos = [
         {
             "x": float(fila.X),
             "y": float(fila.Y),
             "speed": round(float(fila.Speed), 1),
+            "distance": round(float(fila.Distance), 1) if con_distancia else None,
         }
         for fila in limpio.itertuples()
     ]

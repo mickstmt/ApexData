@@ -38,15 +38,34 @@ def test_track_points_recorta_y_conserva_la_velocidad():
             "X": [float(i) for i in range(2000)],
             "Y": [float(i * 2) for i in range(2000)],
             "Speed": [200.0 + i % 50 for i in range(2000)],
+            "Distance": [float(i * 3) for i in range(2000)],
         }
     )
 
     puntos = track_points(telemetria, limit=300)
 
     assert len(puntos) == 300
-    assert set(puntos[0]) == {"x", "y", "speed"}
+    assert set(puntos[0]) == {"x", "y", "speed", "distance"}
     assert puntos[0]["x"] == 0.0
     assert puntos[-1]["x"] == 1999.0
+
+
+def test_track_points_lleva_la_distancia_de_vuelta():
+    # Es lo que permite situar en el mapa el cursor de las trazas: sin ella,
+    # solo se puede aproximar a ojo.
+    telemetria = pd.DataFrame(
+        {"X": [1.0, 2.0], "Y": [1.0, 2.0], "Speed": [100.0, 110.0], "Distance": [0.0, 42.5]}
+    )
+
+    assert [p["distance"] for p in track_points(telemetria)] == [0.0, 42.5]
+
+
+def test_track_points_sin_distancia_no_falla():
+    # Sesiones antiguas pueden no traerla: el mapa se dibuja igual, solo que sin
+    # poder sincronizarse con las trazas.
+    telemetria = pd.DataFrame({"X": [1.0, 2.0], "Y": [1.0, 2.0], "Speed": [100.0, 110.0]})
+
+    assert [p["distance"] for p in track_points(telemetria)] == [None, None]
 
 
 def test_track_points_descarta_muestras_sin_posicion():

@@ -191,6 +191,42 @@ test.describe('semántica y objetivos táctiles (informe 2, puntos 6, 9, 12-14)'
   });
 });
 
+test.describe('telemetría', () => {
+  test('el mapa y las trazas señalan el mismo punto de la vuelta', async ({ page }) => {
+    test.slow(); // La primera carga de una sesión baja la sesión entera de la F1.
+
+    await page.goto('/analysis');
+    const eventos = await page.locator('#analysis-event option').allInnerTexts();
+    const bahrein = eventos.find((o) => /2024.*Bahrain/i.test(o));
+    test.skip(!bahrein, 'La base no tiene sembrada la sesión de referencia');
+
+    await page.locator('#analysis-event').selectOption({ label: bahrein! });
+    await page.locator('#analysis-session').selectOption('Q');
+
+    await page.getByRole('button', { name: /Cargar Telemetría/ }).click();
+    await page.waitForSelector('canvas[aria-label*="Telemetría"]', { timeout: 240_000 });
+    await page.getByRole('button', { name: /Trazado de/ }).click();
+    await page.waitForSelector('canvas[aria-label*="Trazado"]', { timeout: 240_000 });
+
+    const lectura = () =>
+      page.locator('figcaption').filter({ hasText: 'Distancia de vuelta' }).first().innerText();
+
+    // Tocar el mapa mueve la lectura de las trazas: es la mitad que no se ve
+    // mirando una captura, porque son dos lienzos independientes.
+    const mapa = page.locator('canvas[aria-label*="Trazado"]');
+    await mapa.scrollIntoViewIfNeeded();
+    const caja = (await mapa.boundingBox())!;
+
+    await page.mouse.move(caja.x + caja.width * 0.35, caja.y + caja.height * 0.35);
+    const primera = await lectura();
+
+    await page.mouse.move(caja.x + caja.width * 0.7, caja.y + caja.height * 0.55);
+    await expect
+      .poll(async () => (await lectura()) !== primera, { timeout: 5000 })
+      .toBe(true);
+  });
+});
+
 test.describe('retroalimentación al navegar (informe 1)', () => {
   test('el selector de temporada avisa mientras carga', async ({ page }) => {
     await page.goto('/results');

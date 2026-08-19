@@ -26,9 +26,9 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: el **cursor sincronizado** entre las trazas de telemetría y el mapa del circuito —la función distintiva de f1-tempo, y no necesita ningún dato nuevo— y la **ficha de circuito** `/circuits/[circuitId]`, prometida desde el plan original. Después, los huecos del informe 3 que quedan: personalización por equipo favorito, primitivos Chip y Sheet, y `seed:all` reproduciendo solo 4 de 17 temporadas.
+**Próximo paso**: la **ficha de circuito** `/circuits/[circuitId]` con su historial de ganadores, prometida desde el plan original y hoy lo único que queda del §8. Después, los huecos del informe 3 que quedan: personalización por equipo favorito, primitivos Chip y Sheet, y `seed:all` reproduciendo solo 4 de 17 temporadas.
 
-**Tests**: 52 unitarios (TypeScript) + 26 (Python) + **16 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 52 unitarios (TypeScript) + 28 (Python) + **17 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -75,6 +75,18 @@
 ---
 
 ## Bitácora
+
+### 2026-08-19 (14) — El mapa y las trazas, señalando el mismo punto ✅
+
+La función distintiva de f1-tempo, y no hacía falta ningún dato nuevo salvo uno que ya estaba a mano: **la distancia de vuelta de cada punto del trazado**. El endpoint la descartaba igual que descartaba `Position`.
+
+Ahora, pasar el dedo por la gráfica de velocidad mueve un punto por el asfalto, y tocar el asfalto mueve el cursor de las tres trazas. Verificado en los dos sentidos: tocando el mapa, las trazas leen 1.247 m, 4.604 m y 111 m según dónde; moviendo el cursor por las trazas, el marcador viaja de (383,134) a (733,227) en el lienzo.
+
+**Un fallo de diseño que apareció al probarlo**: al mover el puntero de las trazas al mapa, el `pointerleave` de las primeras llegaba **después** del `pointermove` del segundo y borraba lo que el otro acababa de poner, así que el punto no aparecía nunca al pasar de un gráfico al otro. Se resuelve con una decisión que además es mejor: **el marcador se queda donde lo dejaste** en vez de borrarse al salir, que es exactamente lo que hace el referente («place a marker by clicking on the track map or telemetry graph»).
+
+**Y dos errores de medición míos, encadenados.** El primero: probé el sentido mapa→trazas con las dos cosas cargadas y salía que no funcionaba… porque con las trazas en pantalla **el mapa queda fuera de la ventana**, y el ratón se movía a coordenadas que ya no caían sobre él. El segundo: antes de eso, había dado por bueno que el mapa no reaccionaba, cuando aislado sí lo hacía. Hace falta desplazar el elemento a la vista antes de medir; la prueba de navegador que fija esto lo hace.
+
+Los gráficos siguen sirviendo sueltos: solo pasan a estar gobernados desde fuera si se les da un `onCursor`.
 
 ### 2026-08-19 (13) — La latencia, resuelta; y dos pantallas jubiladas ✅
 

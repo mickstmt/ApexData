@@ -232,6 +232,8 @@ export interface TrackPoint {
   x: number;
   y: number;
   speed: number;
+  /** Metros recorridos de vuelta. Es lo que une el mapa con las trazas. */
+  distance: number | null;
 }
 
 /**

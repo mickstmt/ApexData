@@ -48,10 +48,32 @@ function readChannel(trace: TelemetryTrace, key: Channel['key']): number[] | nul
   return trace.brake ? trace.brake.map((value) => (value ? 1 : 0)) : null;
 }
 
-export function TelemetryChart({ traces }: { traces: TelemetryTrace[] }) {
+export function TelemetryChart({
+  traces,
+  cursor: cursorExterno,
+  onCursor,
+}: {
+  traces: TelemetryTrace[];
+  /**
+   * Metros de vuelta donde está el cursor, cuando lo gobierna alguien de fuera.
+   *
+   * Existe para que el mapa del circuito y estas trazas señalen el mismo punto:
+   * mover el dedo aquí mueve el punto allí, y al revés. Sin esto hay que
+   * relacionar a ojo una curva de la gráfica con un trozo de asfalto.
+   */
+  cursor?: number | null;
+  onCursor?: (distancia: number | null) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [cursor, setCursor] = useState<number | null>(null);
+  const [cursorPropio, setCursorPropio] = useState<number | null>(null);
+
+  // Controlado si le pasan `onCursor`; si no, se gobierna solo. Así el
+  // componente sigue sirviendo suelto, como hasta ahora.
+  const controlado = onCursor !== undefined;
+  const cursor = controlado ? cursorExterno ?? null : cursorPropio;
+  const setCursor = (distancia: number | null) =>
+    controlado ? onCursor(distancia) : setCursorPropio(distancia);
   // A canvas cannot inherit a CSS variable, so this is the one place that has
   // to read the theme in code — and to repaint when it changes.
   const { resolvedTheme } = useTheme();
@@ -241,7 +263,12 @@ export function TelemetryChart({ traces }: { traces: TelemetryTrace[] }) {
         className="relative w-full touch-pan-y select-none"
         onPointerMove={handlePointer}
         onPointerDown={handlePointer}
-        onPointerLeave={() => setCursor(null)}
+        // Al salir solo se borra si este gráfico va por libre. Compartiendo
+        // cursor con el mapa, el `pointerleave` de aquí llegaba DESPUÉS del
+        // `pointermove` de allí y borraba lo que el otro acababa de poner: el
+        // punto no aparecía nunca al pasar de un gráfico al otro. Que el
+        // marcador se quede donde lo dejaste es además lo que hace f1-tempo.
+        onPointerLeave={controlado ? undefined : () => setCursor(null)}
       >
         <canvas ref={canvasRef} role="img" aria-label="Telemetría de la vuelta" />
       </div>
