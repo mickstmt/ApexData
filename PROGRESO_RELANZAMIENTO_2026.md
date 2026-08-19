@@ -76,6 +76,18 @@
 
 ## Bitácora
 
+### 2026-08-19 (12) — Dos identificadores iguales, y un CI que por fin explica ✅
+
+Tres fallos seguidos del job de navegador, y los dos primeros diagnosticados a ciegas: las anotaciones del check solo dicen «exit code 1» y tanto los logs como los artefactos exigen autenticación. **Lo primero fue arreglar eso**: Playwright tiene un reporter que publica cada fallo como anotación del check, legible por API sin credenciales. Con él, el tercer intento dijo exactamente qué pasaba en la primera línea.
+
+**Y lo que pasaba era un fallo real de la app**: `strict mode violation: locator('#season-selector') resolved to 2 elements`. Dos `<select>` con el mismo `id` en el DOM. Es HTML inválido y rompe la asociación con la etiqueta — el `htmlFor` apunta a un id que ya no es único.
+
+Aparece porque durante una transición pueden convivir un instante dos copias de la página, algo que en local no se reproduce —medido: siempre una— y en el CI, más lento, sí. El id fijo pasa a `useId()`, así que el problema desaparece pase lo que pase con el streaming, y las pruebas localizan **por nombre accesible** en vez de por id.
+
+**El segundo fallo, el anterior, era otro**: seis procesos de Playwright contra un servidor con **una sola conexión** a la base (`connection_limit=1`, herencia de cuando el destino era serverless). Las páginas se encolaban hasta pasarse del tiempo límite. El CI pasa a dos procesos y ajusta la URL a `connection_limit=5`, como producción.
+
+**De paso**, `upload-artifact` vuelve a v4: se había subido a v5 para quitar el aviso de retirada de Node 20 y **la v5 también va con Node 20**, así que el aviso seguía saliendo igual. La actual es la v7; se deja anotado en lugar de saltar cuatro versiones mayores sin mirar qué cambia.
+
 ### 2026-08-19 (11) — El CI no fallaba por el código, sino por una sola conexión ✅
 
 Segundo fallo del job de navegador en el día, y otra vez **con las 17 pruebas en verde en local**. La reproducción esta vez fue exacta: levantar el servidor con la URL del `.env` —la misma que el secret del CI— en lugar de la retocada que venía usando.

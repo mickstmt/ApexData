@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useOptimistic, useTransition } from 'react';
+import { useEffect, useId, useOptimistic, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Calendar, ChevronDown, Loader2 } from 'lucide-react';
 
@@ -10,6 +10,11 @@ interface SeasonSelectorProps {
 }
 
 export function SeasonSelector({ currentSeason, availableSeasons }: SeasonSelectorProps) {
+  // `useId` en vez de un id escrito a mano: durante una transición pueden
+  // convivir un instante dos copias de la página en el DOM, y dos elementos con
+  // el mismo id rompen la asociación con su etiqueta —además de ser HTML
+  // inválido—. Salió en el CI, donde la ventana es más ancha que en local.
+  const id = useId();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -56,7 +61,7 @@ export function SeasonSelector({ currentSeason, availableSeasons }: SeasonSelect
   return (
     <div className="relative z-30 flex items-center gap-3">
       <Calendar className="h-5 w-5 text-muted-foreground" aria-hidden />
-      <label htmlFor="season-selector" className="sr-only">
+      <label htmlFor={id} className="sr-only">
         Temporada
       </label>
 
@@ -64,7 +69,7 @@ export function SeasonSelector({ currentSeason, availableSeasons }: SeasonSelect
           estaba reservado: así nada se recoloca al empezar a cargar. */}
       <div className="relative">
         <select
-          id="season-selector"
+          id={id}
           value={optimisticSeason}
           disabled={isPending}
           aria-busy={isPending}

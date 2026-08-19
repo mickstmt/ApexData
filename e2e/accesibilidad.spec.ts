@@ -212,7 +212,10 @@ test.describe('retroalimentación al navegar (informe 1)', () => {
   test('el selector de temporada avisa mientras carga', async ({ page }) => {
     await page.goto('/results');
 
-    const selector = page.locator('#season-selector');
+    // Por nombre accesible y no por id: el id ya no es fijo, y mientras la
+    // página se transmite puede haber un instante dos copias en el DOM — que
+    // es justo lo que hizo fallar esta prueba en CI y nunca en local.
+    const selector = page.getByRole('combobox', { name: 'Temporada' }).last();
     await expect(selector).toHaveAttribute('aria-busy', 'false');
 
     // Se frena la respuesta para poder observar el estado intermedio, que es
