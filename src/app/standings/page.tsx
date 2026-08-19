@@ -54,7 +54,7 @@ async function getStandings(year: number) {
 
     const round = Math.max(latestDriverRound?.round ?? 0, latestConstructorRound?.round ?? 0);
 
-    if (round === 0) return { drivers: [], constructors: [], round: 0, leaders: [] };
+    if (round === 0) return { drivers: [], constructors: [], round: 0, leaders: [], failed: false };
 
     const teamOf = { select: { name: true, constructorId: true } } as const;
 
@@ -108,6 +108,7 @@ async function getStandings(year: number) {
     }
 
     return {
+      failed: false,
       round,
       // El gráfico se pide aparte y se transmite cuando llegue: es una consulta
       // más que no debe retrasar la tabla, que es a lo que se viene.
@@ -137,7 +138,10 @@ async function getStandings(year: number) {
     };
   } catch (error) {
     console.error('Error fetching standings:', error);
-    return { drivers: [], constructors: [], round: 0, leaders: [] };
+    // Un fallo de base de datos no es una temporada sin datos, y hasta ahora
+    // los dos acababan en el mismo mensaje: «no hay datos de clasificación».
+    // Quien lo leía se iba creyendo que 2024 no está sembrada.
+    return { drivers: [], constructors: [], round: 0, leaders: [], failed: true };
   }
 }
 
@@ -226,6 +230,7 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
     constructors: constructorsStandings,
     round,
     leaders,
+    failed,
   } = await getStandings(displayYear);
 
   return (
@@ -253,7 +258,21 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
         </Suspense>
       )}
 
-      {driversStandings.length === 0 && constructorsStandings.length === 0 ? (
+      {failed ? (
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-12 text-center">
+          <p className="mb-2 text-lg font-semibold">No se pudo consultar la clasificación</p>
+          <p className="mb-6 text-muted-foreground">
+            La base de datos no respondió. Los datos de {displayYear} siguen ahí; es la conexión la
+            que ha fallado.
+          </p>
+          <Link
+            href={`/standings?season=${displayYear}&r=${round}`}
+            className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Reintentar
+          </Link>
+        </div>
+      ) : driversStandings.length === 0 && constructorsStandings.length === 0 ? (
         <div className="rounded-lg border border-border bg-muted/50 p-12 text-center">
           <p className="text-lg text-muted-foreground">
             No hay datos de clasificación disponibles para la temporada {displayYear}.

@@ -129,7 +129,18 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
       </div>
 
       {/* Content based on active tab */}
-      {activeTab === 'race' ? (
+      {activeTab === 'race' && race.results.length === 0 ? (
+        // Sin esta guarda, una carrera aún no disputada pintaba las cabeceras
+        // de la tabla sin una sola fila, un «VUELTAS: 0» y un «Podio» vacío:
+        // el mismo aspecto que tiene un fallo, sin serlo.
+        <div className="rounded-lg border border-border bg-card p-12 text-center">
+          <Flag className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+          <h3 className="mb-2 text-2xl font-bold">Sin resultados todavía</h3>
+          <p className="text-lg text-muted-foreground">
+            Esta carrera aún no tiene resultados en ApexData. Vuelve cuando se haya disputado.
+          </p>
+        </div>
+      ) : activeTab === 'race' ? (
         <>
           {/* Race Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">

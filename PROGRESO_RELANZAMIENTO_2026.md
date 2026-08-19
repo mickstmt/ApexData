@@ -26,7 +26,7 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: **cerrar el Sprint 6** con lo que queda: `global-error.tsx`, `/standings` distinguiendo un fallo de base de datos de una temporada vacía, la carrera sin resultados, `PageTransition` retrasando 300 ms los esqueletos, las tablas priority+, el resto del ARIA (pestañas, tablas, combobox, compuesto) y los objetivos táctiles por debajo de 44 px.
+**Próximo paso**: **cerrar el Sprint 6** con lo que queda: las tablas priority+, el resto del ARIA (pestañas, tablas, combobox, compuesto de neumático), los objetivos táctiles por debajo de 44 px y el idioma mezclado.
 
 **Tests**: 52 unitarios (TypeScript) + 14 (Python) + **10 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
@@ -43,6 +43,8 @@
   - **Pantalla de administración para importar temporadas**: no existe `src/app/admin`.
   - **Checklist de seguridad de §10, incompleto**: faltan *secret scanning* y *push protection* en GitHub, backup mensual con `pg_dump` y *rate limiting* (`slowapi`) en el servicio Python. El RLS de Supabase, que estaba en esta lista, dejó de estar recortado el mismo día — ver la bitácora.
 - 🟡 **Logos de equipo** (detectado por el usuario el 2026-08-18 mirando `/constructors`). Resueltos dos de los tres defectos: el **encuadre** —la caja era cuadrada de 48 px y los logos van de 1,09:1 a 4,8:1, así que un wordmark se dibujaba a 48×10 px— y la **legibilidad por tema**, porque el archivo trae la tinta fija; ahora se pintan como silueta monocroma, negra en claro y blanca en oscuro. De paso se quitó de `sauber.svg` un fondo blanco que cubría el lienzo. **Sigue pendiente** lo que exige acción manual: las **6 marcas sin logo** (Ferrari, Red Bull, Aston Martin, RB, Cadillac, AlphaTauri) y que `williams` es `.webp` en vez de SVG.
+- 🟢 **Estados de error y vacío: resueltos el 2026-08-19**. Existe `global-error.tsx` —hasta ahora un fallo del layout raíz daba la pantalla en blanco del navegador—, `/standings` distingue un fallo de base de datos de una temporada sin sembrar, y una carrera sin resultados avisa en vez de pintar una tabla con cabeceras y ninguna fila.
+- ⚪ **`PageTransition`: medido y descartado**. La auditoría lo acusaba de retrasar 300 ms todos los esqueletos. Medido en navegador contra la implementación alternativa: **96-123 ms antes, 81-85 ms después**. La penalización real era de ~20 ms, y quitar `mode="wait"` hace que la página que sale y la que entra convivan en el flujo, con riesgo de duplicar el alto un instante. No compensa: se deja como estaba.
 - 🟢 **Consultas encadenadas: resueltas el 2026-08-19**. `/standings` pedía el equipo de cada piloto **ronda por ronda**, hasta 24 viajes en serie: la temporada 2015 tardaba **16,5 s** en pintarse y la 2024, 10 s. Ahora la parrilla de la última ronda viene con las tablas y solo se hace una segunda consulta si falta algún piloto — 2,8 s y 3,0 s. La ficha de piloto encadenaba 6 consultas antes del primer byte; con `<Suspense>`, la cabecera aparece a los 514 ms y las estadísticas entran después. La ficha de equipo traía **todos** los resultados históricos con sus joins (Ferrari, 676 filas) para mostrar tres contadores: ahora se cuentan y se suman en la base. Y `/compare` arrastraba carrera, temporada y equipo de cada resultado, que esa pantalla **no lee**: 160-220 ms → 15-47 ms.
 - 🔴 **Latencia de la base de datos: el pooler cuesta 5× lo que la conexión directa** (medido el 2026-08-18; no se ha cambiado nada, por decisión del usuario). Sobre el mismo host `aws-1-us-east-1`: una `SELECT 1` por el **pooler (6543)** tarda **506 ms**; por la **conexión directa (5432)**, **101 ms**, que es exactamente el ida y vuelta de red hasta Virginia. Además `connection_limit=1` serializa: cinco consultas en paralelo tardan lo mismo que en fila india. Se nota donde no hay caché: la home, con 4 consultas encadenadas, tarda **1,4 s**, y `/api/health`, con una sola, **540 ms**; las páginas con `unstable_cache` responden en 55-90 ms y estaban tapando el problema. El pooler tiene sentido en serverless, donde cada petición es un proceso nuevo; aquí hay un contenedor permanente.
 - **El servicio de telemetría no tiene despliegue automático**: el CI solo dispara el webhook de la web, así que un cambio en `python-service/` exige pulsar *Deploy* a mano en el panel.
@@ -70,6 +72,22 @@
 ---
 
 ## Bitácora
+
+### 2026-08-19 (2) — Los estados que no existían, y una auditoría desmentida ✅
+
+**`global-error.tsx`, que no existía.** `error.tsx` vive *dentro* del layout raíz, así que no puede atrapar lo que rompa el layout mismo — `ThemeProvider`, `FavoritesProvider`, las fuentes—: eso daba la pantalla en blanco del navegador, sin una palabra ni forma de salir. Probado de verdad, rompiendo el layout a propósito con una variable de entorno para no dejar código de prueba en el build.
+
+Y ahí aparecieron dos cosas que solo se ven ejecutándolo. La primera: como el fallo ocurre en el servidor, Next devuelve su documento mínimo de error y **la pantalla nuestra solo aparece tras la hidratación**, en el navegador; con `curl` no se ve. La segunda: la hoja de estilos de la app **sí** se carga ahí, y su regla `body { bg-background text-foreground }` pintaba la pantalla siempre en tema claro, porque el tema lo decide `ThemeProvider`, que es justo lo que no ha llegado a ejecutarse. Ahora esta pantalla trae sus propios colores con `prefers-color-scheme`, que además la salvan si el CSS de la app tampoco carga —escenario perfectamente posible cuando se llega hasta aquí—. Verificado en las dos preferencias: **18,04:1 en oscuro y 17,01:1 en claro**.
+
+**`/standings` confundía un fallo de base de datos con una temporada vacía.** El `catch` devolvía listas vacías, indistinguibles de una temporada sin sembrar, y el usuario leía *«no hay datos de clasificación para 2024»* cuando lo cierto era que Supabase no respondía. Ahora son dos mensajes distintos, con reintento. Comprobado levantando el servidor contra una base de datos inexistente.
+
+**Una carrera sin resultados pintaba una tabla fantasma**: cabeceras sin una sola fila, un «VUELTAS: 0» y un «Podio» con el título y nada debajo — el aspecto de un fallo, sin serlo. Ahora avisa de que aún no se ha disputado. Comprobado con el GP de Países Bajos de 2026, que está en el calendario y todavía no tiene resultados.
+
+**Y una acusación de la auditoría que no se sostiene.** Decía que `PageTransition` retrasaba **300 ms** la aparición de todos los esqueletos, por su `mode="wait"`. Medido en navegador contra la alternativa: **96-123 ms antes y 81-85 ms después**. La penalización real es de ~20 ms. Además, quitar `mode="wait"` hace que la página que sale y la que entra convivan en el flujo del documento, con riesgo de duplicar el alto un instante. Veinte milisegundos no pagan eso: **el cambio se revierte** y el punto queda cerrado como medido, no como pendiente.
+
+**Tres mediciones mal montadas antes de dar con la buena**, que conviene recordar porque las tres parecían razonables: (1) esperar `.animate-pulse` casaba con los esqueletos de las imágenes de la página en la que ya se estaba; (2) frenar la respuesta entera con Playwright impide que el servidor mande el esqueleto, así que jamás podía aparecer y salía «3.050 ms» en ambos casos; y (3) un `<a>` creado a mano provoca recarga completa, no navegación de cliente, y destruye el contexto. La medida válida usa lentitud real de base de datos, un enlace real de la cabecera y sondeo del DOM.
+
+**Verificación**: build sin base de datos, 52 tests unitarios, 10 de navegador, y las cuatro pantallas nuevas vistas en ejecución —incluida la de fallo total, en sus dos temas—.
 
 ### 2026-08-19 — Las consultas encadenadas, desencadenadas ✅
 
