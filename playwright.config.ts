@@ -14,6 +14,15 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+
+  // En CI, dos procesos y no los seis que caben en esta máquina.
+  //
+  // El servidor de pruebas comparte UNA conexión a la base de datos —así viene
+  // la URL, con `connection_limit=1`— y cada consulta cuesta ~500 ms contra
+  // Virginia. Con seis navegadores pidiendo a la vez, las páginas que consultan
+  // se encolan detrás de esa única conexión y se pasan del tiempo límite: dio
+  // dos fallos que en local, con menos carga, no aparecían nunca.
+  workers: process.env.CI ? 2 : undefined,
   reporter: 'list',
   timeout: 60_000,
   use: {

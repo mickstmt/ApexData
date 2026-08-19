@@ -76,6 +76,18 @@
 
 ## Bitácora
 
+### 2026-08-19 (11) — El CI no fallaba por el código, sino por una sola conexión ✅
+
+Segundo fallo del job de navegador en el día, y otra vez **con las 17 pruebas en verde en local**. La reproducción esta vez fue exacta: levantar el servidor con la URL del `.env` —la misma que el secret del CI— en lugar de la retocada que venía usando.
+
+**La causa: `connection_limit=1`.** Esa URL trae una sola conexión a la base, herencia de cuando el destino era serverless, donde cada petición es un proceso aparte. Producción corre con 5 desde agosto, pero el secret del CI no. Con **seis procesos de Playwright** pidiendo a la vez contra un servidor con una conexión, y ~500 ms por consulta, las páginas que consultan se encolan hasta pasarse del tiempo límite: caían «la fila desplegada» y «en escritorio la tabla sigue siendo una tabla», las dos sobre `/results/2024/1`.
+
+Medido: con seis procesos, 1-2 fallos por tanda; **con dos, 17/17 en 48 segundos**.
+
+Arreglado por los dos lados, porque cada uno cubre un flanco distinto: el CI pasa a **dos procesos** —el servidor de pruebas no da para más— y el job **ajusta la URL a `connection_limit=5`** antes de arrancar, para que el servidor de pruebas se parezca a producción y no a un entorno que ya no existe.
+
+Es la tercera vez esta semana que el problema es **contra qué se mide**, no qué se mide: un servidor viejo en el puerto, una máquina rápida con la caché caliente, y ahora un límite de conexiones que no era el de producción.
+
 ### 2026-08-19 (10) — La carrera contada en dos gráficos, y cuatro piezas de movimiento ✅
 
 Todo lo elegido por el usuario sobre el mockup, construido con lo que la investigación de los agentes había señalado.

@@ -91,9 +91,26 @@ jobs:
       # El navegador pesa; solo se instala el que usa la configuración.
       - run: npx playwright install --with-deps chromium
 
-      - name: Ejecutar las pruebas contra el servidor de producción
+      # El secret trae `connection_limit=1`, heredado de cuando el destino era
+      # serverless. Producción corre con 5 desde agosto, y el servidor de
+      # pruebas debe parecerse a producción: con una sola conexión, las páginas
+      # se encolan y las pruebas fallan por tiempo, no por comportamiento.
+      - name: Preparar la conexión como en producción
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if echo "$DATABASE_URL" | grep -q 'connection_limit='; then
+            ajustada=$(echo "$DATABASE_URL" | sed 's/connection_limit=[0-9]*/connection_limit=5/')
+          elif echo "$DATABASE_URL" | grep -q '?'; then
+            ajustada="$DATABASE_URL&connection_limit=5"
+          else
+            ajustada="$DATABASE_URL?connection_limit=5"
+          fi
+          echo "::add-mask::$ajustada"
+          echo "DATABASE_URL=$ajustada" >> "$GITHUB_ENV"
+
+      - name: Ejecutar las pruebas contra el servidor de producción
+        env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: npm run test:e2e
 
