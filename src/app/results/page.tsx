@@ -147,9 +147,14 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
                         </Link>
                       </td>
                       <td className="p-4 text-sm text-muted-foreground">
+                        {/* `timeZone: 'UTC'` como en la versión móvil: la fecha
+                            se guarda a medianoche UTC y sin fijar la zona el
+                            mismo gran premio salía con un día distinto en
+                            escritorio y en móvil. */}
                         {new Date(race.date).toLocaleDateString('es-ES', {
                           day: '2-digit',
                           month: 'short',
+                          timeZone: 'UTC',
                         })}
                       </td>
                       <td className="p-4">

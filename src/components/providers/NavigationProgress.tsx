@@ -27,8 +27,13 @@ import { useReducedMotion } from 'framer-motion';
 /** Por debajo de esto la navegación se siente instantánea: mejor no interrumpir. */
 const APPEAR_AFTER_MS = 250;
 
-/** Si algo sale mal, el indicador no puede quedarse dando vueltas para siempre. */
-const GIVE_UP_AFTER_MS = 20_000;
+/**
+ * Plazo de rendición. Si la navegación no llega —o el clic ni siquiera navegaba—
+ * el indicador se apaga solo. Diez segundos: que se retire antes de tiempo en
+ * una página lentísima es inofensivo —el contenido sigue llegando— y quedarse
+ * puesto sobre una página que ya no espera nada, no.
+ */
+const GIVE_UP_AFTER_MS = 10_000;
 
 export function NavigationProgress() {
   const pathname = usePathname();
@@ -71,13 +76,39 @@ export function NavigationProgress() {
       // Mismo destino, o solo cambia la query: no hay página nueva que esperar.
       if (url.pathname === window.location.pathname) return;
 
+      // Dos temporizadores anteriores sin cancelar dejaban uno huérfano al
+      // pulsar dos veces seguidas: `stop()` solo alcanzaba al último, y el
+      // huérfano encendía el velo sin nadie que lo apagara.
+      stop();
+
       showTimer.current = setTimeout(() => setVisible(true), APPEAR_AFTER_MS);
       giveUpTimer.current = setTimeout(stop, GIVE_UP_AFTER_MS);
     };
 
+    // En captura, a propósito. Se probó en burbuja para poder descartar los
+    // clics que otro componente anula, y ahí `Link` ya ha llamado a
+    // `preventDefault()` —así navega el App Router—, de modo que la
+    // comprobación descartaba TODAS las navegaciones y el indicador no salía
+    // nunca. Un clic anulado y una navegación de cliente son indistinguibles
+    // desde el evento, así que en lugar de intentar separarlos se acota el
+    // daño: el plazo de rendición es corto y cualquier interacción posterior
+    // apaga el indicador.
     document.addEventListener('click', onClick, { capture: true });
     return () => document.removeEventListener('click', onClick, { capture: true });
   }, [stop]);
+
+  // Con el indicador puesto, cualquier toque o tecla lo retira: si el usuario
+  // sigue interactuando es que la página anterior nunca se fue.
+  useEffect(() => {
+    if (!visible) return;
+
+    document.addEventListener('pointerdown', stop);
+    document.addEventListener('keydown', stop);
+    return () => {
+      document.removeEventListener('pointerdown', stop);
+      document.removeEventListener('keydown', stop);
+    };
+  }, [visible, stop]);
 
   useEffect(() => stop, [stop]);
 

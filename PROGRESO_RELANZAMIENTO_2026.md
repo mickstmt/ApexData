@@ -9,7 +9,7 @@
 
 1. **Este documento se actualiza siempre**: cada sesión de trabajo termina con una entrada en la bitácora y el estado actualizado, y se commitea/pushea para que esté disponible desde cualquier lugar.
 2. **Acciones del usuario**: cuando algo requiera acción manual suya, se indica con máximo detalle, sin asumir conocimientos ni pasos previos. Si son varios pasos: primero un resumen corto de qué se va a hacer, y después SIEMPRE paso a paso, uno por uno, esperando confirmación antes de seguir, para evitar errores y estancamientos.
-3. **Herramientas**: se usan agentes especializados por ámbito, skills de Claude Code (dataviz, code-review, security-review), e investigación en internet cuando haga falta.
+3. **Herramientas**: se usan agentes especializados por ámbito, skills de Claude Code (dataviz, code-review, security-review), e investigación en internet cuando haga falta. **Esta regla se incumplió durante toda la sesión del 2026-08-19 y salió cara** (ver bitácora): desde entonces el repo tiene sus propias skills en `.claude/skills/` — `verificar`, `desplegar` y `cerrar-sesion` — que recogen el método para que no dependa de acordarse.
 4. **Cada sprint cierra con la app corriendo y verificada**, no con promesas.
 
 ---
@@ -75,6 +75,29 @@
 ---
 
 ## Bitácora
+
+### 2026-08-19 (9) — Las skills que no usé, y lo que escondían ✅
+
+**El usuario señaló que su prompt pedía explícitamente agentes especializados y skills, y que no se habían usado.** Cierto: el método está escrito en dos documentos —`code-review` y `security-review` *antes de cada merge*, `dataviz` antes de tocar un gráfico— y en toda la jornada no se ejecutó ninguna, con **diez commits ya en producción**.
+
+**`code-review` encontró diez defectos reales, todos introducidos ese mismo día.** Los cuatro que rompían uso:
+
+1. **Desde `/results` no se podía llegar a `/calendar`.** El "volver arriba" al tocar la pestaña activa se disparaba también cuando la pestaña estaba marcada por pertenencia o por ruta hija, así que el toque se quedaba en un desplazamiento. Ahora exige estar exactamente en esa ruta.
+2. **El velo del indicador podía quedarse puesto.** El oyente iba en captura, antes que el del enlace, así que un clic anulado por otro componente arrancaba la espera igualmente.
+3. **Dos temporizadores sin cancelar** dejaban uno huérfano al pulsar dos veces: `stop()` solo alcanzaba al último.
+4. **El enlace de la tarjeta de piloto no cubría su relleno**, porque el pseudoelemento se anclaba al envoltorio interno que existe para apilar contenido sobre el dorsal; la tarjeta de equipo, sin ese envoltorio, sí lo cubría. Dos tarjetas gemelas comportándose distinto. Ahora las dos usan una capa explícita.
+
+Y seis más: `?lap=abc` se ignoraba en silencio devolviendo la vuelta rápida como si fuera la pedida; el estado vacío de `/analysis` se colaba bajo el mapa y la estrategia; la fecha de `/results` salía con un día distinto en escritorio y en móvil por no fijar la zona; el botón de reintentar de `/standings` navegaba a la misma URL y no hacía nada; `aria-controls` apuntaba a paneles inexistentes en las pestañas inactivas; y una vuelta de salida de boxes sin compuesto etiquetaba UNKNOWN el stint entero.
+
+**El arreglo del punto 2 rompió lo que arreglaba, y lo cazó la prueba.** Pasar el oyente a burbuja descartaba *todas* las navegaciones, porque `Link` llama a `preventDefault()` para navegar del lado del cliente: un clic anulado y una navegación son indistinguibles desde el evento. Se vuelve a captura y se acota el daño — plazo de rendición de 10 s y cualquier toque posterior retira el indicador.
+
+**`security-review`: sin hallazgos.** Comprobados el flujo de los parámetros de URL hasta la URL saliente del servicio (solo controlan la ruta, nunca el host ni el protocolo), `event_key` y la caché de disco —que hashea la clave antes de tocar el sistema de archivos—, los mensajes de error del servicio, `error.digest`, y la ausencia de sinks de XSS. Una nota: el job `e2e` expone los secrets de base de datos, pero el disparador es `pull_request` y GitHub no los entrega a PRs de forks; solo sería un problema si algún día se cambia a `pull_request_target`.
+
+**`dataviz` destapó un fallo que ninguna captura muestra.** Su validador, ejecutado sobre los colores Pirelli, da **1,11:1 para el HARD** y 1,42:1 para el MEDIUM sobre la tarjeta clara: barras blancas sobre fondo blanco. Los colores son los que manda la convención del deporte y no se tocan, así que se añade el relieve que el propio método exige — aro por segmento y separación de 2 px—, y la identidad sigue estando en la inicial, la leyenda y la tabla equivalente.
+
+**Y la rampa del mapa de velocidad estaba mal elegida.** La escogí a ojo con luminosidad HSL constante, y medida resultó que **en cada tema desaparecía un extremo**: el amarillo a 1,61:1 sobre blanco, el azul a 1,53:1 sobre carbón. La causa es que un barrido de tono a "L" constante no mantiene la luminancia: el verde y el amarillo son mucho más luminosos que el azul. Rehecha resolviendo una **luminancia objetivo por tono**, con una lista de paradas por tema —la oscura no es la clara invertida—: peor paso **3,39:1 en claro y 3,53:1 en oscuro**, medido después sobre el lienzo real (3,38 y 3,45), y luminancia creciente para que el orden se lea en escala de grises.
+
+**El repo pasa a tener sus propias skills** en `.claude/skills/`: `verificar` (build como el CI sin base de datos, medir contra el proceso correcto, los cinco errores de medición ya cometidos), `desplegar` (cutover por `buildId`, nunca disparar el webhook a mano, y el Deploy manual del servicio) y `cerrar-sesion` (revisión antes de merge, qué debe contener la bitácora, y las reglas de trato acordadas). El método deja de depender de que alguien se acuerde.
 
 ### 2026-08-19 (8) — La ronda que cargaba otra carrera ✅
 

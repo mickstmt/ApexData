@@ -43,6 +43,18 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
         <FavoriteButton id={driver.driverId} type="driver" />
       </div>
 
+      {/* La tarjeta entera es el enlace, como capa y no como envoltorio: así el
+          botón de favorito queda fuera de él —un control dentro de un <a> es
+          HTML inválido— y la zona pulsable no depende del apilamiento interno. */}
+      <Link
+        href={`/drivers/${driver.driverId}`}
+        className="absolute inset-0 z-10 rounded-lg ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <span className="sr-only">
+          Ver la ficha de {driver.givenName} {driver.familyName}
+        </span>
+      </Link>
+
         {/* Número permanente en background */}
         {driver.permanentNumber && (
           <div className="absolute right-4 top-16 text-6xl font-bold text-muted/10 transition-colors group-hover:text-primary/20">
@@ -63,12 +75,7 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
 
           {/* Nombre */}
           <h3 className="mb-1 text-xl font-bold text-foreground">
-            <Link
-              href={`/drivers/${driver.driverId}`}
-              className="rounded-sm after:absolute after:inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              {driver.givenName} {driver.familyName}
-            </Link>
+            {driver.givenName} {driver.familyName}
           </h3>
 
           {/* Código del piloto */}

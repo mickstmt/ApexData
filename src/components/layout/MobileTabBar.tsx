@@ -47,8 +47,13 @@ export function MobileTabBar() {
 
   // Volver arriba al tocar la pestaña en la que ya estás: es lo que hace
   // cualquier app nativa, y aquí no hacía nada.
-  const alTocar = (href: string, activa: boolean) => (evento: React.MouseEvent) => {
-    if (!activa) return;
+  //
+  // La condición es estar EXACTAMENTE en esa ruta, no que la pestaña aparezca
+  // marcada: si no, desde `/results` —donde se marca «Calendario» por
+  // pertenencia— o desde la ficha de un piloto, el toque se quedaba en un
+  // desplazamiento y no había forma de llegar a la sección.
+  const alTocar = (href: string) => (evento: React.MouseEvent) => {
+    if (pathname !== href) return;
     evento.preventDefault();
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   };
@@ -72,7 +77,7 @@ export function MobileTabBar() {
               <Link
                 href={href}
                 aria-current={active ? 'page' : undefined}
-                onClick={alTocar(href, active)}
+                onClick={alTocar(href)}
                 className={cn(
                   // 44px is the minimum comfortable touch target on iOS.
                   'flex min-h-[44px] select-none flex-col items-center justify-center gap-1 px-1 py-1',

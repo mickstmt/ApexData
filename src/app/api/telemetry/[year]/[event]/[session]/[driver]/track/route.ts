@@ -36,6 +36,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    if (lap !== null && Number.isNaN(parseInt(lap, 10))) {
+      // Sin esto, `?lap=abc` se convertía en NaN, el cliente lo descartaba por
+      // falsy y la respuesta traía la vuelta rápida etiquetada como si fuera
+      // la pedida.
+      return NextResponse.json({ error: 'Invalid lap parameter' }, { status: 400 });
+    }
+
     const track = await fastf1Client.getTrackMap(
       yearNum,
       event,

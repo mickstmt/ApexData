@@ -40,7 +40,13 @@ export function StintChart({
               {driver.driver}
             </span>
 
-            <div className="flex h-7 flex-1 gap-px overflow-hidden rounded-md" aria-hidden>
+            {/* Separación de 2 px entre tramos y un aro por segmento: los
+                colores Pirelli son los que manda la convención del deporte y no
+                se tocan, pero medidos contra la tarjeta clara el HARD da 1,11:1
+                y el MEDIUM 1,42:1 — una barra blanca sobre fondo blanco. El aro
+                define la forma sin cambiar el color, y la inicial más la leyenda
+                dan la identidad sin depender de él. */}
+            <div className="flex h-7 flex-1 gap-0.5 overflow-hidden rounded-md" aria-hidden>
               {driver.stints.map((stint) => {
                 const fondo = compoundColor(stint.compound);
                 const claro = TINTA_CLARA.has(stint.compound.toUpperCase());
@@ -54,7 +60,7 @@ export function StintChart({
                       width: `${(stint.laps / totalLaps) * 100}%`,
                       color: claro ? '#FFFFFF' : '#15151A',
                     }}
-                    className="flex items-center justify-center text-[10px] font-bold"
+                    className="flex items-center justify-center text-[10px] font-bold ring-1 ring-inset ring-border"
                   >
                     {stint.laps >= 4 ? stint.compound.charAt(0) : ''}
                   </div>

@@ -517,7 +517,7 @@ export function AnalysisClient({
         )}
 
         {/* Empty State */}
-        {!telemetry && !comparison && !fastestLaps && (
+        {!telemetry && !comparison && !fastestLaps && !trackMap && !stints && (
           <div className="rounded-lg border border-border bg-muted/50 p-12 text-center">
             <Activity className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <h2 className="mb-4 text-2xl font-bold">Selecciona una sesión</h2>

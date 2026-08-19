@@ -33,6 +33,15 @@ export function ConstructorCard({ team, index = 0 }: ConstructorCardProps) {
         <FavoriteButton id={team.constructorId} type="constructor" />
       </div>
 
+      {/* Misma capa que en la tarjeta de piloto, para que las dos se comporten
+          igual: el enlace cubre la tarjeta y el favorito queda por encima. */}
+      <Link
+        href={`/constructors/${team.constructorId}`}
+        className="absolute inset-0 z-10 rounded-lg ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <span className="sr-only">Ver la ficha de {team.name}</span>
+      </Link>
+
         {/* Logo */}
         <div className="mb-4">
           <TeamLogo
@@ -44,12 +53,7 @@ export function ConstructorCard({ team, index = 0 }: ConstructorCardProps) {
 
         {/* Nombre del equipo */}
         <h3 className="mb-3 text-xl font-bold text-foreground group-hover:text-primary transition-colors">
-          <Link
-            href={`/constructors/${team.constructorId}`}
-            className="rounded-sm after:absolute after:inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            {team.name}
-          </Link>
+          {team.name}
         </h3>
 
         {/* Información */}

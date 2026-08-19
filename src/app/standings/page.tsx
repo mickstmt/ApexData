@@ -265,12 +265,15 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
             La base de datos no respondió. Los datos de {displayYear} siguen ahí; es la conexión la
             que ha fallado.
           </p>
-          <Link
-            href={`/standings?season=${displayYear}&r=${round}`}
+          {/* Un enlace normal, no <Link>: en el fallo `round` siempre vale 0,
+              así que la URL era idéntica y el router no volvía a pedir nada.
+              Una recarga completa sí reintenta la consulta. */}
+          <a
+            href={`/standings?season=${displayYear}`}
             className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             Reintentar
-          </Link>
+          </a>
         </div>
       ) : driversStandings.length === 0 && constructorsStandings.length === 0 ? (
         <div className="rounded-lg border border-border bg-muted/50 p-12 text-center">

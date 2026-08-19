@@ -139,7 +139,9 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
               role="tab"
               type="button"
               aria-selected={activeTab === tab.id}
-              aria-controls={`panel-${tab.id}`}
+              // Solo se renderiza el panel activo, así que las demás pestañas
+              // apuntaban a un id inexistente.
+              aria-controls={activeTab === tab.id ? `panel-${tab.id}` : undefined}
               tabIndex={activeTab === tab.id ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
               className={`min-h-[44px] px-6 py-3 text-sm font-semibold transition-colors border-b-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${

@@ -93,6 +93,12 @@ def stints_from_laps(laps) -> list[dict]:
         tramo["end_lap"] = max(tramo["end_lap"], vuelta)
         tramo["laps"] += 1
 
+        # El compuesto se tomaba de la primera vuelta del tramo, y la de salida
+        # de boxes llega a veces sin él: eso etiquetaba UNKNOWN un stint entero
+        # cuyas demás vueltas sí lo traen.
+        if tramo["compound"] == "UNKNOWN" and compuesto != "UNKNOWN":
+            tramo["compound"] = compuesto
+
     return sorted(tramos.values(), key=lambda t: (t["driver"], t["stint"]))
 
 

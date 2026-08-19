@@ -15,11 +15,24 @@ import type { TrackPoint } from '@/types';
  * cientos de segmentos con su propio color, y un `<path>` por segmento es un
  * nodo por segmento.
  *
- * La escala de color va de un azul frío a un amarillo cálido —no del rojo al
- * verde—, para que quien no distingue esos dos siga leyendo el gradiente: la
- * luminosidad sube con la velocidad, así que el orden se percibe igual en
- * escala de grises.
+ * La escala es de "calor" —frío para lento, cálido para rápido—, que es una de
+ * las dos excepciones admitidas a la regla de "una sola tinta" para magnitud, y
+ * va siempre acompañada de su leyenda con los extremos en km/h.
+ *
+ * Sus paradas **no se eligieron por buen aspecto, sino resolviendo una
+ * luminancia objetivo por tono**. Escogidas a ojo con luminosidad HSL constante,
+ * el amarillo quedaba a 1,61:1 sobre blanco y el azul a 1,53:1 sobre carbón: en
+ * cada tema desaparecía un extremo de la escala, y eso no se ve mirando una sola
+ * captura. Ahora el peor paso da 3,39:1 en claro y 3,53:1 en oscuro —el mínimo
+ * que WCAG pide a un objeto gráfico— y la luminancia crece siempre, así que el
+ * orden se percibe incluso en escala de grises.
  */
+
+/** Paradas de la rampa, una lista por tema: la oscura no es la clara invertida. */
+const RAMPA = {
+  claro: ['#0D0DC7', '#085A7B', '#077545', '#1B8609', '#778809', '#E3670E'],
+  oscuro: ['#5555F4', '#0E8FD4', '#0BB381', '#0DCC17', '#85D50E', '#F4CA4D'],
+} as const;
 
 const PADDING = 18;
 
@@ -148,8 +161,13 @@ export function TrackMap({
         <span className="font-mono tabular-nums">{Math.round(minSpeed)} km/h</span>
         <span
           aria-hidden
-          className="h-2 flex-1 rounded-full"
-          style={{ background: `linear-gradient(to right, ${escalaCss()})` }}
+          className="h-2 flex-1 rounded-full bg-[linear-gradient(to_right,var(--rampa-clara))] dark:bg-[linear-gradient(to_right,var(--rampa-oscura))]"
+          style={
+            {
+              '--rampa-clara': RAMPA.claro.join(', '),
+              '--rampa-oscura': RAMPA.oscuro.join(', '),
+            } as React.CSSProperties
+          }
         />
         <span className="font-mono tabular-nums">{Math.round(maxSpeed)} km/h</span>
       </figcaption>
@@ -157,20 +175,20 @@ export function TrackMap({
   );
 }
 
-/**
- * Azul frío → cian → amarillo cálido. La luminosidad crece con la velocidad,
- * así que el gradiente se sigue leyendo sin distinguir los colores.
- */
+/** Interpola entre las paradas de la rampa del tema. */
 function colorPorVelocidad(proporcion: number, oscuro: boolean): string {
-  const t = Math.min(1, Math.max(0, proporcion));
-  const tono = 240 - t * 190;
-  const luz = oscuro ? 38 + t * 30 : 30 + t * 22;
+  const paradas = oscuro ? RAMPA.oscuro : RAMPA.claro;
+  const t = Math.min(1, Math.max(0, proporcion)) * (paradas.length - 1);
+  const indice = Math.min(paradas.length - 2, Math.floor(t));
 
-  return `hsl(${tono} 85% ${luz}%)`;
+  return mezclar(paradas[indice], paradas[indice + 1], t - indice);
 }
 
-function escalaCss(): string {
-  return [0, 0.25, 0.5, 0.75, 1]
-    .map((t) => `hsl(${240 - t * 190} 85% 48%)`)
-    .join(', ');
+function mezclar(desde: string, hasta: string, peso: number): string {
+  const canal = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+  const valores = [0, 1, 2].map((i) =>
+    Math.round(canal(desde, i) + (canal(hasta, i) - canal(desde, i)) * peso)
+  );
+
+  return `rgb(${valores.join(' ')})`;
 }
