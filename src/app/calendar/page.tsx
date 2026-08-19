@@ -152,7 +152,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                   isToday
                     ? 'border-primary bg-primary/5'
                     : isPast
-                    ? 'border-border bg-muted/30 opacity-75'
+                    ? 'border-border bg-muted/30'
                     : 'border-border bg-card hover:border-primary hover:shadow-md'
                 }`}
               >

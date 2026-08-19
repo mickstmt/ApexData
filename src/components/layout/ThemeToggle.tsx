@@ -18,7 +18,7 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <div className="h-11 w-11 rounded-md border border-border bg-background md:h-9 md:w-9" />
+      <div className="h-11 w-11 rounded-md border border-input bg-background md:h-9 md:w-9" />
     );
   }
 
@@ -27,7 +27,7 @@ export function ThemeToggle() {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="relative flex h-11 w-11 items-center justify-center rounded-md border border-border bg-background transition-colors hover:border-primary hover:bg-accent md:h-9 md:w-9"
+      className="relative flex h-11 w-11 items-center justify-center rounded-md border border-input bg-background transition-colors hover:border-primary hover:bg-accent md:h-9 md:w-9"
       aria-label="Cambiar entre tema claro y oscuro"
     >
       <Sun className="absolute inset-2 h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

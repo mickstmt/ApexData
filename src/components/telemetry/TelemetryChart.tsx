@@ -55,6 +55,15 @@ export function TelemetryChart({ traces }: { traces: TelemetryTrace[] }) {
   // A canvas cannot inherit a CSS variable, so this is the one place that has
   // to read the theme in code — and to repaint when it changes.
   const { resolvedTheme } = useTheme();
+  const paleta = useRef({ ink: '#8A8A94', grid: '#2A2A33' });
+
+  useEffect(() => {
+    const styles = getComputedStyle(document.documentElement);
+    paleta.current = {
+      ink: `hsl(${styles.getPropertyValue('--muted-foreground').trim()})`,
+      grid: `hsl(${styles.getPropertyValue('--border').trim()})`,
+    };
+  }, [resolvedTheme]);
 
   const maxDistance = useMemo(
     () => Math.max(...traces.map((trace) => trace.distance[trace.distance.length - 1] ?? 0)),
@@ -87,11 +96,13 @@ export function TelemetryChart({ traces }: { traces: TelemetryTrace[] }) {
     ctx.scale(ratio, ratio);
     ctx.clearRect(0, 0, width, totalHeight);
 
-    const styles = getComputedStyle(document.documentElement);
-    const ink = `hsl(${styles.getPropertyValue('--muted-foreground').trim()})`;
-    const grid = `hsl(${styles.getPropertyValue('--border').trim()})`;
-    // The class is on the document before first paint; resolvedTheme arrives
-    // a tick later, so the document is what the first draw goes by.
+    // `getComputedStyle` fuerza un recálculo de estilo, y `draw` corre en cada
+    // `pointermove` mientras se arrastra el cursor: era el único punto del
+    // código que provocaba reflow durante una interacción continua. Los
+    // colores del tema se leen una vez, al cambiar de tema. Comprobar la clase
+    // del documento, en cambio, no cuesta nada y mantiene el primer dibujo
+    // correcto antes de que next-themes resuelva.
+    const { ink, grid } = paleta.current;
     const isDark = resolvedTheme
       ? resolvedTheme === 'dark'
       : document.documentElement.classList.contains('dark');

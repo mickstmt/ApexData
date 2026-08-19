@@ -166,7 +166,7 @@ function DriverPicker({
                 }}
                 onFocus={() => onAbrir(true)}
                 onKeyDown={onTeclado}
-                className="w-full rounded-lg border border-border bg-background py-3 pl-10 pr-4 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
+                className="w-full rounded-lg border border-input bg-background py-3 pl-10 pr-4 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
               />
             </div>
 

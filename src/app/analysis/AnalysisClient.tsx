@@ -177,7 +177,7 @@ export function AnalysisClient({
             </label>
             <select
               id="analysis-event"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               value={`${selectedSession.year}-${selectedSession.event}`}
               onChange={(e) => {
                 const [year, event] = e.target.value.split('-');
@@ -208,7 +208,7 @@ export function AnalysisClient({
             </label>
             <select
               id="analysis-session"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               value={sessionType}
               onChange={(e) => setSessionType(e.target.value as SessionType)}
             >
@@ -230,7 +230,7 @@ export function AnalysisClient({
             </label>
             <select
               id="analysis-driver-1"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               value={driver1}
               onChange={(e) => setDriver1(e.target.value)}
             >
@@ -252,7 +252,7 @@ export function AnalysisClient({
             </label>
             <select
               id="analysis-driver-2"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               value={driver2}
               onChange={(e) => setDriver2(e.target.value)}
             >
@@ -311,7 +311,10 @@ export function AnalysisClient({
 
         {/* Error Message */}
         {error && (
-          <div className="mt-4 rounded-md border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+          <div
+            role="alert"
+            className="mt-4 rounded-md border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive"
+          >
             {error}
           </div>
         )}

@@ -16,7 +16,7 @@
 
 ## Estado actual
 
-**Fase**: 🟡 **Sprint 6 en curso** (2026-08-18) — la web y la telemetría en producción: https://apexdata.meeks.fun · Sprint 5 cerrado con recortes anotados · Sprints 0–4 completados (2026-08-16).
+**Fase**: 🟢 **Sprint 6 cerrado** (2026-08-19), con su alcance contrastado punto por punto y los recortes anotados — la web y la telemetría en producción: https://apexdata.meeks.fun · Sprint 5 cerrado con recortes anotados · Sprints 0–4 completados (2026-08-16).
 
 **Cobertura de datos**: **2010–2026 completo** (17 temporadas) — resultados, clasificación y standings oficiales. 84 pilotos, 25 equipos, 55 circuitos.
 
@@ -26,7 +26,7 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: **cerrar el Sprint 6 formalmente**, contrastando su alcance completo punto por punto y anotando lo que se recorte. Después, los arrastres del S4 (mapa del circuito por velocidad, estrategia de neumáticos) y las retiradas pendientes (`/telemetry` en `/analysis`, jubilar `/compare`).
+**Próximo paso**: los **arrastres del S4** —mapa del circuito coloreado por velocidad y gráfico de estrategia de neumáticos— y las **retiradas pendientes**: fusionar `/telemetry` en `/analysis` y jubilar `/compare`.
 
 **Tests**: 52 unitarios (TypeScript) + 14 (Python) + **17 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
@@ -50,7 +50,7 @@
 - 🟢 **Consultas encadenadas: resueltas el 2026-08-19**. `/standings` pedía el equipo de cada piloto **ronda por ronda**, hasta 24 viajes en serie: la temporada 2015 tardaba **16,5 s** en pintarse y la 2024, 10 s. Ahora la parrilla de la última ronda viene con las tablas y solo se hace una segunda consulta si falta algún piloto — 2,8 s y 3,0 s. La ficha de piloto encadenaba 6 consultas antes del primer byte; con `<Suspense>`, la cabecera aparece a los 514 ms y las estadísticas entran después. La ficha de equipo traía **todos** los resultados históricos con sus joins (Ferrari, 676 filas) para mostrar tres contadores: ahora se cuentan y se suman en la base. Y `/compare` arrastraba carrera, temporada y equipo de cada resultado, que esa pantalla **no lee**: 160-220 ms → 15-47 ms.
 - 🔴 **Latencia de la base de datos: el pooler cuesta 5× lo que la conexión directa** (medido el 2026-08-18; no se ha cambiado nada, por decisión del usuario). Sobre el mismo host `aws-1-us-east-1`: una `SELECT 1` por el **pooler (6543)** tarda **506 ms**; por la **conexión directa (5432)**, **101 ms**, que es exactamente el ida y vuelta de red hasta Virginia. Además `connection_limit=1` serializa: cinco consultas en paralelo tardan lo mismo que en fila india. Se nota donde no hay caché: la home, con 4 consultas encadenadas, tarda **1,4 s**, y `/api/health`, con una sola, **540 ms**; las páginas con `unstable_cache` responden en 55-90 ms y estaban tapando el problema. El pooler tiene sentido en serverless, donde cada petición es un proceso nuevo; aquí hay un contenedor permanente.
 - **El servicio de telemetría no tiene despliegue automático**: el CI solo dispara el webhook de la web, así que un cambio en `python-service/` exige pulsar *Deploy* a mano en el panel.
-- 🔴 **Auditoría triple del 2026-08-17** (retroalimentación · accesibilidad/móvil · veracidad de la documentación): el alcance completo quedó consolidado en la sección **"S6 — alcance completo"** del plan de referencia. Resuelto el 2026-08-18: `useReducedMotion`, el foco de teclado, el zoom bloqueado, Favoritos a partir del piloto 51, y los tokens de timing, los gráficos en tema claro y la edad de los pilotos. **Sigue pendiente**: ninguna tabla con priority+, y **9 promesas del plan sin implementar ni registrar como deuda** (personalización por equipo, Table/Chip/Sheet, ficha de circuito, FLIP, `seed:all` incompleto…). La documentación resultó veraz en lo que afirma e incompleta en lo que omite: el cierre de cada sprint nunca se contrastó contra su alcance original.
+- 🟢 **Auditoría triple del 2026-08-17: cerrada el 2026-08-19.** Los tres informes se contrastaron punto por punto contra el código (ver la bitácora de cierre). Del informe 1 y del 2 no queda nada sin resolver o sin recortar explícitamente. **Recortado a propósito, con motivo**: (a) `PageTransition` —la acusación de 300 ms era de ~20 ms medidos, y el arreglo tenía un riesgo peor que el defecto—; (b) el `role="img"` de `TelemetryChart`, sin alternativa textual, porque una vuelta son miles de muestras y una tabla equivalente no es legible —el gráfico del campeonato sí la tiene—; (c) la «golden rule» de safe-area en `Header`, que se desvía del plan pero funciona por su altura fija. **Del informe 3 (huecos silenciosos) siguen abiertos** los puntos 1, 2 (parcial: existe `PriorityRows`, faltan Chip y Sheet), 4, 5, 7 y 9, listados abajo.
 
 **Decisiones tomadas**:
 - ✅ **Las pruebas de navegador corren en CI** (2026-08-18). El job `e2e` construye con credenciales falsas —como el job `web`, para no perder la garantía de que la app compila sin base de datos— y sirve la app con el secret `DATABASE_URL` que ya existía para el cron. El despliegue depende ahora de las tres cosas: tipos, tests y navegador.
@@ -74,6 +74,20 @@
 ---
 
 ## Bitácora
+
+### 2026-08-19 (5) — Cierre del Sprint 6, contrastado punto por punto ✅
+
+El método que exigió la auditoría de veracidad: **contrastar el cierre contra la lista de alcance original**, no contra lo que uno recuerda haber hecho. Esto es ese contraste.
+
+**Informe 1 — retroalimentación: completo.** Selector de temporada con estado, los 8 `loading.tsx` que faltaban, `<Suspense>` en home, ficha de piloto y `/standings`, caché en las históricas, y los seis bugs funcionales: Favoritos más allá del piloto 50, la precedencia de `DriverSelector`, `/standings` distinguiendo fallo de vacío, la carrera sin resultados, las consultas sin `take` y `PageTransition`. Este último **se recorta con motivo**: se le atribuían 300 ms de retraso en los esqueletos y medidos son ~20 ms, con un arreglo que hace convivir en el flujo la página que sale y la que entra.
+
+**Informe 2 — accesibilidad: completo salvo dos recortes.** Reducir movimiento, foco visible, zoom, tokens de timing, gráficos legibles en claro, tablas priority+, nombres accesibles, inputs a 16 px, objetivos táctiles, controles fuera de los enlaces, `aria-live` donde hacía falta, `scope` y `caption`, pestañas, combobox, compuesto de neumático, semántica de tiempos, contraste de tokens, bordes de control a 3:1, foco del menú del header, `overscroll-contain`, paneo del gráfico en móvil, reflow del canvas, idioma, `h1` estable, posición en las medallas, contraste del calendario, enlace para saltar al contenido y alternativa textual del gráfico del campeonato. **Se recortan**: la alternativa textual de `TelemetryChart` —una vuelta son miles de muestras por canal y una tabla equivalente no sería legible por nadie— y la «golden rule» de safe-area en `Header`, que se desvía de la receta del plan pero funciona por su altura fija.
+
+**Lo último de este bloque**, hecho hoy: el `<button>` dentro del `<a>` en las tarjetas de piloto y equipo —HTML inválido y dos paradas de teclado por tarjeta— se resuelve con el enlace cubriendo la tarjeta por pseudoelemento y el favorito por encima; el menú del header cierra con Escape y devuelve el foco; el borde de los controles sube a **3,13:1 en claro y 3,73:1 en oscuro** —solo el de los controles: subir el de los separadores convertiría cada tarjeta y cada fila en una caja marcada—; `getComputedStyle` sale del bucle de dibujo del canvas, que era el único punto que forzaba reflow en cada movimiento del dedo; y el gráfico del campeonato gana una tabla equivalente en `sr-only`.
+
+**Informe 3 — veracidad: sigue abierto, y se declara.** Quedan sin hacer: personalización por equipo favorito, los primitivos Chip y Sheet (Table existe desde hoy, como `PriorityRows`), la ficha de circuito `/circuits/[circuitId]`, la animación FLIP y el *number ticking* en standings, `seed:all` reproduciendo solo 4 de las 17 temporadas, y el código muerto sin limpiar. No desaparecen: están en la deuda técnica con su nombre.
+
+**Verificación de cierre**: build reproduciendo el CI sin base de datos, 52 tests unitarios, 17 de navegador, y comprobación en ejecución de lo añadido hoy —bordes medidos en los dos temas, primer tabulador de la home, cero controles anidados en enlaces, y el menú cerrando con Escape con el foco de vuelta en su botón—.
 
 ### 2026-08-19 (4) — Las tablas, en un teléfono ✅
 

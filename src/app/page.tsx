@@ -95,6 +95,12 @@ export default async function Home() {
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
+      {/* El único h1 de la home vivía dentro del bloque de la próxima carrera:
+          fuera de temporada la página arrancaba en h2 y no tenía título de
+          nivel 1. Ahora lo tiene siempre; visible solo para quien lo necesita,
+          porque en pantalla el titular es el nombre del gran premio. */}
+      <h1 className="sr-only">ApexData · datos y telemetría de Fórmula 1</h1>
+
       {/* Next race */}
       {nextRace && (
         <section className="mb-10">
@@ -114,9 +120,9 @@ export default async function Home() {
                   </span>
                 </div>
 
-                <h1 className="mb-3 font-display text-3xl font-bold tracking-tight md:text-4xl">
+                <h2 className="mb-3 font-display text-3xl font-bold tracking-tight md:text-4xl">
                   {nextRace.raceName}
-                </h1>
+                </h2>
 
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   <span className="inline-flex items-center gap-1.5">

@@ -69,7 +69,7 @@ export function SeasonSelector({ currentSeason, availableSeasons }: SeasonSelect
           disabled={isPending}
           aria-busy={isPending}
           onChange={(e) => handleSeasonChange(Number(e.target.value))}
-          className="w-full appearance-none rounded-lg border border-border bg-background py-2 pl-4 pr-10 text-base font-medium ring-offset-background transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-wait md:text-sm"
+          className="w-full appearance-none rounded-lg border border-input bg-background py-2 pl-4 pr-10 text-base font-medium ring-offset-background transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-wait md:text-sm"
         >
           {seasons.map((season) => (
             <option key={season} value={season}>

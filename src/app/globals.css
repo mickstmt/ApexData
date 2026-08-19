@@ -24,7 +24,11 @@
     --destructive: 2 100% 38%;
     --destructive-foreground: 0 0% 100%;
     --border: 240 8% 88%;
-    --input: 240 8% 88%;
+    /* El borde es lo único que dibuja un campo o un desplegable, así que es un
+       límite de componente y WCAG 1.4.11 le pide 3:1. `--border`, que solo
+       separa, se queda donde estaba: subirlo convertiría cada tarjeta y cada
+       fila de tabla en una caja marcada. */
+    --input: 240 8% 58%;
     --ring: 72 100% 32%;
     --radius: 0.75rem;
 
@@ -69,7 +73,7 @@
     --destructive: 3 100% 61%;
     --destructive-foreground: 0 0% 100%;
     --border: 240 10% 18%;
-    --input: 240 10% 18%;
+    --input: 240 10% 46%;
     --ring: 72 100% 50%;
 
     /* Lightened so each one clears 4.5:1 on the carbon ground. */

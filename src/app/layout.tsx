@@ -95,8 +95,19 @@ export default function RootLayout({
           <MotionProvider>
             <FavoritesProvider>
               <NavigationProgress />
+
+              {/* Solo aparece al tabular: con cabecera y barra de pestañas, el
+                  teclado recorría toda la navegación en cada página antes de
+                  llegar al contenido. */}
+              <a
+                href="#contenido"
+                className="sr-only z-50 rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground focus:not-sr-only focus:absolute focus:left-4 focus:top-4"
+              >
+                Saltar al contenido
+              </a>
+
               <Header />
-              <main className="flex-1">
+              <main id="contenido" className="flex-1">
                 <PageTransition>{children}</PageTransition>
               </main>
               {/* Clearance for the fixed tab bar, below the last element on the

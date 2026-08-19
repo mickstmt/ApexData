@@ -28,19 +28,20 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
   const bornOn = formatBirthDate(driver.dateOfBirth);
 
   return (
-    <Link href={`/drivers/${driver.driverId}`}>
-      <motion.div
+    <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: index * 0.05 }}
         whileHover={{ scale: 1.02, y: -5 }}
         whileTap={{ scale: 0.98 }}
-        className="group relative overflow-hidden rounded-lg border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg"
-      >
-        {/* Favorite button */}
-        <div className="absolute right-2 top-2 z-10">
-          <FavoriteButton id={driver.driverId} type="driver" />
-        </div>
+      className="group relative overflow-hidden rounded-lg border border-border bg-card p-6 transition-all focus-within:border-primary hover:border-primary hover:shadow-lg"
+    >
+      {/* El favorito, por encima del enlace y fuera de él: antes vivía dentro
+          del <a> que envolvía la tarjeta, lo que es HTML inválido y daba dos
+          paradas de teclado por piloto. */}
+      <div className="absolute right-2 top-2 z-20">
+        <FavoriteButton id={driver.driverId} type="driver" />
+      </div>
 
         {/* Número permanente en background */}
         {driver.permanentNumber && (
@@ -62,7 +63,12 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
 
           {/* Nombre */}
           <h3 className="mb-1 text-xl font-bold text-foreground">
-            {driver.givenName} {driver.familyName}
+            <Link
+              href={`/drivers/${driver.driverId}`}
+              className="rounded-sm after:absolute after:inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {driver.givenName} {driver.familyName}
+            </Link>
           </h3>
 
           {/* Código del piloto */}
@@ -96,9 +102,8 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
           </div>
         </div>
 
-        {/* Hover indicator */}
-        <div className="absolute bottom-0 left-0 h-1 w-full origin-left scale-x-0 bg-primary transition-transform group-hover:scale-x-100" />
-      </motion.div>
-    </Link>
+      {/* Hover indicator */}
+      <div className="absolute bottom-0 left-0 h-1 w-full origin-left scale-x-0 bg-primary transition-transform group-hover:scale-x-100" />
+    </motion.div>
   );
 }

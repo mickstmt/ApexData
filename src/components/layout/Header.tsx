@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { navItems } from '@/config/site';
@@ -12,6 +12,23 @@ const primaryItems = navItems.filter((item) => item.primary);
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const botonMenu = useRef<HTMLButtonElement>(null);
+
+  // Escape cierra el menú y devuelve el foco al botón que lo abrió: sin esto,
+  // quien navega con teclado se queda dentro sin salida evidente. En la app
+  // instalada este menú es el acceso a las secciones secundarias.
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const alPulsar = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setMenuOpen(false);
+      botonMenu.current?.focus();
+    };
+
+    document.addEventListener('keydown', alPulsar);
+    return () => document.removeEventListener('keydown', alPulsar);
+  }, [menuOpen]);
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -51,10 +68,12 @@ export function Header() {
           <ThemeToggle />
           <button
             type="button"
-            className="flex h-11 w-11 items-center justify-center rounded-md text-foreground hover:bg-accent md:h-10 md:w-10"
+            ref={botonMenu}
+            className="flex h-11 w-11 items-center justify-center rounded-md text-foreground ring-offset-background hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:h-10 md:w-10"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
             aria-expanded={menuOpen}
+            aria-controls="menu-secciones"
           >
             {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -62,7 +81,7 @@ export function Header() {
       </nav>
 
       {menuOpen && (
-        <div className="border-t border-border bg-background">
+        <div id="menu-secciones" className="border-t border-border bg-background">
           <div className="container mx-auto grid grid-cols-2 gap-1 px-4 py-4 sm:grid-cols-3">
             {navItems.map((item) => (
               <Link

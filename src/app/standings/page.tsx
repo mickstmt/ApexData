@@ -310,6 +310,7 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                     />
                     {/* Position */}
                     <div className="flex w-12 items-center justify-center">
+                      {medalIcon && <span className="sr-only">Posición {entry.position}</span>}
                       {medalIcon ? (
                         <span className="text-2xl">{medalIcon}</span>
                       ) : (

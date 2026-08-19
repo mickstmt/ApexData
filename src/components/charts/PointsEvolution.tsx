@@ -67,11 +67,38 @@ export function PointsEvolution({
 
   return (
     <figure className="m-0">
-      <div className="overflow-x-auto">
+      {/* La alternativa textual del gráfico: `role="img"` con una etiqueta
+          decía de qué iba, pero no qué contaba. Con la tabla, quien usa lector
+          de pantalla lee los mismos números. */}
+      <table className="sr-only">
+        <caption>Puntos acumulados por ronda de los cinco primeros</caption>
+        <thead>
+          <tr>
+            <th scope="col">Piloto</th>
+            {Array.from({ length: rounds }, (_, index) => (
+              <th key={index} scope="col">
+                Ronda {index + 1}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {series.map((s) => (
+            <tr key={s.driverId}>
+              <th scope="row">{s.name}</th>
+              {Array.from({ length: rounds }, (_, index) => (
+                <td key={index}>{s.points[index] ?? '—'}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="overflow-x-auto" aria-hidden>
         <svg
           ref={svgRef}
           viewBox={`0 0 ${width} ${height}`}
-          className="h-auto w-full min-w-[560px] touch-pan-y"
+          className="h-auto w-full min-w-[560px] touch-pan-x touch-pan-y"
           role="img"
           aria-label="Evolución de puntos por ronda"
           onPointerMove={handleMove}
