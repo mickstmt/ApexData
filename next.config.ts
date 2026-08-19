@@ -27,6 +27,26 @@ const nextConfig: NextConfig = {
   // Traces only the modules the app imports, so the Docker image ships a
   // fraction of a full node_modules and the build's memory peak stays lower.
   output: 'standalone',
+  /**
+   * Las dos pantallas retiradas.
+   *
+   * `/telemetry` era el demo de OpenF1 que llevaba desde diciembre diciendo
+   * "próximamente"; lo que enseñaba de verdad —las condiciones de la sesión—
+   * vive ahora en `/analysis`, con la sesión que el usuario elige y no con "la
+   * última que hubiera". `/compare` calculaba sobre las últimas cinco carreras,
+   * lo que daba comparaciones engañosas; el cara a cara de la ficha de piloto
+   * lo sustituye con la temporada entera.
+   *
+   * Redirección permanente y no borrado a secas: puede haber enlaces guardados,
+   * y un 404 no explica nada.
+   */
+  async redirects() {
+    return [
+      { source: '/telemetry', destination: '/analysis', permanent: true },
+      { source: '/compare', destination: '/drivers', permanent: true },
+    ];
+  },
+
   images: {
     // Flags, circuit layouts and most team logos are SVG. next/image refuses to
     // optimise SVG unless this is set, which would break every one of them.

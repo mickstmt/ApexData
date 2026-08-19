@@ -6,13 +6,23 @@
  */
 
 import { useState } from 'react';
-import { Activity, BarChart3, Clock, Layers, Loader2, Map, TrendingUp } from 'lucide-react';
+import {
+  Activity,
+  BarChart3,
+  Clock,
+  CloudSun,
+  Layers,
+  Loader2,
+  Map,
+  TrendingUp,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LapTimesTable } from '@/components/telemetry';
 import { TelemetryChart, type TelemetryTrace } from '@/components/telemetry/TelemetryChart';
 import { TrackMap } from '@/components/telemetry/TrackMap';
 import { StintChart } from '@/components/telemetry/StintChart';
 import { RaceProgress } from '@/components/charts/RaceProgress';
+import { SessionWeather } from '@/components/telemetry/SessionWeather';
 import { compoundColor } from '@/lib/team-colors';
 import type { SessionOption, DriverOption } from './options';
 import type {
@@ -21,6 +31,7 @@ import type {
   FastestLapsResponse,
   SessionLapsResponse,
   SessionType,
+  SessionWeatherResponse,
   StintsResponse,
   TrackMapResponse,
 } from '@/types';
@@ -68,6 +79,7 @@ export function AnalysisClient({
   const [trackMap, setTrackMap] = useState<TrackMapResponse | null>(null);
   const [stints, setStints] = useState<StintsResponse | null>(null);
   const [raceLaps, setRaceLaps] = useState<SessionLapsResponse | null>(null);
+  const [weather, setWeather] = useState<SessionWeatherResponse | null>(null);
 
   // Loading state
   const [loading, setLoading] = useState<{
@@ -77,6 +89,7 @@ export function AnalysisClient({
     track: boolean;
     stints: boolean;
     race: boolean;
+    weather: boolean;
   }>({
     telemetry: false,
     comparison: false,
@@ -84,6 +97,7 @@ export function AnalysisClient({
     track: false,
     stints: false,
     race: false,
+    weather: false,
   });
 
   // Error state
@@ -175,6 +189,28 @@ export function AnalysisClient({
     }
   };
 
+  // Condiciones de la sesión: lo que enseñaba la retirada /telemetry, pero de
+  // la sesión elegida y desde FastF1 en vez de «la última que hubiera».
+  const fetchWeather = async () => {
+    setLoading((prev) => ({ ...prev, weather: true }));
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/weather/${selectedSession.year}/${selectedSession.event}/${sessionType}`
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'No se pudieron cargar las condiciones');
+      }
+      setWeather(await res.json());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar las condiciones');
+      setWeather(null);
+    } finally {
+      setLoading((prev) => ({ ...prev, weather: false }));
+    }
+  };
+
   // Vueltas de la sesión completa: la base de los dos gráficos de carrera
   const fetchRaceProgress = async () => {
     setLoading((prev) => ({ ...prev, race: true }));
@@ -224,7 +260,8 @@ export function AnalysisClient({
     loading.laps ||
     loading.track ||
     loading.stints ||
-    loading.race;
+    loading.race ||
+    loading.weather;
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -433,6 +470,20 @@ export function AnalysisClient({
             )}
             Carrera vuelta a vuelta
           </Button>
+
+          <Button
+            onClick={fetchWeather}
+            disabled={isAnyLoading}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            {loading.weather ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <CloudSun className="h-4 w-4" aria-hidden />
+            )}
+            Condiciones
+          </Button>
         </div>
 
         {/* Error Message */}
@@ -548,6 +599,9 @@ export function AnalysisClient({
           </div>
         )}
 
+        {/* Condiciones de la sesión */}
+        {weather && <SessionWeather data={weather} />}
+
         {/* Cómo se desarrolló la carrera */}
         {raceLaps && (
           <div>
@@ -575,7 +629,13 @@ export function AnalysisClient({
         )}
 
         {/* Empty State */}
-        {!telemetry && !comparison && !fastestLaps && !trackMap && !stints && !raceLaps && (
+        {!telemetry &&
+          !comparison &&
+          !fastestLaps &&
+          !trackMap &&
+          !stints &&
+          !raceLaps &&
+          !weather && (
           <div className="rounded-lg border border-border bg-muted/50 p-12 text-center">
             <Activity className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <h2 className="mb-4 text-2xl font-bold">Selecciona una sesión</h2>

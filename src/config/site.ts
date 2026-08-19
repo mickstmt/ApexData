@@ -29,7 +29,5 @@ export const navItems = [
   { title: 'Resultados', href: '/results', primary: true },
   { title: 'Circuitos', href: '/circuits', primary: false },
   { title: 'Telemetría', href: '/analysis', primary: false },
-  { title: 'En vivo', href: '/telemetry', primary: false },
-  { title: 'Comparar', href: '/compare', primary: false },
   { title: 'Favoritos', href: '/favorites', primary: false },
 ] as const;

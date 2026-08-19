@@ -26,14 +26,12 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: las **retiradas pendientes** —fusionar `/telemetry` en `/analysis` y jubilar `/compare`— y después los huecos del informe 3 (equipo favorito, ficha de circuito, FLIP en standings, `seed:all`, código muerto).
+**Próximo paso**: el **cursor sincronizado** entre las trazas de telemetría y el mapa del circuito —la función distintiva de f1-tempo, y no necesita ningún dato nuevo— y la **ficha de circuito** `/circuits/[circuitId]`, prometida desde el plan original. Después, los huecos del informe 3 que quedan: personalización por equipo favorito, primitivos Chip y Sheet, y `seed:all` reproduciendo solo 4 de 17 temporadas.
 
-**Tests**: 52 unitarios (TypeScript) + 26 (Python) + **17 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 52 unitarios (TypeScript) + 26 (Python) + **16 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
-- La página `/telemetry` (OpenF1) sigue siendo un demo; conviene fusionarla con `/analysis`.
-- El comparador `/compare` calcula stats sobre las últimas 5 carreras (engañoso); el head-to-head del perfil de piloto ya lo sustituye, falta retirarlo.
 - ~~El venv local tiene FastF1 3.7.0~~ → resuelto el 2026-08-19: se creó `python-service/.venv` desde `requirements-dev.txt`, con **FastF1 3.8.3**. Está en `.gitignore`, así que es de esta máquina.
 - ~~Pendientes de S4: mapa del circuito por velocidad y estrategia de neumáticos~~ → **hechos el 2026-08-19**, con dos endpoints nuevos en el servicio Python. **Exigen pulsar *Deploy* a mano en el panel**: sin eso, los dos botones nuevos de `/analysis` responden con error en producción.
 - 15 warnings de lint (variables sin usar, algún `any`) — limpieza cosmética pendiente.
@@ -48,7 +46,9 @@
 - 🟢 **Estados de error y vacío: resueltos el 2026-08-19**. Existe `global-error.tsx` —hasta ahora un fallo del layout raíz daba la pantalla en blanco del navegador—, `/standings` distingue un fallo de base de datos de una temporada sin sembrar, y una carrera sin resultados avisa en vez de pintar una tabla con cabeceras y ninguna fila.
 - ⚪ **`PageTransition`: medido y descartado**. La auditoría lo acusaba de retrasar 300 ms todos los esqueletos. Medido en navegador contra la implementación alternativa: **96-123 ms antes, 81-85 ms después**. La penalización real era de ~20 ms, y quitar `mode="wait"` hace que la página que sale y la que entra convivan en el flujo, con riesgo de duplicar el alto un instante. No compensa: se deja como estaba.
 - 🟢 **Consultas encadenadas: resueltas el 2026-08-19**. `/standings` pedía el equipo de cada piloto **ronda por ronda**, hasta 24 viajes en serie: la temporada 2015 tardaba **16,5 s** en pintarse y la 2024, 10 s. Ahora la parrilla de la última ronda viene con las tablas y solo se hace una segunda consulta si falta algún piloto — 2,8 s y 3,0 s. La ficha de piloto encadenaba 6 consultas antes del primer byte; con `<Suspense>`, la cabecera aparece a los 514 ms y las estadísticas entran después. La ficha de equipo traía **todos** los resultados históricos con sus joins (Ferrari, 676 filas) para mostrar tres contadores: ahora se cuentan y se suman en la base. Y `/compare` arrastraba carrera, temporada y equipo de cada resultado, que esa pantalla **no lee**: 160-220 ms → 15-47 ms.
-- 🔴 **Latencia de la base de datos: el pooler cuesta 5× lo que la conexión directa** (medido el 2026-08-18; no se ha cambiado nada, por decisión del usuario). Sobre el mismo host `aws-1-us-east-1`: una `SELECT 1` por el **pooler (6543)** tarda **506 ms**; por la **conexión directa (5432)**, **101 ms**, que es exactamente el ida y vuelta de red hasta Virginia. Además `connection_limit=1` serializa: cinco consultas en paralelo tardan lo mismo que en fila india. Se nota donde no hay caché: la home, con 4 consultas encadenadas, tarda **1,4 s**, y `/api/health`, con una sola, **540 ms**; las páginas con `unstable_cache` responden en 55-90 ms y estaban tapando el problema. El pooler tiene sentido en serverless, donde cada petición es un proceso nuevo; aquí hay un contenedor permanente.
+- 🟢 **Latencia: resuelta el 2026-08-19** pasando la app al puerto 5432 (modo sesión) con `connection_limit=5`. Medido en producción antes/después: `/api/health` **540 → 155 ms**, `/standings?season=2015` **2.963 → 1.699 ms**, `/standings?season=2024` **2.837 → 1.268 ms**, home **~1.400 → ~1.140 ms**. Queda como nota histórica lo que se midió: el pooler en modo transacción (6543) cobraba ~400 ms por consulta sobre el mismo host, porque está pensado para serverless —un proceso por petición— y aquí hay un contenedor permanente.
+- ⚪ **Medido y descartado por ahora: Postgres en el VPS.** Daría ~1 ms por consulta frente a los 101 ms de red hasta Virginia, pero con la conexión directa ya resuelta, el salto restante no compensa asumir backups y actualizaciones propios. Queda anotado por si algún día la latencia vuelve a molestar.
+- ⚪ **Nota histórica: el pooler cuesta 5× lo que la conexión directa** (medido el 2026-08-18; no se ha cambiado nada, por decisión del usuario). Sobre el mismo host `aws-1-us-east-1`: una `SELECT 1` por el **pooler (6543)** tarda **506 ms**; por la **conexión directa (5432)**, **101 ms**, que es exactamente el ida y vuelta de red hasta Virginia. Además `connection_limit=1` serializa: cinco consultas en paralelo tardan lo mismo que en fila india. Se nota donde no hay caché: la home, con 4 consultas encadenadas, tarda **1,4 s**, y `/api/health`, con una sola, **540 ms**; las páginas con `unstable_cache` responden en 55-90 ms y estaban tapando el problema. El pooler tiene sentido en serverless, donde cada petición es un proceso nuevo; aquí hay un contenedor permanente.
 - **El servicio de telemetría no tiene despliegue automático**: el CI solo dispara el webhook de la web, así que un cambio en `python-service/` exige pulsar *Deploy* a mano en el panel.
 - 🟢 **Auditoría triple del 2026-08-17: cerrada el 2026-08-19.** Los tres informes se contrastaron punto por punto contra el código (ver la bitácora de cierre). Del informe 1 y del 2 no queda nada sin resolver o sin recortar explícitamente. **Recortado a propósito, con motivo**: (a) `PageTransition` —la acusación de 300 ms era de ~20 ms medidos, y el arreglo tenía un riesgo peor que el defecto—; (b) el `role="img"` de `TelemetryChart`, sin alternativa textual, porque una vuelta son miles de muestras y una tabla equivalente no es legible —el gráfico del campeonato sí la tiene—; (c) la «golden rule» de safe-area en `Header`, que se desvía del plan pero funciona por su altura fija. **Del informe 3 (huecos silenciosos) siguen abiertos** los puntos 1, 2 (parcial: existe `PriorityRows`, faltan Chip y Sheet), 4, 5, 7 y 9, listados abajo.
 
@@ -75,6 +75,31 @@
 ---
 
 ## Bitácora
+
+### 2026-08-19 (13) — La latencia, resuelta; y dos pantallas jubiladas ✅
+
+**La conexión directa: entre 2 y 3,5 veces más rápido, y costó una variable.** Medido en producción antes y después del cambio:
+
+| | Pooler (6543) | Directa (5432) |
+|---|---|---|
+| `/api/health` | 540 ms | **155 ms** |
+| `/standings?season=2015` | 2.963 ms | **1.699 ms** |
+| `/standings?season=2024` | 2.837 ms | **1.268 ms** |
+| Home | ~1.400 ms | **~1.140 ms** |
+
+Antes de tocar producción se comprobó aquí lo que de verdad importaba: que **la concurrencia no reventara**. Ocho peticiones simultáneas a páginas que consultan → las ocho en 200, **cero errores `P2024`** y exactamente cinco conexiones abiertas, que es el límite configurado. Era el escenario que ya mordió en agosto con `connection_limit=1`.
+
+También se quitó `pgbouncer=true`: ese modificador desactiva las *prepared statements* porque el modo transacción no las soporta, y el modo sesión sí.
+
+**`/telemetry` y `/compare`, jubiladas** — las dos retiradas que el plan pedía en §8 y que llevaban desde entonces en la deuda. Una prometía «próximamente» desde diciembre; la otra calculaba estadísticas sobre las últimas cinco carreras, lo que daba comparaciones engañosas, y el cara a cara de la ficha de piloto ya la sustituye con la temporada entera.
+
+**Fusionar no fue borrar.** Lo que `/telemetry` enseñaba de verdad —las condiciones de la sesión— vive ahora en `/analysis`, con dos mejoras: es de **la sesión que el usuario elige** y no de «la última que hubiera», y sale de FastF1 en vez de OpenF1. Para eso se aprovechó el endpoint de meteorología que el servicio tenía **desde el principio y que ninguna pantalla usaba**: era uno de los «endpoints huérfanos sin UI» que la auditoría de agosto listó. Verificado con Baréin 2024: 18,2 °C de aire, 23,7 de pista, 48,8 % de humedad, y «sesión en seco» sobre 157 mediciones.
+
+Las dos rutas **redirigen con 308** en lugar de dar 404, porque puede haber enlaces guardados y un 404 no explica nada.
+
+**Y de paso, el código muerto que el informe 3 mandaba limpiar**: `SpeedChart`, `TelemetryComparison`, `jolpica/transformers.ts` y `src/hooks/` —que solo contenía un README—. Los avisos de lint bajan de 15 a 14.
+
+**Un efecto que conviene decir**: al retirar `/compare` desaparece el único combobox de la app, así que su prueba de teclado se retira con él. El trabajo de ARIA que se hizo esta semana sobre ese componente se va con la pantalla; queda hecho el patrón, por si vuelve a hacer falta.
 
 ### 2026-08-19 (12) — Dos identificadores iguales, y un CI que por fin explica ✅
 

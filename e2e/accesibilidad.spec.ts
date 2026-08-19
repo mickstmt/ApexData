@@ -132,23 +132,6 @@ test.describe('semántica y objetivos táctiles (informe 2, puntos 6, 9, 12-14)'
     await expect(page.locator('table caption').first()).not.toBeEmpty();
   });
 
-  test('el buscador de /compare es un combobox manejable con teclado', async ({ page }) => {
-    await page.goto('/compare');
-
-    const buscador = page.getByRole('combobox').first();
-    await expect(buscador).toHaveAttribute('aria-expanded', 'false');
-
-    await buscador.fill('ver');
-    await expect(buscador).toHaveAttribute('aria-expanded', 'true');
-    expect(await page.getByRole('option').count()).toBeGreaterThan(0);
-
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('Enter');
-
-    // Y el botón para quitarlo tiene nombre: antes era un «botón» a secas.
-    await expect(page.getByRole('button', { name: /Quitar a .+ de la comparación/ })).toHaveCount(1);
-  });
-
   test('en móvil las tablas anchas no obligan a arrastrar', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
 
@@ -288,15 +271,21 @@ test.describe('retroalimentación al navegar (informe 1)', () => {
     expect(await page.getByText('Cargando la página…').count()).toBe(0);
   });
 
-  test('/compare recibe al usuario con instrucciones', async ({ page }) => {
-    await page.goto('/compare');
-    // El estado vacío que el bug de precedencia impedía pintar. Se filtra por
-    // visibilidad porque, mientras la página se transmite, el contenido
-    // anterior sigue un instante en el DOM ya oculto.
-    await expect(
-      page
-        .getByText('Selecciona dos pilotos para comenzar la comparación')
-        .filter({ visible: true })
-    ).toHaveCount(1);
+  test('las pantallas retiradas redirigen en vez de dar 404', async ({ page }) => {
+    // `/compare` y `/telemetry` se jubilaron —una calculaba sobre cinco
+    // carreras y la otra llevaba meses diciendo «próximamente»—, pero puede
+    // haber enlaces guardados: una redirección explica a dónde ir, un 404 no.
+    // Por HTTP y no navegando: lo que se comprueba es el contrato del
+    // redirect —código y destino—, y encadenar dos `goto` a rutas que redirigen
+    // aborta la segunda navegación por cómo las agrupa el navegador.
+    for (const [origen, destino] of [
+      ['/compare', '/drivers'],
+      ['/telemetry', '/analysis'],
+    ]) {
+      const respuesta = await page.request.get(origen, { maxRedirects: 0 });
+
+      expect(respuesta.status()).toBe(308);
+      expect(respuesta.headers()['location']).toContain(destino);
+    }
   });
 });
