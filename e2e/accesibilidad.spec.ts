@@ -192,38 +192,86 @@ test.describe('semántica y objetivos táctiles (informe 2, puntos 6, 9, 12-14)'
 });
 
 test.describe('telemetría', () => {
+  /**
+   * Una vuelta inventada: un círculo de 60 puntos con su distancia y su
+   * velocidad.
+   *
+   * Se simulan las respuestas en vez de pedirlas al microservicio porque lo que
+   * esta prueba comprueba es la **sincronización entre los dos lienzos**, no
+   * que FastF1 responda — y el CI no tiene el servicio configurado, así que la
+   * primera versión de esta prueba se quedó esperando un canvas que no iba a
+   * llegar nunca.
+   */
+  const VUELTA = Array.from({ length: 60 }, (_, i) => {
+    const angulo = (i / 60) * Math.PI * 2;
+    return {
+      x: Math.cos(angulo) * 1000,
+      y: Math.sin(angulo) * 1000,
+      distance: i * 50,
+      speed: 150 + Math.sin(angulo * 3) * 100,
+    };
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/telemetry/**/track**', (route) =>
+      route.fulfill({
+        json: {
+          driver: 'VER',
+          lap_number: 12,
+          lap_time: '1:29.179',
+          rotation: 0,
+          min_speed: 50,
+          max_speed: 250,
+          points: VUELTA,
+        },
+      })
+    );
+
+    await page.route(
+      (url) => /\/api\/telemetry\/[^/]+\/[^/]+\/[^/]+\/[^/]+$/.test(url.pathname),
+      (route) =>
+        route.fulfill({
+          json: {
+            driver: 'VER',
+            lap_number: 12,
+            lap_time: '1:29.179',
+            is_personal_best: true,
+            compound: 'SOFT',
+            tyre_life: 3,
+            telemetry: VUELTA.map((punto) => ({
+              Distance: punto.distance,
+              Speed: punto.speed,
+              Throttle: 80,
+              Brake: false,
+            })),
+          },
+        })
+    );
+  });
+
   test('el mapa y las trazas señalan el mismo punto de la vuelta', async ({ page }) => {
-    test.slow(); // La primera carga de una sesión baja la sesión entera de la F1.
-
     await page.goto('/analysis');
-    const eventos = await page.locator('#analysis-event option').allInnerTexts();
-    const bahrein = eventos.find((o) => /2024.*Bahrain/i.test(o));
-    test.skip(!bahrein, 'La base no tiene sembrada la sesión de referencia');
-
-    await page.locator('#analysis-event').selectOption({ label: bahrein! });
-    await page.locator('#analysis-session').selectOption('Q');
 
     await page.getByRole('button', { name: /Cargar Telemetría/ }).click();
-    await page.waitForSelector('canvas[aria-label*="Telemetría"]', { timeout: 240_000 });
+    await page.waitForSelector('canvas[aria-label*="Telemetría"]', { timeout: 20_000 });
     await page.getByRole('button', { name: /Trazado de/ }).click();
-    await page.waitForSelector('canvas[aria-label*="Trazado"]', { timeout: 240_000 });
+    await page.waitForSelector('canvas[aria-label*="Trazado"]', { timeout: 20_000 });
 
     const lectura = () =>
       page.locator('figcaption').filter({ hasText: 'Distancia de vuelta' }).first().innerText();
 
-    // Tocar el mapa mueve la lectura de las trazas: es la mitad que no se ve
-    // mirando una captura, porque son dos lienzos independientes.
+    // El mapa queda fuera de la ventana con las trazas cargadas: sin traerlo a
+    // la vista, el ratón se mueve a coordenadas que ya no caen sobre él — que
+    // fue exactamente el falso negativo que costó media hora al construirlo.
     const mapa = page.locator('canvas[aria-label*="Trazado"]');
     await mapa.scrollIntoViewIfNeeded();
     const caja = (await mapa.boundingBox())!;
 
-    await page.mouse.move(caja.x + caja.width * 0.35, caja.y + caja.height * 0.35);
+    await page.mouse.move(caja.x + caja.width * 0.25, caja.y + caja.height * 0.5);
     const primera = await lectura();
 
-    await page.mouse.move(caja.x + caja.width * 0.7, caja.y + caja.height * 0.55);
-    await expect
-      .poll(async () => (await lectura()) !== primera, { timeout: 5000 })
-      .toBe(true);
+    await page.mouse.move(caja.x + caja.width * 0.75, caja.y + caja.height * 0.5);
+    await expect.poll(async () => (await lectura()) !== primera, { timeout: 5000 }).toBe(true);
   });
 });
 
