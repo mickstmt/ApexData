@@ -23,7 +23,11 @@ export default defineConfig({
   // se encolan detrás de esa única conexión y se pasan del tiempo límite: dio
   // dos fallos que en local, con menos carga, no aparecían nunca.
   workers: process.env.CI ? 2 : undefined,
-  reporter: 'list',
+  // En CI, además de la lista, el reporter de GitHub: publica cada fallo como
+  // anotación del check, que se puede leer por API sin autenticación. Sin esto,
+  // un fallo del job solo dice «exit code 1» y el log pide credenciales — dos
+  // veces hoy hubo que reproducirlo a ciegas para averiguar qué se rompía.
+  reporter: process.env.CI ? [['list'], ['github']] : 'list',
   timeout: 60_000,
   use: {
     baseURL: 'http://localhost:3100',
