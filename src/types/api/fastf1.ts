@@ -64,6 +64,8 @@ export interface LapData {
   DriverNumber: string;
   LapTime?: string;
   LapNumber: number;
+  /** Posición en pista al cruzar la línea. La base de los gráficos de carrera. */
+  Position?: number;
   Stint?: number;
   PitOutTime?: string;
   PitInTime?: string;

@@ -6,18 +6,20 @@
  */
 
 import { useState } from 'react';
-import { Activity, BarChart3, Clock, Layers, Loader2, Map } from 'lucide-react';
+import { Activity, BarChart3, Clock, Layers, Loader2, Map, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LapTimesTable } from '@/components/telemetry';
 import { TelemetryChart, type TelemetryTrace } from '@/components/telemetry/TelemetryChart';
 import { TrackMap } from '@/components/telemetry/TrackMap';
 import { StintChart } from '@/components/telemetry/StintChart';
+import { RaceProgress } from '@/components/charts/RaceProgress';
 import { compoundColor } from '@/lib/team-colors';
 import type { SessionOption, DriverOption } from './options';
 import type {
   DriverTelemetryResponse,
   TelemetryComparisonResponse,
   FastestLapsResponse,
+  SessionLapsResponse,
   SessionType,
   StintsResponse,
   TrackMapResponse,
@@ -65,6 +67,7 @@ export function AnalysisClient({
   const [fastestLaps, setFastestLaps] = useState<FastestLapsResponse | null>(null);
   const [trackMap, setTrackMap] = useState<TrackMapResponse | null>(null);
   const [stints, setStints] = useState<StintsResponse | null>(null);
+  const [raceLaps, setRaceLaps] = useState<SessionLapsResponse | null>(null);
 
   // Loading state
   const [loading, setLoading] = useState<{
@@ -73,12 +76,14 @@ export function AnalysisClient({
     laps: boolean;
     track: boolean;
     stints: boolean;
+    race: boolean;
   }>({
     telemetry: false,
     comparison: false,
     laps: false,
     track: false,
     stints: false,
+    race: false,
   });
 
   // Error state
@@ -170,6 +175,27 @@ export function AnalysisClient({
     }
   };
 
+  // Vueltas de la sesión completa: la base de los dos gráficos de carrera
+  const fetchRaceProgress = async () => {
+    setLoading((prev) => ({ ...prev, race: true }));
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/laps/${selectedSession.year}/${selectedSession.event}/${sessionType}`
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'No se pudo cargar la carrera');
+      }
+      setRaceLaps(await res.json());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar la carrera');
+      setRaceLaps(null);
+    } finally {
+      setLoading((prev) => ({ ...prev, race: false }));
+    }
+  };
+
   // Fetch fastest laps
   const fetchFastestLaps = async () => {
     setLoading((prev) => ({ ...prev, laps: true }));
@@ -193,7 +219,12 @@ export function AnalysisClient({
   };
 
   const isAnyLoading =
-    loading.telemetry || loading.comparison || loading.laps || loading.track || loading.stints;
+    loading.telemetry ||
+    loading.comparison ||
+    loading.laps ||
+    loading.track ||
+    loading.stints ||
+    loading.race;
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -388,6 +419,20 @@ export function AnalysisClient({
             )}
             Estrategia de neumáticos
           </Button>
+
+          <Button
+            onClick={fetchRaceProgress}
+            disabled={isAnyLoading}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            {loading.race ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <TrendingUp className="h-4 w-4" aria-hidden />
+            )}
+            Carrera vuelta a vuelta
+          </Button>
         </div>
 
         {/* Error Message */}
@@ -503,6 +548,19 @@ export function AnalysisClient({
           </div>
         )}
 
+        {/* Cómo se desarrolló la carrera */}
+        {raceLaps && (
+          <div>
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
+              <TrendingUp className="h-5 w-5 text-primary" aria-hidden />
+              Carrera vuelta a vuelta - {raceLaps.session.name}
+            </h2>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <RaceProgress laps={raceLaps.laps} teamOf={teamOf} />
+            </div>
+          </div>
+        )}
+
         {/* Estrategia de neumáticos */}
         {stints && (
           <div>
@@ -517,7 +575,7 @@ export function AnalysisClient({
         )}
 
         {/* Empty State */}
-        {!telemetry && !comparison && !fastestLaps && !trackMap && !stints && (
+        {!telemetry && !comparison && !fastestLaps && !trackMap && !stints && !raceLaps && (
           <div className="rounded-lg border border-border bg-muted/50 p-12 text-center">
             <Activity className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <h2 className="mb-4 text-2xl font-bold">Selecciona una sesión</h2>

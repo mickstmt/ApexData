@@ -34,7 +34,7 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
         transition={{ duration: 0.3, delay: index * 0.05 }}
         whileHover={{ scale: 1.02, y: -5 }}
         whileTap={{ scale: 0.98 }}
-      className="group relative overflow-hidden rounded-lg border border-border bg-card p-6 transition-all focus-within:border-primary hover:border-primary hover:shadow-lg"
+      className="group relative overflow-hidden rounded-lg border border-border bg-card p-6 transition-all duration-100 ease-out focus-within:border-primary hover:border-primary hover:shadow-lg active:scale-[0.98] motion-reduce:active:scale-100"
     >
       {/* El favorito, por encima del enlace y fuera de él: antes vivía dentro
           del <a> que envolvía la tarjeta, lo que es HTML inválido y daba dos

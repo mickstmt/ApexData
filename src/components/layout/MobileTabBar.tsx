@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useReducedMotion } from 'framer-motion';
 import { CalendarDays, Home, Trophy, Users, Gauge } from 'lucide-react';
@@ -52,6 +53,33 @@ export function MobileTabBar() {
   // marcada: si no, desde `/results` —donde se marca «Calendario» por
   // pertenencia— o desde la ficha de un piloto, el toque se quedaba en un
   // desplazamiento y no había forma de llegar a la sección.
+  // Posición y ancho de la pestaña activa, medidos del DOM: los anchos los
+  // reparte flex, así que no se pueden calcular de antemano.
+  const lista = useRef<HTMLUListElement>(null);
+  const [pildora, setPildora] = useState<React.CSSProperties>({ opacity: 0 });
+
+  useEffect(() => {
+    const nodo = lista.current;
+    if (!nodo) return;
+
+    const medir = () => {
+      const activa = nodo.querySelector<HTMLElement>('[aria-current="page"]');
+      if (!activa) return setPildora({ opacity: 0 });
+
+      const caja = activa.getBoundingClientRect();
+      const contenedor = nodo.getBoundingClientRect();
+      setPildora({
+        opacity: 1,
+        width: `${caja.width}px`,
+        transform: `translateX(${caja.left - contenedor.left}px)`,
+      });
+    };
+
+    medir();
+    window.addEventListener('resize', medir);
+    return () => window.removeEventListener('resize', medir);
+  }, [pathname]);
+
   const alTocar = (href: string) => (evento: React.MouseEvent) => {
     if (pathname !== href) return;
     evento.preventDefault();
@@ -67,7 +95,16 @@ export function MobileTabBar() {
         'pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2'
       )}
     >
-      <ul className="flex items-stretch justify-around">
+      <ul ref={lista} className="relative flex items-stretch justify-around">
+        {/* La píldora viaja entre pestañas en vez de aparecer y desaparecer:
+            da continuidad espacial a la navegación principal. Va detrás del
+            contenido y no captura toques. */}
+        <li
+          aria-hidden
+          className="pointer-events-none absolute inset-y-1 left-0 rounded-xl bg-primary/10 transition-[transform,width] duration-[260ms] ease-out motion-reduce:transition-none"
+          style={pildora}
+        />
+
         {TABS.map(({ href, label, icon: Icon }) => {
           const active =
             href === '/' ? pathname === '/' : pathname.startsWith(href) || seccion === href;
@@ -85,7 +122,7 @@ export function MobileTabBar() {
                   // La app desactiva el resaltado gris de iOS al tocar, así que
                   // sin esto pulsar no producía ninguna señal: parecía que la
                   // pestaña no respondía hasta que llegaba la página nueva.
-                  'rounded-lg active:scale-95 active:bg-accent motion-reduce:active:scale-100',
+                  'relative rounded-lg active:scale-95 motion-reduce:active:scale-100',
                   'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
                   active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 )}

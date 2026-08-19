@@ -6,6 +6,8 @@ import { teamColor } from '@/lib/team-colors';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { PointsEvolution, type EvolutionSeries } from '@/components/charts/PointsEvolution';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
+import { FlipRows } from '@/components/ui/FlipRows';
+import { RollingNumber } from '@/components/ui/RollingNumber';
 import { prisma } from '@/lib/prisma';
 
 export const metadata = {
@@ -289,7 +291,7 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
               <Medal className="mb-1 inline-block h-6 w-6 text-primary" /> Campeonato de Pilotos
             </h2>
 
-            <div className="space-y-2">
+            <FlipRows className="space-y-2">
               {driversStandings.map((entry) => {
                 const medalIcon =
                   entry.position === 1 ? '🥇' :
@@ -299,8 +301,9 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                 return (
                   <Link
                     key={entry.driverId}
+                    data-flip-id={entry.driverId}
                     href={`/drivers/${entry.driverId}`}
-                    className={`relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 pl-5 transition-colors ${
+                    className={`relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 pl-5 transition-[transform,colors] duration-100 ease-out active:scale-[0.99] motion-reduce:active:scale-100 ${
                       entry.position !== null && entry.position <= 3
                         ? 'border-primary/40 bg-primary/5'
                         : 'border-border bg-card hover:border-primary'
@@ -336,13 +339,16 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
 
                     {/* Points */}
                     <div className="text-right">
-                      <div className="font-display text-2xl font-bold tabular-nums text-primary">{entry.points}</div>
+                      <RollingNumber
+                        value={entry.points}
+                        className="font-display text-2xl font-bold text-primary"
+                      />
                       <div className="text-xs text-muted-foreground">pts</div>
                     </div>
                   </Link>
                 );
               })}
-            </div>
+            </FlipRows>
           </div>
 
           {/* Constructors Standings */}
@@ -351,7 +357,7 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
               <Award className="mb-1 inline-block h-6 w-6 text-primary" /> Campeonato de Constructores
             </h2>
 
-            <div className="space-y-2">
+            <FlipRows className="space-y-2">
               {constructorsStandings.map((entry) => {
                 const medalIcon =
                   entry.position === 1 ? '🥇' :
@@ -361,8 +367,9 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                 return (
                   <Link
                     key={entry.constructorId}
+                    data-flip-id={entry.constructorId}
                     href={`/constructors/${entry.constructorId}`}
-                    className={`relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 pl-5 transition-colors ${
+                    className={`relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 pl-5 transition-[transform,colors] duration-100 ease-out active:scale-[0.99] motion-reduce:active:scale-100 ${
                       entry.position !== null && entry.position <= 3
                         ? 'border-primary/40 bg-primary/5'
                         : 'border-border bg-card hover:border-primary'
@@ -391,13 +398,16 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
 
                     {/* Points */}
                     <div className="text-right">
-                      <div className="font-display text-2xl font-bold tabular-nums text-primary">{entry.points}</div>
+                      <RollingNumber
+                        value={entry.points}
+                        className="font-display text-2xl font-bold text-primary"
+                      />
                       <div className="text-xs text-muted-foreground">pts</div>
                     </div>
                   </Link>
                 );
               })}
-            </div>
+            </FlipRows>
           </div>
         </div>
       )}

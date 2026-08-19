@@ -55,8 +55,13 @@ async def get_session_laps(
             raise HTTPException(status_code=404, detail="No laps found")
 
         # Select relevant columns
+        #
+        # `Position` estaba fuera de esta lista aunque FastF1 la entrega en
+        # `session.laps`: sin ella no se puede dibujar ni la evolución de
+        # posiciones ni la traza de carrera, que son los dos gráficos que
+        # cuentan una carrera entera de un vistazo.
         columns = [
-            'Time', 'Driver', 'DriverNumber', 'LapTime', 'LapNumber',
+            'Time', 'Driver', 'DriverNumber', 'LapTime', 'LapNumber', 'Position',
             'Stint', 'PitOutTime', 'PitInTime', 'Sector1Time', 'Sector2Time',
             'Sector3Time', 'Sector1SessionTime', 'Sector2SessionTime',
             'Sector3SessionTime', 'SpeedI1', 'SpeedI2', 'SpeedFL', 'SpeedST',

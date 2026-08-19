@@ -76,6 +76,27 @@
 
 ## Bitácora
 
+### 2026-08-19 (10) — La carrera contada en dos gráficos, y cuatro piezas de movimiento ✅
+
+Todo lo elegido por el usuario sobre el mockup, construido con lo que la investigación de los agentes había señalado.
+
+**Los dos gráficos que faltaban salen de una línea.** `python-service/app/routes/laps.py` seleccionaba columnas a mano y **descartaba `Position`**, que FastF1 sí entrega — comprobado contra la sesión real: 31 columnas disponibles, y también `PitInTime`, `PitOutTime`, `TrackStatus` e `IsAccurate`, que igualmente se estaban tirando. Con ese campo aparecen **posiciones vuelta a vuelta** —los cruces son adelantamientos, las caídas en bloque son tandas de paradas— y la **traza de carrera**.
+
+**La traza se rehizo antes de llegar a la app.** La primera versión usaba el ritmo mediano del ganador como referencia y salía ilegible: todas las líneas caían a la vez, porque con depósito lleno las primeras vueltas son más lentas que la mediana. Contra el tiempo acumulado del líder, su línea queda plana en cero y lo que se ve es la distancia real — de 0 a +93 s en Baréin 2024.
+
+**Cada gráfico lleva su «cómo se lee»**, que la investigación señaló como la mejora de mejor retorno de toda la lista: The Field mantiene una página entera dedicada a explicar sus gráficos.
+
+**Cuatro piezas de movimiento**, las cuatro respetando «reducir movimiento»:
+
+- **Respuesta al pulsar** en tarjetas y filas (`scale` de 0,98 en 100 ms). La app desactivaba el resaltado gris de iOS sin poner nada en su lugar.
+- **Marcador rodante** en los puntos de la clasificación. Dos detalles que costaron una corrección cada uno: la rueda debe pintarse **primero en la posición vieja** —puesta de una vez en su destino, el navegador no tiene desde dónde interpolar y el dígito cambia sin rodar—; y las ruedas **solo existen mientras algo se mueve**, porque montarlas siempre dejaba **770 nodos parados** en la clasificación. Medido después: 0 en reposo, 63 rodando, 0 al terminar.
+- **FLIP al cambiar de temporada**: 22 filas animadas al pasar de 2024 a 2021. Se mide con `offsetTop` y no con `getBoundingClientRect`, porque la segunda es relativa a la ventana y un desplazamiento de la página entre pintados se colaría como un salto inventado.
+- **Píldora deslizante** en la barra inferior, medida del DOM porque los anchos los reparte flex.
+
+**Y un fallo que solo apareció midiendo**: la función que separa las etiquetas de las líneas comparaba contra el array original en vez de contra la etiqueta ya movida, así que dos que caían juntas quedaban a **5 px** de los 13 pedidos. Corregido y verificado: separación mínima de 13 px en los dos temas.
+
+**Acción pendiente del usuario**: el cambio de `Position` está en `python-service/`, así que exige **pulsar Deploy a mano** otra vez.
+
 ### 2026-08-19 (9) — Las skills que no usé, y lo que escondían ✅
 
 **El usuario señaló que su prompt pedía explícitamente agentes especializados y skills, y que no se habían usado.** Cierto: el método está escrito en dos documentos —`code-review` y `security-review` *antes de cada merge*, `dataviz` antes de tocar un gráfico— y en toda la jornada no se ejecutó ninguna, con **diez commits ya en producción**.
