@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { Trophy, Medal, Award } from 'lucide-react';
 import { DriverAvatar, TeamLogo } from '@/components/ui/OptimizedImage';
@@ -53,9 +54,11 @@ async function getStandings(year: number) {
 
     const round = Math.max(latestDriverRound?.round ?? 0, latestConstructorRound?.round ?? 0);
 
-    if (round === 0) return { drivers: [], constructors: [], round: 0, evolution: [] as EvolutionSeries[] };
+    if (round === 0) return { drivers: [], constructors: [], round: 0, leaders: [] };
 
-    const [driverRows, constructorRows] = await Promise.all([
+    const teamOf = { select: { name: true, constructorId: true } } as const;
+
+    const [driverRows, constructorRows, lastRoundEntries] = await Promise.all([
       prisma.driverStanding.findMany({
         where: { year, round },
         orderBy: [{ position: 'asc' }],
@@ -66,62 +69,52 @@ async function getStandings(year: number) {
         orderBy: [{ position: 'asc' }],
         include: { team: true },
       }),
+      // La parrilla de la última ronda cubre a casi todos los pilotos y se pide
+      // a la vez que las tablas, así que no cuesta un viaje aparte.
+      prisma.result.findMany({
+        where: { race: { year, round } },
+        select: { driverId: true, team: teamOf },
+      }),
     ]);
 
     // A driver's team is not part of the standings table, so it is read from
     // that season's most recent race entry.
+    //
+    // Esto era un bucle que pedía ronda por ronda hasta tener el equipo de cada
+    // piloto: hasta 24 viajes en serie, y con la base a ~500 ms por consulta,
+    // la temporada 2015 tardaba 16 segundos en pintarse. Ahora la última ronda
+    // viene con las tablas, y solo si falta alguien —un piloto lesionado, un
+    // sustituto, alguien que se fue a mitad de año— se hace una segunda
+    // consulta con el resto de la temporada. Dos viajes en el peor caso.
     const teamByDriver = new Map<string, { name: string; constructorId: string }>();
-    // Walk back from the latest round until every driver has a team, instead of
-    // pulling the whole season into memory.
-    for (let lookup = round; lookup >= 1 && teamByDriver.size < driverRows.length; lookup--) {
-      const entries = await prisma.result.findMany({
-        where: { race: { year, round: lookup } },
-        select: {
-          driverId: true,
-          team: { select: { name: true, constructorId: true } },
-        },
+    for (const entry of lastRoundEntries) {
+      if (!teamByDriver.has(entry.driverId)) {
+        teamByDriver.set(entry.driverId, entry.team);
+      }
+    }
+
+    if (teamByDriver.size < driverRows.length) {
+      const earlier = await prisma.result.findMany({
+        where: { race: { year, round: { lt: round } } },
+        orderBy: { race: { round: 'desc' } },
+        select: { driverId: true, team: teamOf },
       });
 
-      for (const entry of entries) {
+      for (const entry of earlier) {
         if (!teamByDriver.has(entry.driverId)) {
           teamByDriver.set(entry.driverId, entry.team);
         }
       }
     }
 
-    const topDriverIds = driverRows.slice(0, 5).map((row) => row.driverId);
-
-    const evolutionRows = await prisma.driverStanding.findMany({
-      where: { year, driverId: { in: topDriverIds } },
-      orderBy: { round: 'asc' },
-      include: { driver: { select: { driverId: true, familyName: true } } },
-    });
-
-    const evolution: EvolutionSeries[] = topDriverIds
-      .map((driverId) => {
-        const rows = evolutionRows.filter((row) => row.driverId === driverId);
-
-        // Index by round: a driver who joined mid-season has no entry for the
-        // early rounds, and mapping positionally would shift their whole line.
-        const byRound = new Map(rows.map((row) => [row.round, row.points]));
-        let carried = 0;
-        const points = Array.from({ length: round }, (_, index) => {
-          carried = byRound.get(index + 1) ?? carried;
-          return carried;
-        });
-
-        return {
-          driverId,
-          name: rows[0]?.driver.familyName ?? '',
-          constructorId: teamByDriver.get(driverId)?.constructorId ?? null,
-          points,
-        };
-      })
-      .filter((series) => series.name !== '' && series.points.length > 1);
-
     return {
-      evolution,
       round,
+      // El gráfico se pide aparte y se transmite cuando llegue: es una consulta
+      // más que no debe retrasar la tabla, que es a lo que se viene.
+      leaders: driverRows.slice(0, 5).map((row) => ({
+        driverId: row.driverId,
+        constructorId: teamByDriver.get(row.driverId)?.constructorId ?? null,
+      })),
       drivers: driverRows.map((row) => ({
         position: row.position,
         driver: `${row.driver.givenName} ${row.driver.familyName}`,
@@ -144,8 +137,84 @@ async function getStandings(year: number) {
     };
   } catch (error) {
     console.error('Error fetching standings:', error);
-    return { drivers: [], constructors: [], round: 0, evolution: [] as EvolutionSeries[] };
+    return { drivers: [], constructors: [], round: 0, leaders: [] };
   }
+}
+
+/**
+ * Evolución del campeonato, en su propio `<Suspense>`.
+ *
+ * Es una consulta más sobre `driverStanding`, y la tabla no la necesita para
+ * pintarse. Separándola, la clasificación aparece en cuanto está y el gráfico
+ * entra después, en vez de que todo espere a lo más lento.
+ */
+async function ChampionshipEvolution({
+  year,
+  round,
+  leaders,
+}: {
+  year: number;
+  round: number;
+  leaders: { driverId: string; constructorId: string | null }[];
+}) {
+  const topDriverIds = leaders.map((leader) => leader.driverId);
+
+  let rows;
+  try {
+    rows = await prisma.driverStanding.findMany({
+      where: { year, driverId: { in: topDriverIds } },
+      orderBy: { round: 'asc' },
+      include: { driver: { select: { driverId: true, familyName: true } } },
+    });
+  } catch (error) {
+    console.error('Error fetching championship evolution:', error);
+    return null;
+  }
+
+  const evolution: EvolutionSeries[] = leaders
+    .map(({ driverId, constructorId }) => {
+      const own = rows.filter((row) => row.driverId === driverId);
+
+      // Index by round: a driver who joined mid-season has no entry for the
+      // early rounds, and mapping positionally would shift their whole line.
+      const byRound = new Map(own.map((row) => [row.round, row.points]));
+      let carried = 0;
+      const points = Array.from({ length: round }, (_, index) => {
+        carried = byRound.get(index + 1) ?? carried;
+        return carried;
+      });
+
+      return { driverId, name: own[0]?.driver.familyName ?? '', constructorId, points };
+    })
+    .filter((series) => series.name !== '' && series.points.length > 1);
+
+  if (evolution.length <= 1) return null;
+
+  return (
+    <section className="mb-10">
+      <h2 className="mb-1 font-display text-xl font-semibold">Evolución del campeonato</h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Puntos acumulados de los cinco primeros. Los compañeros de equipo comparten color, así que
+        el segundo va con línea discontinua.
+      </p>
+      <div className="rounded-xl border border-border bg-card p-4">
+        <PointsEvolution series={evolution} rounds={round} />
+      </div>
+    </section>
+  );
+}
+
+/** Mismo hueco que ocupará el gráfico, para que nada salte al llegar. */
+function EvolutionSkeleton() {
+  return (
+    <section className="mb-10" aria-hidden>
+      <div className="mb-1 h-7 w-64 animate-pulse rounded bg-muted" />
+      <div className="mb-4 h-5 w-full max-w-xl animate-pulse rounded bg-muted" />
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="h-[280px] animate-pulse rounded bg-muted" />
+      </div>
+    </section>
+  );
 }
 
 export default async function StandingsPage({ searchParams }: StandingsPageProps) {
@@ -156,7 +225,7 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
     drivers: driversStandings,
     constructors: constructorsStandings,
     round,
-    evolution,
+    leaders,
   } = await getStandings(displayYear);
 
   return (
@@ -178,17 +247,10 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
         </p>
       </div>
 
-      {evolution.length > 1 && (
-        <section className="mb-10">
-          <h2 className="mb-1 font-display text-xl font-semibold">Evolución del campeonato</h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Puntos acumulados de los cinco primeros. Los compañeros de equipo comparten color, así
-            que el segundo va con línea discontinua.
-          </p>
-          <div className="rounded-xl border border-border bg-card p-4">
-            <PointsEvolution series={evolution} rounds={round} />
-          </div>
-        </section>
+      {leaders.length > 1 && (
+        <Suspense fallback={<EvolutionSkeleton />}>
+          <ChampionshipEvolution year={displayYear} round={round} leaders={leaders} />
+        </Suspense>
       )}
 
       {driversStandings.length === 0 && constructorsStandings.length === 0 ? (

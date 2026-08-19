@@ -14,29 +14,33 @@ export const dynamic = 'force-dynamic';
 
 const getDriversForComparison = unstable_cache(
   async () => {
-    const drivers = await prisma.driver.findMany({
-      include: {
+    // Se piden solo los campos que la pantalla usa. Antes traía cada resultado
+    // con su carrera, su temporada y su equipo anidados —84 pilotos × 5
+    // resultados— y el comparador no lee ninguno de los tres: era carga muerta
+    // que viajaba entera hasta el navegador en cada visita.
+    //
+    // De paso desaparece el problema de `Result.milliseconds`: es un BigInt,
+    // JSON no sabe representarlo y la caché reventaba al serializarlo. No hace
+    // falta descartarlo campo a campo si no se pide.
+    return prisma.driver.findMany({
+      select: {
+        id: true,
+        driverId: true,
+        givenName: true,
+        familyName: true,
+        code: true,
+        permanentNumber: true,
+        nationality: true,
+        dateOfBirth: true,
+        imageUrl: true,
         results: {
           take: 5,
           orderBy: { race: { date: 'desc' } },
-          include: {
-            team: true,
-            race: { include: { season: true } },
-          },
+          select: { id: true, position: true },
         },
       },
       orderBy: [{ familyName: 'asc' }],
     });
-
-    // `Result.milliseconds` es un BigInt, y la caché guarda serializando en
-    // JSON, que no sabe representarlo: dejarlo pasar lanzaba un
-    // `unhandledRejection` en el servidor cada vez que se poblaba la caché.
-    // Esta pantalla solo usa la posición de cada resultado, así que el campo
-    // se descarta en lugar de arrastrarlo hasta el navegador.
-    return drivers.map((driver) => ({
-      ...driver,
-      results: driver.results.map((result) => ({ ...result, milliseconds: null })),
-    }));
   },
   ['compare-drivers'],
   { revalidate: 3600 }

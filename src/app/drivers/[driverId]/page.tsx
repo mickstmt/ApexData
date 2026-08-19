@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -59,129 +60,28 @@ function StatTile({
   );
 }
 
-export default async function DriverDetailPage({ params }: DriverDetailPageProps) {
-  const { driverId } = await params;
-
-  let driver;
-  let hasError = false;
-
-  try {
-    driver = await prisma.driver.findUnique({
-      where: { driverId },
-      include: {
-        results: {
-          take: 10,
-          orderBy: { race: { date: 'desc' } },
-          include: {
-            race: { include: { circuit: true } },
-            team: true,
-          },
-        },
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching driver:', error);
-    hasError = true;
-  }
-
-  if (!driver && !hasError) notFound();
-
-  if (hasError || !driver) {
-    return (
-      <div className="container mx-auto px-4 py-12">
-        <Link href="/drivers" className="mb-8 inline-block">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver a pilotos
-          </Button>
-        </Link>
-        <div className="mt-12 rounded-xl border border-border bg-card p-12 text-center">
-          <h2 className="mb-3 text-2xl font-bold">Base de datos no disponible</h2>
-          <p className="text-muted-foreground">
-            No se pudo cargar la ficha del piloto. Inténtalo de nuevo en un momento.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const stats = await getDriverStats(driver.id);
+/**
+ * Todo lo que exige consultar más allá de la ficha: las estadísticas de
+ * carrera, el cara a cara con el compañero y la tabla por temporada.
+ *
+ * Vive en su propio `<Suspense>` porque son cinco consultas más —y encadenadas
+ * entre sí, porque el cara a cara necesita saber antes cuál fue la última
+ * temporada—. Con la base de datos a 100 ms de ida y vuelta en el mejor caso,
+ * eso era medio segundo largo en el que no se veía ni el nombre del piloto.
+ */
+async function DriverPerformance({
+  driverId,
+  accentColor,
+}: {
+  driverId: string;
+  accentColor: string;
+}) {
+  const stats = await getDriverStats(driverId);
   const latestSeason = stats.seasons[0];
-  const headToHead = latestSeason ? await getHeadToHead(driver.id, latestSeason.year) : null;
-
-  const age = driverAge(driver.dateOfBirth);
-  const bornOn = formatBirthDate(driver.dateOfBirth);
-
-  const accent = teamColor(latestSeason?.constructorId);
+  const headToHead = latestSeason ? await getHeadToHead(driverId, latestSeason.year) : null;
 
   return (
-    <div className="container mx-auto px-4 py-8 md:py-12">
-      <Link href="/drivers" className="mb-6 inline-block">
-        <Button variant="outline" size="sm">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Volver a pilotos
-        </Button>
-      </Link>
-
-      {/* Cabecera */}
-      <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center">
-        <div
-          className="shrink-0 overflow-hidden rounded-full border-4"
-          style={{ borderColor: accent.color }}
-        >
-          <DriverAvatar
-            src={driver.imageUrl}
-            name={`${driver.givenName} ${driver.familyName}`}
-            size="xl"
-          />
-        </div>
-
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-3xl font-bold tracking-tight md:text-5xl">
-              {driver.givenName} {driver.familyName}
-            </h1>
-            {driver.permanentNumber && (
-              <span className="font-mono text-3xl font-bold tabular-nums text-muted-foreground md:text-4xl">
-                #{driver.permanentNumber}
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-2">
-              <CountryFlag nationality={driver.nationality} size={18} />
-              {driver.nationality}
-            </span>
-            {latestSeason && (
-              <Link
-                href={`/constructors/${latestSeason.constructorId}`}
-                className="inline-flex items-center gap-2 hover:text-foreground"
-              >
-                <span
-                  aria-hidden
-                  className="inline-block h-3.5 w-1 rounded-sm"
-                  style={{ backgroundColor: accent.color }}
-                />
-                {latestSeason.team}
-              </Link>
-            )}
-            {age !== null && (
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" aria-hidden />
-                {bornOn ? `${bornOn} · ${age} años` : `${age} años`}
-              </span>
-            )}
-            {driver.code && (
-              <span className="inline-flex items-center gap-1.5">
-                <Hash className="h-4 w-4" aria-hidden />
-                {driver.code}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
+    <>
       {/* Estadísticas de carrera */}
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatTile icon={Flag} label="Carreras" value={stats.races} />
@@ -242,7 +142,7 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
                     <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full">
                       <div
                         className="rounded-l-full"
-                        style={{ width: `${share}%`, backgroundColor: accent.color }}
+                        style={{ width: `${share}%`, backgroundColor: accentColor }}
                       />
                       <div
                         className="flex-1 rounded-r-full bg-muted"
@@ -311,6 +211,157 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
           </Card>
         )}
       </div>
+    </>
+  );
+}
+
+/** El mismo esqueleto que la sección real: seis tiles y dos tarjetas. */
+function PerformanceSkeleton() {
+  return (
+    <div aria-hidden>
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="rounded-xl border border-border bg-card p-4">
+            <div className="mb-2 h-3 w-20 animate-pulse rounded bg-muted" />
+            <div className="h-8 w-14 animate-pulse rounded bg-muted" />
+          </div>
+        ))}
+      </div>
+      <div className="mb-10 h-5 w-80 animate-pulse rounded bg-muted" />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="h-56 animate-pulse rounded-xl border border-border bg-card" />
+        <div className="h-56 animate-pulse rounded-xl border border-border bg-card" />
+      </div>
+    </div>
+  );
+}
+
+export default async function DriverDetailPage({ params }: DriverDetailPageProps) {
+  const { driverId } = await params;
+
+  let driver;
+  let hasError = false;
+
+  try {
+    driver = await prisma.driver.findUnique({
+      where: { driverId },
+      include: {
+        results: {
+          take: 10,
+          orderBy: { race: { date: 'desc' } },
+          include: {
+            race: { include: { circuit: true } },
+            team: true,
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching driver:', error);
+    hasError = true;
+  }
+
+  if (!driver && !hasError) notFound();
+
+  if (hasError || !driver) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <Link href="/drivers" className="mb-8 inline-block">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver a pilotos
+          </Button>
+        </Link>
+        <div className="mt-12 rounded-xl border border-border bg-card p-12 text-center">
+          <h2 className="mb-3 text-2xl font-bold">Base de datos no disponible</h2>
+          <p className="text-muted-foreground">
+            No se pudo cargar la ficha del piloto. Inténtalo de nuevo en un momento.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const age = driverAge(driver.dateOfBirth);
+  const bornOn = formatBirthDate(driver.dateOfBirth);
+
+  // El equipo actual sale del resultado más reciente, que ya viene en la
+  // consulta de arriba. Antes se sacaba de las estadísticas, y por ese dato la
+  // cabecera entera —foto, nombre, dorsal— esperaba a cinco consultas más.
+  const currentTeam = driver.results[0]?.team ?? null;
+  const accent = teamColor(currentTeam?.constructorId);
+
+  return (
+    <div className="container mx-auto px-4 py-8 md:py-12">
+      <Link href="/drivers" className="mb-6 inline-block">
+        <Button variant="outline" size="sm">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Volver a pilotos
+        </Button>
+      </Link>
+
+      {/* Cabecera */}
+      <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center">
+        <div
+          className="shrink-0 overflow-hidden rounded-full border-4"
+          style={{ borderColor: accent.color }}
+        >
+          <DriverAvatar
+            src={driver.imageUrl}
+            name={`${driver.givenName} ${driver.familyName}`}
+            size="xl"
+          />
+        </div>
+
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-3xl font-bold tracking-tight md:text-5xl">
+              {driver.givenName} {driver.familyName}
+            </h1>
+            {driver.permanentNumber && (
+              <span className="font-mono text-3xl font-bold tabular-nums text-muted-foreground md:text-4xl">
+                #{driver.permanentNumber}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-2">
+              <CountryFlag nationality={driver.nationality} size={18} />
+              {driver.nationality}
+            </span>
+            {currentTeam && (
+              <Link
+                href={`/constructors/${currentTeam.constructorId}`}
+                className="inline-flex items-center gap-2 hover:text-foreground"
+              >
+                <span
+                  aria-hidden
+                  className="inline-block h-3.5 w-1 rounded-sm"
+                  style={{ backgroundColor: accent.color }}
+                />
+                {currentTeam.name}
+              </Link>
+            )}
+            {age !== null && (
+              <span className="inline-flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" aria-hidden />
+                {bornOn ? `${bornOn} · ${age} años` : `${age} años`}
+              </span>
+            )}
+            {driver.code && (
+              <span className="inline-flex items-center gap-1.5">
+                <Hash className="h-4 w-4" aria-hidden />
+                {driver.code}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <Suspense fallback={<PerformanceSkeleton />}>
+        <DriverPerformance driverId={driver.id} accentColor={accent.color} />
+      </Suspense>
 
       {/* Últimos resultados */}
       {driver.results.length > 0 && (

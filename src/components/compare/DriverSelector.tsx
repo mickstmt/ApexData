@@ -3,15 +3,24 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, X, Trophy, Flag, Calendar, TrendingUp, GitCompare } from 'lucide-react';
-import type { Driver, Result, Race, Season } from '@prisma/client';
 import { formatBirthDate } from '@/lib/driver-age';
 
-type DriverWithResults = Driver & {
-  results: (Result & {
-    race: Race & {
-      season: Season;
-    };
-  })[];
+/**
+ * Solo lo que esta pantalla usa. El tipo declaraba la carrera y la temporada
+ * de cada resultado, que no se leen en ninguna parte, y eso obligaba a la
+ * consulta a traerlas.
+ */
+type DriverWithResults = {
+  id: string;
+  driverId: string;
+  givenName: string;
+  familyName: string;
+  code: string | null;
+  permanentNumber: number | null;
+  nationality: string;
+  dateOfBirth: Date | null;
+  imageUrl: string | null;
+  results: { id: string; position: number | null }[];
 };
 
 interface DriverSelectorProps {

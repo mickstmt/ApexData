@@ -41,24 +41,64 @@ export default async function ConstructorDetailPage({ params }: ConstructorDetai
   const { constructorId } = await params;
 
   let constructor;
+  let totals = { races: 0, wins: 0, podiums: 0, points: 0 };
+  let drivers: { name: string; driverId: string }[] = [];
+  let recentResults: {
+    id: string;
+    position: number | null;
+    points: number;
+    race: { raceName: string };
+    driver: { givenName: string; familyName: string };
+  }[] = [];
   let hasError = false;
 
   try {
-    constructor = await prisma.team.findUnique({
-      where: { constructorId },
-      include: {
-        results: {
+    constructor = await prisma.team.findUnique({ where: { constructorId } });
+
+    if (constructor) {
+      // Antes esta página traía TODOS los resultados históricos del equipo con
+      // su carrera, su circuito y su piloto anidados —Ferrari son más de mil
+      // filas— para acabar mostrando tres contadores y diez filas. Ahora cada
+      // cosa se pide como lo que es: los contadores se cuentan y se suman en
+      // la base de datos, y las filas se piden con `take`. Van en paralelo, así
+      // que son un viaje de ida y vuelta, no cinco.
+      const teamId = constructor.id;
+
+      const [races, wins, podiums, sum, recent, seen] = await Promise.all([
+        prisma.result.count({ where: { constructorId: teamId } }),
+        prisma.result.count({ where: { constructorId: teamId, position: 1 } }),
+        prisma.result.count({ where: { constructorId: teamId, position: { lte: 3 } } }),
+        prisma.result.aggregate({ where: { constructorId: teamId }, _sum: { points: true } }),
+        prisma.result.findMany({
+          where: { constructorId: teamId },
           orderBy: { race: { date: 'desc' } },
-          include: {
-            race: { include: { circuit: true } },
-            driver: true,
-            // Explícito para que TypeScript no herede Object.prototype.constructor
-            // al comparar este literal con ResultInclude. Ver src/lib/prisma.ts.
-            team: false,
+          take: 10,
+          select: {
+            id: true,
+            position: true,
+            points: true,
+            race: { select: { raceName: true } },
+            driver: { select: { givenName: true, familyName: true } },
           },
-        },
-      },
-    });
+        }),
+        prisma.result.findMany({
+          where: { constructorId: teamId },
+          orderBy: { race: { date: 'desc' } },
+          distinct: ['driverId'],
+          take: 60,
+          select: {
+            driver: { select: { driverId: true, givenName: true, familyName: true } },
+          },
+        }),
+      ]);
+
+      totals = { races, wins, podiums, points: sum._sum.points ?? 0 };
+      recentResults = recent;
+      drivers = seen.map((row) => ({
+        name: `${row.driver.givenName} ${row.driver.familyName}`,
+        driverId: row.driver.driverId,
+      }));
+    }
   } catch (error) {
     console.error('Error fetching constructor:', error);
     hasError = true;
@@ -97,25 +137,7 @@ export default async function ConstructorDetailPage({ params }: ConstructorDetai
     );
   }
 
-  const results = constructor!.results;
-
-  const wins = results.filter((r) => r.position === 1).length;
-  const podiums = results.filter((r) => r.position !== null && r.position <= 3).length;
-  const points = results.reduce((sum, r) => sum + r.points, 0);
-
-  // Pilotos que han corrido para el equipo, del más reciente al más antiguo.
-  const driversSeen = new Map<string, { name: string; driverId: string }>();
-  for (const result of results) {
-    if (!driversSeen.has(result.driver.driverId)) {
-      driversSeen.set(result.driver.driverId, {
-        name: `${result.driver.givenName} ${result.driver.familyName}`,
-        driverId: result.driver.driverId,
-      });
-    }
-  }
-  const drivers = Array.from(driversSeen.values());
-
-  const recentResults = results.slice(0, 10);
+  const { wins, podiums, points } = totals;
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -170,7 +192,7 @@ export default async function ConstructorDetailPage({ params }: ConstructorDetai
           </div>
 
           <p className="text-sm text-muted-foreground">
-            Datos calculados sobre las {results.length} carreras registradas en ApexData.
+            Datos calculados sobre las {totals.races} carreras registradas en ApexData.
           </p>
         </div>
       </div>
