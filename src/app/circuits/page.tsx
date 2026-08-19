@@ -85,7 +85,7 @@ export default async function CircuitsPage() {
         {sorted.map((circuit) => (
           <Card
             key={circuit.id}
-            className="flex flex-col overflow-hidden transition-colors hover:border-primary"
+            className="relative flex flex-col overflow-hidden transition-colors focus-within:border-primary hover:border-primary"
           >
             <div className="flex h-36 items-center justify-center bg-muted/40 p-4">
               {circuit.imageUrl ? (
@@ -111,7 +111,18 @@ export default async function CircuitsPage() {
                 <span className="truncate text-sm text-muted-foreground">{circuit.location}</span>
               </div>
 
-              <h2 className="font-display text-lg font-semibold leading-tight">{circuit.name}</h2>
+              {/* Un solo enlace que se estira sobre la tarjeta entera: así el
+                  objetivo táctil es la tarjeta —no un renglón de texto— sin
+                  anidar controles, que es el defecto que la auditoría señaló.
+                  El de calendario se queda por encima con su propia capa. */}
+              <h2 className="font-display text-lg font-semibold leading-tight">
+                <Link
+                  href={`/circuits/${circuit.circuitId}`}
+                  className="after:absolute after:inset-0 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {circuit.name}
+                </Link>
+              </h2>
 
               <div className="mt-auto flex items-center justify-between pt-2 text-sm text-muted-foreground">
                 <span className="tabular-nums">
@@ -120,7 +131,7 @@ export default async function CircuitsPage() {
                 {circuit.lastYear && (
                   <Link
                     href={`/calendar?season=${circuit.lastYear}`}
-                    className="tabular-nums hover:text-foreground"
+                    className="relative z-10 tabular-nums hover:text-foreground"
                   >
                     última: {circuit.lastYear}
                   </Link>

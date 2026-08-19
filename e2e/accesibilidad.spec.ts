@@ -275,6 +275,53 @@ test.describe('telemetría', () => {
   });
 });
 
+test.describe('ficha de circuito', () => {
+  test('se llega desde la lista y cuenta desde dónde se gana aquí', async ({ page }) => {
+    await page.goto('/circuits');
+
+    // El enlace del título se estira sobre la tarjeta entera: se pulsa el
+    // nombre, pero el objetivo táctil es la tarjeta.
+    await page.getByRole('link', { name: /Monza/ }).first().click();
+    await page.waitForURL('**/circuits/monza');
+
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Monza');
+
+    // Las dos cifras que distinguen un circuito de otro. Con expresión regular
+    // anclada porque «desde la pole» también sale en cada fila del historial.
+    await expect(page.getByText(/^Desde la pole$/)).toBeVisible();
+    await expect(page.getByText(/^Parrilla media$/)).toBeVisible();
+
+    const filas = page.locator('table tbody tr');
+    expect(await filas.count()).toBeGreaterThan(5);
+    // La primera columna es cabecera de fila, no una celda más: es el año, y
+    // es lo que identifica a las demás.
+    await expect(filas.first().locator('th')).toHaveAttribute('scope', 'row');
+  });
+
+  test('en móvil el historial se pliega y el detalle lleva a la carrera', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/circuits/monza');
+
+    await expect(page.locator('table').first()).toBeHidden();
+
+    // Se agarra por `aria-controls` y no por el nombre accesible: al
+    // desplegarse, la fila pasa de «Ver más de…» a «Ocultar…», así que un
+    // localizador por nombre se resuelve luego a OTRA fila —la siguiente sin
+    // desplegar— y lee un `aria-expanded` que no es el suyo.
+    const fila = page.locator('[aria-controls^="detalle-"]').first();
+    const detalleId = await fila.getAttribute('aria-controls');
+    await fila.click();
+    await expect(page.locator(`[aria-controls="${detalleId}"]`)).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+
+    const detalle = page.locator('dl').first();
+    await expect(detalle).toContainText('Salió');
+    await expect(detalle.getByRole('link').first()).toHaveAttribute('href', /\/results\/\d+\/\d+/);
+  });
+});
+
 test.describe('retroalimentación al navegar (informe 1)', () => {
   test('el selector de temporada avisa mientras carga', async ({ page }) => {
     await page.goto('/results');

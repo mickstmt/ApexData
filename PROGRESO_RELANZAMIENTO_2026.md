@@ -26,9 +26,9 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: la **ficha de circuito** `/circuits/[circuitId]` con su historial de ganadores, prometida desde el plan original y hoy lo único que queda del §8. Después, los huecos del informe 3 que quedan: personalización por equipo favorito, primitivos Chip y Sheet, y `seed:all` reproduciendo solo 4 de 17 temporadas.
+**Próximo paso**: los huecos que quedan del informe 3 —personalización por equipo favorito, primitivos Chip y Sheet, y `seed:all` reproduciendo solo 4 de 17 temporadas— y la deuda del Sprint 5: aviso push tras cada GP, pantalla de administración, escaneo de secretos, respaldo con `pg_dump` y límite de peticiones con `slowapi`. El §8 del plan queda cerrado con la ficha de circuito de hoy.
 
-**Tests**: 52 unitarios (TypeScript) + 28 (Python) + **17 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 60 unitarios (TypeScript) + 28 (Python) + **19 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -75,6 +75,32 @@
 ---
 
 ## Bitácora
+
+### 2026-08-19 (15) — La ficha de circuito, y una pregunta que ninguna especificación responde ✅
+
+Lo último que quedaba del §8: `/circuits/[circuitId]` con su historial de ganadores. Se llega tocando la tarjeta desde la lista —un solo enlace estirado sobre toda la tarjeta, para no anidar controles— y cada año del historial lleva a su carrera.
+
+**Lo que la ficha NO enseña, y por qué.** El esquema tiene cuatro columnas de especificaciones —longitud, curvas, zonas DRS y récord de vuelta— y están **vacías en los 36 circuitos con carreras**. No es un olvido del seed: Jolpica/Ergast, que es de donde salen los circuitos, no las publica; `update-incomplete-circuits.ts` solo rellena ubicación, país, coordenadas y enlace. Una ficha llena de guiones dice menos que una ficha corta, así que no se pintan. Si alguna vez se quieren, hay que buscar otra fuente.
+
+**Lo que sí se puede responder con lo que hay: ¿aquí se adelanta?** La parrilla del ganador lo cuenta mejor que ninguna especificación, y el contraste entre dos circuitos es inmediato:
+
+| | Desde la pole | Parrilla media del ganador |
+|---|---|---|
+| Monza | 56 % | 2,4 |
+| Mónaco | 69 % | 1,4 |
+
+Con eso, cada ficha lleva cuatro cifras, la mayor remontada del circuito —en Monza, Gasly desde el 10.º en 2020—, quién manda aquí entre pilotos y equipos, y el historial completo.
+
+**Una trampa de los datos, cubierta con pruebas**: en los datos de Ergast, salir del pit lane se guarda como **parrilla 0**, no como el último puesto. Hay 56 salidas así en la base. Sin ese cuidado, una victoria desde el pit lane contaría como la mejor parrilla posible y hundiría la media; ahora se ordena por detrás de cualquier parrilla y se nombra «desde el pit lane».
+
+**Dos fallos propios que conviene anotar porque son de familia conocida:**
+
+1. Exporté una función auxiliar desde el módulo de la tabla de móvil —que es `'use client'`— y la llamé desde la página, que es de servidor. **No lo ve el tipado, ni el lint, ni la compilación**: solo estalla al abrir la página, y la primera comprobación en navegador la enseñó en la primera visita. La función se mudó al módulo puro, que es de donde puede leerla el servidor.
+2. La prueba de la fila plegable fallaba y parecía un fallo de la pantalla. Era **un localizador que se resolvía a otra fila**: al desplegarse, el botón cambia su nombre accesible de «Ver más de…» a «Ocultar…», así que `.first()` con ese nombre pasaba a apuntar a la siguiente fila sin desplegar y leía su `aria-expanded`. Ahora se agarra por `aria-controls`, que no cambia.
+
+**Anotado, no resuelto**: 8 circuitos con carreras no tienen trazado —`mugello`, `ricard`, `yeongam`, `valencia`, `portimao`, `hockenheimring`, `sochi` y `nurburgring`—, todos retirados del calendario salvo Paul Ricard y Portimão. Su ficha funciona igual, sin la silueta.
+
+**Verificado**: 60 pruebas unitarias (8 nuevas), 19 de navegador (2 nuevas) y 28 de Python. Recorrido en navegador de verdad, claro y oscuro, escritorio y móvil: la lista lleva a la ficha, el historial se pliega en móvil con su detalle enlazado, un circuito inventado da la página de 404 y la primera columna de la tabla es cabecera de fila. De paso, el ordinal «1.º» salió de la monoespaciada, donde se separaba y parecía un símbolo de grados.
 
 ### 2026-08-19 (14) — El mapa y las trazas, señalando el mismo punto ✅
 
@@ -239,7 +265,7 @@ El método que exigió la auditoría de veracidad: **contrastar el cierre contra
 
 **Lo último de este bloque**, hecho hoy: el `<button>` dentro del `<a>` en las tarjetas de piloto y equipo —HTML inválido y dos paradas de teclado por tarjeta— se resuelve con el enlace cubriendo la tarjeta por pseudoelemento y el favorito por encima; el menú del header cierra con Escape y devuelve el foco; el borde de los controles sube a **3,13:1 en claro y 3,73:1 en oscuro** —solo el de los controles: subir el de los separadores convertiría cada tarjeta y cada fila en una caja marcada—; `getComputedStyle` sale del bucle de dibujo del canvas, que era el único punto que forzaba reflow en cada movimiento del dedo; y el gráfico del campeonato gana una tabla equivalente en `sr-only`.
 
-**Informe 3 — veracidad: sigue abierto, y se declara.** Quedan sin hacer: personalización por equipo favorito, los primitivos Chip y Sheet (Table existe desde hoy, como `PriorityRows`), la ficha de circuito `/circuits/[circuitId]`, la animación FLIP y el *number ticking* en standings, `seed:all` reproduciendo solo 4 de las 17 temporadas, y el código muerto sin limpiar. No desaparecen: están en la deuda técnica con su nombre.
+**Informe 3 — veracidad: sigue abierto, y se declara.** Quedan sin hacer: personalización por equipo favorito, los primitivos Chip y Sheet (Table existe desde hoy, como `PriorityRows`), ~~la ficha de circuito `/circuits/[circuitId]`~~ (hecha el 2026-08-19), la animación FLIP y el *number ticking* en standings, `seed:all` reproduciendo solo 4 de las 17 temporadas, y el código muerto sin limpiar. No desaparecen: están en la deuda técnica con su nombre.
 
 **Verificación de cierre**: build reproduciendo el CI sin base de datos, 52 tests unitarios, 17 de navegador, y comprobación en ejecución de lo añadido hoy —bordes medidos en los dos temas, primer tabulador de la home, cero controles anidados en enlaces, y el menú cerrando con Escape con el foco de vuelta en su botón—.
 
