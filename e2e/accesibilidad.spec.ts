@@ -269,14 +269,20 @@ test.describe('retroalimentación al navegar (informe 1)', () => {
     expect(despues).not.toBe(antes);
   });
 
-  test('una navegación rápida no interrumpe con el coche', async ({ page }) => {
-    // Con prefetch, ir a una ficha de piloto ronda los 70 ms. Sacar un coche
-    // por encima de eso haría la app más lenta a la vista, no más informativa.
+  test('el coche no interrumpe una navegación breve', async ({ page }) => {
+    // La propiedad es "no aparece antes del umbral de 250 ms", y eso es lo que
+    // se mide: al poco de pulsar, todavía no hay nada.
+    //
+    // La primera versión de esta prueba navegaba y comprobaba al terminar que
+    // no había coche. Pasaba en local —con la página cacheada, la navegación
+    // ronda los 70 ms— y falló en CI, donde con caché fría tarda más de 250 ms
+    // y el indicador aparece, que es justo lo que debe hacer. Medía la
+    // velocidad de la máquina, no el comportamiento.
     await page.goto('/drivers');
     await page.locator('a[href^="/drivers/"]').first().click();
-    await page.waitForURL('**/drivers/*');
 
-    await expect(page.getByText('Cargando la página…')).toHaveCount(0);
+    await page.waitForTimeout(120);
+    expect(await page.getByText('Cargando la página…').count()).toBe(0);
   });
 
   test('/compare recibe al usuario con instrucciones', async ({ page }) => {

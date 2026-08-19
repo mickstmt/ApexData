@@ -98,7 +98,7 @@ jobs:
         run: npm run test:e2e
 
       # Sin esto, un fallo solo dice qué aserción falló y no qué se veía.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: playwright-report

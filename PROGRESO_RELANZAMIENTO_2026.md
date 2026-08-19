@@ -76,6 +76,18 @@
 
 ## Bitácora
 
+### 2026-08-19 (7) — La primera prueba de navegador que falla en CI y no en local ✅
+
+El CI tumbó el commit del mapa de velocidad, y **no por el código nuevo**: falló la prueba «una navegación rápida no interrumpe con el coche», que afirma que el indicador no aparece al ir a una ficha de piloto. En esta máquina esa navegación ronda los **70 ms**, con la página cacheada; en el runner, con caché fría y la base de datos a 500 ms por consulta, tarda **más de los 250 ms del umbral**, así que el coche aparece — correctamente— y la prueba falla.
+
+**La prueba estaba escrita contra un entorno rápido, no contra la propiedad.** Lo que quiere comprobarse es «no aparece antes de 250 ms», y eso se mide mirando poco después de pulsar, no al terminar la navegación. Reescrita así, y **verificada en las dos condiciones**: con la navegación normal y con la respuesta frenada a propósito, donde a los 120 ms no hay nada y a los 520 ms el coche ya está cruzando.
+
+Es la misma lección de la semana con otra cara: **medir contra el entorno equivocado**. Antes fue un servidor viejo en el puerto y un build sin base de datos; ahora, una máquina rápida con la caché caliente.
+
+**De paso**, `actions/upload-artifact` sube a v5: el propio log del CI avisaba de que aún iba con Node 20.
+
+**Nota de secuencia**: como el job de despliegue depende de las pruebas, la web **no llegó a desplegarse** con ese commit. El servicio de telemetría sí se desplegó a mano, así que durante un rato producción tuvo el servicio nuevo y la web antigua — inofensivo, porque la web vieja no llama a los endpoints nuevos.
+
 ### 2026-08-19 (6) — El mapa de velocidad y la estrategia de neumáticos ✅
 
 Los dos arrastres del Sprint 4, que llevaban declarados como deuda desde el 16 de agosto. Ambos necesitaban datos que solo tiene FastF1, así que **el servicio Python crece por primera vez desde que está en producción**.
