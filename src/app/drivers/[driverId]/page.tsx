@@ -170,13 +170,14 @@ async function DriverPerformance({
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
+                <caption className="sr-only">Resumen por temporada: equipo, posición final, victorias y puntos</caption>
                   <thead>
                     <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="pb-2 pr-3 font-medium">Año</th>
-                      <th className="pb-2 pr-3 font-medium">Equipo</th>
-                      <th className="pb-2 pr-3 text-right font-medium">Pos</th>
-                      <th className="pb-2 pr-3 text-right font-medium">Vict</th>
-                      <th className="pb-2 text-right font-medium">Pts</th>
+                      <th scope="col" className="pb-2 pr-3 font-medium">Año</th>
+                      <th scope="col" className="pb-2 pr-3 font-medium">Equipo</th>
+                      <th scope="col" className="pb-2 pr-3 text-right font-medium">Pos</th>
+                      <th scope="col" className="pb-2 pr-3 text-right font-medium">Vict</th>
+                      <th scope="col" className="pb-2 text-right font-medium">Pts</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">

@@ -221,12 +221,13 @@ export default async function ConstructorDetailPage({ params }: ConstructorDetai
           <h2 className="mb-6 text-2xl font-bold">Resultados recientes</h2>
           <div className="overflow-x-auto">
             <table className="w-full">
+                <caption className="sr-only">Últimos resultados del equipo</caption>
               <thead>
                 <tr className="border-b border-border text-left text-sm text-muted-foreground">
-                  <th className="pb-3 pr-4">Carrera</th>
-                  <th className="pb-3 pr-4">Piloto</th>
-                  <th className="pb-3 pr-4">Posición</th>
-                  <th className="pb-3">Puntos</th>
+                  <th scope="col" className="pb-3 pr-4">Carrera</th>
+                  <th scope="col" className="pb-3 pr-4">Piloto</th>
+                  <th scope="col" className="pb-3 pr-4">Posición</th>
+                  <th scope="col" className="pb-3">Puntos</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

@@ -73,7 +73,7 @@ export function PwaRegister() {
       <button
         type="button"
         onClick={() => window.location.reload()}
-        className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        className="min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
       >
         Actualizar
       </button>

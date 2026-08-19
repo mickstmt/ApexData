@@ -51,7 +51,7 @@ export function Header() {
           <ThemeToggle />
           <button
             type="button"
-            className="rounded-md p-2 text-foreground hover:bg-accent"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-foreground hover:bg-accent md:h-10 md:w-10"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
             aria-expanded={menuOpen}

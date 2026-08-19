@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, X, Trophy, Flag, Calendar, TrendingUp, GitCompare } from 'lucide-react';
 import { formatBirthDate } from '@/lib/driver-age';
@@ -57,6 +57,165 @@ function calculateStats(driver: DriverWithResults) {
   };
 }
 
+/**
+ * Buscador de piloto.
+ *
+ * Era un `div` con botones dentro, duplicado dos veces: sin `role="combobox"`,
+ * sin `aria-expanded`, sin indicar qué opción está activa y sin flechas — solo
+ * se podía usar tabulando por cada resultado. Y el botón de quitar al piloto
+ * elegido no tenía nombre accesible: un lector de pantalla anunciaba «botón».
+ *
+ * Ahora es un combobox de verdad, y al ser uno solo los dos selectores se
+ * arreglan a la vez.
+ */
+function DriverPicker({
+  etiqueta,
+  seleccionado,
+  candidatos,
+  busqueda,
+  onBuscar,
+  abierto,
+  onAbrir,
+  onElegir,
+}: {
+  etiqueta: string;
+  seleccionado: DriverWithResults | null;
+  candidatos: DriverWithResults[];
+  busqueda: string;
+  onBuscar: (valor: string) => void;
+  abierto: boolean;
+  onAbrir: (valor: boolean) => void;
+  onElegir: (piloto: DriverWithResults | null) => void;
+}) {
+  const id = useId();
+  const listaId = `${id}-lista`;
+  const [activo, setActivo] = useState(0);
+
+  const visibles = candidatos.slice(0, 10);
+  const desplegado = abierto && busqueda.length > 0;
+
+  const elegir = (piloto: DriverWithResults) => {
+    onElegir(piloto);
+    onBuscar('');
+    onAbrir(false);
+  };
+
+  const onTeclado = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!desplegado || visibles.length === 0) return;
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const paso = event.key === 'ArrowDown' ? 1 : -1;
+      setActivo((previo) => (previo + paso + visibles.length) % visibles.length);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      elegir(visibles[activo]);
+    } else if (event.key === 'Escape') {
+      onAbrir(false);
+    }
+  };
+
+  return (
+    <div>
+      <label htmlFor={id} className="mb-2 block text-sm font-semibold text-muted-foreground">
+        {etiqueta}
+      </label>
+      <div className="relative">
+        {seleccionado ? (
+          <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-4">
+            <div>
+              <div className="font-bold">
+                {seleccionado.givenName} {seleccionado.familyName}
+              </div>
+              <div className="text-sm text-muted-foreground">{seleccionado.nationality}</div>
+            </div>
+            <button
+              type="button"
+              aria-label={`Quitar a ${seleccionado.givenName} ${seleccionado.familyName} de la comparación`}
+              onClick={() => {
+                onElegir(null);
+                onBuscar('');
+              }}
+              className="flex h-11 w-11 items-center justify-center rounded-full ring-offset-background hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <X className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-3 h-5 w-5 text-muted-foreground"
+                aria-hidden
+              />
+              <input
+                id={id}
+                type="text"
+                role="combobox"
+                aria-expanded={desplegado}
+                aria-controls={listaId}
+                aria-autocomplete="list"
+                aria-activedescendant={desplegado ? `${listaId}-${activo}` : undefined}
+                autoComplete="off"
+                placeholder="Buscar piloto..."
+                value={busqueda}
+                onChange={(e) => {
+                  onBuscar(e.target.value);
+                  onAbrir(true);
+                  setActivo(0);
+                }}
+                onFocus={() => onAbrir(true)}
+                onKeyDown={onTeclado}
+                className="w-full rounded-lg border border-border bg-background py-3 pl-10 pr-4 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
+              />
+            </div>
+
+            {desplegado && (
+              // `overscroll-contain`: sin él, al llegar al final de la lista el
+              // desplazamiento seguía en la página de detrás (§5 del plan).
+              <ul
+                id={listaId}
+                role="listbox"
+                aria-label={`Resultados para ${etiqueta}`}
+                className="absolute z-10 mt-2 max-h-96 w-full overflow-y-auto overscroll-contain rounded-lg border border-border bg-card shadow-lg"
+              >
+                {visibles.map((piloto, indice) => (
+                  <li key={piloto.id}>
+                    <button
+                      type="button"
+                      id={`${listaId}-${indice}`}
+                      role="option"
+                      aria-selected={indice === activo}
+                      onMouseEnter={() => setActivo(indice)}
+                      onClick={() => elegir(piloto)}
+                      className={`w-full border-b border-border p-4 text-left transition-colors last:border-b-0 ${
+                        indice === activo ? 'bg-muted/50' : ''
+                      }`}
+                    >
+                      <div className="font-semibold">
+                        {piloto.givenName} {piloto.familyName}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {piloto.code && `${piloto.code} • `}
+                        {piloto.nationality}
+                      </div>
+                    </button>
+                  </li>
+                ))}
+                {visibles.length === 0 && (
+                  <li className="p-4 text-center text-sm text-muted-foreground">
+                    No se encontraron pilotos
+                  </li>
+                )}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function DriverSelector({ drivers }: DriverSelectorProps) {
   const [driver1, setDriver1] = useState<DriverWithResults | null>(null);
   const [driver2, setDriver2] = useState<DriverWithResults | null>(null);
@@ -85,153 +244,27 @@ export function DriverSelector({ drivers }: DriverSelectorProps) {
     <div className="space-y-8">
       {/* Selection Area */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Driver 1 Selector */}
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-muted-foreground">
-            Piloto 1
-          </label>
-          <div className="relative">
-            {driver1 ? (
-              <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-4">
-                <div>
-                  <div className="font-bold">
-                    {driver1.givenName} {driver1.familyName}
-                  </div>
-                  <div className="text-sm text-muted-foreground">{driver1.nationality}</div>
-                </div>
-                <button
-                  onClick={() => {
-                    setDriver1(null);
-                    setSearch1('');
-                  }}
-                  className="rounded-full p-1 hover:bg-primary/10"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            ) : (
-              <div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Buscar piloto..."
-                    value={search1}
-                    onChange={(e) => {
-                      setSearch1(e.target.value);
-                      setShowDropdown1(true);
-                    }}
-                    onFocus={() => setShowDropdown1(true)}
-                    className="w-full rounded-lg border border-border bg-background py-3 pl-10 pr-4 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  />
-                </div>
+        <DriverPicker
+          etiqueta="Piloto 1"
+          seleccionado={driver1}
+          candidatos={filteredDrivers1}
+          busqueda={search1}
+          onBuscar={setSearch1}
+          abierto={showDropdown1}
+          onAbrir={setShowDropdown1}
+          onElegir={setDriver1}
+        />
 
-                {showDropdown1 && search1 && (
-                  <div className="absolute z-10 mt-2 max-h-96 w-full overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
-                    {filteredDrivers1.slice(0, 10).map((driver) => (
-                      <button
-                        key={driver.id}
-                        onClick={() => {
-                          setDriver1(driver);
-                          setSearch1('');
-                          setShowDropdown1(false);
-                        }}
-                        className="w-full border-b border-border p-4 text-left transition-colors hover:bg-muted/50 last:border-b-0"
-                      >
-                        <div className="font-semibold">
-                          {driver.givenName} {driver.familyName}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {driver.code && `${driver.code} • `}
-                          {driver.nationality}
-                        </div>
-                      </button>
-                    ))}
-                    {filteredDrivers1.length === 0 && (
-                      <div className="p-4 text-center text-sm text-muted-foreground">
-                        No se encontraron pilotos
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Driver 2 Selector */}
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-muted-foreground">
-            Piloto 2
-          </label>
-          <div className="relative">
-            {driver2 ? (
-              <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-4">
-                <div>
-                  <div className="font-bold">
-                    {driver2.givenName} {driver2.familyName}
-                  </div>
-                  <div className="text-sm text-muted-foreground">{driver2.nationality}</div>
-                </div>
-                <button
-                  onClick={() => {
-                    setDriver2(null);
-                    setSearch2('');
-                  }}
-                  className="rounded-full p-1 hover:bg-primary/10"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            ) : (
-              <div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Buscar piloto..."
-                    value={search2}
-                    onChange={(e) => {
-                      setSearch2(e.target.value);
-                      setShowDropdown2(true);
-                    }}
-                    onFocus={() => setShowDropdown2(true)}
-                    className="w-full rounded-lg border border-border bg-background py-3 pl-10 pr-4 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  />
-                </div>
-
-                {showDropdown2 && search2 && (
-                  <div className="absolute z-10 mt-2 max-h-96 w-full overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
-                    {filteredDrivers2.slice(0, 10).map((driver) => (
-                      <button
-                        key={driver.id}
-                        onClick={() => {
-                          setDriver2(driver);
-                          setSearch2('');
-                          setShowDropdown2(false);
-                        }}
-                        className="w-full border-b border-border p-4 text-left transition-colors hover:bg-muted/50 last:border-b-0"
-                      >
-                        <div className="font-semibold">
-                          {driver.givenName} {driver.familyName}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {driver.code && `${driver.code} • `}
-                          {driver.nationality}
-                        </div>
-                      </button>
-                    ))}
-                    {filteredDrivers2.length === 0 && (
-                      <div className="p-4 text-center text-sm text-muted-foreground">
-                        No se encontraron pilotos
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        <DriverPicker
+          etiqueta="Piloto 2"
+          seleccionado={driver2}
+          candidatos={filteredDrivers2}
+          busqueda={search2}
+          onBuscar={setSearch2}
+          abierto={showDropdown2}
+          onAbrir={setShowDropdown2}
+          onElegir={setDriver2}
+        />
       </div>
 
       {/* Comparison Results */}

@@ -20,8 +20,8 @@ import type {
 } from '@/types';
 
 const SESSION_TYPES: { value: SessionType; label: string }[] = [
-  { value: 'R', label: 'Race' },
-  { value: 'Q', label: 'Qualifying' },
+  { value: 'R', label: 'Carrera' },
+  { value: 'Q', label: 'Clasificación' },
   { value: 'FP1', label: 'FP1' },
   { value: 'FP2', label: 'FP2' },
   { value: 'FP3', label: 'FP3' },

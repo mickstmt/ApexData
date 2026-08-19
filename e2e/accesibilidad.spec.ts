@@ -104,6 +104,72 @@ test.describe('reducir movimiento (informe 2, punto 1)', () => {
   });
 });
 
+test.describe('semántica y objetivos táctiles (informe 2, puntos 6, 9, 12-14)', () => {
+  test('las pestañas de sesión se anuncian como pestañas y van con flechas', async ({ page }) => {
+    await page.goto('/results/2024/1');
+
+    await expect(page.getByRole('tablist')).toHaveCount(1);
+    await expect(page.getByRole('tabpanel')).toHaveCount(1);
+
+    const activa = page.getByRole('tab', { selected: true });
+    await expect(activa).toHaveCount(1);
+    const antes = await activa.innerText();
+
+    await activa.focus();
+    await page.keyboard.press('ArrowRight');
+
+    await expect(page.getByRole('tab', { selected: true })).not.toHaveText(antes);
+  });
+
+  test('las tablas asocian cada celda con su cabecera', async ({ page }) => {
+    await page.goto('/results/2024/1');
+
+    // Sin `scope`, con siete columnas, un lector de pantalla no puede decir a
+    // qué cabecera pertenece la celda que está leyendo.
+    const cabeceras = page.locator('table th');
+    expect(await cabeceras.count()).toBeGreaterThan(0);
+    await expect(page.locator('table th:not([scope])')).toHaveCount(0);
+    await expect(page.locator('table caption').first()).not.toBeEmpty();
+  });
+
+  test('el buscador de /compare es un combobox manejable con teclado', async ({ page }) => {
+    await page.goto('/compare');
+
+    const buscador = page.getByRole('combobox').first();
+    await expect(buscador).toHaveAttribute('aria-expanded', 'false');
+
+    await buscador.fill('ver');
+    await expect(buscador).toHaveAttribute('aria-expanded', 'true');
+    expect(await page.getByRole('option').count()).toBeGreaterThan(0);
+
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+
+    // Y el botón para quitarlo tiene nombre: antes era un «botón» a secas.
+    await expect(page.getByRole('button', { name: /Quitar a .+ de la comparación/ })).toHaveCount(1);
+  });
+
+  test('en móvil no queda ningún control por debajo de 44 px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/drivers');
+
+    const pequeños = await page.locator('button:visible').evaluateAll((els) =>
+      els
+        .map((el) => {
+          const caja = el.getBoundingClientRect();
+          return {
+            nombre: (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 30),
+            ancho: Math.round(caja.width),
+            alto: Math.round(caja.height),
+          };
+        })
+        .filter((control) => control.alto > 0 && (control.alto < 44 || control.ancho < 44))
+    );
+
+    expect(pequeños).toEqual([]);
+  });
+});
+
 test.describe('retroalimentación al navegar (informe 1)', () => {
   test('el selector de temporada avisa mientras carga', async ({ page }) => {
     await page.goto('/results');

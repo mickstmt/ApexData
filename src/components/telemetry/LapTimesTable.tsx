@@ -23,7 +23,7 @@ export function LapTimesTable({ laps, showDriver = true }: LapTimesTableProps) {
   if (!laps.length) {
     return (
       <div className="flex items-center justify-center rounded-lg border border-border bg-card p-8">
-        <p className="text-muted-foreground">No lap data available</p>
+        <p className="text-muted-foreground">No hay datos de vueltas para esta sesión.</p>
       </div>
     );
   }
@@ -32,33 +32,34 @@ export function LapTimesTable({ laps, showDriver = true }: LapTimesTableProps) {
     <div className="overflow-hidden rounded-lg border border-border bg-card">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
+                <caption className="sr-only">Vueltas más rápidas de la sesión, con sus parciales y el neumático</caption>
           <thead className="border-b border-border bg-muted/50">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Lap
+              <th scope="col" className="px-4 py-3 text-left font-medium text-muted-foreground">
+                Vuelta
               </th>
               {showDriver && (
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Driver
+                <th scope="col" className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  Piloto
                 </th>
               )}
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Time
+              <th scope="col" className="px-4 py-3 text-left font-medium text-muted-foreground">
+                Tiempo
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th scope="col" className="px-4 py-3 text-left font-medium text-muted-foreground">
                 S1
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th scope="col" className="px-4 py-3 text-left font-medium text-muted-foreground">
                 S2
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th scope="col" className="px-4 py-3 text-left font-medium text-muted-foreground">
                 S3
               </th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">
-                Tyre
+              <th scope="col" className="px-4 py-3 text-center font-medium text-muted-foreground">
+                Neumático
               </th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                Max Speed
+              <th scope="col" className="px-4 py-3 text-right font-medium text-muted-foreground">
+                Vel. máx.
               </th>
             </tr>
           </thead>

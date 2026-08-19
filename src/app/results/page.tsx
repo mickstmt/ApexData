@@ -65,25 +65,26 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
         <div className="overflow-hidden rounded-lg border border-border bg-card">
           <div className="overflow-x-auto">
             <table className="w-full">
+                <caption className="sr-only">Resultados de cada gran premio de la temporada</caption>
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="p-4 text-left text-sm font-semibold text-foreground">
-                    GRAND PRIX
+                  <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">
+                    GRAN PREMIO
                   </th>
-                  <th className="p-4 text-left text-sm font-semibold text-foreground">
-                    DATE
+                  <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">
+                    FECHA
                   </th>
-                  <th className="p-4 text-left text-sm font-semibold text-foreground">
-                    WINNER
+                  <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">
+                    GANADOR
                   </th>
-                  <th className="p-4 text-left text-sm font-semibold text-foreground">
-                    CAR
+                  <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">
+                    EQUIPO
                   </th>
-                  <th className="p-4 text-right text-sm font-semibold text-foreground">
-                    LAPS
+                  <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground">
+                    VUELTAS
                   </th>
-                  <th className="p-4 text-right text-sm font-semibold text-foreground">
-                    TIME
+                  <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground">
+                    TIEMPO
                   </th>
                 </tr>
               </thead>
@@ -114,7 +115,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
                         </Link>
                       </td>
                       <td className="p-4 text-sm text-muted-foreground">
-                        {new Date(race.date).toLocaleDateString('en-US', {
+                        {new Date(race.date).toLocaleDateString('es-ES', {
                           day: '2-digit',
                           month: 'short',
                         })}

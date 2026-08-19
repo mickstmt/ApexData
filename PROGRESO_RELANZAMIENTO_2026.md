@@ -26,9 +26,9 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: **cerrar el Sprint 6** con lo que queda: las tablas priority+, el resto del ARIA (pestañas, tablas, combobox, compuesto de neumático), los objetivos táctiles por debajo de 44 px y el idioma mezclado.
+**Próximo paso**: **las tablas priority+**, lo último que queda del alcance del Sprint 6. Es una decisión de diseño, así que se propone en mockup antes de tocar código.
 
-**Tests**: 52 unitarios (TypeScript) + 14 (Python) + **10 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 52 unitarios (TypeScript) + 14 (Python) + **14 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -43,6 +43,7 @@
   - **Pantalla de administración para importar temporadas**: no existe `src/app/admin`.
   - **Checklist de seguridad de §10, incompleto**: faltan *secret scanning* y *push protection* en GitHub, backup mensual con `pg_dump` y *rate limiting* (`slowapi`) en el servicio Python. El RLS de Supabase, que estaba en esta lista, dejó de estar recortado el mismo día — ver la bitácora.
 - 🟡 **Logos de equipo** (detectado por el usuario el 2026-08-18 mirando `/constructors`). Resueltos dos de los tres defectos: el **encuadre** —la caja era cuadrada de 48 px y los logos van de 1,09:1 a 4,8:1, así que un wordmark se dibujaba a 48×10 px— y la **legibilidad por tema**, porque el archivo trae la tinta fija; ahora se pintan como silueta monocroma, negra en claro y blanca en oscuro. De paso se quitó de `sauber.svg` un fondo blanco que cubría el lienzo. **Sigue pendiente** lo que exige acción manual: las **6 marcas sin logo** (Ferrari, Red Bull, Aston Martin, RB, Cadillac, AlphaTauri) y que `williams` es `.webp` en vez de SVG.
+- 🟢 **Semántica, teclado e idioma: resueltos el 2026-08-19**. Las pestañas de sesión son pestañas de verdad (`tablist`/`tab`/`tabpanel`, con flechas); las 6 tablas asocian celda y cabecera (**37 `scope="col"` y 6 leyendas**, donde antes había cero de ambas); el buscador de `/compare` es un combobox manejable con teclado y su botón de quitar tiene nombre; ningún control baja de 44 px en móvil —con la densidad de escritorio intacta a partir de `md`—; y las cabeceras, fechas y mensajes que estaban en inglés pasan al español de la app.
 - 🟢 **Estados de error y vacío: resueltos el 2026-08-19**. Existe `global-error.tsx` —hasta ahora un fallo del layout raíz daba la pantalla en blanco del navegador—, `/standings` distingue un fallo de base de datos de una temporada sin sembrar, y una carrera sin resultados avisa en vez de pintar una tabla con cabeceras y ninguna fila.
 - ⚪ **`PageTransition`: medido y descartado**. La auditoría lo acusaba de retrasar 300 ms todos los esqueletos. Medido en navegador contra la implementación alternativa: **96-123 ms antes, 81-85 ms después**. La penalización real era de ~20 ms, y quitar `mode="wait"` hace que la página que sale y la que entra convivan en el flujo, con riesgo de duplicar el alto un instante. No compensa: se deja como estaba.
 - 🟢 **Consultas encadenadas: resueltas el 2026-08-19**. `/standings` pedía el equipo de cada piloto **ronda por ronda**, hasta 24 viajes en serie: la temporada 2015 tardaba **16,5 s** en pintarse y la 2024, 10 s. Ahora la parrilla de la última ronda viene con las tablas y solo se hace una segunda consulta si falta algún piloto — 2,8 s y 3,0 s. La ficha de piloto encadenaba 6 consultas antes del primer byte; con `<Suspense>`, la cabecera aparece a los 514 ms y las estadísticas entran después. La ficha de equipo traía **todos** los resultados históricos con sus joins (Ferrari, 676 filas) para mostrar tres contadores: ahora se cuentan y se suman en la base. Y `/compare` arrastraba carrera, temporada y equipo de cada resultado, que esa pantalla **no lee**: 160-220 ms → 15-47 ms.
@@ -72,6 +73,22 @@
 ---
 
 ## Bitácora
+
+### 2026-08-19 (3) — Semántica, teclado, dedos e idioma ✅
+
+**Las pestañas de sesión eran seis botones sueltos.** Un lector de pantalla los anunciaba sin decir que forman un grupo, cuál está activa ni qué cambian al pulsarlas. Ahora son `tablist`/`tab`/`tabpanel` con `aria-selected` y `aria-controls`, solo la activa recibe tabulación y las flechas recorren las pestañas, que es lo que espera quien navega con teclado.
+
+**Cuarenta y tres cabeceras de tabla sin `scope` y ni una leyenda.** Con siete u ocho columnas, eso significa que VoiceOver no puede decir a qué cabecera pertenece la celda que está leyendo. Añadidos los `scope="col"` en las seis tablas y una `<caption>` en `sr-only` por tabla, describiendo lo que contiene. (Un tropiezo por el camino: el reemplazo automático también convirtió `<thead>` en `<th scope="col"ead>`; lo cazó el compilador al instante.)
+
+**El buscador de `/compare` era un `div` con botones dentro**: sin `role="combobox"`, sin `aria-expanded`, sin decir qué opción está activa y sin flechas — solo se podía usar tabulando por cada resultado. Y el botón de quitar al piloto elegido no tenía nombre: se anunciaba como «botón» a secas. Como el marcado estaba **duplicado** para el piloto 1 y el 2, se extrajo un único componente: arreglar uno arregla los dos, y de paso desaparecen ~90 líneas repetidas. Lleva también el `overscroll-contain` que el plan pedía en §5 y no estaba.
+
+**Objetivos táctiles: 44 px en móvil, densidad de escritorio a partir de `md`.** El plan pide ≥44 pt y había controles de 24, 28 y 36 px. Subirlos a secas habría engordado la interfaz de escritorio, donde apunta un ratón; con `min-h-11 md:min-h-0` se cumple donde importa sin tocar lo demás. Verificado con una prueba que recorre todos los botones visibles en un viewport de móvil y falla si alguno baja de 44.
+
+**Idioma.** `GRAND PRIX`, `DATE`, `CAR`, `LAPS`, `TIME`, `Lap`, `Driver`, `Tyre`, `Max Speed`, `Toggle theme`, `Image not available`, `No lap data available` y las fechas en `en-US` convivían con una app declarada `lang="es"`. Un lector de pantalla en español las pronuncia mal. Traducidas.
+
+**Cuatro pruebas de navegador nuevas** (14 en total): las pestañas con flechas, las tablas con `scope` y leyenda, el combobox con teclado, y que ningún control baje de 44 px en móvil.
+
+**Y otra medición mal montada, la tercera de la jornada**: al comprobar los `scope` conté las cabeceras *después* de haber cambiado de pestaña con la flecha, y ese panel no tiene tabla. Salía «0 scope» con el HTML servido lleno de ellos.
 
 ### 2026-08-19 (2) — Los estados que no existían, y una auditoría desmentida ✅
 

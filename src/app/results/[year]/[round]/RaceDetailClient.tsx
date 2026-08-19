@@ -108,14 +108,39 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
         </div>
       </div>
 
-      {/* Session Tabs */}
+      {/* Session Tabs
+          Eran seis botones sueltos: un lector de pantalla los anunciaba sin
+          decir que forman un grupo, cuál está activa ni qué cambian al
+          pulsarlas. Con los roles de pestañas eso queda dicho, y con las
+          flechas se pueden recorrer como se espera de unas pestañas: solo la
+          activa recibe tabulación, y las flechas mueven entre ellas. */}
       <div className="mb-8 overflow-x-auto">
-        <div className="flex gap-2 border-b border-border min-w-max">
+        <div
+          role="tablist"
+          aria-label="Sesiones del fin de semana"
+          className="flex gap-2 border-b border-border min-w-max"
+          onKeyDown={(event) => {
+            const paso = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+            if (!paso) return;
+
+            event.preventDefault();
+            const actual = tabs.findIndex((tab) => tab.id === activeTab);
+            const siguiente = tabs[(actual + paso + tabs.length) % tabs.length];
+            setActiveTab(siguiente.id);
+            document.getElementById(`tab-${siguiente.id}`)?.focus();
+          }}
+        >
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              id={`tab-${tab.id}`}
+              role="tab"
+              type="button"
+              aria-selected={activeTab === tab.id}
+              aria-controls={`panel-${tab.id}`}
+              tabIndex={activeTab === tab.id ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-6 py-3 text-sm font-semibold transition-colors border-b-2 ${
+              className={`min-h-[44px] px-6 py-3 text-sm font-semibold transition-colors border-b-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                 activeTab === tab.id
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -129,6 +154,7 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
       </div>
 
       {/* Content based on active tab */}
+      <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
       {activeTab === 'race' && race.results.length === 0 ? (
         // Sin esta guarda, una carrera aún no disputada pintaba las cabeceras
         // de la tabla sin una sola fila, un «VUELTAS: 0» y un «Podio» vacío:
@@ -193,17 +219,18 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
           <div className="rounded-lg border border-border bg-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
+                  <caption className="sr-only">Resultado de la carrera por piloto</caption>
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="p-4 text-left text-sm font-semibold text-foreground w-16">POS</th>
-                    <th className="p-4 text-left text-sm font-semibold text-foreground w-20">NO</th>
-                    <th className="p-4 text-left text-sm font-semibold text-foreground">PILOTO</th>
-                    <th className="p-4 text-left text-sm font-semibold text-foreground">EQUIPO</th>
-                    <th className="p-4 text-right text-sm font-semibold text-foreground w-20">LAPS</th>
-                    <th className="p-4 text-right text-sm font-semibold text-foreground w-32">
-                      TIME/RETIRED
+                    <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground w-16">POS</th>
+                    <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground w-20">NO</th>
+                    <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">PILOTO</th>
+                    <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">EQUIPO</th>
+                    <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-20">VUELTAS</th>
+                    <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-32">
+                      TIEMPO/ABANDONO
                     </th>
-                    <th className="p-4 text-right text-sm font-semibold text-foreground w-20">PTS</th>
+                    <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-20">PTS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -411,15 +438,16 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
               <div className="rounded-lg border border-border bg-card overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
+                      <caption className="sr-only">Clasificación por piloto, con los tiempos de Q1, Q2 y Q3</caption>
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
-                        <th className="p-4 text-left text-sm font-semibold text-foreground w-16">POS</th>
-                        <th className="p-4 text-left text-sm font-semibold text-foreground w-20">NO</th>
-                        <th className="p-4 text-left text-sm font-semibold text-foreground">PILOTO</th>
-                        <th className="p-4 text-left text-sm font-semibold text-foreground">EQUIPO</th>
-                        <th className="p-4 text-right text-sm font-semibold text-foreground w-32">Q1</th>
-                        <th className="p-4 text-right text-sm font-semibold text-foreground w-32">Q2</th>
-                        <th className="p-4 text-right text-sm font-semibold text-foreground w-32">Q3</th>
+                        <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground w-16">POS</th>
+                        <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground w-20">NO</th>
+                        <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">PILOTO</th>
+                        <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">EQUIPO</th>
+                        <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-32">Q1</th>
+                        <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-32">Q2</th>
+                        <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-32">Q3</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -531,7 +559,7 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                 <div className="rounded-lg border border-border bg-card p-6">
                   <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-primary" />
-                    Top 3 Qualifying
+                    Top 3 de la clasificación
                   </h2>
                   <div className="space-y-3">
                     {race.qualifyings.slice(0, 3).map((result, index) => (
@@ -621,6 +649,7 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -51,7 +51,7 @@ export function IosInstallHint() {
         type="button"
         onClick={dismiss}
         aria-label="Cerrar aviso de instalación"
-        className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+        className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
       >
         <X className="h-4 w-4" />
       </button>

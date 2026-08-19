@@ -36,7 +36,7 @@ export function OptimizedImage({
         className={`flex items-center justify-center bg-muted ${className}`}
         style={fill ? {} : { width, height }}
       >
-        <span className="text-xs text-muted-foreground">Image not available</span>
+        <span className="text-xs text-muted-foreground">Imagen no disponible</span>
       </div>
     );
   }
@@ -121,7 +121,7 @@ export function DriverAvatar({
   return (
     <OptimizedImage
       src={src}
-      alt={`${name} avatar`}
+      alt={`Foto de ${name}`}
       width={dimension}
       height={dimension}
       className={`rounded-full ${sizeClasses[size]}`}

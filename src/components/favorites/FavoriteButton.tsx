@@ -25,7 +25,7 @@ export function FavoriteButton({ id, type, className = '' }: FavoriteButtonProps
         e.stopPropagation();
         toggle(id);
       }}
-      className={`rounded-full p-2 transition-colors hover:bg-primary/10 ${className}`}
+      className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-primary/10 md:h-9 md:w-9 ${className}`}
       aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
     >
       <Star
