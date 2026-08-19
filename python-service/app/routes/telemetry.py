@@ -10,6 +10,7 @@ import pandas as pd
 from app.utils.cache_manager import cache_manager
 from app.utils.serialization import records, format_lap_time
 from app.utils.track import track_points
+from app.utils.events import event_key
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ async def compare_drivers_telemetry(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event, session_type)
+        session = fastf1.get_session(year, event_key(event), session_type)
         session.load()
 
         laps_d1 = session.laps.pick_drivers(driver1)
@@ -125,7 +126,7 @@ async def get_driver_track(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event, session_type)
+        session = fastf1.get_session(year, event_key(event), session_type)
         session.load()
 
         driver_laps = session.laps.pick_drivers(driver)
@@ -211,7 +212,7 @@ async def get_driver_telemetry(
             return cached_data
 
         # Load session
-        session = fastf1.get_session(year, event, session_type)
+        session = fastf1.get_session(year, event_key(event), session_type)
         session.load()
 
         # Get driver laps (use pick_drivers instead of deprecated pick_driver)

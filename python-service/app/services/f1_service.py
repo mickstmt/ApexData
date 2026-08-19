@@ -4,6 +4,7 @@ F1 Service - Business logic for F1 data operations
 import fastf1
 import pandas as pd
 from typing import Optional
+from app.utils.events import event_key
 
 
 class F1Service:
@@ -14,7 +15,7 @@ class F1Service:
 
     def get_session(self, year: int, event: str, session_type: str):
         """Load and return a session"""
-        session = fastf1.get_session(year, event, session_type)
+        session = fastf1.get_session(year, event_key(event), session_type)
         session.load()
         return session
 

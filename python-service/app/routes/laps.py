@@ -10,6 +10,7 @@ import pandas as pd
 from app.utils.cache_manager import cache_manager
 from app.utils.serialization import records
 from app.utils.track import group_by_driver, stints_from_laps
+from app.utils.events import event_key
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ async def get_session_laps(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event, session_type)
+        session = fastf1.get_session(year, event_key(event), session_type)
         session.load()
 
         laps = session.laps
@@ -109,7 +110,7 @@ async def get_session_stints(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event, session_type)
+        session = fastf1.get_session(year, event_key(event), session_type)
         session.load()
 
         if session.laps.empty:
@@ -168,7 +169,7 @@ async def get_fastest_laps(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event, session_type)
+        session = fastf1.get_session(year, event_key(event), session_type)
         session.load()
 
         laps = session.laps
@@ -221,7 +222,7 @@ async def get_driver_lap_analysis(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event, session_type)
+        session = fastf1.get_session(year, event_key(event), session_type)
         session.load()
 
         driver_laps = session.laps.pick_drivers(driver)

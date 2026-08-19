@@ -140,7 +140,7 @@ export default async function Home() {
                     alt={`Trazado de ${nextRace.circuit.name}`}
                     width={220}
                     height={140}
-                    className="h-28 w-auto opacity-80 dark:invert"
+                    className="h-28 w-auto opacity-90 brightness-0 dark:brightness-0 dark:invert"
                   />
                 </div>
               )}

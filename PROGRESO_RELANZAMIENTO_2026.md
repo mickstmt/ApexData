@@ -28,7 +28,7 @@
 
 **Próximo paso**: las **retiradas pendientes** —fusionar `/telemetry` en `/analysis` y jubilar `/compare`— y después los huecos del informe 3 (equipo favorito, ficha de circuito, FLIP en standings, `seed:all`, código muerto).
 
-**Tests**: 52 unitarios (TypeScript) + 24 (Python) + **17 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 52 unitarios (TypeScript) + 26 (Python) + **17 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -68,13 +68,33 @@
 ## Acciones pendientes del usuario
 
 1. ~~**Desplegar la web y el servicio de telemetría en EasyPanel**~~ → ambos hechos: la web el 2026-08-17 y la telemetría el 2026-08-18, con el volumen en `/app/cache` y `FASTF1_SERVICE_URL` ya configurada. ~~Comprobación de cutover del CI~~ → resuelta.
-2. 🔴 **Pulsar *Deploy* en el servicio de telemetría** (`apexdata-telemetry`, proyecto `ditto`, en panel.dittochatbot.com). El código nuevo ya está en el repo, pero ese servicio no se despliega solo: hasta entonces, los botones «Trazado» y «Estrategia de neumáticos» de `/analysis` dan error en producción.
+2. 🔴 **Pulsar *Deploy* en el servicio de telemetría OTRA VEZ** (el del 2026-08-19 ya se hizo; este es por la corrección de la ronda, que es la que arregla «no hay datos de Verstappen») (`apexdata-telemetry`, proyecto `ditto`, en panel.dittochatbot.com). El código nuevo ya está en el repo, pero ese servicio no se despliega solo: hasta entonces, los botones «Trazado» y «Estrategia de neumáticos» de `/analysis` dan error en producción.
 3. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
 4. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
 
 ---
 
 ## Bitácora
+
+### 2026-08-19 (8) — La ronda que cargaba otra carrera ✅
+
+**El usuario reportó que en telemetría «a cada rato salía que no había información de Verstappen» y que comparar daba error.** No era un problema de datos: era un fallo de identificación de la sesión que llevaba ahí desde el principio.
+
+`fastf1.get_session(year, gp, session)` decide **por el tipo** del segundo argumento: entero, número de ronda; texto, nombre de Gran Premio. La ronda llega por la URL, así que llegaba como **texto** — y FastF1, en vez de fallar, hacía coincidencia por parecido y lo registraba en su log: `Correcting user input '11' to 'Australian Grand Prix'`. Es decir: **al elegir Hungría, la app cargaba Australia**. Verificado en el propio intérprete: `get_session(2026, '11', 'Q')` → ronda 1, Australia; `get_session(2026, 11, 'Q')` → ronda 11, Hungría.
+
+El síntoma no era un error, que se habría visto: eran **datos de otra carrera**. Verstappen «sin vueltas» en una sesión donde sí corrió, comparaciones imposibles, y tiempos que no eran los de la sesión elegida. Cualquiera de mis verificaciones anteriores pasó porque usé nombres —«Bahrain»—, no rondas.
+
+Corregido en las **10 llamadas** del servicio con `event_key()`, que convierte a entero lo que son dígitos y deja el resto como texto, con dos tests. Comprobado después: la ronda 11 de 2026 carga el **Gran Premio de Hungría** y Verstappen aparece con su vuelta 14 en 1:17.725.
+
+**Tres defectos visuales más, también del usuario:**
+
+**El trazado del circuito no se veía.** 23 de los 36 archivos SVG vienen con `stroke="white"` —la variante blanca del repositorio del que se descargaron—, así que en tema claro eran blanco sobre blanco, y el `dark:invert` que llevaban los volvía **negros** sobre carbón. El comentario del código decía «son line art oscuro», dando por hecho lo contrario de lo que hay en disco. Ahora se fuerzan a silueta monocroma como los logos: negra en claro, blanca en oscuro, venga el archivo como venga.
+
+**El marco de la foto del piloto era una cápsula** que ocupaba todo el ancho con la foto pegada a un lado: el contenedor era un `div` de bloque dentro de una columna flex, así que se estiraba, y `rounded-full` sobre una caja ancha da una píldora. Ceñido al tamaño del avatar: 192×192.
+
+**El conmutador de tema nunca funcionaba al primer clic.** Comparaba `theme`, que vale `'system'` mientras el usuario no elige: con el sistema en oscuro, el primer clic ponía `'dark'` —lo que ya se veía— y solo el segundo hacía algo. Ahora lee `resolvedTheme`, que es el tema que se está viendo, y de paso la etiqueta dice a dónde va («Cambiar a tema claro»).
+
+**Y la barra inferior**, revisada tras el aviso del usuario. Lo esencial estaba bien —pestaña activa correcta incluso en rutas profundas, objetivos de 79×47 px, sin solaparse con el footer— pero había dos cosas: en `/results`, `/circuits`, `/compare` y `/constructors` **no se marcaba ninguna pestaña**, y el toque **no producía ninguna señal**, porque la app desactiva el resaltado gris de iOS y no puso nada en su lugar. Ahora esas rutas marcan la pestaña a la que pertenecen, pulsar tiene estado de pulsación, y tocar la pestaña en la que ya estás vuelve arriba, como en cualquier app nativa.
 
 ### 2026-08-19 (7) — La primera prueba de navegador que falla en CI y no en local ✅
 

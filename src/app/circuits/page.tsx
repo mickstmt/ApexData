@@ -94,8 +94,11 @@ export default async function CircuitsPage() {
                   alt={`Trazado de ${circuit.name}`}
                   width={260}
                   height={130}
-                  // The layouts are dark line art, so they invert for dark mode.
-                  className="h-full w-auto object-contain opacity-90 dark:invert"
+                  // 23 de los 36 archivos vienen con `stroke="white"` y el resto
+                  // en negro: el comentario anterior daba por hecho que todos
+                  // eran oscuros, y los blancos desaparecían en tema claro. Como
+                  // con los logos, se fuerzan a silueta monocroma.
+                  className="h-full w-auto object-contain opacity-90 brightness-0 dark:brightness-0 dark:invert"
                 />
               ) : (
                 <MapPin className="h-10 w-10 text-muted-foreground/40" aria-hidden />

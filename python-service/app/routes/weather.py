@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 import fastf1
 from app.utils.cache_manager import cache_manager
 from app.utils.serialization import records
+from app.utils.events import event_key
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ async def get_session_weather(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event, session_type)
+        session = fastf1.get_session(year, event_key(event), session_type)
         session.load()
 
         weather = session.weather_data

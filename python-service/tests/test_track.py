@@ -126,3 +126,22 @@ def test_group_by_driver_pone_al_final_a_quien_no_esta_en_el_orden():
     agrupado = group_by_driver(tramos, order=["VER"])
 
     assert [g["driver"] for g in agrupado] == ["VER", "ZHO"]
+
+
+# --- Identificación del Gran Premio ---
+
+from app.utils.events import event_key
+
+
+def test_event_key_convierte_la_ronda_en_entero():
+    # El fallo que esto evita: FastF1 decide por el TIPO. Con "11" hace
+    # coincidencia por nombre y carga el Gran Premio de Australia en vez de la
+    # ronda 11, sin dar error: solo datos de otra carrera.
+    assert event_key("11") == 11
+    assert event_key(11) == 11
+    assert event_key(" 7 ") == 7
+
+
+def test_event_key_deja_los_nombres_como_texto():
+    assert event_key("Bahrain") == "Bahrain"
+    assert event_key("Monaco Grand Prix") == "Monaco Grand Prix"

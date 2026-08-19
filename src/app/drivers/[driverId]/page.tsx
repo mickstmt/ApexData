@@ -304,7 +304,7 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
       {/* Cabecera */}
       <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center">
         <div
-          className="shrink-0 overflow-hidden rounded-full border-4"
+          className="h-48 w-48 shrink-0 self-center overflow-hidden rounded-full border-4 sm:self-auto"
           style={{ borderColor: accent.color }}
         >
           <DriverAvatar
