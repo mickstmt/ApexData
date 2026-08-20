@@ -26,7 +26,7 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: lo que queda de la deuda del Sprint 5 —aviso push tras cada GP, pantalla de administración y el límite de peticiones con `slowapi`, que es el único que pide Deploy manual del servicio— más el mantenimiento pendiente. El respaldo mensual y el escaneo de secretos salen de esa lista: el primero, hecho hoy: aviso push tras cada GP, pantalla de administración, escaneo de secretos, respaldo con `pg_dump` y límite de peticiones con `slowapi`. El §8 del plan queda cerrado con la ficha de circuito de hoy.
+**Próximo paso**: lo que queda de la deuda del Sprint 5 —aviso push tras cada GP, pantalla de administración y el límite de peticiones con `slowapi`, que es el único que pide Deploy manual del servicio— más el mantenimiento pendiente. El respaldo con `pg_dump` sale de esa lista: hecho hoy y comprobado restaurándose. El escaneo de secretos y la protección de subida siguen pendientes, y se activan en los ajustes de GitHub, no en el código: aviso push tras cada GP, pantalla de administración, escaneo de secretos, respaldo con `pg_dump` y límite de peticiones con `slowapi`. El §8 del plan queda cerrado con la ficha de circuito de hoy.
 
 **Tests**: 96 unitarios (TypeScript) + 28 (Python) + **24 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
