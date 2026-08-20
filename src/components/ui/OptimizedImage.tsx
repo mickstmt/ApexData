@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import { Skeleton } from './Skeleton';
+import { teamInk } from '@/lib/team-colors';
 
 interface OptimizedImageProps {
   src: string;
@@ -145,13 +146,33 @@ export function DriverAvatar({
  *    legibles en los dos temas, y la identidad del equipo ya la lleva su barra
  *    de color, que es donde el sistema de diseño dice que debe vivir.
  */
+/**
+ * Cuando no hay logo, el nombre hace de logo.
+ *
+ * Diecisiete de los veinticinco equipos de la base no tienen archivo, y la
+ * mayoría no lo tendrá nunca: son escuderías desaparecidas. De los actuales
+ * faltan cinco —Ferrari, Red Bull, Aston Martin, RB y Cadillac—, y no por
+ * descuido: sus marcas están registradas y no viven en Wikimedia con licencia
+ * libre, que es de donde el script baja las demás.
+ *
+ * Dos letras grises parecían un hueco; el nombre del equipo con su color
+ * parece una decisión. Se recorta la coletilla porque «F1 Team» no distingue a
+ * nadie: lo que identifica es «Cadillac», no «Team».
+ */
+function nombreDeMarca(name: string): string {
+  return name.replace(/\s+(F1\s+Team|F1|Racing|Team)$/i, '').trim() || name;
+}
+
 export function TeamLogo({
   src,
   name,
+  constructorId,
   size = 'md',
 }: {
   src?: string | null;
   name: string;
+  /** Para teñir el respaldo con el color del equipo, no con el de la app. */
+  constructorId?: string | null;
   size?: 'sm' | 'md' | 'lg';
 }) {
   const box = {
@@ -162,15 +183,18 @@ export function TeamLogo({
 
   if (!src) {
     return (
-      <div
-        className={`flex items-center justify-center rounded-lg border border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 ${
-          size === 'sm' ? 'h-8 w-8' : size === 'md' ? 'h-9 w-9' : 'h-12 w-12'
+      <span
+        // `team-ink` resuelve al tono legible de cada tema: el color de marca
+        // crudo no vale como tinta —seis de los once actuales no llegan a 3:1
+        // sobre el fondo claro—, y aquí es texto.
+        className={`team-ink inline-flex items-center font-display font-bold uppercase tracking-tight ${box[size]} ${
+          size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : 'text-lg'
         }`}
+        style={teamInk(constructorId)}
+        title={name}
       >
-        <span className={`font-bold text-primary ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
-          {name.slice(0, 2).toUpperCase()}
-        </span>
-      </div>
+        <span className="truncate">{nombreDeMarca(name)}</span>
+      </span>
     );
   }
 

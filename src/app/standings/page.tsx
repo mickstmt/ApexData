@@ -396,7 +396,12 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                       )}
                     </div>
 
-                    <TeamLogo src={entry.logoUrl} name={entry.team} size="sm" />
+                    <TeamLogo
+                      src={entry.logoUrl}
+                      name={entry.team}
+                      constructorId={entry.constructorId}
+                      size="sm"
+                    />
 
                     {/* Team name */}
                     <div className="flex-1 font-bold">{entry.team}</div>

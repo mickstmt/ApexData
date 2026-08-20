@@ -152,7 +152,12 @@ export default async function ConstructorDetailPage({ params }: ConstructorDetai
       <div className="mb-12 grid gap-8 md:grid-cols-[200px_1fr]">
         <div className="flex items-center justify-center md:items-start">
           <div className="flex h-48 w-48 items-center justify-center rounded-lg border border-border bg-card p-6">
-            <TeamLogo src={constructor!.logoUrl} name={constructor!.name} size="lg" />
+            <TeamLogo
+              src={constructor!.logoUrl}
+              name={constructor!.name}
+              constructorId={constructor!.constructorId}
+              size="lg"
+            />
           </div>
         </div>
 

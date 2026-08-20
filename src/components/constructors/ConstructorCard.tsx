@@ -47,6 +47,7 @@ export function ConstructorCard({ team, index = 0 }: ConstructorCardProps) {
           <TeamLogo
             src={team.logoUrl}
             name={team.name}
+            constructorId={team.constructorId}
             size="md"
           />
         </div>
