@@ -60,3 +60,6 @@ prisma/dev.db
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Archivos de trabajo de las sesiones (volcados, capturas, guiones sueltos).
+.tmp/

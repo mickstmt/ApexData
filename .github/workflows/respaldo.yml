@@ -90,7 +90,7 @@ jobs:
           # Supabase trae extensiones y referencias que un Postgres recién
           # instalado no tiene, y protestar por eso no significa que los datos
           # no hayan llegado. La prueba son las filas, que se cuentan abajo.
-          pg_restore --dbname "$ESPEJO" --no-owner --no-privileges "$NOMBRE" 2> restauracion.log             || echo "pg_restore terminó con avisos:"
+          pg_restore --dbname "$ESPEJO" --no-owner --no-privileges "$NOMBRE" 2> restauracion.log || echo "pg_restore terminó con avisos:"
           tail -5 restauracion.log || true
 
           # Se comparan las filas de las tres tablas grandes contra el origen:
