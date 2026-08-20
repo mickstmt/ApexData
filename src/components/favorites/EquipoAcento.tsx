@@ -2,6 +2,7 @@
 
 import { Check, Palette } from 'lucide-react';
 import { useFavorites } from '@/contexts/FavoritesContext';
+import { ChipSeleccionable } from '@/components/ui/Chip';
 import { teamColor } from '@/lib/team-colors';
 
 export interface EquipoElegible {
@@ -32,35 +33,23 @@ export function EquipoAcento({ equipos }: { equipos: EquipoElegible[] }) {
       </p>
 
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          aria-pressed={equipoAcento === null}
+        <ChipSeleccionable
+          elegido={equipoAcento === null}
           onClick={() => elegirEquipoAcento(null)}
-          className={`inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-            equipoAcento === null
-              ? 'border-primary bg-primary/10 text-foreground'
-              : 'border-input hover:border-foreground/40'
-          }`}
         >
           {equipoAcento === null && <Check className="h-4 w-4 text-primary" aria-hidden />}
           Sin equipo
-        </button>
+        </ChipSeleccionable>
 
         {equipos.map((equipo) => {
           const elegido = equipoAcento === equipo.constructorId;
           const { color } = teamColor(equipo.constructorId);
 
           return (
-            <button
+            <ChipSeleccionable
               key={equipo.constructorId}
-              type="button"
-              aria-pressed={elegido}
+              elegido={elegido}
               onClick={() => elegirEquipoAcento(equipo.constructorId)}
-              className={`inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                elegido
-                  ? 'border-primary bg-primary/10 text-foreground'
-                  : 'border-input hover:border-foreground/40'
-              }`}
             >
               {/* El cuadrito lleva el color de marca sin derivar: es un bloque
                   sólido, no tinta, así que aquí sí es el color de verdad. */}
@@ -71,7 +60,7 @@ export function EquipoAcento({ equipos }: { equipos: EquipoElegible[] }) {
               />
               {equipo.name}
               {elegido && <Check className="h-4 w-4 text-primary" aria-hidden />}
-            </button>
+            </ChipSeleccionable>
           );
         })}
       </div>

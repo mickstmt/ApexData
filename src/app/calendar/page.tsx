@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react';
 import { fallbackRaces } from '@/lib/fallback-data';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
 import { CountryFlag } from '@/components/ui/CountryFlag';
+import { Chip } from '@/components/ui/Chip';
 
 export const metadata = {
   title: 'Calendario F1 | ApexData',
@@ -171,14 +172,10 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-xl font-bold">{race.raceName}</h3>
                       {isToday && (
-                        <span className="rounded-full bg-primary px-2 py-1 text-xs font-bold text-primary-foreground">
-                          HOY
-                        </span>
+                        <Chip tono="solido">HOY</Chip>
                       )}
                       {isPast && !isToday && (
-                        <span className="rounded-full bg-muted px-2 py-1 text-xs font-bold text-muted-foreground">
-                          FINALIZADO
-                        </span>
+                        <Chip tono="apagado">FINALIZADO</Chip>
                       )}
                     </div>
 

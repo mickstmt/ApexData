@@ -26,9 +26,9 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: los huecos que quedan del informe 3 —primitivos Chip y Sheet— y la deuda del Sprint 5: aviso push tras cada GP, pantalla de administración, escaneo de secretos, respaldo con `pg_dump` y límite de peticiones con `slowapi`. El §8 del plan queda cerrado con la ficha de circuito de hoy.
+**Próximo paso**: la deuda del Sprint 5: aviso push tras cada GP, pantalla de administración, escaneo de secretos, respaldo con `pg_dump` y límite de peticiones con `slowapi`. El §8 del plan queda cerrado con la ficha de circuito de hoy.
 
-**Tests**: 96 unitarios (TypeScript) + 28 (Python) + **22 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 96 unitarios (TypeScript) + 28 (Python) + **24 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -75,6 +75,22 @@
 ---
 
 ## Bitácora
+
+### 2026-08-20 (18) — Chip y Sheet: los dos primitivos que faltaban del S3 ✅
+
+Con estos se cierra el entregable «primitivos UI (Card/Table/Chip/Sheet)» que el informe 3 marcó como parcial: Card existía, Table quedó cubierto por `PriorityRows` el 2026-08-19, y hoy entran los dos últimos.
+
+**Chip: refactor invisible, con tres tonos que salen de tres papeles reales.** No lo pide la estética sino la repetición: «HOY» y «FINALIZADO» en el calendario y el código del piloto en su tarjeta se dibujaban cada uno con su mezcla de `rounded-*`, `px-*` y `text-xs`. Tonos: `solido` para el estado que hay que ver primero, `apagado` para lo que ya pasó, `suave` para identificar sin alarmar. Y `ChipSeleccionable`, que es un botón de verdad con `aria-pressed` —lo que distingue «elegido» de «pulsado» para quien no ve la pantalla— y 44 px de alto. Adoptado en cuatro sitios; verificado en navegador: 11 etiquetas en el calendario, el código del piloto en 46×24 y los 12 chips del selector de equipo, ninguno por debajo de 44 px.
+
+**Sheet: una hoja inferior, y el motivo no era estético.** El menú de secciones cerraba con `Escape` y devolvía el foco —eso ya estaba bien—, pero **no atrapaba el foco**: tabulando se salía hacia la página de detrás sin cerrarlo, y tampoco cerraba al tocar fuera. Va sobre `<dialog>` con `showModal()`, que da de fábrica lo que habría que escribir a mano y equivocarse: foco atrapado, `Escape`, foco devuelto al botón, velo y el fondo inerte.
+
+**Elegido sobre mockup, con cuatro comportamientos funcionando.** El usuario preguntó por el cajón lateral que usa X, así que se añadieron sus dos versiones al mockup con lo que implican: en X el disparador vive arriba a la izquierda y por eso el panel entra por ahí, mientras que aquí el botón está a la derecha —copiar el lado obligaría a mover el botón—; y en el iPhone instalado **el borde izquierdo está reservado al gesto de volver atrás**, así que un cajón por ahí compite con él. Elegida la hoja inferior; el cajón queda anotado como opción para otra función.
+
+**Medido, no supuesto**: doce tabulaciones seguidas con la hoja abierta y **ninguna cae en la página de detrás** —la única salida es el `<body>`, que es el punto donde el navegador cierra su propio ciclo—, `Escape` cierra y el foco vuelve al botón, y tocar el velo cierra. El relleno inferior da 20 px en el navegador, que es el mínimo de la regla de zona segura; en el iPhone instalado crece solo.
+
+**Una decisión que conviene no deshacer**: la hoja **solo se anima al entrar**. Animar también el cierre obliga a esperar al final de la animación antes de cerrar el diálogo, y una hoja que tarda en irse se siente rota. Con «reducir movimiento» no se anima nada.
+
+**Verificado**: 96 unitarias, **24 de navegador** (2 nuevas) y 28 de Python.
 
 ### 2026-08-20 (17) — El sembrador completo, dos carreras que faltaban y el acento del equipo ✅
 
@@ -310,7 +326,7 @@ El método que exigió la auditoría de veracidad: **contrastar el cierre contra
 
 **Lo último de este bloque**, hecho hoy: el `<button>` dentro del `<a>` en las tarjetas de piloto y equipo —HTML inválido y dos paradas de teclado por tarjeta— se resuelve con el enlace cubriendo la tarjeta por pseudoelemento y el favorito por encima; el menú del header cierra con Escape y devuelve el foco; el borde de los controles sube a **3,13:1 en claro y 3,73:1 en oscuro** —solo el de los controles: subir el de los separadores convertiría cada tarjeta y cada fila en una caja marcada—; `getComputedStyle` sale del bucle de dibujo del canvas, que era el único punto que forzaba reflow en cada movimiento del dedo; y el gráfico del campeonato gana una tabla equivalente en `sr-only`.
 
-**Informe 3 — veracidad: sigue abierto, y se declara.** Quedan sin hacer: ~~personalización por equipo favorito~~ (hecha el 2026-08-20), los primitivos Chip y Sheet (Table existe desde hoy, como `PriorityRows`), ~~la ficha de circuito `/circuits/[circuitId]`~~ (hecha el 2026-08-19), la animación FLIP y el *number ticking* en standings, `seed:all` reproduciendo solo 4 de las 17 temporadas, y el código muerto sin limpiar. No desaparecen: están en la deuda técnica con su nombre.
+**Informe 3 — veracidad: sigue abierto, y se declara.** Quedan sin hacer: ~~personalización por equipo favorito~~ (hecha el 2026-08-20), ~~los primitivos Chip y Sheet~~ (hechos el 2026-08-20; Table ya existía como `PriorityRows`), ~~la ficha de circuito `/circuits/[circuitId]`~~ (hecha el 2026-08-19), la animación FLIP y el *number ticking* en standings, `seed:all` reproduciendo solo 4 de las 17 temporadas, y el código muerto sin limpiar. No desaparecen: están en la deuda técnica con su nombre.
 
 **Verificación de cierre**: build reproduciendo el CI sin base de datos, 52 tests unitarios, 17 de navegador, y comprobación en ejecución de lo añadido hoy —bordes medidos en los dos temas, primer tabulador de la home, cero controles anidados en enlaces, y el menú cerrando con Escape con el foco de vuelta en su botón—.
 

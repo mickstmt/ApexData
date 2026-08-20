@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
+import { Sheet } from '@/components/ui/Sheet';
 import { ThemeToggle } from './ThemeToggle';
 import { navItems } from '@/config/site';
 import { cn } from '@/lib/utils';
@@ -12,23 +13,10 @@ const primaryItems = navItems.filter((item) => item.primary);
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const botonMenu = useRef<HTMLButtonElement>(null);
 
-  // Escape cierra el menú y devuelve el foco al botón que lo abrió: sin esto,
-  // quien navega con teclado se queda dentro sin salida evidente. En la app
-  // instalada este menú es el acceso a las secciones secundarias.
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    const alPulsar = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      setMenuOpen(false);
-      botonMenu.current?.focus();
-    };
-
-    document.addEventListener('keydown', alPulsar);
-    return () => document.removeEventListener('keydown', alPulsar);
-  }, [menuOpen]);
+  // `Escape`, el foco atrapado dentro y el foco devuelto al botón ya no se
+  // escriben aquí: los da `<dialog>` a través de `Sheet`. Lo que había antes
+  // solo cubría lo primero.
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -72,7 +60,6 @@ export function Header() {
           <ThemeToggle />
           <button
             type="button"
-            ref={botonMenu}
             className="flex h-11 w-11 items-center justify-center rounded-md text-foreground ring-offset-background hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:h-10 md:w-10"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
@@ -84,25 +71,23 @@ export function Header() {
         </div>
       </nav>
 
-      {menuOpen && (
-        <div id="menu-secciones" className="border-t border-border bg-background">
-          <div className="container mx-auto grid grid-cols-2 gap-1 px-4 py-4 sm:grid-cols-3">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMenuOpen(false)}
-                className={cn(
-                  'rounded-md px-3 py-2 text-base font-medium hover:bg-accent hover:text-primary',
-                  isActive(item.href) ? 'text-foreground' : 'text-foreground/60'
-                )}
-              >
-                {item.title}
-              </Link>
-            ))}
-          </div>
+      <Sheet abierta={menuOpen} alCerrar={() => setMenuOpen(false)} titulo="Secciones">
+        <div id="menu-secciones" className="grid grid-cols-2 gap-1">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMenuOpen(false)}
+              className={cn(
+                'flex min-h-[44px] items-center rounded-md px-3 text-base font-medium hover:bg-accent hover:text-primary',
+                isActive(item.href) ? 'text-foreground' : 'text-foreground/60'
+              )}
+            >
+              {item.title}
+            </Link>
+          ))}
         </div>
-      )}
+      </Sheet>
     </header>
   );
 }

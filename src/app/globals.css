@@ -193,3 +193,39 @@ main {
     scroll-behavior: auto !important;
   }
 }
+
+/* La hoja inferior sube al abrirse. Solo la entrada: animar el cierre obliga a
+   esperar al final de la animación antes de cerrar el diálogo, y una hoja que
+   tarda en irse se siente rota. */
+@keyframes hoja-entra {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes velo-entra {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+dialog[data-hoja][open] {
+  animation: hoja-entra 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+dialog[data-hoja][open]::backdrop {
+  animation: velo-entra 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog[data-hoja][open],
+  dialog[data-hoja][open]::backdrop {
+    animation: none;
+  }
+}

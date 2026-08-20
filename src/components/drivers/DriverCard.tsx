@@ -7,6 +7,7 @@ import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { DriverAvatar } from '@/components/ui/OptimizedImage';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { driverAge, formatBirthDate } from '@/lib/driver-age';
+import { Chip } from '@/components/ui/Chip';
 
 interface DriverCardProps {
   driver: {
@@ -80,9 +81,9 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
 
           {/* Código del piloto */}
           {driver.code && (
-            <div className="mb-3 inline-block rounded-md bg-primary/10 px-2 py-1 text-xs font-bold text-primary">
+            <Chip tono="suave" className="mb-3">
               {driver.code}
-            </div>
+            </Chip>
           )}
 
           {/* Información */}

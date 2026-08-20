@@ -308,6 +308,55 @@ test.describe('telemetría', () => {
   });
 });
 
+test.describe('menú de secciones (hoja inferior)', () => {
+  test('atrapa el foco, cierra con Escape y lo devuelve al botón', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/standings');
+
+    const abrir = page.getByRole('button', { name: 'Abrir menú' });
+    await abrir.click();
+
+    const hoja = page.locator('dialog[data-hoja]');
+    await expect(hoja).toBeVisible();
+    // `:modal` es lo que distingue una capa de verdad de un `div` flotante:
+    // deja inerte lo de detrás y atrapa el foco sin escribirlo a mano.
+    expect(await hoja.evaluate((d: HTMLDialogElement) => d.matches(':modal'))).toBe(true);
+
+    // Doce tabulaciones sin que el foco caiga en la página de detrás, que es lo
+    // que hacía el menú anterior: cerraba con Escape, pero no atrapaba.
+    let escapados = 0;
+    for (let i = 0; i < 12; i++) {
+      await page.keyboard.press('Tab');
+      const fuera = await page.evaluate(() => {
+        const activo = document.activeElement;
+        // El navegador pasa por <body> al cerrar el ciclo; eso no es escaparse.
+        if (!activo || activo === document.body) return false;
+        return activo.closest('dialog[data-hoja]') === null;
+      });
+      if (fuera) escapados++;
+    }
+    expect(escapados).toBe(0);
+
+    await page.keyboard.press('Escape');
+    await expect(hoja).toBeHidden();
+    await expect(abrir).toBeFocused();
+  });
+
+  test('la hoja respeta la zona segura de abajo', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/standings');
+    await page.getByRole('button', { name: 'Abrir menú' }).click();
+
+    // En el navegador el inset vale 0 y queda el mínimo de 1,25rem; en el
+    // iPhone instalado crece solo. Sin esto, la última sección cae bajo la
+    // barra de gestos.
+    const relleno = await page
+      .locator('dialog[data-hoja] > div')
+      .evaluate((e) => parseFloat(getComputedStyle(e).paddingBottom));
+    expect(relleno).toBeGreaterThanOrEqual(20);
+  });
+});
+
 test.describe('acento por equipo favorito', () => {
   const tono = (page: import('@playwright/test').Page) =>
     page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--primary').trim());
