@@ -26,7 +26,7 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: la deuda del Sprint 5: aviso push tras cada GP, pantalla de administración, escaneo de secretos, respaldo con `pg_dump` y límite de peticiones con `slowapi`. El §8 del plan queda cerrado con la ficha de circuito de hoy.
+**Próximo paso**: lo que queda de la deuda del Sprint 5 —aviso push tras cada GP, pantalla de administración y el límite de peticiones con `slowapi`, que es el único que pide Deploy manual del servicio— más el mantenimiento pendiente. El respaldo mensual y el escaneo de secretos salen de esa lista: el primero, hecho hoy: aviso push tras cada GP, pantalla de administración, escaneo de secretos, respaldo con `pg_dump` y límite de peticiones con `slowapi`. El §8 del plan queda cerrado con la ficha de circuito de hoy.
 
 **Tests**: 96 unitarios (TypeScript) + 28 (Python) + **24 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
@@ -75,6 +75,28 @@
 ---
 
 ## Bitácora
+
+### 2026-08-20 (19) — Un respaldo que se restaura solo para demostrar que sirve ✅
+
+**El plan gratuito de Supabase no hace copias.** Hasta hoy, si algo se borraba no había de dónde recuperarlo — y no es teórico: esta misma sesión descubrió que a 2025 le faltaban dos carreras enteras sin que nadie lo hubiera notado.
+
+Ahora, el día 1 de cada mes: `pg_dump` del esquema `public` en formato `custom`, guardado 90 días como artefacto. **973 KB** para los 21 MB que ocupa la base. Los esquemas internos de Supabase se quedan fuera porque esta app no los usa y solo añaden ruido al restaurar.
+
+**Lo que lo convierte en respaldo y no en un archivo**: el mismo trabajo levanta un Postgres de usar y tirar, restaura el volcado allí y **compara las filas de cuatro tablas contra el origen**. Si no cuadran, falla el mes que toca y no el día que haga falta de verdad. El código de salida de `pg_restore` no vale como prueba —una base de Supabase trae extensiones que un Postgres limpio no tiene—, así que la prueba son las filas.
+
+**Falló a la primera, y el fallo enseña algo.** `pg_dump: server version 17.6, pg_dump version 16.15`. Instalar `postgresql-client-17` no basta: sus binarios quedan en `/usr/lib/postgresql/17/bin` y el `pg_dump` del `PATH` es un envoltorio que seguía eligiendo el 16. Pero lo importante es **por qué no se cazó antes**: el paso de instalación terminaba con `pg_dump --version`, que imprimía «16.15» y pasaba en verde. **Imprimir no es comprobar.** Ahora hay un paso que falla si la versión no es la que hace falta.
+
+**Y el workflow se ejecuta al cambiar su propio archivo**, porque verificar un respaldo no puede depender de que alguien se acuerde de pulsar un botón: la primera versión solo se descubrió rota al ejecutarla a mano.
+
+De paso, `upload-artifact` v4 → v7 también en el CI: era deuda de mantenimiento y salía como aviso de Node 20 en cada ejecución.
+
+### 2026-08-20 (18b) — Sin logo, el nombre del equipo hace de logo ✅
+
+Diecisiete de los veinticinco equipos de la base no tienen archivo de logo, y la mayoría no lo tendrá nunca: son escuderías desaparecidas. De los once actuales faltan cinco —Ferrari, Red Bull, Aston Martin, RB y Cadillac— y tampoco es descuido: **sus marcas están registradas y no viven en Wikimedia con licencia libre**, que es de donde el script baja las demás. Buscarlas por internet no lo arregla; es una decisión sobre marcas, no una búsqueda.
+
+Lo que había eran dos letras en verde oliva —«FE», «RE»— dentro de un recuadro: parecía un hueco. Ahora es el nombre del equipo en la tipografía de títulos con **su** color, derivado legible por tema, porque el color de marca crudo no vale como tinta. Se recorta la coletilla: lo que identifica es «Cadillac», no «Team».
+
+Esto no sustituye a los archivos —cuando los haya, se dejan en `public/images/constructors/` y el seeder los recoge—, pero hace que su ausencia parezca una decisión y no un fallo. Y para las diecisiete escuderías históricas es la solución definitiva.
 
 ### 2026-08-20 (18) — Chip y Sheet: los dos primitivos que faltaban del S3 ✅
 
