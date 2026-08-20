@@ -47,7 +47,9 @@ function StatTile({
   nota?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="relative isolate overflow-hidden rounded-xl border border-border bg-card p-4">
+      {/* Mismo velo que la barra superior: invisible sin equipo elegido. */}
+      <span aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-ambiente/[0.12]" />
       <div className="mb-1.5 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
         <Icon className="h-3.5 w-3.5" aria-hidden />
         {label}

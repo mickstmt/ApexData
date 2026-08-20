@@ -26,9 +26,9 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: los huecos que quedan del informe 3 —personalización por equipo favorito, primitivos Chip y Sheet, y `seed:all` reproduciendo solo 4 de 17 temporadas— y la deuda del Sprint 5: aviso push tras cada GP, pantalla de administración, escaneo de secretos, respaldo con `pg_dump` y límite de peticiones con `slowapi`. El §8 del plan queda cerrado con la ficha de circuito de hoy.
+**Próximo paso**: los huecos que quedan del informe 3 —primitivos Chip y Sheet— y la deuda del Sprint 5: aviso push tras cada GP, pantalla de administración, escaneo de secretos, respaldo con `pg_dump` y límite de peticiones con `slowapi`. El §8 del plan queda cerrado con la ficha de circuito de hoy.
 
-**Tests**: 62 unitarios (TypeScript) + 28 (Python) + **20 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 96 unitarios (TypeScript) + 28 (Python) + **22 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -75,6 +75,29 @@
 ---
 
 ## Bitácora
+
+### 2026-08-20 (17) — El sembrador completo, dos carreras que faltaban y el acento del equipo ✅
+
+**El comando de reconstrucción cubría 4 de las 17 temporadas.** `seed:all` llevaba «2023 2024 2025 2026» escrito a mano y repetido en dos comandos, así que el procedimiento documentado para levantar la base de cero reproducía menos de una cuarta parte de lo que hay en producción. Ahora las temporadas salen de un único módulo con pruebas —de 2010 al año en curso, así que en enero entra la nueva sin tocar código— y los dos sembradores aceptan `--todas`, `--current`, años sueltos o `--listar`, que enseña qué harían sin tocar nada. De paso dejan de pedirse los sprints anteriores a 2021, que no existían: **215 de las 1.562 peticiones** que cuesta la reconstrucción completa.
+
+**Verificado sin escribir en la base, porque la única configurada es la de producción.** `scripts/seed/comparar.ts` contrasta una temporada de Jolpica contra lo guardado. Pasado por las diecisiete: **7.153 resultados comparados**, y dieciséis temporadas con **cero diferencias**.
+
+**Y la diecisiete destapó un agujero real: a 2025 le faltaban las dos últimas carreras.** Qatar y Abu Dabi, 22 de 24, sin resultados ni clasificación. El calendario sí estaba, así que la app las mostraba como carreras existentes y vacías. Nadie lo había notado —y no había forma de notarlo: **como el comando solo sembraba cuatro temporadas, nadie podía contrastar lo que había**. Es exactamente el daño que esta deuda estaba causando en silencio, no una molestia teórica.
+
+Sembrada 2025 de verdad, que además probó el camino de escritura: 24 carreras, 479 resultados y **cero diferencias** al volver a compararla; la clasificación llega ya hasta la ronda 24, con Norris campeón con 423 puntos.
+
+**El acento por equipo favorito (§8.7 del plan), elegido sobre mockup.** Se propusieron cuatro grados de teñido sobre la misma pantalla con datos reales, y el usuario eligió **acento y ambiente**: el equipo tiñe botones, enlaces, cifras y anillo de foco, y además vela la barra superior, las cifras de las fichas y sus filas en la clasificación.
+
+**La medida que decidió cómo se implementa**: `--primary` hace dos trabajos en esta app —relleno de botón y tinta de texto—, y el color de marca crudo no sirve para lo segundo. **Seis de los once equipos actuales están por debajo de 3:1 sobre el fondo claro**: Mercedes 1,31, Audi 1,48, Williams 1,80, Alpine 2,08, McLaren 2,35, RB 2,75. Así que el acento se deriva a grado texto (4,5:1) por tema, y el color puro queda solo para el ambiente, que se pinta al 12 %. Medido en la página real con Mercedes: **de 1,31:1 a 4,88:1 en claro** y 13,99:1 en oscuro.
+
+**Dos cosas que las pruebas pillaron y la vista no:**
+
+1. El dorado de Cadillac se quedaba en **4,39:1 en oscuro**: los valores `onDark` de la paleta se escribieron para rayas (3:1), no para texto. Ahora también se derivan.
+2. El mismo dorado se derivaba correcto a 4,51:1 y **llegaba al documento con 4,39:1**, porque redondear los canales HSL del token al entero movía la luminancia. Los tokens llevan un decimal.
+
+**Un apunte de método**: teñir la app entera no tocó ni un componente. Los tokens de ApexData son canales HSL, así que reescribir cuatro variables en el documento basta para que el acento recorra botones, enlaces, gráficas y focos. Lo único que no se puede hacer así es teñir *las filas de tu equipo*, porque exige **comparar** el equipo de la fila con el elegido y CSS no compara atributos: eso va como una regla escrita a la medida del equipo elegido.
+
+**Verificado**: 96 pruebas unitarias (34 nuevas: las once escuderías comprobadas en los dos temas), 22 de navegador (2 nuevas) y 28 de Python. Recorrido real en claro y oscuro.
 
 ### 2026-08-20 (16) — La revisión de código que faltaba, y lo que encontró ✅
 
@@ -287,7 +310,7 @@ El método que exigió la auditoría de veracidad: **contrastar el cierre contra
 
 **Lo último de este bloque**, hecho hoy: el `<button>` dentro del `<a>` en las tarjetas de piloto y equipo —HTML inválido y dos paradas de teclado por tarjeta— se resuelve con el enlace cubriendo la tarjeta por pseudoelemento y el favorito por encima; el menú del header cierra con Escape y devuelve el foco; el borde de los controles sube a **3,13:1 en claro y 3,73:1 en oscuro** —solo el de los controles: subir el de los separadores convertiría cada tarjeta y cada fila en una caja marcada—; `getComputedStyle` sale del bucle de dibujo del canvas, que era el único punto que forzaba reflow en cada movimiento del dedo; y el gráfico del campeonato gana una tabla equivalente en `sr-only`.
 
-**Informe 3 — veracidad: sigue abierto, y se declara.** Quedan sin hacer: personalización por equipo favorito, los primitivos Chip y Sheet (Table existe desde hoy, como `PriorityRows`), ~~la ficha de circuito `/circuits/[circuitId]`~~ (hecha el 2026-08-19), la animación FLIP y el *number ticking* en standings, `seed:all` reproduciendo solo 4 de las 17 temporadas, y el código muerto sin limpiar. No desaparecen: están en la deuda técnica con su nombre.
+**Informe 3 — veracidad: sigue abierto, y se declara.** Quedan sin hacer: ~~personalización por equipo favorito~~ (hecha el 2026-08-20), los primitivos Chip y Sheet (Table existe desde hoy, como `PriorityRows`), ~~la ficha de circuito `/circuits/[circuitId]`~~ (hecha el 2026-08-19), la animación FLIP y el *number ticking* en standings, `seed:all` reproduciendo solo 4 de las 17 temporadas, y el código muerto sin limpiar. No desaparecen: están en la deuda técnica con su nombre.
 
 **Verificación de cierre**: build reproduciendo el CI sin base de datos, 52 tests unitarios, 17 de navegador, y comprobación en ejecución de lo añadido hoy —bordes medidos en los dos temas, primer tabulador de la home, cero controles anidados en enlaces, y el menú cerrando con Escape con el foco de vuelta en su botón—.
 

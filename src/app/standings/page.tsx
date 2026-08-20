@@ -302,6 +302,10 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                   <Link
                     key={entry.driverId}
                     data-flip-id={entry.driverId}
+                    // De qué equipo es la fila: `TeamAccent` la tiñe si es la
+                    // del equipo elegido. Aquí no se sabe cuál es —esto es
+                    // servidor y la elección vive en el navegador—.
+                    data-equipo={entry.constructorId ?? undefined}
                     href={`/drivers/${entry.driverId}`}
                     className={`relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 pl-5 transition-[transform,colors] duration-100 ease-out active:scale-[0.99] motion-reduce:active:scale-100 ${
                       entry.position !== null && entry.position <= 3
@@ -368,6 +372,7 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                   <Link
                     key={entry.constructorId}
                     data-flip-id={entry.constructorId}
+                    data-equipo={entry.constructorId}
                     href={`/constructors/${entry.constructorId}`}
                     className={`relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 pl-5 transition-[transform,colors] duration-100 ease-out active:scale-[0.99] motion-reduce:active:scale-100 ${
                       entry.position !== null && entry.position <= 3

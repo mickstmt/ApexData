@@ -308,6 +308,61 @@ test.describe('telemetría', () => {
   });
 });
 
+test.describe('acento por equipo favorito', () => {
+  const tono = (page: import('@playwright/test').Page) =>
+    page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--primary').trim());
+
+  test('el equipo elegido tiñe la app y sigue siendo legible', async ({ page }) => {
+    await page.goto('/favorites');
+
+    const verde = await tono(page);
+
+    // Mercedes es el caso que obliga a derivar: su turquesa da 1,31:1 sobre el
+    // fondo claro, así que usado tal cual dejaría los enlaces ilegibles.
+    await page.getByRole('button', { name: 'Mercedes' }).click();
+    await expect.poll(async () => (await tono(page)) !== verde, { timeout: 5000 }).toBe(true);
+
+    // Se mide en la página, no en el cálculo: el contraste de la tinta del
+    // acento contra el fondo real tiene que llegar a 4,5:1.
+    const contraste = await page.evaluate(() => {
+      const luz = (css: string) => {
+        const [r, g, b] = css.match(/\d+/g)!.slice(0, 3).map((v) => {
+          const s = Number(v) / 255;
+          return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const marca = document.createElement('span');
+      marca.className = 'text-primary';
+      document.body.appendChild(marca);
+      const tinta = luz(getComputedStyle(marca).color);
+      const fondo = luz(getComputedStyle(document.body).backgroundColor);
+      marca.remove();
+      const [claro, oscuro] = [tinta, fondo].sort((a, b) => b - a);
+      return (claro + 0.05) / (oscuro + 0.05);
+    });
+    expect(contraste).toBeGreaterThanOrEqual(4.4);
+  });
+
+  test('las filas de tu equipo se distinguen, y sin equipo no se tiñe nada', async ({ page }) => {
+    await page.goto('/favorites');
+    await page.getByRole('button', { name: 'Mercedes' }).click();
+
+    await page.goto('/standings');
+    const fondoDe = (equipo: string) =>
+      page.locator(`[data-equipo="${equipo}"]`).first().evaluate((e) => getComputedStyle(e).backgroundColor);
+
+    const mio = await fondoDe('mercedes');
+    expect(mio).not.toBe(await fondoDe('mclaren'));
+
+    // Al quitar el equipo, el acento vuelve al verde de la marca y las filas
+    // dejan de distinguirse.
+    await page.goto('/favorites');
+    await page.getByRole('button', { name: 'Sin equipo' }).click();
+    await expect.poll(() => tono(page), { timeout: 5000 }).toBe('72 100% 20%');
+  });
+});
+
 test.describe('ficha de circuito', () => {
   test('se llega desde la lista y cuenta desde dónde se gana aquí', async ({ page }) => {
     await page.goto('/circuits');

@@ -57,15 +57,27 @@ function scale(hex: string, factor: number): string {
   return `#${channels.map((c) => c.toString(16).padStart(2, '0')).join('')}`.toUpperCase();
 }
 
-/** Identity colour darkened just enough to be visible on the white canvas. */
-export function readableOnLight(hex: string): string {
+/**
+ * Identity colour darkened just enough to be visible on the white canvas.
+ *
+ * `minimo` exists because the same derivation serves two jobs with different
+ * thresholds: a line or a swatch needs 3:1 (WCAG 1.4.11), but the accent of a
+ * favourite team also becomes link and button text, and text needs 4.5:1.
+ */
+export function readableOnLight(hex: string, minimo: number = GRAPHIC_CONTRAST): string {
   let candidate = hex.toUpperCase();
 
-  for (let step = 0; step < 40 && contrastOnLightGround(candidate) < GRAPHIC_CONTRAST; step++) {
+  for (let step = 0; step < 40 && contrastOnLightGround(candidate) < minimo; step++) {
     candidate = scale(hex, 1 - (step + 1) * 0.05);
   }
 
   return candidate;
+}
+
+/** Contrast between two colours, for deciding ink over a filled block. */
+export function contrastBetween(a: string, b: string): number {
+  const [claro, oscuro] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (claro + 0.05) / (oscuro + 0.05);
 }
 
 const IDENTITIES: Record<string, Omit<TeamColor, 'onLight'>> = {

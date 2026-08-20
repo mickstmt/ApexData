@@ -38,7 +38,11 @@ export function Header() {
     // The safe-area padding pushes this below the notch / Dynamic Island once
     // the app runs standalone; on the web the inset is 0 and nothing changes.
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <nav className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
+      {/* El velo del equipo favorito. Va como capa encima del fondo y no en
+          lugar de él, para no perder el desenfoque; y como `--ambiente` vale
+          por defecto lo mismo que el fondo, sin equipo elegido no se ve. */}
+      <span aria-hidden className="pointer-events-none absolute inset-0 bg-ambiente/[0.14]" />
+      <nav className="container relative mx-auto flex h-16 items-center justify-between gap-4 px-4">
         <Link href="/" className="flex shrink-0 items-center">
           <span className="font-display text-2xl font-bold tracking-tight">
             <span className="text-foreground">Apex</span>

@@ -16,6 +16,10 @@ const config: Config = {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        // Superficie teñida por el equipo favorito. Se usa siempre con
+        // opacidad baja (`bg-ambiente/10`): el color de marca crudo no es
+        // legible como tinta, pero como velo sobre el fondo funciona.
+        ambiente: 'hsl(var(--ambiente) / <alpha-value>)',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         primary: {

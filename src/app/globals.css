@@ -32,6 +32,12 @@
     --ring: 72 100% 32%;
     --radius: 0.75rem;
 
+    /* El ambiente del equipo favorito. Por defecto es el propio fondo, así que
+       sin equipo elegido las superficies teñidas no se distinguen de nada; al
+       elegirlo, `TeamAccent` lo sustituye por el color de marca sin derivar,
+       que aquí sí puede usarse crudo porque solo se pinta al 10 %. */
+    --ambiente: 240 5% 97%;
+
     /* Broadcast timing convention: purple fastest overall, green personal
        best, yellow slower. Fans read these without a legend. The light values
        are darkened until each clears 4.5:1 even as ink on a 20% tint of
@@ -75,6 +81,7 @@
     --border: 240 10% 18%;
     --input: 240 10% 46%;
     --ring: 72 100% 50%;
+    --ambiente: 240 15% 5%;
 
     /* Lightened so each one clears 4.5:1 on the carbon ground. */
     --fastest: 270 95% 75%;

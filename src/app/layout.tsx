@@ -8,6 +8,7 @@ import { PageTransition } from '@/components/providers/PageTransition';
 import { NavigationProgress } from '@/components/providers/NavigationProgress';
 import { MotionProvider } from '@/components/providers/MotionProvider';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
+import { TeamAccent } from '@/components/providers/TeamAccent';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
 import { PwaRegister } from '@/components/pwa/PwaRegister';
 import { ThemeColorSync } from '@/components/pwa/ThemeColorSync';
@@ -94,6 +95,7 @@ export default function RootLayout({
         >
           <MotionProvider>
             <FavoritesProvider>
+              <TeamAccent />
               <NavigationProgress />
 
               {/* Solo aparece al tabular: con cabecera y barra de pestañas, el

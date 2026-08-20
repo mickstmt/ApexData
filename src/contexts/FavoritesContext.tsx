@@ -9,16 +9,25 @@ interface FavoritesContextType {
   toggleConstructorFavorite: (constructorId: string) => void;
   isDriverFavorite: (driverId: string) => boolean;
   isConstructorFavorite: (constructorId: string) => boolean;
+  /**
+   * El equipo que tiñe el acento de la app. Es uno solo y aparte de la lista de
+   * equipos favoritos: seguir a cinco equipos es razonable, pero el color de la
+   * interfaz solo puede ser de uno.
+   */
+  equipoAcento: string | null;
+  elegirEquipoAcento: (constructorId: string | null) => void;
 }
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
 const STORAGE_KEY_DRIVERS = 'apexdata_favorite_drivers';
 const STORAGE_KEY_CONSTRUCTORS = 'apexdata_favorite_constructors';
+const STORAGE_KEY_ACENTO = 'apexdata_equipo_acento';
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [favoriteDrivers, setFavoriteDrivers] = useState<string[]>([]);
   const [favoriteConstructors, setFavoriteConstructors] = useState<string[]>([]);
+  const [equipoAcento, setEquipoAcento] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load favorites from localStorage on mount
@@ -33,6 +42,9 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       if (savedConstructors) {
         setFavoriteConstructors(JSON.parse(savedConstructors));
       }
+
+      const acento = localStorage.getItem(STORAGE_KEY_ACENTO);
+      if (acento) setEquipoAcento(acento);
     } catch (error) {
       console.error('Error loading favorites from localStorage:', error);
     } finally {
@@ -86,6 +98,17 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     return favoriteConstructors.includes(constructorId);
   };
 
+  const elegirEquipoAcento = (constructorId: string | null) => {
+    setEquipoAcento(constructorId);
+
+    try {
+      if (constructorId) localStorage.setItem(STORAGE_KEY_ACENTO, constructorId);
+      else localStorage.removeItem(STORAGE_KEY_ACENTO);
+    } catch (error) {
+      console.error('Error guardando el equipo del acento:', error);
+    }
+  };
+
   return (
     <FavoritesContext.Provider
       value={{
@@ -95,6 +118,8 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
         toggleConstructorFavorite,
         isDriverFavorite,
         isConstructorFavorite,
+        equipoAcento,
+        elegirEquipoAcento,
       }}
     >
       {children}
