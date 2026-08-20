@@ -6,6 +6,7 @@
  *   npx tsx scripts/seed/season.ts 2026
  *   npx tsx scripts/seed/season.ts 2023 2024 2025 2026
  *   npx tsx scripts/seed/season.ts --current      (current year only)
+ *   npx tsx scripts/seed/season.ts --todas        (todo lo que cubre el proyecto)
  */
 
 import {
@@ -17,6 +18,7 @@ import {
   classifiedPosition,
   type JolpicaRace,
 } from './jolpica';
+import { anosPedidos, PRIMERA_TEMPORADA_SPRINT } from './temporadas';
 
 interface RaceTableResponse {
   MRData: { RaceTable: { Races: JolpicaRace[] } };
@@ -129,6 +131,14 @@ async function seedQualifying(year: number, rounds: number) {
 }
 
 async function seedSprints(year: number, rounds: number) {
+  // Antes de 2021 no hubo carreras al sprint: preguntarlo ronda por ronda son
+  // ~20 peticiones por temporada que siempre vuelven vacias, y por las once
+  // temporadas anteriores pasan de doscientas.
+  if (year < PRIMERA_TEMPORADA_SPRINT) {
+    console.log(`   ${year}: no habia sprints todavia.`);
+    return;
+  }
+
   console.log(`\n⚡ Sprints ${year}`);
   let seeded = 0;
 
@@ -191,14 +201,20 @@ async function seedSeason(year: number) {
 }
 
 async function main() {
-  const args = process.argv.slice(2);
-  const years = args.includes('--current')
-    ? [new Date().getFullYear()]
-    : args.map(Number).filter((year) => Number.isInteger(year) && year >= 1950);
+  const years = anosPedidos(process.argv.slice(2));
 
   if (years.length === 0) {
-    console.error('Uso: npx tsx scripts/seed/season.ts <año> [año...] | --current');
+    console.error('Uso: npx tsx scripts/seed/season.ts <año> [año...] | --current | --todas');
     process.exit(1);
+  }
+
+  console.log(`Temporadas: ${years[0]}–${years[years.length - 1]} (${years.length})`);
+
+  // `--listar` enseña qué se sembraria y se va sin tocar nada: la unica base
+  // configurada es la de produccion, asi que conviene poder mirar antes.
+  if (process.argv.includes('--listar')) {
+    console.log(years.join(' '));
+    return;
   }
 
   for (const year of years) {

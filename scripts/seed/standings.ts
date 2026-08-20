@@ -11,6 +11,7 @@
  */
 
 import { prisma, fetchJolpica, upsertDriver, upsertConstructor, type JolpicaDriver, type JolpicaConstructor } from './jolpica';
+import { anosPedidos } from './temporadas';
 
 interface StandingsResponse<T> {
   MRData: { StandingsTable: { StandingsLists: Array<{ round: string } & T> } };
@@ -103,14 +104,20 @@ async function seedSeason(year: number) {
 }
 
 async function main() {
-  const years = process.argv
-    .slice(2)
-    .map(Number)
-    .filter((year) => Number.isInteger(year) && year >= 1950);
+  const years = anosPedidos(process.argv.slice(2));
 
   if (years.length === 0) {
-    console.error('Uso: npx tsx scripts/seed/standings.ts <año> [año...]');
+    console.error('Uso: npx tsx scripts/seed/standings.ts <año> [año...] | --current | --todas');
     process.exit(1);
+  }
+
+  console.log(`Temporadas: ${years[0]}–${years[years.length - 1]} (${years.length})`);
+
+  // `--listar` enseña qué se sembraria y se va sin tocar nada: la unica base
+  // configurada es la de produccion, asi que conviene poder mirar antes.
+  if (process.argv.includes('--listar')) {
+    console.log(years.join(' '));
+    return;
   }
 
   for (const year of years) {
