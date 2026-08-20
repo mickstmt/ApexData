@@ -308,6 +308,46 @@ test.describe('telemetría', () => {
   });
 });
 
+test.describe('pantalla de apertura', () => {
+  test('tapa el arranque y se retira sola', async ({ page }) => {
+    // Con `?splash` porque el modo instalado no se puede emular desde un
+    // navegador: ni `Emulation.setEmulatedMedia` por CDP ni abrir Chromium con
+    // `--app` hacen que `(display-mode: standalone)` valga.
+    await page.goto('/?splash', { waitUntil: 'commit' });
+
+    const capa = page.locator('[data-splash]');
+    await expect(capa).toBeVisible();
+
+    // La marca se dibuja: el trazo empieza con el hueco entero y termina sin
+    // hueco. Si alguien quita `pathLength` o el fotograma clave, esto lo caza.
+    await expect
+      .poll(
+        async () =>
+          await page
+            .locator('.splash-linea')
+            // `parseFloat` y no `Number`: el valor calculado llega como «1px»
+            // y `Number('1px')` es NaN, que no es menor que nada.
+            .evaluate((e) => parseFloat(getComputedStyle(e).strokeDashoffset)),
+        { timeout: 3000 }
+      )
+      .toBeLessThan(0.05);
+
+    // Y se va sola, que es lo que la diferencia de una pantalla colgada.
+    await expect(capa).toHaveCount(0, { timeout: 6000 });
+  });
+
+  test('en una pestaña normal no se ve ni un fotograma', async ({ page }) => {
+    // La esconde una regla CSS, no JavaScript: si dependiera de hidratarse,
+    // habría un parpadeo en cada visita desde el navegador.
+    await page.goto('/', { waitUntil: 'commit' });
+
+    const oculta = await page
+      .locator('[data-splash]')
+      .evaluate((e) => getComputedStyle(e).display);
+    expect(oculta).toBe('none');
+  });
+});
+
 test.describe('menú de secciones (hoja inferior)', () => {
   test('atrapa el foco, cierra con Escape y lo devuelve al botón', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });

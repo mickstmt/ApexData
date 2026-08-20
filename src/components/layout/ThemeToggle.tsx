@@ -34,8 +34,14 @@ export function ThemeToggle() {
       className="relative flex h-11 w-11 items-center justify-center rounded-md border border-input bg-background transition-colors hover:border-primary hover:bg-accent md:h-9 md:w-9"
       aria-label={resolvedTheme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
     >
-      <Sun className="absolute inset-2 h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute inset-2 h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      {/* `inset-0 m-auto` y no `inset-2`: con izquierda, derecha y ancho
+          fijados a la vez, el navegador ignora la derecha y el icono se pega
+          al borde izquierdo. Coincidía con el centro en el botón de 36 px de
+          escritorio, pero en el de 44 px —el de móvil y el de la app
+          instalada— quedaba 3 px a la izquierda y 3 arriba. Con los cuatro
+          lados a cero y márgenes automáticos, se centra a cualquier tamaño. */}
+      <Sun className="absolute inset-0 m-auto h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+      <Moon className="absolute inset-0 m-auto h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
       <span className="sr-only">
         {resolvedTheme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
       </span>

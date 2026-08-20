@@ -229,3 +229,83 @@ dialog[data-hoja][open]::backdrop {
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Pantalla de apertura de la app instalada.
+
+   La regla va aquí y no en el componente a propósito: esconde la capa **antes
+   de que corra una sola línea de JavaScript**, así que en una pestaña normal
+   del navegador no hay ni un parpadeo. Dentro de la app instalada sí se ve, y
+   es lo que tapa los segundos de pantalla negra del arranque.
+   --------------------------------------------------------------------------- */
+@media not all and (display-mode: standalone) {
+  /* Solo el valor `auto`: con `?splash` en la dirección, el propio componente
+     lo cambia a `forzada` y la capa se ve también en una pestaña, que es la
+     única forma de revisar la animación sin instalar la app. */
+  [data-splash='auto'] {
+    display: none !important;
+  }
+}
+
+@keyframes splash-trazo {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes splash-letra {
+  from {
+    opacity: 0;
+    transform: translateY(0.4em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splash-piano {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* El trazo empieza invisible —el hueco mide lo mismo que el camino— y se
+   dibuja al llevar el desfase a cero. */
+.splash-trazo {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.splash-linea {
+  animation: splash-trazo 700ms ease-out 0ms forwards;
+}
+
+/* Arranca a los 600 ms, cuando la curva casi ha terminado: primero se traza la
+   curva y de ella sale la telemetría, en vez de dibujarse las dos a la vez. */
+.splash-traza {
+  animation: splash-trazo 400ms ease-out 600ms forwards;
+}
+
+.splash-piano {
+  opacity: 0;
+  animation: splash-piano 200ms ease-out forwards;
+  /* Sin esto, la escala de un `rect` de SVG toma como origen la esquina del
+     lienzo entero y los pianos entran volando desde fuera. */
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.splash-letra {
+  opacity: 0;
+  animation: splash-letra 240ms ease-out forwards;
+  /* El retraso de cada letra va en su propio `style`, para escalonarlas. */
+}
