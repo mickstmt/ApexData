@@ -266,6 +266,13 @@ export function AnalysisClient({
     }
   };
 
+  /**
+   * El mapa y las trazas solo se sincronizan si son del mismo piloto: se puede
+   * cambiar de piloto y cargar el trazado sin recargar las trazas, y entonces
+   * cada lienzo estaría señalando un punto de una vuelta distinta.
+   */
+  const mismoPiloto = Boolean(telemetry && trackMap && telemetry.driver === trackMap.driver);
+
   const isAnyLoading =
     loading.telemetry ||
     loading.comparison ||
@@ -600,7 +607,7 @@ export function AnalysisClient({
                 </span>
               )}
             </h2>
-            {telemetry && telemetry.driver === trackMap.driver && (
+            {mismoPiloto && (
               <p className="mb-3 text-sm text-muted-foreground">
                 Pasa el dedo o el cursor por el mapa o por las trazas: las dos cosas señalan el
                 mismo punto de la vuelta.
@@ -608,8 +615,13 @@ export function AnalysisClient({
             )}
             <div className="rounded-lg border border-border bg-card p-4">
               <TrackMap
-                cursor={cursorVuelta}
-                onCursor={setCursorVuelta}
+                // Solo se sincronizan si las dos cosas son del mismo piloto:
+                // se puede cambiar de piloto y cargar el trazado sin recargar
+                // las trazas, y entonces los dos lienzos señalaban puntos de
+                // vueltas distintas. El aviso de arriba ya lo comprobaba; el
+                // cableado, no.
+                cursor={mismoPiloto ? cursorVuelta : null}
+                onCursor={mismoPiloto ? setCursorVuelta : undefined}
                 points={trackMap.points}
                 rotation={trackMap.rotation}
                 minSpeed={trackMap.min_speed}

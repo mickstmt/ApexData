@@ -272,6 +272,31 @@ test.describe('telemetría', () => {
 
     await page.mouse.move(caja.x + caja.width * 0.75, caja.y + caja.height * 0.5);
     await expect.poll(async () => (await lectura()) !== primera, { timeout: 5000 }).toBe(true);
+
+    // Y al revés: moverse por las trazas pinta el marcador en el mapa. Se
+    // cuentan píxeles opacos de la capa de encima —el lienzo del marcador, que
+    // es el único `aria-hidden`—, porque un canvas no tiene texto que leer.
+    const trazas = page.locator('canvas[aria-label*="Telemetría"]').first();
+    await trazas.scrollIntoViewIfNeeded();
+    const cajaTrazas = (await trazas.boundingBox())!;
+    await page.mouse.move(
+      cajaTrazas.x + cajaTrazas.width * 0.3,
+      cajaTrazas.y + cajaTrazas.height * 0.5
+    );
+
+    const marcador = page.locator('canvas[aria-hidden="true"]').first();
+    await expect
+      .poll(
+        async () =>
+          await marcador.evaluate((c: HTMLCanvasElement) => {
+            const datos = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+            let opacos = 0;
+            for (let i = 3; i < datos.length; i += 4) if (datos[i] > 0) opacos++;
+            return opacos;
+          }),
+        { timeout: 5000 }
+      )
+      .toBeGreaterThan(0);
   });
 });
 
@@ -296,6 +321,26 @@ test.describe('ficha de circuito', () => {
     // La primera columna es cabecera de fila, no una celda más: es el año, y
     // es lo que identifica a las demás.
     await expect(filas.first().locator('th')).toHaveAttribute('scope', 'row');
+  });
+
+  test('un circuito con dos carreras el mismo año da dos filas independientes', async ({
+    page,
+  }) => {
+    // Red Bull Ring 2021 acogió el GP de Estiria y el de Austria, y 2020 lo
+    // mismo. Con el año como clave, las dos filas compartían identificador:
+    // desplegar una abría las dos.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/circuits/red_bull_ring');
+
+    const de2021 = page.locator('[aria-controls^="detalle-2021"]');
+    await expect(de2021).toHaveCount(2);
+
+    const ids = await de2021.evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-controls')));
+    expect(new Set(ids).size).toBe(2);
+
+    await de2021.first().click();
+    await expect(de2021.first()).toHaveAttribute('aria-expanded', 'true');
+    await expect(de2021.nth(1)).toHaveAttribute('aria-expanded', 'false');
   });
 
   test('en móvil el historial se pliega y el detalle lleva a la carrera', async ({ page }) => {

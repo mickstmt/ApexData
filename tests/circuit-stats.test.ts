@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { contarSalida, resumirVictorias, type VictoriaEnCircuito } from '@/lib/circuit-history';
+import {
+  añosRepetidos,
+  contarSalida,
+  resumirVictorias,
+  type VictoriaEnCircuito,
+} from '@/lib/circuit-stats';
 
 function victoria(parcial: Partial<VictoriaEnCircuito>): VictoriaEnCircuito {
   return {
@@ -94,5 +99,21 @@ describe('contarSalida', () => {
 
   it('llama pit lane a la parrilla 0', () => {
     expect(contarSalida(0)).toBe('desde el pit lane');
+  });
+});
+
+describe('añosRepetidos', () => {
+  it('señala los años con dos carreras en el mismo circuito', () => {
+    const victorias = [
+      victoria({ year: 2021, round: 9, raceName: 'Austrian Grand Prix' }),
+      victoria({ year: 2021, round: 8, raceName: 'Styrian Grand Prix' }),
+      victoria({ year: 2020, round: 1 }),
+    ];
+
+    expect([...añosRepetidos(victorias)]).toEqual([2021]);
+  });
+
+  it('no señala nada cuando cada año trae una sola carrera', () => {
+    expect(añosRepetidos([victoria({ year: 2024 }), victoria({ year: 2023 })]).size).toBe(0);
   });
 });

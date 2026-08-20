@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, ExternalLink, Flag, Mountain, MoveUp, Timer, Trophy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CountryFlag } from '@/components/ui/CountryFlag';
-import { contarSalida, getCircuitHistory, resumirVictorias } from '@/lib/circuit-history';
+import { getCircuitHistory } from '@/lib/circuit-history';
+import { añosRepetidos, contarSalida, resumirVictorias } from '@/lib/circuit-stats';
 import { teamInk } from '@/lib/team-colors';
 import { CircuitWinnerRows } from './CircuitWinnerRows';
 
@@ -131,6 +132,7 @@ export default async function CircuitDetailPage({ params }: CircuitPageProps) {
   if (!circuito) notFound();
 
   const resumen = resumirVictorias(circuito.victorias);
+  const repetidos = añosRepetidos(circuito.victorias);
   const distintos = resumen.pilotos.length;
 
   return (
@@ -310,13 +312,24 @@ export default async function CircuitDetailPage({ params }: CircuitPageProps) {
                 <tbody>
                   {circuito.victorias.map((v) => (
                     <tr
-                      key={v.year}
+                      key={`${v.year}-${v.round}`}
                       className="border-b border-border transition-colors last:border-0 hover:bg-muted/30"
                     >
-                      <th scope="row" className="p-4 text-left font-mono font-semibold tabular-nums">
-                        <Link href={`/results/${v.year}/${v.round}`} className="hover:text-primary">
+                      <th scope="row" className="p-4 text-left font-semibold">
+                        <Link
+                          href={`/results/${v.year}/${v.round}`}
+                          className="font-mono tabular-nums hover:text-primary"
+                        >
                           {v.year}
                         </Link>
+                        {/* El nombre del gran premio solo en los años con dos
+                            carreras aquí: sin él, las dos filas se leen como la
+                            misma carrera repetida. */}
+                        {repetidos.has(v.year) && (
+                          <span className="block text-xs font-normal text-muted-foreground">
+                            {v.raceName}
+                          </span>
+                        )}
                       </th>
                       <td className="p-4">
                         <Link href={`/drivers/${v.driverId}`} className="hover:text-primary">

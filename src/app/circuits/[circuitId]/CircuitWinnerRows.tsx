@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { PriorityRows } from '@/components/ui/PriorityRows';
 import { teamInk } from '@/lib/team-colors';
-import { contarSalida, type VictoriaEnCircuito } from '@/lib/circuit-history';
+import { añosRepetidos, contarSalida, type VictoriaEnCircuito } from '@/lib/circuit-stats';
 
 /**
  * El historial de ganadores, en móvil.
@@ -15,11 +15,18 @@ import { contarSalida, type VictoriaEnCircuito } from '@/lib/circuit-history';
  */
 
 export function CircuitWinnerRows({ victorias }: { victorias: VictoriaEnCircuito[] }) {
+  const repetidos = añosRepetidos(victorias);
+
   return (
     <PriorityRows
       rows={victorias}
-      getKey={(v) => String(v.year)}
-      label={(v) => `la victoria de ${v.year}`}
+      // Año Y ronda: cuatro circuitos han acogido dos carreras el mismo año
+      // —Red Bull Ring en 2020 y 2021, Silverstone y Baréin en 2020—, y con el
+      // año a secas las dos filas compartían clave e identificador, así que
+      // desplegar una abría las dos. Es el mismo defecto de los `id` repetidos
+      // que ya destapó el CI.
+      getKey={(v) => `${v.year}-${v.round}`}
+      label={(v) => `la victoria de ${v.raceName} ${v.year}`}
       lead={(v) => (
         <>
           <span className="shrink-0 font-mono text-sm font-semibold tabular-nums">{v.year}</span>
@@ -27,6 +34,9 @@ export function CircuitWinnerRows({ victorias }: { victorias: VictoriaEnCircuito
             <span className="block truncate font-semibold">{v.driver}</span>
             <span className="team-ink block truncate text-xs" style={teamInk(v.teamId)}>
               {v.team}
+              {repetidos.has(v.year) && (
+                <span className="text-muted-foreground"> · {v.raceName}</span>
+              )}
             </span>
           </span>
           <span className="shrink-0 text-xs text-muted-foreground">{contarSalida(v.grid)}</span>

@@ -28,7 +28,7 @@
 
 **Próximo paso**: los huecos que quedan del informe 3 —personalización por equipo favorito, primitivos Chip y Sheet, y `seed:all` reproduciendo solo 4 de 17 temporadas— y la deuda del Sprint 5: aviso push tras cada GP, pantalla de administración, escaneo de secretos, respaldo con `pg_dump` y límite de peticiones con `slowapi`. El §8 del plan queda cerrado con la ficha de circuito de hoy.
 
-**Tests**: 60 unitarios (TypeScript) + 28 (Python) + **19 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 62 unitarios (TypeScript) + 28 (Python) + **20 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -75,6 +75,28 @@
 ---
 
 ## Bitácora
+
+### 2026-08-20 (16) — La revisión de código que faltaba, y lo que encontró ✅
+
+El cierre de ayer se saltó el paso 1 del método —`code-review` antes de commitear— y quedó anotado como pendiente. Hoy se pasó sobre los tres commits del día anterior: **siete hallazgos, seis reales y arreglados, uno cierto pero sin efecto medible**.
+
+**1. La ficha de circuito descargaba Prisma al navegador.** Es consecuencia directa de la corrección de ayer: al mudar `contarSalida` al módulo que consulta la base, el componente de cliente que la usa se trajo detrás el cliente de Prisma. Medido en la compilación: `/circuits/<id>` pedía un chunk de **64 KB** con `PrismaClient` y su shim de navegador dentro, y **ninguna otra página lo pedía**. Ahora lo puro vive en `circuit-stats.ts` —sin un solo `import` de servidor— y la consulta en `circuit-history.ts`, que es la misma separación que ya tenían `results.ts` y `driver-stats.ts`. Comprobado tras recompilar: ningún chunk de cliente contiene `PrismaClient`.
+
+**2. Cuatro circuitos rompían el historial, y son datos reales**: Red Bull Ring acogió dos carreras en 2020 y otras dos en 2021, y Silverstone y Baréin dos en 2020. Con el año como clave, las dos filas compartían identificador —`detalle-2021` duplicado—, así que desplegar una abría las dos. **Es exactamente el defecto de los `id` repetidos que el CI destapó el 2026-08-19**, otra vez y por otro camino. La clave pasa a ser año + ronda.
+
+**3. Y al enseñarlas por separado apareció lo de fondo**: las dos filas de 2021 se leían idénticas —mismo año, mismo ganador, mismo equipo—, porque el nombre del gran premio no estaba a la vista. Ahora se nombra, **solo en los años con dos carreras**; en los demás sería ruido.
+
+**4. El orden de los dobletes podía bailar entre visitas**: la consulta ordenaba solo por año. Añadido el desempate por ronda, que es lo que el propio módulo ya se cuidaba de hacer en las clasificaciones y no hizo aquí.
+
+**5. El mapa y las trazas se sincronizaban aunque fueran de pilotos distintos.** El aviso que lo anuncia sí comprobaba que el piloto fuera el mismo; el cableado, no. Se puede cambiar de piloto y cargar el trazado sin recargar las trazas, y entonces cada lienzo señalaba un punto de una vuelta distinta. Ahora la condición es una sola y vale para las dos cosas.
+
+**6. Un punto sin distancia podía llegar como `undefined`, no como `null`**, si el servicio devolvía algo guardado en su caché de una hora antes de que el trazado incluyera la distancia. `=== null` no lo veía y acababa escribiéndose en el estado. Comparado por tipo.
+
+**7. El séptimo: cierto en estructura, sin efecto medible.** El efecto que dibuja el mapa dependía del cursor, así que cada movimiento del puntero rehacía el `ResizeObserver` y volvía a trazar los ~600 segmentos. Se separó en dos capas —el trazado debajo, el marcador encima—, pero **la medición no da diferencia**: 60 movimientos del puntero cuestan **4 ms de scripting con una versión y con la otra** (medido dentro de la página con `Performance.getMetrics`, porque el reloj de pared solo mide el ida y vuelta de Playwright: 993 ms en las dos). Se mantiene el cambio por el ciclo de vida del observador —desconectarlo y reconectarlo en cada movimiento puede perderse un cambio de tamaño—, no por velocidad. Queda dicho para no apuntarse una mejora que no existe.
+
+**Lo que la revisión miró y descartó**, que también vale anotarlo: el `dropna` de la distancia en Python (el `cumsum` de pandas ya ignora nulos, así que descarta las mismas filas) y el enlace estirado de la lista de circuitos (el `z-10` del enlace de calendario sí queda por encima de la capa).
+
+**Verificado**: 62 unitarias (2 nuevas), 20 de navegador (2 nuevas: el doblete de Red Bull Ring y que el marcador del mapa se pinta al recorrer las trazas) y 28 de Python. La prueba del cursor ahora cuenta píxeles opacos de la capa del marcador, que es lo único que comprueba de verdad que el mapa responde a las trazas.
 
 ### 2026-08-19 (15) — La ficha de circuito, y una pregunta que ninguna especificación responde ✅
 

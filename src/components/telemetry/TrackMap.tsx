@@ -57,6 +57,16 @@ export function TrackMap({
   onCursor?: (distancia: number | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /**
+   * El marcador vive en su propia capa.
+   *
+   * Con un solo lienzo, cada movimiento del dedo obligaba a repintar los ~600
+   * segmentos del trazado —y, como `draw` entraba en las dependencias del
+   * efecto, a rehacer también el `ResizeObserver`—. Ahora el trazado solo se
+   * redibuja si cambia el tamaño, el tema o la vuelta; el puntero únicamente
+   * repinta este lienzo de encima, que tiene un círculo.
+   */
+  const marcadorRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
   const [size, setSize] = useState({ width: 0, height: 360 });
@@ -141,27 +151,71 @@ export function TrackMap({
       ctx.stroke();
     }
 
-    // El punto que señalan las trazas. Anillo del color del lienzo alrededor:
-    // sobre una línea de siete píxeles con su propio color, un punto a secas se
-    // confunde con el trazado.
+  }, [rotated, size.height, minSpeed, maxSpeed, resolvedTheme]);
+
+  /**
+   * El punto que señalan las trazas, en la capa de encima. Lleva un anillo del
+   * color del lienzo porque sobre una línea de siete píxeles con su propio
+   * color, un punto a secas se confunde con el trazado.
+   */
+  const dibujarMarcador = useCallback(() => {
+    const canvas = marcadorRef.current;
+    const wrapper = wrapperRef.current;
+    const proyectar = proyeccion.current;
+    if (!canvas || !wrapper) return;
+
+    const width = wrapper.clientWidth;
+    const height = size.height;
+    const ratio = window.devicePixelRatio || 1;
+
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
     const senalado = puntoEn(rotated, cursor);
-    if (senalado) {
-      ctx.beginPath();
-      ctx.arc(px(senalado.x), py(senalado.y), 7, 0, Math.PI * 2);
-      ctx.fillStyle = oscuro ? '#F5F5F7' : '#15151A';
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = oscuro ? '#0B0B0F' : '#FFFFFF';
-      ctx.stroke();
-    }
-  }, [rotated, size.height, minSpeed, maxSpeed, resolvedTheme, cursor]);
+    if (!senalado || !proyectar) return;
+
+    const oscuro = resolvedTheme
+      ? resolvedTheme === 'dark'
+      : document.documentElement.classList.contains('dark');
+
+    ctx.beginPath();
+    ctx.arc(proyectar.px(senalado.x), proyectar.py(senalado.y), 7, 0, Math.PI * 2);
+    ctx.fillStyle = oscuro ? '#F5F5F7' : '#15151A';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = oscuro ? '#0B0B0F' : '#FFFFFF';
+    ctx.stroke();
+  }, [rotated, size.height, cursor, resolvedTheme]);
+
+  // El observador se monta una sola vez y lee siempre la última versión de
+  // ambas funciones: si dependiera de ellas, se desconectaría y volvería a
+  // conectarse en cada movimiento del puntero.
+  const ultimoDibujo = useRef({ draw, dibujarMarcador });
 
   useEffect(() => {
+    ultimoDibujo.current = { draw, dibujarMarcador };
     draw();
-    const observer = new ResizeObserver(draw);
+    // El marcador va detrás porque necesita la proyección que deja el trazado.
+    dibujarMarcador();
+  }, [draw, dibujarMarcador]);
+
+  useEffect(() => {
+    const alCambiarTamano = () => {
+      ultimoDibujo.current.draw();
+      ultimoDibujo.current.dibujarMarcador();
+    };
+    const observer = new ResizeObserver(alCambiarTamano);
     if (wrapperRef.current) observer.observe(wrapperRef.current);
     return () => observer.disconnect();
-  }, [draw]);
+  }, []);
 
   useEffect(() => {
     const alRedimensionar = () => setSize({ width: 0, height: window.innerWidth < 640 ? 280 : 360 });
@@ -183,7 +237,10 @@ export function TrackMap({
     let distanciaMinima = Infinity;
 
     for (const punto of rotated) {
-      if (punto.distance === null) continue;
+      // `typeof` y no `=== null`: una respuesta guardada en la caché del
+      // servicio antes de que el trazado incluyera la distancia llega sin el
+      // campo, y `undefined` colaba hasta escribirse en el estado.
+      if (typeof punto.distance !== 'number') continue;
       const dx = proyectar.px(punto.x) - x;
       const dy = proyectar.py(punto.y) - y;
       const separacion = dx * dx + dy * dy;
@@ -200,7 +257,7 @@ export function TrackMap({
     <figure className="m-0">
       <div
         ref={wrapperRef}
-        className="w-full touch-pan-y"
+        className="relative w-full touch-pan-y"
         onPointerMove={onCursor ? alSenalar : undefined}
         onPointerDown={onCursor ? alSenalar : undefined}
         // Sin `onPointerLeave`: el marcador se queda donde lo dejaste, y así
@@ -213,6 +270,7 @@ export function TrackMap({
             lapTime ? ` en ${lapTime}` : ''
           }. De ${Math.round(minSpeed)} a ${Math.round(maxSpeed)} km/h.`}
         />
+        <canvas ref={marcadorRef} aria-hidden className="absolute inset-0 pointer-events-none" />
       </div>
 
       <figcaption className="mt-2 flex items-center justify-between gap-4 text-xs text-muted-foreground">
@@ -244,7 +302,7 @@ function puntoEn(
   let diferencia = Infinity;
 
   for (const punto of puntos) {
-    if (punto.distance === null) continue;
+    if (typeof punto.distance !== 'number') continue;
     const separacion = Math.abs(punto.distance - distancia);
     if (separacion < diferencia) {
       diferencia = separacion;
