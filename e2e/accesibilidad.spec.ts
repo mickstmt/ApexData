@@ -124,10 +124,13 @@ test.describe('semántica y objetivos táctiles (informe 2, puntos 6, 9, 12-14)'
   test('las tablas asocian cada celda con su cabecera', async ({ page }) => {
     await page.goto('/results/2024/1');
 
-    // Sin `scope`, con siete columnas, un lector de pantalla no puede decir a
-    // qué cabecera pertenece la celda que está leyendo.
+    // La ruta tiene `loading.tsx`, así que `goto` termina con el ESQUELETO en
+    // pantalla y la tabla llega después. Contar sin esperar hacía dos cosas
+    // malas: fallar cuando el CI iba lento —pasó el 2026-08-20— y, peor, pasar
+    // por vacío cuando el resto de comprobaciones no encontraban ninguna tabla
+    // que revisar. `toBeAttached` reintenta hasta que el contenido llega.
     const cabeceras = page.locator('table th');
-    expect(await cabeceras.count()).toBeGreaterThan(0);
+    await expect(cabeceras.first()).toBeAttached({ timeout: 30_000 });
     await expect(page.locator('table th:not([scope])')).toHaveCount(0);
     await expect(page.locator('table caption').first()).not.toBeEmpty();
   });
@@ -138,13 +141,18 @@ test.describe('semántica y objetivos táctiles (informe 2, puntos 6, 9, 12-14)'
     for (const ruta of ['/results?season=2024', '/results/2024/1']) {
       await page.goto(ruta);
 
+      // Primero se espera el contenido: con el esqueleto en pantalla no hay ni
+      // tablas ni filas plegables, así que las tres comprobaciones de abajo
+      // pasarían por vacío sin haber mirado nada.
+      const plegables = page.locator('button[aria-expanded="false"]');
+      await expect(plegables.first()).toBeAttached({ timeout: 30_000 });
+
       // El defecto original: ~900 px de tabla en una pantalla de 390, con la
       // posición perdiéndose por la izquierda al arrastrar.
       const ancho = await page.evaluate(() => document.documentElement.scrollWidth);
       expect(ancho).toBeLessThanOrEqual(390);
 
       await expect(page.locator('table:visible')).toHaveCount(0);
-      expect(await page.locator('button[aria-expanded="false"]').count()).toBeGreaterThan(0);
     }
   });
 
