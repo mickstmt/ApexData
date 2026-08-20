@@ -8,6 +8,12 @@ on:
     # enteras sin que nadie lo hubiera notado.
     - cron: '0 4 1 * *'
   workflow_dispatch:
+  # Al cambiar este archivo se ejecuta entero: la primera version fallaba por
+  # usar el cliente equivocado y eso solo se vio ejecutandola. Un respaldo cuya
+  # comprobacion depende de que alguien pulse un boton no esta comprobado.
+  push:
+    paths:
+      - '.github/workflows/respaldo.yml'
 
 jobs:
   dump:
@@ -49,7 +55,23 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client-17
-          pg_dump --version
+
+          # Instalar el 17 no basta: el `pg_dump` del PATH es un envoltorio que
+          # elegia el 16 igualmente, y el primer intento murio con «server
+          # version mismatch» despues de dar este paso por bueno. Los binarios
+          # del 17 van delante.
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Comprobar que el cliente es el 17
+        # Imprimir la version no comprueba nada: el paso anterior la imprimia y
+        # decia 16.15 en verde. Esto falla si no es la que hace falta.
+        run: |
+          VERSION=$(pg_dump --version)
+          echo "$VERSION"
+          case "$VERSION" in
+            *' 17.'*) ;;
+            *) echo "::error::pg_dump no es del 17: $VERSION"; exit 1 ;;
+          esac
 
       - name: Volcar la base
         id: volcado
