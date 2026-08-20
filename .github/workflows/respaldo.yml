@@ -1,0 +1,138 @@
+name: Monthly backup
+
+on:
+  schedule:
+    # Día 1 de cada mes a las 04:00 UTC. El plan gratuito de Supabase no hace
+    # copias: si algo se borra, hoy no hay de dónde recuperarlo. Y no es
+    # teórico — el 2026-08-20 se descubrió que a 2025 le faltaban dos carreras
+    # enteras sin que nadie lo hubiera notado.
+    - cron: '0 4 1 * *'
+  workflow_dispatch:
+
+jobs:
+  dump:
+    name: Volcar y comprobar que se restaura
+    runs-on: ubuntu-latest
+
+    # Un volcado que nadie ha restaurado no es un respaldo, es un archivo. Este
+    # Postgres de usar y tirar existe para restaurarlo aquí mismo y contar las
+    # filas: si no cuadran, el trabajo falla y se ve el mes que toca, no el día
+    # que haga falta de verdad.
+    services:
+      espejo:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: respaldo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Conexión directa (5432), no el pooler: `pg_dump` necesita una sesión
+      # entera y el modo transacción no se la da.
+      ORIGEN: ${{ secrets.DIRECT_URL }}
+      ESPEJO: postgresql://postgres:respaldo@localhost:5432/postgres
+
+    steps:
+      - name: Instalar el cliente de Postgres 17
+        # La versión importa: Supabase corre 17.6 y `pg_dump` se niega a volcar
+        # un servidor más nuevo que él. El runner trae el 16, así que el 17 se
+        # instala del repositorio oficial.
+        run: |
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          pg_dump --version
+
+      - name: Volcar la base
+        id: volcado
+        run: |
+          if [ -z "$ORIGEN" ]; then
+            echo "El secreto DIRECT_URL no está configurado; no hay nada que volcar."
+            exit 1
+          fi
+
+          NOMBRE="apexdata-$(date -u +%Y-%m-%d).dump"
+          echo "nombre=$NOMBRE" >> "$GITHUB_OUTPUT"
+
+          # Formato `custom`: comprimido y restaurable tabla a tabla con
+          # `pg_restore`. Sin dueños ni permisos, porque los roles de Supabase
+          # no existen en el sitio donde se restaure.
+          #
+          # Solo el esquema `public`, que es donde vive todo lo de la app: los
+          # esquemas internos de Supabase (auth, storage, graphql) no los usa
+          # nadie aquí y al restaurarlos en un Postgres normal solo generan
+          # ruido y peso.
+          pg_dump "$ORIGEN" --schema=public --format=custom --no-owner --no-privileges --file "$NOMBRE"
+
+          echo "Tamaño: $(du -h "$NOMBRE" | cut -f1)"
+
+      - name: Comprobar que el volcado se restaura
+        run: |
+          NOMBRE="${{ steps.volcado.outputs.nombre }}"
+
+          TABLAS=$(pg_restore --list "$NOMBRE" | grep -c "TABLE DATA" || true)
+          echo "Tablas con datos en el volcado: $TABLAS"
+
+          if [ "$TABLAS" -lt 10 ]; then
+            echo "::error::El volcado trae $TABLAS tablas con datos y la base tiene 10."
+            exit 1
+          fi
+
+          # El código de salida de `pg_restore` no es la prueba: una base de
+          # Supabase trae extensiones y referencias que un Postgres recién
+          # instalado no tiene, y protestar por eso no significa que los datos
+          # no hayan llegado. La prueba son las filas, que se cuentan abajo.
+          pg_restore --dbname "$ESPEJO" --no-owner --no-privileges "$NOMBRE" 2> restauracion.log             || echo "pg_restore terminó con avisos:"
+          tail -5 restauracion.log || true
+
+          # Se comparan las filas de las tres tablas grandes contra el origen:
+          # que el archivo exista no dice nada, que restaure los mismos datos sí.
+          {
+            echo "## Respaldo de $(date -u +%Y-%m-%d)"
+            echo
+            echo "| Tabla | Origen | Restaurado |"
+            echo "|---|---:|---:|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          FALLOS=0
+          for TABLA in results qualifying races driver_standings; do
+            ORIG=$(psql "$ORIGEN" -tAc "SELECT count(*) FROM \"$TABLA\"")
+            COPIA=$(psql "$ESPEJO" -tAc "SELECT count(*) FROM \"$TABLA\"")
+            echo "| \`$TABLA\` | $ORIG | $COPIA |" >> "$GITHUB_STEP_SUMMARY"
+            echo "$TABLA: origen $ORIG, restaurado $COPIA"
+
+            if [ "$ORIG" != "$COPIA" ]; then
+              echo "::error::$TABLA no cuadra: $ORIG en el origen, $COPIA restauradas."
+              FALLOS=$((FALLOS + 1))
+            fi
+          done
+
+          {
+            echo
+            echo "Tamaño del volcado: **$(du -h "$NOMBRE" | cut -f1)** · tablas con datos: **$TABLAS**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$FALLOS" -gt 0 ]; then
+            exit 1
+          fi
+
+          echo "El volcado restaura los mismos datos que hay en producción."
+
+      - name: Guardar el volcado
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.volcado.outputs.nombre }}
+          path: ${{ steps.volcado.outputs.nombre }}
+          # Noventa días es el máximo del plan: quedan tres copias vivas a la
+          # vez, que es lo que hace falta para volver atrás si un mes se sembró
+          # algo mal y no se notó hasta el siguiente.
+          retention-days: 90
+          if-no-files-found: error
