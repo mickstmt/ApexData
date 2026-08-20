@@ -491,9 +491,17 @@ test.describe('retroalimentación al navegar (informe 1)', () => {
 
     // Se frena la respuesta para poder observar el estado intermedio, que es
     // justo lo que no se podía comprobar sin navegador.
-    await page.route('**/results?season=*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      await route.continue();
+    //
+    // Por la cabecera `rsc` y no por la URL: con el patrón de dirección la
+    // navegación de este selector se colaba sin frenar en CI, la ventana de
+    // carga duraba un suspiro y se cerraba entre dos comprobaciones —el aviso
+    // para lectores pasaba y el indicador ya no estaba—. Es la misma técnica
+    // que usa la prueba del coche, que nunca ha fallado.
+    await page.route('**/*', async (route) => {
+      const cabeceras = route.request().headers();
+      if (cabeceras['next-router-prefetch'] === '1') return route.abort();
+      if (cabeceras['rsc'] === '1') await new Promise((r) => setTimeout(r, 2500));
+      return route.continue();
     });
 
     const temporadas = await selector.locator('option').allTextContents();
