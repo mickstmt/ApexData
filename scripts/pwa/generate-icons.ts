@@ -15,6 +15,9 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 
 const BACKGROUND = '#0B0B0F';
+
+/** El fondo del tema claro, `--background`: hsl(240 5% 97%). */
+const BACKGROUND_CLARO = '#F7F7F8';
 const publicDir = join(process.cwd(), 'public');
 const iconsDir = join(publicDir, 'icons');
 const splashDir = join(publicDir, 'splash');
@@ -76,34 +79,74 @@ async function generateIcons(svg: Buffer) {
   }
 }
 
-async function generateSplashScreens(svg: Buffer) {
+/**
+ * Las imágenes de arranque de iOS: **solo el fondo, sin la marca**.
+ *
+ * Antes llevaban el logo centrado, y eso producía un parpadeo al abrir la app:
+ * iOS enseñaba la marca ya dibujada, luego había un hueco mientras llegaba el
+ * HTML, y después la pantalla de apertura la borraba y volvía a dibujarla desde
+ * cero. El logo aparecía dos veces y el ojo lo leía como un salto.
+ *
+ * Con el fondo a secas, la secuencia es continua: mismo color de principio a
+ * fin, y la marca se dibuja una sola vez, ya dentro de la app.
+ *
+ * Se generan los dos temas porque solo había juego oscuro: quien usa la app en
+ * claro pasaba de una pantalla negra a una app blanca.
+ */
+async function generateSplashScreens() {
   await mkdir(splashDir, { recursive: true });
 
   for (const [width, height, scale, label] of SPLASH_SCREENS) {
     const pixelWidth = width * scale;
     const pixelHeight = height * scale;
-    const logoSize = Math.round(Math.min(pixelWidth, pixelHeight) * 0.32);
-    const logo = await sharp(svg).resize(logoSize, logoSize).png().toBuffer();
 
-    await sharp({
-      create: { width: pixelWidth, height: pixelHeight, channels: 4, background: BACKGROUND },
-    })
-      .composite([{ input: logo, gravity: 'centre' }])
-      .png()
-      .toFile(join(splashDir, `${label}.png`));
+    for (const [sufijo, color] of [['', BACKGROUND], ['-claro', BACKGROUND_CLARO]] as const) {
+      await sharp({
+        create: { width: pixelWidth, height: pixelHeight, channels: 4, background: color },
+      })
+        // Con paleta: son un color plano, y sin esto pesaban 67 KB cada una
+        // —1,7 MB entre las veintiséis— por guardar millones de colores para
+        // representar uno.
+        .png({ palette: true, compressionLevel: 9 })
+        .toFile(join(splashDir, `${label}${sufijo}.png`));
+    }
 
-    console.log(`   ✓ splash/${label}.png (${pixelWidth}×${pixelHeight})`);
+    console.log(`   ✓ splash/${label}.png y ${label}-claro.png (${pixelWidth}×${pixelHeight})`);
   }
 }
 
-/** Emits the media-query list so layout.tsx never drifts from the files. */
+/**
+ * Emits the media-query list so layout.tsx never drifts from the files.
+ *
+ * Tres entradas por dispositivo y en este orden a propósito:
+ *
+ * 1. Una **sin condición de tema**, que es la red de seguridad: si un iOS viejo
+ *    no entiende `prefers-color-scheme`, esta es la única que le encaja y algo
+ *    enseña. Sin ella, no encontrar ninguna significa pantalla en blanco.
+ * 2. y 3. Las dos específicas por tema. Van después porque, cuando dos
+ *    coinciden, la última manda.
+ *
+ * Y todas llevan `orientation: portrait`: Apple lo pide, y sin él hay
+ * dispositivos que no reconocen la suya.
+ */
 async function writeStartupImageManifest() {
-  const entries = SPLASH_SCREENS.map(([width, height, scale, label]) => ({
-    url: `/splash/${label}.png`,
-    media:
+  const entries = SPLASH_SCREENS.flatMap(([width, height, scale, label]) => {
+    const geometria =
       `(device-width: ${width}px) and (device-height: ${height}px) ` +
-      `and (-webkit-device-pixel-ratio: ${scale})`,
-  }));
+      `and (-webkit-device-pixel-ratio: ${scale}) and (orientation: portrait)`;
+
+    return [
+      { url: `/splash/${label}.png`, media: geometria },
+      {
+        url: `/splash/${label}.png`,
+        media: `${geometria} and (prefers-color-scheme: dark)`,
+      },
+      {
+        url: `/splash/${label}-claro.png`,
+        media: `${geometria} and (prefers-color-scheme: light)`,
+      },
+    ];
+  });
 
   await writeFile(
     join(process.cwd(), 'src', 'lib', 'apple-splash.ts'),
@@ -120,7 +163,7 @@ async function main() {
   const svg = await readFile(join(publicDir, 'icon.svg'));
 
   await generateIcons(svg);
-  await generateSplashScreens(svg);
+  await generateSplashScreens();
   await writeStartupImageManifest();
 
   console.log('\n✅ Listo.\n');
