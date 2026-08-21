@@ -101,7 +101,11 @@ export function MobileTabBar() {
             contenido y no captura toques. */}
         <li
           aria-hidden
-          className="pointer-events-none absolute inset-y-1 left-0 rounded-xl bg-primary/10 transition-[transform,width] duration-[260ms] ease-out motion-reduce:transition-none"
+          // `inset-y-0` y no `inset-y-1`: con la píldora cuatro píxeles más baja
+          // que la fila, su borde superior caía justo en el icono y parecía que
+          // el icono se salía del fondo. Ahora la píldora llega arriba y abajo,
+          // y el relleno del enlace deja aire por dentro.
+          className="pointer-events-none absolute inset-y-0 left-0 rounded-xl bg-primary/10 transition-[transform,width] duration-[260ms] ease-out motion-reduce:transition-none"
           style={pildora}
         />
 
@@ -117,7 +121,7 @@ export function MobileTabBar() {
                 onClick={alTocar(href)}
                 className={cn(
                   // 44px is the minimum comfortable touch target on iOS.
-                  'flex min-h-[44px] select-none flex-col items-center justify-center gap-1 px-1 py-1',
+                  'flex min-h-[44px] select-none flex-col items-center justify-center gap-1 px-1 py-1.5',
                   'text-[10px] font-medium transition-colors',
                   // La app desactiva el resaltado gris de iOS al tocar, así que
                   // sin esto pulsar no producía ninguna señal: parecía que la

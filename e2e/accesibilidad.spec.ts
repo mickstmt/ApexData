@@ -319,6 +319,39 @@ test.describe('telemetría', () => {
   });
 });
 
+test.describe('márgenes en móvil', () => {
+  test('la portada no se sale de la pantalla a lo ancho', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    // El defecto que esto fija: las dos tarjetas de la rejilla exigían 372 y
+    // 380 px dentro de una columna de 358 —los hijos de una rejilla no encogen
+    // por debajo de su contenido salvo que se les diga— y empujaban el
+    // documento a 396. Se veía como un «Ver todo» pegado al borde derecho.
+    const ancho = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(ancho).toBeLessThanOrEqual(390);
+
+    // Y el enlace vuelve a respetar el margen del contenedor.
+    const enlace = page.getByRole('link', { name: 'Ver todo' }).first();
+    const caja = (await enlace.boundingBox())!;
+    expect(390 - caja.x - caja.width).toBeGreaterThanOrEqual(12);
+  });
+
+  test('el icono de la pestaña activa cabe dentro de su fondo', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    const barra = page.locator('nav[aria-label="Navegación principal"]');
+    const pildora = (await barra.locator('li[aria-hidden]').boundingBox())!;
+    const icono = (await barra.locator('a[aria-current="page"] svg').first().boundingBox())!;
+
+    // Antes el borde de la píldora caía justo en el icono y parecía que se
+    // salía. Tiene que quedar aire por arriba y por abajo.
+    expect(icono.y - pildora.y).toBeGreaterThanOrEqual(3);
+    expect(pildora.y + pildora.height - icono.y - icono.height).toBeGreaterThan(0);
+  });
+});
+
 test.describe('temporada por defecto', () => {
   test('todas las páginas abren en la misma, y es la última con datos', async ({ page }) => {
     // El defecto que esto fija: pilotos, equipos y resultados tenían el año

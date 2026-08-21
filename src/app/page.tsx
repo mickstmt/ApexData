@@ -151,7 +151,12 @@ export default async function Home() {
         </section>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      {/* `min-w-0` en los hijos: por defecto una celda de rejilla no encoge por
+          debajo del ancho de su contenido, así que las dos tarjetas exigían 372
+          y 380 px dentro de una columna de 358 y empujaban la página 6 px más
+          allá de la pantalla. Se veía como un «Ver todo» pegado al borde y una
+          barra de desplazamiento horizontal que nadie había pedido. */}
+      <div className="grid gap-8 lg:grid-cols-2 [&>*]:min-w-0">
         {/* Last result */}
         {lastRace && lastRace.results.length > 0 && (
           <section>
