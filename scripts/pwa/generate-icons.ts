@@ -13,11 +13,16 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { fondoDeApertura } from '../../src/lib/splash-art';
 
 const BACKGROUND = '#0B0B0F';
 
 /** El fondo del tema claro, `--background`: hsl(240 5% 97%). */
 const BACKGROUND_CLARO = '#F7F7F8';
+
+/** El acento en cada tema, `--primary`: hsl(72 100% 50%) y hsl(72 100% 20%). */
+const ACENTO_OSCURO = '#CCFF00';
+const ACENTO_CLARO = '#526600';
 const publicDir = join(process.cwd(), 'public');
 const iconsDir = join(publicDir, 'icons');
 const splashDir = join(publicDir, 'splash');
@@ -80,15 +85,18 @@ async function generateIcons(svg: Buffer) {
 }
 
 /**
- * Las imágenes de arranque de iOS: **solo el fondo, sin la marca**.
+ * Las imágenes de arranque de iOS: la composición, **sin la marca**.
  *
  * Antes llevaban el logo centrado, y eso producía un parpadeo al abrir la app:
  * iOS enseñaba la marca ya dibujada, luego había un hueco mientras llegaba el
  * HTML, y después la pantalla de apertura la borraba y volvía a dibujarla desde
  * cero. El logo aparecía dos veces y el ojo lo leía como un salto.
  *
- * Con el fondo a secas, la secuencia es continua: mismo color de principio a
- * fin, y la marca se dibuja una sola vez, ya dentro de la app.
+ * Con solo la composición —las dos curvas del ápice sobre el fondo—, la
+ * secuencia es continua: lo mismo de principio a fin, y la marca se dibuja una
+ * sola vez, ya dentro de la app. La composición vive en `src/lib/splash-art.ts`
+ * y de ahí sale también el fondo que pinta la app: si se calcularan por
+ * separado, la diferencia se vería como un salto.
  *
  * Se generan los dos temas porque solo había juego oscuro: quien usa la app en
  * claro pasaba de una pantalla negra a una app blanca.
@@ -100,15 +108,19 @@ async function generateSplashScreens() {
     const pixelWidth = width * scale;
     const pixelHeight = height * scale;
 
-    for (const [sufijo, color] of [['', BACKGROUND], ['-claro', BACKGROUND_CLARO]] as const) {
-      await sharp({
-        create: { width: pixelWidth, height: pixelHeight, channels: 4, background: color },
-      })
-        // Con paleta: son un color plano, y sin esto pesaban 67 KB cada una
-        // —1,7 MB entre las veintiséis— por guardar millones de colores para
-        // representar uno.
-        .png({ palette: true, compressionLevel: 9 })
-        .toFile(join(splashDir, `${label}${sufijo}.png`));
+    const temas = [
+      ['', BACKGROUND, ACENTO_OSCURO],
+      ['-claro', BACKGROUND_CLARO, ACENTO_CLARO],
+    ] as const;
+
+    for (const [sufijo, fondo, acento] of temas) {
+      const svg = Buffer.from(fondoDeApertura(pixelWidth, pixelHeight, fondo, acento));
+
+      // Con paleta: son dos colores planos, y sin esto pesaban 67 KB cada una
+      // por guardar millones de colores para representar dos.
+      await sharp(svg).png({ palette: true, compressionLevel: 9 }).toFile(
+        join(splashDir, `${label}${sufijo}.png`)
+      );
     }
 
     console.log(`   ✓ splash/${label}.png y ${label}-claro.png (${pixelWidth}×${pixelHeight})`);

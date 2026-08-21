@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { FORMAS, estiloDeForma } from '@/lib/splash-art';
 
 /**
  * La pantalla de apertura de la app instalada.
@@ -19,6 +20,12 @@ import { useEffect, useState } from 'react';
  *
  * Se dibuja la misma marca del icono que se acaba de tocar: la línea de carrera
  * trazando la curva, los pianos del ápice y la traza de telemetría saliendo.
+ *
+ * El fondo —las dos curvas del ápice— es **el mismo que trae la imagen nativa
+ * de iOS**, calculado desde `splash-art.ts` para que no haya salto entre una y
+ * otra. Y va en el verde de la marca escrito a mano, no en `--primary`: ese
+ * token lo reescribe el equipo favorito, y entonces la app y la imagen de
+ * arranque dejarían de coincidir. Aquí manda la identidad de ApexData.
  *
  *   0 ms  ──► 700 ms    la línea de carrera se dibuja sola
  *   600 ms ─► 1000 ms   la traza de telemetría, solapando con la anterior
@@ -43,7 +50,7 @@ import { useEffect, useState } from 'react';
  */
 const LETRAS = [
   { texto: 'Apex', clase: 'text-foreground' },
-  { texto: 'Data', clase: 'text-primary' },
+  { texto: 'Data', clase: 'text-[#526600] dark:text-[#CCFF00]' },
 ].flatMap(({ texto, clase }) => texto.split('').map((letra) => ({ letra, clase })));
 
 const INICIO_DESVANECIDO_MS = 1900;
@@ -97,6 +104,16 @@ export function SplashScreen() {
         desvaneciendo ? 'opacity-0' : 'opacity-100'
       }`}
     >
+      {/* Las dos curvas del ápice, iguales que en la imagen nativa. */}
+      {FORMAS.map((forma, indice) => (
+        <span
+          key={indice}
+          aria-hidden
+          className="absolute bg-[#526600] dark:bg-[#CCFF00]"
+          style={estiloDeForma(forma)}
+        />
+      ))}
+
       {/* La marca del icono. `pathLength="1"` en los trazos para que el
           fotograma clave pueda animar `stroke-dashoffset` de 1 a 0 sin saber
           cuánto mide cada camino de verdad. */}
@@ -106,7 +123,7 @@ export function SplashScreen() {
         viewBox="0 0 512 512"
         fill="none"
         aria-hidden
-        className="drop-shadow-sm"
+        className="relative drop-shadow-sm"
       >
         <path
           d="M96 400 C 96 232, 200 128, 400 112"
@@ -114,7 +131,7 @@ export function SplashScreen() {
           strokeWidth="34"
           strokeLinecap="round"
           pathLength="1"
-          className="splash-trazo splash-linea text-primary"
+          className="splash-trazo splash-linea text-[#526600] dark:text-[#CCFF00]"
         />
 
         <g className="text-foreground" fill="currentColor">
@@ -161,7 +178,7 @@ export function SplashScreen() {
         />
       </svg>
 
-      <p className="font-display text-3xl font-bold tracking-tight">
+      <p className="relative font-display text-3xl font-bold tracking-tight">
         {LETRAS.map(({ letra, clase }, indice) => (
           <span
             key={indice}
