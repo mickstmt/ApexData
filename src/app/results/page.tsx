@@ -3,6 +3,7 @@ import { Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
 import { SeasonResultRows } from './SeasonResultRows';
+import { temporadaPorDefecto } from '@/lib/temporada';
 
 export const metadata = {
   title: 'Resultados | ApexData',
@@ -15,7 +16,7 @@ interface ResultsPageProps {
 
 export default async function ResultsPage({ searchParams }: ResultsPageProps) {
   const params = await searchParams;
-  const displayYear = params.season ? parseInt(params.season) : 2024;
+  const displayYear = params.season ? parseInt(params.season) : await temporadaPorDefecto();
 
   // Obtener todas las carreras del año seleccionado con sus resultados
   const races = await prisma.race.findMany({

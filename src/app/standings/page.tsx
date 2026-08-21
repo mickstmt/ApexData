@@ -9,6 +9,7 @@ import { SeasonSelector } from '@/components/ui/SeasonSelector';
 import { FlipRows } from '@/components/ui/FlipRows';
 import { RollingNumber } from '@/components/ui/RollingNumber';
 import { prisma } from '@/lib/prisma';
+import { temporadaPorDefecto } from '@/lib/temporada';
 
 export const metadata = {
   title: 'Standings F1 | ApexData',
@@ -210,7 +211,7 @@ function EvolutionSkeleton() {
 
 export default async function StandingsPage({ searchParams }: StandingsPageProps) {
   const params = await searchParams;
-  const displayYear = params.season ? parseInt(params.season) : new Date().getFullYear();
+  const displayYear = params.season ? parseInt(params.season) : await temporadaPorDefecto();
 
   const {
     drivers: driversStandings,

@@ -93,14 +93,25 @@ test.describe('reducir movimiento (informe 2, punto 1)', () => {
     await page.getByRole('link', { name: /circuitos/i }).first().click();
     await page.waitForURL('**/circuits');
 
+    // Se espera al contenido de destino antes de medir. Sin esto, el elemento
+    // se resolvía mientras React aún estaba sustituyendo el DOM y la medida
+    // caía sobre un nodo ya desprendido: `getComputedStyle` de un nodo fuera
+    // del documento devuelve cadenas vacías, y eso hizo fallar el CI con un
+    // valor «» que en local no se reproducía.
+    await expect(page.getByRole('heading', { name: 'Circuitos', level: 1 })).toBeVisible();
+
     // Con movimiento reducido, framer-motion no aplica desplazamiento: el
     // contenedor animado no puede quedar con una traslación pendiente.
-    const transformacion = await page
-      .locator('main > div')
-      .first()
-      .evaluate((el) => getComputedStyle(el).transform);
-
-    expect(['none', 'matrix(1, 0, 0, 1, 0, 0)']).toContain(transformacion);
+    await expect
+      .poll(
+        async () =>
+          await page
+            .locator('main > div')
+            .first()
+            .evaluate((el) => getComputedStyle(el).transform),
+        { timeout: 5000 }
+      )
+      .toMatch(/^(none|matrix\(1, 0, 0, 1, 0, 0\))$/);
   });
 });
 
@@ -305,6 +316,40 @@ test.describe('telemetría', () => {
         { timeout: 5000 }
       )
       .toBeGreaterThan(0);
+  });
+});
+
+test.describe('temporada por defecto', () => {
+  test('todas las páginas abren en la misma, y es la última con datos', async ({ page }) => {
+    // El defecto que esto fija: pilotos, equipos y resultados tenían el año
+    // 2024 escrito a mano —de cuando era el año en curso— mientras la
+    // clasificación usaba el del reloj. Tres páginas ancladas al pasado y dos
+    // criterios distintos conviviendo sin que nada lo dijera.
+    const elegida = async (ruta: string) => {
+      await page.goto(ruta);
+      return page
+        .locator('select')
+        .first()
+        .evaluate((el: HTMLSelectElement) => el.options[el.selectedIndex]?.textContent?.trim());
+    };
+
+    const referencia = await elegida('/standings');
+    expect(referencia).toMatch(/^Temporada \d{4}$/);
+
+    for (const ruta of ['/drivers', '/constructors', '/results']) {
+      expect(await elegida(ruta), `${ruta} debería abrir en la misma temporada`).toBe(referencia);
+    }
+  });
+
+  test('una temporada pedida a mano manda sobre la de por defecto', async ({ page }) => {
+    await page.goto('/drivers?season=2021');
+
+    const elegida = await page
+      .locator('select')
+      .first()
+      .evaluate((el: HTMLSelectElement) => el.options[el.selectedIndex]?.textContent?.trim());
+
+    expect(elegida).toBe('Temporada 2021');
   });
 });
 

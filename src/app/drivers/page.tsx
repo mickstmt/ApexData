@@ -3,6 +3,7 @@ import { DriversSearch } from '@/components/drivers/DriversSearch';
 import { fallbackDrivers } from '@/lib/fallback-data';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
 import type { Driver } from '@prisma/client';
+import { temporadaPorDefecto } from '@/lib/temporada';
 
 export const metadata = {
   title: 'Pilotos de F1 | ApexData',
@@ -15,7 +16,7 @@ interface DriversPageProps {
 
 export default async function DriversPage({ searchParams }: DriversPageProps) {
   const params = await searchParams;
-  const displayYear = params.season ? parseInt(params.season) : 2024;
+  const displayYear = params.season ? parseInt(params.season) : await temporadaPorDefecto();
 
   // Obtener pilotos que participaron en la temporada seleccionada
   let drivers: Driver[];

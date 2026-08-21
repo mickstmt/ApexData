@@ -3,6 +3,7 @@ import type { Team } from '@prisma/client';
 import { ConstructorsSearch } from '@/components/constructors/ConstructorsSearch';
 import { fallbackConstructors } from '@/lib/fallback-data';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
+import { temporadaPorDefecto } from '@/lib/temporada';
 
 export const metadata = {
   title: 'Equipos de F1 | ApexData',
@@ -15,7 +16,7 @@ interface ConstructorsPageProps {
 
 export default async function ConstructorsPage({ searchParams }: ConstructorsPageProps) {
   const params = await searchParams;
-  const displayYear = params.season ? parseInt(params.season) : 2024;
+  const displayYear = params.season ? parseInt(params.season) : await temporadaPorDefecto();
 
   // Obtener constructores que participaron en la temporada seleccionada
   let constructors: Team[];
