@@ -68,7 +68,7 @@
 ## Acciones pendientes del usuario
 
 1. ~~**Desplegar la web y el servicio de telemetría en EasyPanel**~~ → ambos hechos: la web el 2026-08-17 y la telemetría el 2026-08-18, con el volumen en `/app/cache` y `FASTF1_SERVICE_URL` ya configurada. ~~Comprobación de cutover del CI~~ → resuelta.
-2. 🔴 **Pulsar *Deploy* en el servicio de telemetría** por el endpoint `/classification`, que es el que reconstruye la parrilla del sprint (`apexdata-telemetry`, proyecto `ditto`, en panel.dittochatbot.com). Los deploys anteriores —2026-08-19 y 2026-08-21— ya se hicieron. Hasta que se pulse este, la pestaña del sprint enseña el aviso sin la parrilla: falla en silencio a propósito, no rompe la página.
+2. ~~**Pulsar *Deploy* en el servicio de telemetría** por el endpoint `/classification`~~ → hecho el 2026-08-22, comprobado en producción: `/api/clasificacion/2026/12/SQ` devuelve los 22 puestos y la pestaña del sprint enseña la parrilla. Recordatorio permanente: **el servicio de telemetría no se despliega solo**; cualquier cambio bajo `python-service/` necesita pulsar *Deploy* a mano en panel.dittochatbot.com.
 3. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
 4. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
 
