@@ -12,6 +12,7 @@ import { RaceCountdown, LocalDateTime } from '@/components/home/RaceCountdown';
 import { Championship, ChampionshipSkeleton } from '@/components/home/Championship';
 import { raceStart } from '@/lib/race-time';
 import { sesionesOrdenadas } from '@/lib/sesiones';
+import { SesionesDelFinDeSemana } from '@/components/home/SesionesDelFinDeSemana';
 
 // The hub is "what is happening now", so it must never be baked at build time.
 export const dynamic = 'force-dynamic';
@@ -138,18 +139,12 @@ export default async function Home() {
 
             {nextSessions.length > 1 && (
               <div className="border-t border-border">
-                <ul className="grid grid-cols-2 divide-border sm:grid-cols-3 lg:grid-cols-6">
-                  {nextSessions.map(({ nombre, cuando }) => (
-                    <li key={nombre} className="border-b border-r border-border p-3 last:border-r-0">
-                      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {nombre}
-                      </div>
-                      <div className="mt-0.5 text-sm">
-                        <LocalDateTime value={cuando.toISOString()} />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <SesionesDelFinDeSemana
+                  sesiones={nextSessions.map(({ nombre, cuando }) => ({
+                    nombre,
+                    cuando: cuando.toISOString(),
+                  }))}
+                />
               </div>
             )}
           </Card>

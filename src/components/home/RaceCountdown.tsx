@@ -25,7 +25,11 @@ export function RaceCountdown({ target }: { target: string }) {
       const hours = Math.floor((diff % 86_400_000) / 3_600_000);
       const minutes = Math.floor((diff % 3_600_000) / 60_000);
 
-      setRemaining(days > 0 ? `${days}d ${hours}h` : `${hours}h ${minutes}m`);
+      // Sin la hora en cero: «en 0h 30m» se lee peor que «en 30m», y a media
+      // hora de una sesión es justo cuando alguien mira esto.
+      if (days > 0) setRemaining(`${days}d ${hours}h`);
+      else if (hours > 0) setRemaining(`${hours}h ${minutes}m`);
+      else setRemaining(`${minutes}m`);
     };
 
     update();

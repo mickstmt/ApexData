@@ -44,3 +44,40 @@ export function sesionesOrdenadas(
     .map(([nombre, cuando]) => ({ nombre, cuando }))
     .sort((a, b) => a.cuando.getTime() - b.cuando.getTime());
 }
+
+/**
+ * Cuánto dura cada sesión, en minutos.
+ *
+ * Son las duraciones oficiales del formato actual, y solo deciden hasta cuándo
+ * una sesión sigue «en curso». Si el reglamento cambia, lo peor que pasa es que
+ * la marca se apague unos minutos antes o después.
+ */
+const DURACION: Record<string, number> = {
+  'Práctica 1': 60,
+  'Práctica 2': 60,
+  'Práctica 3': 60,
+  'Clasif. sprint': 45,
+  Sprint: 45,
+  Clasificación: 60,
+  Carrera: 150,
+};
+
+const DURACION_POR_DEFECTO = 60;
+
+export type EstadoDeSesion = 'pasada' | 'en-curso' | 'pendiente';
+
+/**
+ * En qué punto está una sesión ahora mismo.
+ *
+ * Una sesión no desaparece en cuanto empieza: sigue «en curso» mientras dura,
+ * porque anunciar «la próxima es la clasificación» mientras la práctica está
+ * rodando sería mentir por precisión mal entendida.
+ */
+export function estadoDeSesion(nombre: string, cuando: Date, ahora: number): EstadoDeSesion {
+  const empieza = cuando.getTime();
+  const acaba = empieza + (DURACION[nombre] ?? DURACION_POR_DEFECTO) * 60_000;
+
+  if (ahora >= acaba) return 'pasada';
+  if (ahora >= empieza) return 'en-curso';
+  return 'pendiente';
+}

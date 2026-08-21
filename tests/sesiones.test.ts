@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sesionesOrdenadas, type FinDeSemana } from '@/lib/sesiones';
+import { estadoDeSesion, sesionesOrdenadas, type FinDeSemana } from '@/lib/sesiones';
 
 const vacio: FinDeSemana = {
   fp1Date: null,
@@ -72,5 +72,35 @@ describe('sesionesOrdenadas', () => {
     ).map((s) => s.nombre);
 
     expect(nombres).toEqual(['Clasificación', 'Práctica 3', 'Carrera']);
+  });
+});
+
+describe('estadoDeSesion', () => {
+  const inicio = fecha('2026-08-21T09:30:00Z');
+  const enMinutos = (m: number) => inicio.getTime() + m * 60_000;
+
+  it('antes de empezar está pendiente', () => {
+    expect(estadoDeSesion('Práctica 1', inicio, enMinutos(-10))).toBe('pendiente');
+  });
+
+  it('mientras rueda sigue en curso, no pasada', () => {
+    // Sin esto, a los dos minutos de empezar la práctica la portada anunciaría
+    // la clasificación como «la próxima» y quien mira se perdería lo que está
+    // ocurriendo delante.
+    expect(estadoDeSesion('Práctica 1', inicio, enMinutos(1))).toBe('en-curso');
+    expect(estadoDeSesion('Práctica 1', inicio, enMinutos(59))).toBe('en-curso');
+  });
+
+  it('cuando termina, pasa', () => {
+    expect(estadoDeSesion('Práctica 1', inicio, enMinutos(61))).toBe('pasada');
+  });
+
+  it('cada sesión dura lo suyo: la carrera no acaba en una hora', () => {
+    expect(estadoDeSesion('Carrera', inicio, enMinutos(90))).toBe('en-curso');
+    expect(estadoDeSesion('Sprint', inicio, enMinutos(50))).toBe('pasada');
+  });
+
+  it('una sesión con nombre desconocido no se queda colgada para siempre', () => {
+    expect(estadoDeSesion('Sesión rara', inicio, enMinutos(61))).toBe('pasada');
   });
 });
