@@ -319,6 +319,39 @@ test.describe('telemetría', () => {
   });
 });
 
+test.describe('pestañas de una carrera', () => {
+  test('la carrera va primero y no hay que arrastrar para encontrarla', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/results/2024/1');
+
+    // El defecto: iban en orden cronológico, así que la carrera —lo que se
+    // viene a ver— quedaba la última, detrás de tres prácticas sin datos, y en
+    // un teléfono había que arrastrar la fila para llegar a ella.
+    const pestanas = page.getByRole('tab');
+    expect((await pestanas.allInnerTexts())[0]).toMatch(/CARRERA/i);
+    await expect(page.getByRole('tab', { selected: true })).toHaveText(/CARRERA/i);
+
+    const fila = page.getByRole('tablist');
+    const medidas = await fila.evaluate((e) => ({ caja: e.clientWidth, contenido: e.scrollWidth }));
+    expect(medidas.contenido).toBeLessThanOrEqual(medidas.caja + 1);
+  });
+
+  test('un fin de semana al sprint enseña su resultado, que ya estaba guardado', async ({
+    page,
+  }) => {
+    await page.goto('/results/2026/2');
+
+    // `isSprintWeekend` estaba fijado a false a mano, así que esta pestaña no
+    // aparecía nunca — y detrás había 528 resultados guardados sin usar.
+    const pestana = page.getByRole('tab', { name: /^Sprint$/i });
+    await expect(pestana).toBeVisible();
+    await pestana.click();
+
+    await expect(page.getByText('GANADOR DEL SPRINT')).toBeVisible();
+    expect(await page.locator('table tbody tr').count()).toBeGreaterThan(15);
+  });
+});
+
 test.describe('márgenes en móvil', () => {
   test('la portada no se sale de la pantalla a lo ancho', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });

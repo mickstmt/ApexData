@@ -55,6 +55,18 @@ export default async function RaceResultPage({ params }: RaceResultPageProps) {
           position: 'asc',
         },
       },
+      // Estaban guardados desde el principio —528 filas, 22 por sprint— y la
+      // página no los pedía: la pestaña del sprint enseñaba «En desarrollo»
+      // sobre datos que ya existían.
+      sprintResults: {
+        include: {
+          driver: true,
+          team: true,
+        },
+        orderBy: {
+          positionOrder: 'asc',
+        },
+      },
     },
   });
 

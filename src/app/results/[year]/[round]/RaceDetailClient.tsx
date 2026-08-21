@@ -5,7 +5,16 @@ import { Trophy, Calendar, MapPin, Flag, Zap, Construction, Clock } from 'lucide
 import Link from 'next/link';
 import { teamColor } from '@/lib/team-colors';
 import { PriorityRows } from '@/components/ui/PriorityRows';
-import type { Race, Circuit, Result, Driver, Team, Qualifying } from '@prisma/client';
+import { SprintResults } from './SprintResults';
+import type {
+  Race,
+  Circuit,
+  Result,
+  Driver,
+  Team,
+  Qualifying,
+  SprintResult,
+} from '@prisma/client';
 
 type RaceWithDetails = Race & {
   circuit: Circuit;
@@ -14,6 +23,10 @@ type RaceWithDetails = Race & {
     team: Team;
   })[];
   qualifyings: (Qualifying & {
+    driver: Driver;
+    team: Team;
+  })[];
+  sprintResults: (SprintResult & {
     driver: Driver;
     team: Team;
   })[];
@@ -42,26 +55,38 @@ interface TabConfig {
 export default function RaceDetailClient({ race, year }: RaceDetailClientProps) {
   const [activeTab, setActiveTab] = useState<SessionTab>('race');
 
-  // Determinar si es un fin de semana Sprint
-  // Por ahora, asumimos que no es Sprint (puedes agregar lógica basada en la ronda)
-  const isSprintWeekend = false;
+  /**
+   * Si el fin de semana tuvo sprint, sale del propio dato.
+   *
+   * Estaba fijado a `false` a mano —con un comentario que decía «puedes agregar
+   * lógica basada en la ronda»—, así que las pestañas del sprint no aparecían
+   * nunca. La base guarda sus resultados desde el primer sembrado.
+   */
+  const isSprintWeekend = race.sprintResults.length > 0;
 
-  // Configuración de tabs según el tipo de fin de semana
-  const tabs: TabConfig[] = isSprintWeekend
-    ? [
-        { id: 'practice1', label: 'Práctica Libre 1', shortLabel: 'PL1' },
-        { id: 'sprint-qualifying', label: 'Clasificación Sprint', shortLabel: 'CS' },
-        { id: 'sprint', label: 'Sprint', shortLabel: 'SPRINT' },
-        { id: 'qualifying', label: 'Clasificación', shortLabel: 'CLASI' },
-        { id: 'race', label: 'Carrera', shortLabel: 'CARRERA' },
-      ]
-    : [
-        { id: 'practice1', label: 'Práctica Libre 1', shortLabel: 'PL1' },
-        { id: 'practice2', label: 'Práctica Libre 2', shortLabel: 'PL2' },
-        { id: 'practice3', label: 'Práctica Libre 3', shortLabel: 'PL3' },
-        { id: 'qualifying', label: 'Clasificación', shortLabel: 'CLASI' },
-        { id: 'race', label: 'Carrera', shortLabel: 'CARRERA' },
-      ];
+  /**
+   * Las pestañas van de lo más importante a lo menos, no en orden cronológico.
+   *
+   * Esta es una página de resultados de una carrera **terminada**: lo que se
+   * viene a ver es quién ganó. Con el orden del fin de semana, la carrera
+   * quedaba la última y en un teléfono había que arrastrar la fila de pestañas
+   * para encontrarla — enterrar lo principal detrás de tres prácticas.
+   */
+  const tabs: TabConfig[] = [
+    { id: 'race', label: 'Carrera', shortLabel: 'CARRERA' },
+    { id: 'qualifying', label: 'Clasificación', shortLabel: 'CLASI' },
+    ...(isSprintWeekend
+      ? ([
+          { id: 'sprint', label: 'Sprint', shortLabel: 'SPRINT' },
+          { id: 'sprint-qualifying', label: 'Clasificación Sprint', shortLabel: 'CLASI. SPRINT' },
+          { id: 'practice1', label: 'Práctica Libre 1', shortLabel: 'PL1' },
+        ] as TabConfig[])
+      : ([
+          { id: 'practice3', label: 'Práctica Libre 3', shortLabel: 'PL3' },
+          { id: 'practice2', label: 'Práctica Libre 2', shortLabel: 'PL2' },
+          { id: 'practice1', label: 'Práctica Libre 1', shortLabel: 'PL1' },
+        ] as TabConfig[])),
+  ];
 
   // Find fastest lap
   const fastestLapResult = race.results
@@ -752,18 +777,33 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
             </div>
           )}
         </>
+      ) : activeTab === 'sprint' ? (
+        <SprintResults resultados={race.sprintResults} />
       ) : (
-        // Coming Soon for other sessions
-        <div className="rounded-lg border border-border bg-card p-12 text-center">
-          <Construction className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-          <h3 className="mb-2 text-2xl font-bold">En Desarrollo</h3>
-          <p className="text-lg text-muted-foreground mb-4">
-            Estamos trabajando para traerte los datos de{' '}
-            {tabs.find((t) => t.id === activeTab)?.label}
+        /*
+         * Las sesiones que todavía no se pueden enseñar, y por qué.
+         *
+         * No es falta de ganas: **Jolpica no publica resultados de prácticas
+         * libres** —Ergast nunca los tuvo— ni de la clasificación al sprint. Esos
+         * datos existen en FastF1, como tiempos de vuelta, que es de donde los
+         * sacará la app cuando esta pestaña deje de decir esto. Decir «en
+         * desarrollo» sin más deja pensando que es un olvido.
+         */
+        <div className="rounded-lg border border-border bg-card p-10 text-center">
+          <Construction className="mx-auto mb-4 h-12 w-12 text-muted-foreground" aria-hidden />
+          <h3 className="mb-2 text-xl font-bold">
+            Todavía no hay datos de {tabs.find((t) => t.id === activeTab)?.label}
+          </h3>
+          <p className="mx-auto mb-4 max-w-prose text-sm text-muted-foreground">
+            La fuente de resultados que usa esta página —Jolpica— publica carrera, clasificación y
+            sprint, pero no las prácticas libres ni la clasificación al sprint.
           </p>
-          <p className="text-sm text-muted-foreground">
-            Próximamente podrás ver los tiempos de vuelta, posiciones y estadísticas de todas las
-            sesiones del fin de semana.
+          <p className="mx-auto max-w-prose text-sm text-muted-foreground">
+            Esos tiempos sí están en FastF1, que ya alimenta la sección de{' '}
+            <Link href="/analysis" className="text-primary hover:underline">
+              análisis
+            </Link>
+            : ahí puedes ver ahora mismo las vueltas de cualquier sesión de este fin de semana.
           </p>
         </div>
       )}
