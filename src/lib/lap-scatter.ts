@@ -22,6 +22,12 @@ export interface ResumenPiloto {
   vueltas: number;
   mejor: number;
   mediana: number;
+  /** Primer y tercer cuartil: los bordes de la caja. */
+  q1: number;
+  q3: number;
+  /** Los bigotes: el 90 % central de sus vueltas cabe entre estos dos. */
+  p5: number;
+  p95: number;
   /**
    * Rango intercuartílico: la mitad central de sus vueltas cabe en esta
    * horquilla. Se usa en vez de la desviación típica porque una sola parada en
@@ -116,13 +122,40 @@ export function resumirPiloto(visibles: PuntoVuelta[], code: string): ResumenPil
 
   const ordenados = [...suyas].sort((a, b) => a - b);
 
+  const q1 = percentil(ordenados, 0.25);
+  const q3 = percentil(ordenados, 0.75);
+
   return {
     code,
     vueltas: ordenados.length,
     mejor: ordenados[0],
     mediana: percentil(ordenados, 0.5),
-    intercuartil: percentil(ordenados, 0.75) - percentil(ordenados, 0.25),
+    q1,
+    q3,
+    p5: percentil(ordenados, 0.05),
+    p95: percentil(ordenados, 0.95),
+    intercuartil: q3 - q1,
   };
+}
+
+/**
+ * El resumen de todos, ordenado por ritmo.
+ *
+ * Ordenar por **mediana** y no por mejor vuelta es la decisión que hace útil
+ * esta lista: la vuelta rápida la marca cualquiera con el coche vacío y la
+ * pista limpia, mientras que la mediana es el ritmo que de verdad sostuvo.
+ *
+ * `minimoVueltas` deja fuera a quien apenas rodó —abandonos de la primera
+ * vuelta, un piloto que solo hizo instalación—: con tres vueltas no hay
+ * distribución que enseñar, solo tres puntos que fingen ser una caja.
+ */
+export function resumirTodos(visibles: PuntoVuelta[], minimoVueltas = 5): ResumenPiloto[] {
+  const codigos = [...new Set(visibles.map((p) => p.code))];
+
+  return codigos
+    .map((code) => resumirPiloto(visibles, code))
+    .filter((r): r is ResumenPiloto => r !== null && r.vueltas >= minimoVueltas)
+    .sort((a, b) => a.mediana - b.mediana);
 }
 
 /** De milisegundos a «1:32.608», que es como se leen los tiempos de vuelta. */

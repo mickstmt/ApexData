@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { CORTE, comoTiempo, prepararDispersion, resumirPiloto } from '@/lib/lap-scatter';
+import {
+  CORTE,
+  comoTiempo,
+  prepararDispersion,
+  resumirPiloto,
+  resumirTodos,
+} from '@/lib/lap-scatter';
 import type { LapData } from '@/types';
 
 /** Una vuelta como la que manda el servicio, con lo justo para el gráfico. */
@@ -103,5 +109,59 @@ describe('comoTiempo', () => {
     expect(comoTiempo(59900)).toBe('59.900');
     // El relleno importa: sin él, 1:02.500 saldría como «1:2.500».
     expect(comoTiempo(62500)).toBe('1:02.500');
+  });
+});
+
+describe('resumirTodos', () => {
+  const sesion = (filas: [string, number, string][]) =>
+    prepararDispersion(filas.map(([c, n, t]) => vuelta(c, n, t))).visibles;
+
+  it('ordena por mediana, no por mejor vuelta', () => {
+    // El caso que justifica la decisión: VER marca la vuelta rápida absoluta
+    // pero su ritmo sostenido es peor. Ordenando por mejor vuelta saldría
+    // primero y la lista mentiría sobre quién tenía ritmo.
+    const visibles = sesion([
+      ['VER', 1, '1:32.000'],
+      ['VER', 2, '1:36.000'],
+      ['VER', 3, '1:36.500'],
+      ['VER', 4, '1:36.400'],
+      ['VER', 5, '1:36.300'],
+      ['NOR', 1, '1:34.000'],
+      ['NOR', 2, '1:34.200'],
+      ['NOR', 3, '1:34.100'],
+      ['NOR', 4, '1:34.300'],
+      ['NOR', 5, '1:34.150'],
+    ]);
+
+    const todos = resumirTodos(visibles);
+    expect(todos.map((r) => r.code)).toEqual(['NOR', 'VER']);
+    expect(todos[1].mejor).toBeLessThan(todos[0].mejor);
+  });
+
+  it('deja fuera a quien apenas rodó', () => {
+    const visibles = sesion([
+      ['VER', 1, '1:32.000'],
+      ['VER', 2, '1:32.100'],
+      ['VER', 3, '1:32.200'],
+      ['VER', 4, '1:32.300'],
+      ['VER', 5, '1:32.400'],
+      ['ABA', 1, '1:33.000'],
+      ['ABA', 2, '1:33.100'],
+    ]);
+
+    // Con dos vueltas no hay distribución: habría una caja que finge serlo.
+    expect(resumirTodos(visibles).map((r) => r.code)).toEqual(['VER']);
+  });
+
+  it('calcula la caja y los bigotes', () => {
+    const visibles = sesion(
+      Array.from({ length: 11 }, (_, i) => ['VER', i + 1, `1:3${i % 10}.000`] as [string, number, string])
+    );
+
+    const [resumen] = resumirTodos(visibles);
+    expect(resumen.q1).toBeLessThan(resumen.mediana);
+    expect(resumen.mediana).toBeLessThan(resumen.q3);
+    expect(resumen.p5).toBeLessThanOrEqual(resumen.q1);
+    expect(resumen.p95).toBeGreaterThanOrEqual(resumen.q3);
   });
 });

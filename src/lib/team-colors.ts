@@ -175,3 +175,67 @@ export function compoundColor(compound: string | null | undefined): string {
   if (!compound) return COMPOUND_COLORS.UNKNOWN;
   return COMPOUND_COLORS[compound.toUpperCase()] ?? COMPOUND_COLORS.UNKNOWN;
 }
+
+/**
+ * De cómo llama FastF1 a un equipo al identificador que usa esta app.
+ *
+ * Hace falta porque la lista de pilotos de la página de análisis sale de la
+ * **última carrera**, así que al abrir una sesión de 2024 los que ya no compiten
+ * —Ricciardo, Sargeant, Zhou, Magnussen, Hülkenberg, Bottas, Pérez— se quedaban
+ * sin equipo y sus cajas y sus puntos salían grises. El dato correcto viaja en
+ * las propias vueltas: cada una trae el equipo de ese piloto **en esa sesión**,
+ * que además es la respuesta buena para quien cambió de equipo a mitad de año.
+ *
+ * Se busca por trozo de nombre y no por igualdad porque el patrocinador entra y
+ * sale del nombre oficial cada temporada: «Sauber» ha sido «Alfa Romeo Racing»,
+ * «Alfa Romeo» y «Stake F1 Team Kick Sauber» sin dejar de ser el mismo equipo.
+ * El orden importa: lo más específico primero.
+ */
+const NOMBRES: [string, string][] = [
+  ['red bull racing', 'red_bull'],
+  ['racing bulls', 'rb'],
+  ['visa cash app', 'rb'],
+  ['alphatauri', 'alphatauri'],
+  ['toro rosso', 'toro_rosso'],
+  ['kick sauber', 'sauber'],
+  ['alfa romeo', 'alfa'],
+  ['sauber', 'sauber'],
+  ['aston martin', 'aston_martin'],
+  ['racing point', 'racing_point'],
+  ['force india', 'force_india'],
+  ['haas', 'haas'],
+  ['ferrari', 'ferrari'],
+  ['mercedes', 'mercedes'],
+  ['mclaren', 'mclaren'],
+  ['alpine', 'alpine'],
+  ['renault', 'renault'],
+  ['williams', 'williams'],
+  ['audi', 'audi'],
+  ['cadillac', 'cadillac'],
+  ['lotus', 'lotus_f1'],
+  ['manor', 'manor'],
+  ['marussia', 'marussia'],
+  ['caterham', 'caterham'],
+  ['virgin', 'virgin'],
+  ['hrt', 'hrt'],
+];
+
+/**
+ * Nombres tan cortos que buscarlos como trozo daría falsos positivos: «rb»
+ * aparece dentro de cualquier palabra con esas dos letras seguidas.
+ */
+const EXACTOS: Record<string, string> = { rb: 'rb' };
+
+export function teamIdFromName(name: string | null | undefined): string | null {
+  if (!name) return null;
+
+  const limpio = name.toLowerCase().trim();
+
+  if (EXACTOS[limpio]) return EXACTOS[limpio];
+
+  for (const [trozo, id] of NOMBRES) {
+    if (limpio.includes(trozo)) return id;
+  }
+
+  return null;
+}

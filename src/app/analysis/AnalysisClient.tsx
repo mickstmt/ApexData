@@ -5,7 +5,7 @@
  * Interactive telemetry analysis using FastF1 data
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Activity,
   BarChart3,
@@ -13,7 +13,7 @@ import {
   CloudSun,
   Layers,
   Loader2,
-  Map,
+  Map as MapaIcono,
   TrendingUp,
   ScatterChart,
 } from 'lucide-react';
@@ -23,7 +23,9 @@ import { TelemetryChart, type TelemetryTrace } from '@/components/telemetry/Tele
 import { TrackMap } from '@/components/telemetry/TrackMap';
 import { StintChart } from '@/components/telemetry/StintChart';
 import { RaceProgress } from '@/components/charts/RaceProgress';
+import { teamIdFromName } from '@/lib/team-colors';
 import { LapScatter } from '@/components/charts/LapScatter';
+import { PaceBoxes } from '@/components/charts/PaceBoxes';
 import { SessionWeather } from '@/components/telemetry/SessionWeather';
 import { compoundColor } from '@/lib/team-colors';
 import type { SessionOption, DriverOption } from './options';
@@ -62,9 +64,6 @@ export function AnalysisClient({
     name: session.name,
   }));
   const DRIVERS = drivers.map((driver) => driver.code);
-  const teamOf = (code: string) =>
-    drivers.find((driver) => driver.code === code)?.constructorId ?? null;
-
   // Selection state. The list can legitimately be empty (a fresh database, or
   // no season from 2018 seeded yet), so it never indexes blindly.
   const [selectedSession, setSelectedSession] = useState(
@@ -81,6 +80,34 @@ export function AnalysisClient({
   const [trackMap, setTrackMap] = useState<TrackMapResponse | null>(null);
   const [stints, setStints] = useState<StintsResponse | null>(null);
   const [raceLaps, setRaceLaps] = useState<SessionLapsResponse | null>(null);
+
+  /**
+   * El equipo de cada piloto **en la sesión que se está mirando**.
+   *
+   * La lista de `drivers` sale de la última carrera, así que al abrir una
+   * sesión de 2024 los que ya no compiten se quedaban sin equipo y salían
+   * grises en los tres gráficos. Las vueltas traen el equipo de cada piloto en
+   * esa sesión, que además acierta con quien cambió de equipo a mitad de
+   * temporada; la lista queda como respaldo para cuando aún no se han cargado.
+   */
+  const equiposDeLaSesion = useMemo(() => {
+    const mapa = new Map<string, string>();
+
+    for (const lap of raceLaps?.laps ?? []) {
+      if (!lap.Driver || mapa.has(lap.Driver)) continue;
+
+      const id = teamIdFromName(lap.Team);
+      if (id) mapa.set(lap.Driver, id);
+    }
+
+    return mapa;
+  }, [raceLaps]);
+
+  const teamOf = (code: string) =>
+    equiposDeLaSesion.get(code) ??
+    drivers.find((driver) => driver.code === code)?.constructorId ??
+    null;
+
   const [weather, setWeather] = useState<SessionWeatherResponse | null>(null);
 
   /**
@@ -459,7 +486,7 @@ export function AnalysisClient({
             {loading.track ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             ) : (
-              <Map className="h-4 w-4" aria-hidden />
+              <MapaIcono className="h-4 w-4" aria-hidden />
             )}
             Trazado de {driver1}
           </Button>
@@ -601,7 +628,7 @@ export function AnalysisClient({
         {trackMap && (
           <div>
             <h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
-              <Map className="h-5 w-5 text-primary" aria-hidden />
+              <MapaIcono className="h-5 w-5 text-primary" aria-hidden />
               Trazado - {trackMap.driver}
               {trackMap.lap_time && (
                 <span className="font-mono text-base font-normal text-muted-foreground">
@@ -669,6 +696,24 @@ export function AnalysisClient({
                 destacados={[driver1, driver2]}
                 teamOf={teamOf}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Ritmo de toda la parrilla */}
+        {raceLaps && (
+          <div>
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
+              <BarChart3 className="h-5 w-5 text-primary" aria-hidden />
+              Ritmo de la parrilla
+            </h2>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Ordenados por su mediana, que es el ritmo que de verdad sostuvieron — no por la
+              vuelta rápida, que la marca cualquiera con el coche vacío. Suele no coincidir con el
+              orden de llegada.
+            </p>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <PaceBoxes laps={raceLaps.laps} teamOf={teamOf} />
             </div>
           </div>
         )}

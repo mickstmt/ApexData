@@ -309,7 +309,14 @@ test.describe('telemetría', () => {
 });
 
 test.describe('dispersión de tiempos por vuelta', () => {
-  /** Dos pilotos, diez vueltas, y una parada que se sale de la escala. */
+  /**
+   * Dos pilotos, diez vueltas y una parada que se sale de la escala.
+   *
+   * Están hechos para que los dos criterios NO coincidan: VER marca la vuelta
+   * más rápida de todas (1:30.000) pero rueda en 1:34; NOR no baja de 1:32.100
+   * y jamás hace la vuelta rápida. Por mejor vuelta manda VER, por mediana
+   * manda NOR — que es justo lo que el gráfico de ritmo tiene que enseñar.
+   */
   const CARRERA = {
     session: { year: 2024, event: 'Bahrain', type: 'R', name: 'Bahrain Grand Prix', date: '2024-03-02' },
     total_laps: 10,
@@ -317,15 +324,18 @@ test.describe('dispersión de tiempos por vuelta', () => {
       ...Array.from({ length: 10 }, (_, i) => ({
         Driver: 'VER',
         DriverNumber: '1',
+        Team: 'Red Bull Racing',
         LapNumber: i + 1,
-        // Una parada en la vuelta 5: se sale del 110 % y debe quedar fuera.
-        LapTime: i === 4 ? '1:52.000' : `1:3${i % 3}.500`,
+        // Vuelta 1: la más rápida de la sesión. Vuelta 5: parada en boxes, que
+        // se sale del 110 % y tiene que quedar fuera de la escala.
+        LapTime: i === 0 ? '1:30.000' : i === 4 ? '1:52.000' : `1:34.${(i % 3) + 1}00`,
       })),
       ...Array.from({ length: 10 }, (_, i) => ({
         Driver: 'NOR',
         DriverNumber: '4',
+        Team: 'McLaren',
         LapNumber: i + 1,
-        LapTime: `1:3${(i % 3) + 1}.100`,
+        LapTime: `1:32.${(i % 3) + 1}00`,
       })),
     ],
   };
@@ -353,6 +363,30 @@ test.describe('dispersión de tiempos por vuelta', () => {
     await expect(tabla.locator('tbody tr')).toHaveCount(2);
     await expect(tabla).toContainText('VER');
     await expect(tabla).toContainText('NOR');
+  });
+
+  test('el ritmo de la parrilla se ordena por mediana, no por vuelta rápida', async ({
+    page,
+  }) => {
+    await page.goto('/analysis');
+    await page.getByRole('button', { name: /Carrera vuelta a vuelta/ }).click();
+
+    const cajas = page.locator('svg[aria-label*="Ritmo de"]');
+    await expect(cajas).toBeVisible({ timeout: 20_000 });
+
+    // En el juego de prueba NOR sostiene 1:31–1:33 y VER marca la vuelta más
+    // rápida pero rueda más lento: por mediana manda NOR. Ordenar por mejor
+    // vuelta pondría a VER primero y el gráfico mentiría sobre el ritmo.
+    await expect(cajas).toHaveAttribute('aria-label', /Manda NOR/);
+
+    // `textContent` y no `innerText`: en un `<text>` de SVG el segundo vuelve
+    // vacío, y la comparación pasaría a comparar dos listas de nada.
+    const codigos = await cajas
+      .locator('text')
+      .evaluateAll((nodos) =>
+        nodos.map((n) => n.textContent?.trim() ?? '').filter((t) => t === 'VER' || t === 'NOR')
+      );
+    expect(codigos).toEqual(['NOR', 'VER']);
   });
 
   test('las vueltas de boxes quedan fuera de escala y se dicen', async ({ page }) => {
