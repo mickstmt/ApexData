@@ -1,0 +1,74 @@
+name: Refresh after each session
+
+on:
+  schedule:
+    # Cada hora, y casi siempre no hace nada.
+    #
+    # El tic es barato a propósito: lo único que ocurre siempre es una consulta
+    # a la base preguntando «¿terminó alguna sesión cuyos datos no tengo?». En
+    # una semana de descanso, en el parón de verano o un martes cualquiera, la
+    # respuesta es no y el trabajo termina sin gastar una sola petición a la
+    # fuente. Solo cuando acaba de correrse algo se siembra de verdad.
+    #
+    # Esto sustituye a esperar al lunes: antes, el resultado del domingo tardaba
+    # hasta dos días en aparecer —y el aviso push, lo mismo—.
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  refrescar:
+    name: Sembrar lo que acabe de correrse
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: ¿Hay algo que sembrar?
+        id: decidir
+        # El guion decide y no siembra: escribe su veredicto aquí y los pasos de
+        # abajo llaman a los sembradores de siempre, que ya están probados.
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Falta el secreto DATABASE_URL; no hay nada que revisar."
+            echo "sembrar=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          npx tsx scripts/hay-que-sembrar.ts
+
+      - name: Sembrar la temporada
+        if: steps.decidir.outputs.sembrar == 'true'
+        # La temporada entera y no solo la ronda: el sembrador es idempotente
+        # —comprobado contra las diecisiete temporadas, cero diferencias— y así
+        # de paso se recupera cualquier hueco anterior.
+        run: |
+          npm run seed:season -- "${{ steps.decidir.outputs.anio }}"
+          npm run seed:standings -- "${{ steps.decidir.outputs.anio }}"
+
+      - name: Avisar del resultado
+        if: steps.decidir.outputs.sembrar == 'true'
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+        # Aquí está la diferencia que se nota: el aviso sale una hora después de
+        # la carrera en vez de dos días después. El sembrado semanal lo sigue
+        # intentando por si este trabajo falla un fin de semana entero; la marca
+        # `notifiedAt` impide que nadie reciba el mismo aviso dos veces.
+        run: |
+          if [ -z "$VAPID_PRIVATE_KEY" ]; then
+            echo "Falta el secreto VAPID_PRIVATE_KEY; no se avisa a nadie."
+            exit 0
+          fi
+
+          npx tsx scripts/notificar-carrera.ts
