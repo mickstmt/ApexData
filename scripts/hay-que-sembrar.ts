@@ -19,6 +19,7 @@
 import 'dotenv/config';
 import { appendFileSync } from 'node:fs';
 import { prisma } from '../src/lib/prisma';
+import { comienzoDeCarrera } from '../src/lib/sesiones';
 
 /**
  * Cuánto dura cada sesión, para saber cuándo terminó.
@@ -69,15 +70,6 @@ export interface SesionRevisada {
   tenemos: number;
 }
 
-/** El comienzo real de la carrera: la fecha es medianoche y la hora va aparte. */
-export function comienzoDeCarrera(fecha: Date, hora: string | null): Date {
-  const comienzo = new Date(fecha);
-  if (!hora) return comienzo;
-
-  const [h, m] = hora.replace('Z', '').split(':').map(Number);
-  comienzo.setUTCHours(h ?? 0, m ?? 0, 0, 0);
-  return comienzo;
-}
 
 /**
  * Las sesiones que ya terminaron dentro de la ventana, con lo que tenemos de

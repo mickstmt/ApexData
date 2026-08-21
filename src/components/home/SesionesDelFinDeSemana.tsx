@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { LocalDateTime, RaceCountdown } from '@/components/home/RaceCountdown';
 import { estadoDeSesion } from '@/lib/sesiones';
 
@@ -24,8 +25,40 @@ export interface SesionParaLaTira {
   cuando: string;
 }
 
+/**
+ * A dónde lleva cada sesión.
+ *
+ * Las tres que publica Jolpica van a su pestaña en la ficha de la carrera; las
+ * demás, a Análisis, que es donde sí están sus tiempos porque vienen de FastF1.
+ * Enviar una práctica a la ficha sería llevar a alguien a un cartel que explica
+ * que ahí no hay nada.
+ */
+const DESTINO: Record<string, { pestaña?: string; analisis?: boolean }> = {
+  Carrera: { pestaña: 'race' },
+  Clasificación: { pestaña: 'qualifying' },
+  Sprint: { pestaña: 'sprint' },
+  'Clasif. sprint': { analisis: true },
+  'Práctica 1': { analisis: true },
+  'Práctica 2': { analisis: true },
+  'Práctica 3': { analisis: true },
+};
 
-export function SesionesDelFinDeSemana({ sesiones }: { sesiones: SesionParaLaTira[] }) {
+function enlaceDe(nombre: string, year: number, round: number): string {
+  const destino = DESTINO[nombre];
+  if (destino?.pestaña) return `/results/${year}/${round}?sesion=${destino.pestaña}`;
+  return '/analysis';
+}
+
+
+export function SesionesDelFinDeSemana({
+  sesiones,
+  year,
+  round,
+}: {
+  sesiones: SesionParaLaTira[];
+  year: number;
+  round: number;
+}) {
   const [ahora, setAhora] = useState<number | null>(null);
 
   useEffect(() => {
@@ -57,10 +90,14 @@ export function SesionesDelFinDeSemana({ sesiones }: { sesiones: SesionParaLaTir
           <li
             key={sesion.nombre}
             aria-current={esProxima || enCurso ? 'step' : undefined}
-            className={`border-b border-r border-border p-3 last:border-r-0 ${
+            className={`border-b border-r border-border last:border-r-0 ${
               enCurso || esProxima ? 'bg-primary/5' : ''
             } ${estado === 'pasada' ? 'opacity-55' : ''}`}
           >
+            <Link
+              href={enlaceDe(sesion.nombre, year, round)}
+              className="block p-3 ring-offset-background transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            >
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {sesion.nombre}
               {enCurso && (
@@ -82,6 +119,7 @@ export function SesionesDelFinDeSemana({ sesiones }: { sesiones: SesionParaLaTir
                 <RaceCountdown target={sesion.cuando} />
               </div>
             )}
+            </Link>
           </li>
         );
       })}

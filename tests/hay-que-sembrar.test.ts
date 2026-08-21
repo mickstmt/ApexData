@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  comienzoDeCarrera,
-  sesionesRevisables,
-  type CarreraParaRevisar,
-} from '../scripts/hay-que-sembrar';
+import { sesionesRevisables, type CarreraParaRevisar } from '../scripts/hay-que-sembrar';
+import { comienzoDeCarrera } from '@/lib/sesiones';
 
 /**
  * El caso que de verdad importa —que note lo que falta— no se puede provocar

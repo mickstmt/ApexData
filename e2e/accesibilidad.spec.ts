@@ -319,6 +319,39 @@ test.describe('telemetría', () => {
   });
 });
 
+test.describe('sesiones enlazadas', () => {
+  test('cada sesión de la portada lleva a donde están sus datos', async ({ page }) => {
+    await page.goto('/');
+
+    const tira = page.locator('ul[class*="grid-cols-2"] a');
+    if ((await tira.count()) === 0) test.skip(true, 'No hay carrera próxima en el calendario');
+
+    const enlaces = await tira.evaluateAll((as) =>
+      as.map((a) => ({
+        nombre: a.querySelector('div')?.textContent?.trim().split(/\s+/)[0] ?? '',
+        href: a.getAttribute('href') ?? '',
+      }))
+    );
+
+    for (const { nombre, href } of enlaces) {
+      // Las tres que publica Jolpica van a su pestaña; las demás, a Análisis,
+      // que es donde sí están sus tiempos. Mandar una práctica a la ficha sería
+      // llevar a alguien a un cartel que explica que ahí no hay nada.
+      if (/Carrera|Clasificación$|^Sprint$/.test(nombre)) {
+        expect(href, `${nombre} debería abrir su pestaña`).toMatch(/\/results\/\d+\/\d+\?sesion=/);
+      } else {
+        expect(href, `${nombre} debería llevar a Análisis`).toBe('/analysis');
+      }
+    }
+  });
+
+  test('una sesión inventada en la dirección abre la carrera', async ({ page }) => {
+    await page.goto('/results/2024/1?sesion=inventada');
+
+    await expect(page.getByRole('tab', { selected: true })).toHaveText(/CARRERA/i);
+  });
+});
+
 test.describe('pestañas de una carrera', () => {
   test('la carrera va primero y no hay que arrastrar para encontrarla', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });

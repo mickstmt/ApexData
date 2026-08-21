@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { estadoDeSesion, sesionesOrdenadas, type FinDeSemana } from '@/lib/sesiones';
+import {
+  estadoDeSesion,
+  queEnseñar,
+  sesionesOrdenadas,
+  type FinDeSemana,
+} from '@/lib/sesiones';
 
 const vacio: FinDeSemana = {
   fp1Date: null,
@@ -102,5 +107,65 @@ describe('estadoDeSesion', () => {
 
   it('una sesión con nombre desconocido no se queda colgada para siempre', () => {
     expect(estadoDeSesion('Sesión rara', inicio, enMinutos(61))).toBe('pasada');
+  });
+});
+
+describe('queEnseñar', () => {
+  const AHORA = new Date('2026-08-23T18:00:00Z').getTime();
+
+  it('con resultados, los resultados', () => {
+    expect(
+      queEnseñar({ nombre: 'Carrera', cuando: fecha('2026-08-23T13:00:00Z'), tieneResultados: true, ahora: AHORA })
+    ).toEqual({ tipo: 'resultados' });
+  });
+
+  it('distingue «todavía no se corre» de «no han publicado»', () => {
+    // Es la diferencia entre «vuelve el domingo» y «vuelve en un rato», y una
+    // pestaña vacía no la cuenta.
+    const futura = queEnseñar({
+      nombre: 'Carrera',
+      cuando: fecha('2026-08-24T13:00:00Z'),
+      tieneResultados: false,
+      ahora: AHORA,
+    });
+    expect(futura.tipo).toBe('aun-no-corre');
+
+    const terminada = queEnseñar({
+      nombre: 'Carrera',
+      cuando: fecha('2026-08-23T13:00:00Z'),
+      tieneResultados: false,
+      ahora: AHORA,
+    });
+    expect(terminada.tipo).toBe('sin-publicar');
+  });
+
+  it('mientras rueda, lo dice', () => {
+    const enCurso = queEnseñar({
+      nombre: 'Carrera',
+      cuando: fecha('2026-08-23T17:00:00Z'),
+      tieneResultados: false,
+      ahora: AHORA,
+    });
+    expect(enCurso.tipo).toBe('en-curso');
+  });
+
+  it('las sesiones sin fuente se dicen aparte, no como un retraso', () => {
+    // Prácticas y clasificación al sprint: esperar por ellas seria esperar por
+    // algo que Jolpica no publica.
+    expect(
+      queEnseñar({
+        nombre: 'Práctica 1',
+        cuando: fecha('2026-08-21T09:30:00Z'),
+        tieneResultados: false,
+        hayFuente: false,
+        ahora: AHORA,
+      })
+    ).toEqual({ tipo: 'sin-fuente' });
+  });
+
+  it('sin fecha guardada tampoco promete nada', () => {
+    expect(
+      queEnseñar({ nombre: 'Sprint', cuando: null, tieneResultados: false, ahora: AHORA }).tipo
+    ).toBe('sin-fuente');
   });
 });

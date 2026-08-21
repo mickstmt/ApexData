@@ -81,3 +81,55 @@ export function estadoDeSesion(nombre: string, cuando: Date, ahora: number): Est
   if (ahora >= empieza) return 'en-curso';
   return 'pendiente';
 }
+
+/**
+ * Qué enseñar en la pestaña de una sesión que todavía no tiene resultados.
+ *
+ * Una pestaña vacía no distingue tres situaciones que para quien mira son muy
+ * distintas: que la sesión aún no se ha corrido, que se corrió y los resultados
+ * no han llegado, o que esa sesión nunca va a tener datos por esta vía. Decirlo
+ * cuesta lo mismo que no decirlo.
+ */
+/** El comienzo real de la carrera: la fecha es medianoche y la hora va aparte. */
+export function comienzoDeCarrera(fecha: Date, hora: string | null): Date {
+  const comienzo = new Date(fecha);
+  if (!hora) return comienzo;
+
+  const [h, m] = hora.replace('Z', '').split(':').map(Number);
+  comienzo.setUTCHours(h ?? 0, m ?? 0, 0, 0);
+  return comienzo;
+}
+
+export type QueEnseñar =
+  | { tipo: 'resultados' }
+  | { tipo: 'aun-no-corre'; cuando: Date }
+  | { tipo: 'en-curso'; cuando: Date }
+  | { tipo: 'sin-publicar'; cuando: Date }
+  | { tipo: 'sin-fuente' };
+
+export function queEnseñar({
+  nombre,
+  cuando,
+  tieneResultados,
+  hayFuente = true,
+  ahora,
+}: {
+  nombre: string;
+  cuando: Date | null;
+  tieneResultados: boolean;
+  /** Falso para prácticas y clasificación al sprint: Jolpica no las publica. */
+  hayFuente?: boolean;
+  ahora: number;
+}): QueEnseñar {
+  if (tieneResultados) return { tipo: 'resultados' };
+  if (!hayFuente) return { tipo: 'sin-fuente' };
+  if (!cuando) return { tipo: 'sin-fuente' };
+
+  const estado = estadoDeSesion(nombre, cuando, ahora);
+
+  if (estado === 'pendiente') return { tipo: 'aun-no-corre', cuando };
+  if (estado === 'en-curso') return { tipo: 'en-curso', cuando };
+
+  // Terminó y no hay datos: están de camino. Es normal durante la primera hora.
+  return { tipo: 'sin-publicar', cuando };
+}

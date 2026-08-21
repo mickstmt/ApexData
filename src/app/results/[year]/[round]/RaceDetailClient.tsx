@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Trophy, Calendar, MapPin, Flag, Zap, Construction, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { teamColor } from '@/lib/team-colors';
 import { PriorityRows } from '@/components/ui/PriorityRows';
 import { SprintResults } from './SprintResults';
+import { SesionPendiente } from './SesionPendiente';
+import { comienzoDeCarrera, queEnseñar } from '@/lib/sesiones';
 import type {
   Race,
   Circuit,
@@ -35,6 +37,8 @@ type RaceWithDetails = Race & {
 interface RaceDetailClientProps {
   race: RaceWithDetails;
   year: number;
+  /** Pestaña con la que abrir, si la dirección lo pide. */
+  sesionInicial?: string;
 }
 
 type SessionTab =
@@ -52,8 +56,65 @@ interface TabConfig {
   shortLabel: string;
 }
 
-export default function RaceDetailClient({ race, year }: RaceDetailClientProps) {
-  const [activeTab, setActiveTab] = useState<SessionTab>('race');
+export default function RaceDetailClient({ race, year, sesionInicial }: RaceDetailClientProps) {
+  // La pestaña de la dirección solo manda si es una de verdad: un `?sesion=`
+  // inventado abre la carrera, que es el destino razonable.
+  const PESTAÑAS_VALIDAS: SessionTab[] = [
+    'race',
+    'qualifying',
+    'sprint',
+    'sprint-qualifying',
+    'practice1',
+    'practice2',
+    'practice3',
+  ];
+
+  const [activeTab, setActiveTab] = useState<SessionTab>(
+    PESTAÑAS_VALIDAS.includes(sesionInicial as SessionTab) ? (sesionInicial as SessionTab) : 'race'
+  );
+
+  /**
+   * La hora, decidida en el navegador.
+   *
+   * Distinguir «aún no se corre» de «ya terminó y no han publicado» depende de
+   * qué hora es, y esta página se sirve cacheada: decidirlo en el servidor
+   * dejaría el mensaje congelado. Hasta que monta, `null` — y entonces se pinta
+   * el aviso sencillo de siempre, sin prometer nada.
+   */
+  const [ahora, setAhora] = useState<number | null>(null);
+
+  useEffect(() => {
+    // El reloj es justo eso: un sistema externo del que la página se entera al
+    // montar. No se puede leer durante el render sin arriesgar que servidor y
+    // navegador no coincidan.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAhora(Date.now());
+  }, []);
+
+  const comienzoDeLaCarrera = comienzoDeCarrera(new Date(race.date), race.time);
+
+  // Se calculan aquí y no dentro del JSX: `Date.now()` en pleno render es una
+  // llamada impura —el compilador de React lo rechaza— y además el resultado
+  // debe ser el mismo en toda la pintura.
+  const estadoCarrera =
+    ahora === null
+      ? null
+      : queEnseñar({
+          nombre: 'Carrera',
+          cuando: comienzoDeLaCarrera,
+          tieneResultados: false,
+          ahora,
+        });
+
+  const estadoSprint =
+    ahora === null
+      ? null
+      : queEnseñar({
+          nombre: 'Sprint',
+          cuando: race.sprintDate,
+          tieneResultados: false,
+          ahora,
+        });
 
   /**
    * Si el fin de semana tuvo sprint, sale del propio dato.
@@ -62,7 +123,11 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
    * lógica basada en la ronda»—, así que las pestañas del sprint no aparecían
    * nunca. La base guarda sus resultados desde el primer sembrado.
    */
-  const isSprintWeekend = race.sprintResults.length > 0;
+  // De si está PROGRAMADO, no de si ya hay resultados: derivarlo de los
+  // resultados hacía desaparecer la pestaña justo el fin de semana en que
+  // interesa —antes de que el sprint se corra—, que es cuando alguien entra a
+  // ver a qué hora es y desde dónde sale su piloto.
+  const isSprintWeekend = race.sprintDate !== null || race.sprintResults.length > 0;
 
   /**
    * Las pestañas van de lo más importante a lo menos, no en orden cronológico.
@@ -184,17 +249,21 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
 
       {/* Content based on active tab */}
       <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
-      {activeTab === 'race' && race.results.length === 0 ? (
+      {activeTab === 'race' && race.results.length === 0 && ahora === null ? (
+        <div className="rounded-lg border border-border bg-card p-12 text-center">
+          <Flag className="mx-auto mb-4 h-16 w-16 text-muted-foreground" aria-hidden />
+          <h3 className="mb-2 text-2xl font-bold">Sin resultados todavía</h3>
+        </div>
+      ) : activeTab === 'race' && race.results.length === 0 && estadoCarrera ? (
         // Sin esta guarda, una carrera aún no disputada pintaba las cabeceras
         // de la tabla sin una sola fila, un «VUELTAS: 0» y un «Podio» vacío:
-        // el mismo aspecto que tiene un fallo, sin serlo.
-        <div className="rounded-lg border border-border bg-card p-12 text-center">
-          <Flag className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-          <h3 className="mb-2 text-2xl font-bold">Sin resultados todavía</h3>
-          <p className="text-lg text-muted-foreground">
-            Esta carrera aún no tiene resultados en ApexData. Vuelve cuando se haya disputado.
-          </p>
-        </div>
+        // el mismo aspecto que tiene un fallo, sin serlo. Y ahora, además, dice
+        // qué falta exactamente y enseña la parrilla si ya se conoce.
+        <SesionPendiente
+          nombre="La carrera"
+          estado={estadoCarrera}
+          parrilla={race.qualifyings}
+        />
       ) : activeTab === 'race' ? (
         <>
           {/* Race Stats */}
@@ -778,10 +847,18 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
           )}
         </>
       ) : activeTab === 'sprint' ? (
-        <SprintResults resultados={race.sprintResults} />
+        race.sprintResults.length > 0 ? (
+          <SprintResults resultados={race.sprintResults} />
+        ) : (
+          estadoSprint && <SesionPendiente nombre="El sprint" estado={estadoSprint} />
+        )
       ) : (
         /*
-         * Las sesiones que todavía no se pueden enseñar, y por qué.
+         * Prácticas y clasificación al sprint: no es un retraso, es que la
+         * fuente no las publica. `SesionPendiente` lo dice con esas palabras.
+         *
+         * Lo que sigue debajo es el texto anterior, que se mantiene aquí para
+         * que el componente decida en un solo sitio.
          *
          * No es falta de ganas: **Jolpica no publica resultados de prácticas
          * libres** —Ergast nunca los tuvo— ni de la clasificación al sprint. Esos

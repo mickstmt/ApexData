@@ -12,6 +12,9 @@ interface RaceResultPageProps {
     year: string;
     round: string;
   }>;
+  /** `?sesion=` abre directamente esa pestaña: es a donde apuntan los enlaces
+      de la portada, para que tocar «Sprint» no te deje en la carrera. */
+  searchParams: Promise<{ sesion?: string }>;
 }
 
 export async function generateMetadata({ params }: RaceResultPageProps) {
@@ -22,7 +25,7 @@ export async function generateMetadata({ params }: RaceResultPageProps) {
   };
 }
 
-export default async function RaceResultPage({ params }: RaceResultPageProps) {
+export default async function RaceResultPage({ params, searchParams }: RaceResultPageProps) {
   const { year, round } = await params;
   const yearNum = parseInt(year);
   const roundNum = parseInt(round);
@@ -74,5 +77,7 @@ export default async function RaceResultPage({ params }: RaceResultPageProps) {
     notFound();
   }
 
-  return <RaceDetailClient race={race} year={yearNum} />;
+  const { sesion } = await searchParams;
+
+  return <RaceDetailClient race={race} year={yearNum} sesionInicial={sesion} />;
 }

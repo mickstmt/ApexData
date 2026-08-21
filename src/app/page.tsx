@@ -140,6 +140,8 @@ export default async function Home() {
             {nextSessions.length > 1 && (
               <div className="border-t border-border">
                 <SesionesDelFinDeSemana
+                  year={nextRace.year}
+                  round={nextRace.round}
                   sesiones={nextSessions.map(({ nombre, cuando }) => ({
                     nombre,
                     cuando: cuando.toISOString(),
