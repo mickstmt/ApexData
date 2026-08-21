@@ -53,7 +53,8 @@ async function main() {
     if (path === driver.imageUrl) continue;
 
     await prisma.driver.update({ where: { id: driver.id }, data: { imageUrl: path } });
-    path ? linked++ : cleared++;
+    if (path) linked++;
+    else cleared++;
   }
   console.log(`   Pilotos:    ${driverImages.size} imágenes disponibles`);
 
@@ -62,7 +63,8 @@ async function main() {
     if (path === constructor.logoUrl) continue;
 
     await prisma.team.update({ where: { id: constructor.id }, data: { logoUrl: path } });
-    path ? linked++ : cleared++;
+    if (path) linked++;
+    else cleared++;
   }
   console.log(`   Equipos:    ${constructorImages.size} logos disponibles`);
 
@@ -71,7 +73,8 @@ async function main() {
     if (path === circuit.imageUrl) continue;
 
     await prisma.circuit.update({ where: { id: circuit.id }, data: { imageUrl: path } });
-    path ? linked++ : cleared++;
+    if (path) linked++;
+    else cleared++;
   }
   console.log(`   Circuitos:  ${circuitImages.size} trazados disponibles`);
 

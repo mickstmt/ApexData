@@ -19,21 +19,6 @@ interface StandingsPageProps {
   searchParams: Promise<{ season?: string }>;
 }
 
-interface DriverStanding {
-  position: number;
-  driver: string;
-  points: number;
-  team: string;
-  wins: number;
-}
-
-interface ConstructorStanding {
-  position: number;
-  team: string;
-  points: number;
-  wins: number;
-}
-
 /**
  * Standings come straight from the stored championship tables, which Jolpica
  * publishes after every round. The page used to load a whole season of results

@@ -18,7 +18,11 @@ Verificar el cutover comparando el `buildId`, no por uptime:
 
 ```bash
 curl -s https://apexdata.meeks.fun/api/health
-# {"status":"healthy","buildId":"…","database":"ok","telemetryService":"configured"}
+# {"status":"healthy","buildId":"…","database":"ok","telemetryService":"ok"}
+#
+# `telemetryService` dice si el servicio RESPONDE, no si la variable existe:
+# `ok`, `sin-respuesta` o `no-configurado`. Como el servicio no tiene dominio,
+# esta es la única forma de saber desde fuera si está en pie.
 ```
 
 ## El servicio de telemetría: MANUAL

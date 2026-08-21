@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { User } from 'lucide-react';
+import { } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { DriverAvatar } from '@/components/ui/OptimizedImage';

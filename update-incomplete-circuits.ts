@@ -58,7 +58,7 @@ async function updateIncompleteCircuits() {
         const circuit = races[0].Circuit;
         circuitDataMap.set(circuit.circuitId, circuit);
       }
-    } catch (error) {
+    } catch {
       console.log(`  ⚠️  Error en ronda ${round}`);
       continue;
     }

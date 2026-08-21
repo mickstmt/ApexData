@@ -33,12 +33,14 @@ async function main() {
 
   for (const { nationality } of drivers) {
     const iso = NATIONALITY_TO_ISO[nationality];
-    iso ? codes.add(iso) : unmapped.add(nationality);
+    if (iso) codes.add(iso);
+    else unmapped.add(nationality);
   }
 
   for (const { country } of circuits) {
     const iso = COUNTRY_TO_ISO[country];
-    iso ? codes.add(iso) : unmapped.add(country);
+    if (iso) codes.add(iso);
+    else unmapped.add(country);
   }
 
   const results: DownloadResult[] = [];

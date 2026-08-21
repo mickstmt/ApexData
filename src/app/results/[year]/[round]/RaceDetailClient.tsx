@@ -574,8 +574,6 @@ export default function RaceDetailClient({ race, year }: RaceDetailClientProps) 
                       {race.qualifyings.map((result) => {
                         const isTop3 = result.position <= 3;
                         const isPole = result.position === 1;
-                        const isQ3 = result.q3 !== null;
-                        const isQ2 = result.q2 !== null && !isQ3;
 
                         return (
                           <tr

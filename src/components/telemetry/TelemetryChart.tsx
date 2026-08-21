@@ -171,7 +171,8 @@ export function TelemetryChart({
         for (let i = 0; i < series.length; i++) {
           const x = xOf(trace.distance[i] ?? 0);
           const y = bottom - (series[i] / max) * (channel.height - 12);
-          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
 
         ctx.stroke();

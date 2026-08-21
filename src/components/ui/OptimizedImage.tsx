@@ -91,12 +91,6 @@ export function DriverAvatar({
     xl: 'h-48 w-48',
   };
 
-  const iconSizes = {
-    sm: 'h-6 w-6',
-    md: 'h-8 w-8',
-    lg: 'h-12 w-12',
-    xl: 'h-24 w-24',
-  };
 
   const initials = name
     .split(' ')
