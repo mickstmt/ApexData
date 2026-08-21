@@ -308,6 +308,63 @@ test.describe('telemetría', () => {
   });
 });
 
+test.describe('dispersión de tiempos por vuelta', () => {
+  /** Dos pilotos, diez vueltas, y una parada que se sale de la escala. */
+  const CARRERA = {
+    session: { year: 2024, event: 'Bahrain', type: 'R', name: 'Bahrain Grand Prix', date: '2024-03-02' },
+    total_laps: 10,
+    laps: [
+      ...Array.from({ length: 10 }, (_, i) => ({
+        Driver: 'VER',
+        DriverNumber: '1',
+        LapNumber: i + 1,
+        // Una parada en la vuelta 5: se sale del 110 % y debe quedar fuera.
+        LapTime: i === 4 ? '1:52.000' : `1:3${i % 3}.500`,
+      })),
+      ...Array.from({ length: 10 }, (_, i) => ({
+        Driver: 'NOR',
+        DriverNumber: '4',
+        LapNumber: i + 1,
+        LapTime: `1:3${(i % 3) + 1}.100`,
+      })),
+    ],
+  };
+
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/laps/**', (route) =>
+      route.fulfill({ json: CARRERA })
+    );
+  });
+
+  test('cada vuelta es un punto, y el resumen dice ritmo y constancia', async ({ page }) => {
+    await page.goto('/analysis');
+    await page.getByRole('button', { name: /Carrera vuelta a vuelta/ }).click();
+
+    const grafico = page.locator('canvas[aria-label*="Dispersión"]');
+    await expect(grafico).toBeVisible({ timeout: 20_000 });
+
+    // El lienzo no tiene texto que leer, así que su descripción tiene que
+    // llevar el resumen y remitir a la tabla.
+    await expect(grafico).toHaveAttribute('aria-label', /vueltas de \d+ pilotos/);
+
+    // La tabla es la alternativa accesible al gráfico, y además el dato que
+    // más se mira: mediana y horquilla.
+    const tabla = page.locator('table').filter({ hasText: 'Horquilla' });
+    await expect(tabla.locator('tbody tr')).toHaveCount(2);
+    await expect(tabla).toContainText('VER');
+    await expect(tabla).toContainText('NOR');
+  });
+
+  test('las vueltas de boxes quedan fuera de escala y se dicen', async ({ page }) => {
+    await page.goto('/analysis');
+    await page.getByRole('button', { name: /Carrera vuelta a vuelta/ }).click();
+    await expect(page.locator('canvas[aria-label*="Dispersión"]')).toBeVisible({ timeout: 20_000 });
+
+    // Esconder una vuelta sin decirlo sería mentir sobre los datos.
+    await expect(page.getByText(/queda[n]? fuera de la escala/)).toBeVisible();
+  });
+});
+
 test.describe('pantalla de apertura', () => {
   test('tapa el arranque y se retira sola', async ({ page }) => {
     // Con `?splash` porque el modo instalado no se puede emular desde un

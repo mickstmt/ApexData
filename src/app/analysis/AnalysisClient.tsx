@@ -15,6 +15,7 @@ import {
   Loader2,
   Map,
   TrendingUp,
+  ScatterChart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LapTimesTable } from '@/components/telemetry';
@@ -22,6 +23,7 @@ import { TelemetryChart, type TelemetryTrace } from '@/components/telemetry/Tele
 import { TrackMap } from '@/components/telemetry/TrackMap';
 import { StintChart } from '@/components/telemetry/StintChart';
 import { RaceProgress } from '@/components/charts/RaceProgress';
+import { LapScatter } from '@/components/charts/LapScatter';
 import { SessionWeather } from '@/components/telemetry/SessionWeather';
 import { compoundColor } from '@/lib/team-colors';
 import type { SessionOption, DriverOption } from './options';
@@ -645,6 +647,28 @@ export function AnalysisClient({
             </h2>
             <div className="rounded-lg border border-border bg-card p-4">
               <RaceProgress laps={raceLaps.laps} teamOf={teamOf} />
+            </div>
+          </div>
+        )}
+
+        {/* Constancia: cada vuelta, un punto */}
+        {raceLaps && (
+          <div>
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
+              <ScatterChart className="h-5 w-5 text-primary" aria-hidden />
+              Constancia vuelta a vuelta
+            </h2>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Cada punto es una vuelta. Una nube apretada es un piloto repitiendo ritmo; una
+              dispersa, tráfico o neumáticos cayéndose. Los escalones hacia abajo son juegos
+              nuevos. Se destacan {driver1} y {driver2}.
+            </p>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <LapScatter
+                laps={raceLaps.laps}
+                destacados={[driver1, driver2]}
+                teamOf={teamOf}
+              />
             </div>
           </div>
         )}
