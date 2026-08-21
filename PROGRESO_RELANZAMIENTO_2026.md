@@ -28,7 +28,7 @@
 
 **Próximo paso**: lo que queda de la deuda del Sprint 5 —aviso push tras cada GP, pantalla de administración, y el límite de peticiones con `slowapi`, que es el único que pide Deploy manual del servicio—, . El respaldo con `pg_dump` y el escaneo de secretos ya salen de esa lista: el primero hecho el 2026-08-20 y comprobado restaurándose, el segundo activado ese mismo día junto con la protección de subida. Queda además el mantenimiento: los 6 logos que faltan, Prisma 6→7 y los 14 avisos de lint.
 
-**Tests**: 96 unitarios (TypeScript) + 28 (Python) + **24 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 100 unitarios (TypeScript) + 28 (Python) + **26 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -75,6 +75,29 @@
 ---
 
 ## Bitácora
+
+### 2026-08-21 (21) — Avisos de fin de carrera: el Sprint 5 queda cerrado ✅
+
+La última pieza que faltaba del plan. Quien quiera se suscribe desde Favoritos y recibe un aviso al terminar cada Gran Premio, con quién ganó; al tocarlo se abre esa carrera. Lo manda **el cron semanal** justo después de sembrar, que es cuando el resultado entra en la base — la web no envía nada, así que en EasyPanel no hubo que tocar nada y el único secreto nuevo (`VAPID_PRIVATE_KEY`) vive en GitHub.
+
+**El ensayo destapó un desastre silencioso antes de mandar nada.** Las 400 carreras de la base están sin avisar, así que la primera ejecución habría contado la última, la siguiente la anterior, y semana a semana habría ido enviando resultados de 2010 como si fueran de ayer. Ahora solo avisa de carreras de **los últimos ocho días** —ocho y no siete porque el cron corre los lunes y una carrera del domingo tiene que caber aunque el reloj vaya justo—, y la marca `notifiedAt` hace que repetir el cron no repita el aviso.
+
+**Qué se pudo verificar sin un teléfono, que es más de lo que parecía:**
+
+- La petición sale **firmada con VAPID y cifrada en `aes128gcm`**, comprobado pidiendo a `web-push` la petición ya construida: 210 bytes cifrados para 105 de texto, y el nombre del ganador no aparece a la vista.
+- Una dirección muerta **se borra sola**: apuntando una suscripción a una URL propia que responde 404, el envío devolvió `caducados: 1` y la fila desapareció. Sin eso, cada envío arrastraría para siempre a quien desinstaló la app.
+- Las rutas aguantan **alta repetida y baja repetida** sin error, que es lo que pasa de verdad cuando alguien reactiva los avisos.
+- **El código del propio service worker se ejecuta en las pruebas**, con un `self` de mentira: enseña título, cuerpo y etiqueta, cae al aviso genérico si el contenido llega ilegible, y al tocarlo reutiliza la ventana abierta en vez de abrir una segunda. Esto no se puede comprobar en un navegador automatizado: se entrega el push por CDP y llega, pero un Chromium sin escritorio no tiene dónde enseñar la notificación y `getNotifications()` vuelve vacío.
+
+**Lo que solo se comprueba en el iPhone**: recibirlo. En iOS el push únicamente funciona con la app instalada, y el control lo explica —con las instrucciones de Compartir → Añadir a pantalla de inicio— en vez de dejar un botón que no haría nada. Lo mismo con el permiso denegado: el navegador no vuelve a preguntar, así que se dice dónde cambiarlo en lugar de insistir.
+
+La tabla nace con **RLS activado** como las demás, y aquí importa más que en las tablas de F1: esas son datos públicos, una dirección de push es de alguien.
+
+### 2026-08-21 (20b) — Dos comprobaciones que cierran pendientes sin escribir código ⚪
+
+**El `williams.webp` no era un problema.** Estaba anotado como deuda por ser el único logo en mapa de bits entre SVG. Medido en las dos temáticas: se pinta igual que los demás —103×36, silueta monocroma— porque todos pasan por el mismo tratamiento, y a 1163×408 le sobra resolución once veces para ese hueco. Se cierra sin tocar nada.
+
+**Las 5 vulnerabilidades «altas» no son alcanzables.** Vienen de `effect`, que entra por `@prisma/config` —la línea de comandos de Prisma, no el camino de consultas— y el aviso es sobre pérdida de contexto en fibras bajo **RPC concurrente**, algo que ni Prisma ni esta app ejecutan. Queda anotado: son reales como aviso y no como riesgo aquí, así que no justifican por sí solas la actualización mayor.
 
 ### 2026-08-20 (20) — La pantalla negra al abrir: medida y quitada ✅
 
