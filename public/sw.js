@@ -181,3 +181,61 @@ async function paginaGuardadaPrimero(event) {
     );
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Avisos push.
+
+   El aviso llega aquí aunque la app esté cerrada: el navegador despierta al
+   worker solo para esto. Por eso el contenido viaja dentro del propio aviso y
+   no se pide a la red — si la conexión falla, el aviso tiene que salir igual.
+   --------------------------------------------------------------------------- */
+self.addEventListener('push', (event) => {
+  let aviso = {
+    titulo: 'ApexData',
+    cuerpo: 'Hay novedades.',
+    url: '/',
+  };
+
+  try {
+    if (event.data) aviso = { ...aviso, ...event.data.json() };
+  } catch {
+    // Un aviso sin cuerpo legible sigue siendo un aviso: se enseña el genérico
+    // en vez de tragárselo, que es lo que hace `showNotification` si falla.
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(aviso.titulo, {
+      body: aviso.cuerpo,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      // La etiqueta agrupa: un aviso nuevo de la misma carrera sustituye al
+      // anterior en vez de apilarse.
+      tag: aviso.etiqueta || 'apexdata',
+      data: { url: aviso.url },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const destino = new URL(event.notification.data?.url || '/', self.location.origin).href;
+
+  event.waitUntil(
+    (async () => {
+      const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+
+      // Si la app ya está abierta se reutiliza esa ventana: abrir una segunda
+      // deja al usuario con dos copias de la misma app.
+      for (const ventana of ventanas) {
+        if ('focus' in ventana) {
+          await ventana.focus();
+          if ('navigate' in ventana) await ventana.navigate(destino);
+          return;
+        }
+      }
+
+      await self.clients.openWindow(destino);
+    })()
+  );
+});

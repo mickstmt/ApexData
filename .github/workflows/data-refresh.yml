@@ -49,6 +49,22 @@ jobs:
           npm run seed:season -- "$YEAR"
           npm run seed:standings -- "$YEAR"
 
+      - name: Avisar del resultado, si hay carrera nueva
+        if: steps.seed.outputs.configured == 'true'
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+        # Va justo después de sembrar, que es cuando el resultado acaba de
+        # entrar en la base. El guion decide solo si hay algo que contar: la
+        # mayoría de los lunes no habrá carrera nueva y no pasa nada.
+        run: |
+          if [ -z "$VAPID_PRIVATE_KEY" ]; then
+            echo "Falta el secreto VAPID_PRIVATE_KEY; no se avisa a nadie."
+            echo "Ver DEPLOY.md, «Avisos de fin de carrera»."
+            exit 0
+          fi
+
+          npx tsx scripts/notificar-carrera.ts
+
       - name: Warm the telemetry cache
         if: steps.seed.outputs.configured == 'true'
         env:

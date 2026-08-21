@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { FavoritesGrid } from '@/components/favorites/FavoritesGrid';
 import { EquipoAcento, type EquipoElegible } from '@/components/favorites/EquipoAcento';
+import { AvisosPush } from '@/components/pwa/AvisosPush';
 
 export const metadata = {
   title: 'Favoritos | ApexData',
@@ -63,6 +64,8 @@ export default async function FavoritesPage() {
       </div>
 
       {equipos.length > 0 && <EquipoAcento equipos={equipos} />}
+
+      <AvisosPush />
 
       {/* Favorites Grid */}
       <FavoritesGrid />

@@ -19,29 +19,29 @@ datasource db {
 
 /// Represents a Formula 1 driver
 model Driver {
-  id              String   @id @default(cuid())
-  driverId        String   @unique // Ergast/Jolpica driver ID (e.g., "hamilton")
+  id              String    @id @default(cuid())
+  driverId        String    @unique // Ergast/Jolpica driver ID (e.g., "hamilton")
   // Neither of these is unique in practice: #1 moves to the reigning champion
   // each year, and codes get reused across eras (Michael and Mick Schumacher
   // both raced as "MSC"). driverId is the only stable identity.
-  permanentNumber Int?     // Racing number for the current season (e.g., 44)
-  code            String?  // Three-letter code (e.g., "HAM")
-  givenName       String   // First name
-  familyName      String   // Last name
+  permanentNumber Int? // Racing number for the current season (e.g., 44)
+  code            String? // Three-letter code (e.g., "HAM")
+  givenName       String // First name
+  familyName      String // Last name
   dateOfBirth     DateTime?
   nationality     String
-  url             String?  // Wikipedia or official URL
-  imageUrl        String?  // Profile image URL
+  url             String? // Wikipedia or official URL
+  imageUrl        String? // Profile image URL
 
   // Metadata
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  results         Result[]
-  qualifyings     Qualifying[]
-  sprintResults   SprintResult[]
-  standings       DriverStanding[]
+  results       Result[]
+  qualifyings   Qualifying[]
+  sprintResults SprintResult[]
+  standings     DriverStanding[]
 
   @@index([driverId])
   @@index([nationality])
@@ -54,22 +54,22 @@ model Driver {
 /// with Object.prototype.constructor, which breaks both the delegate lookup
 /// and the generated row type.
 model Team {
-  id             String   @id @default(cuid())
-  constructorId  String   @unique // Ergast/Jolpica constructor ID (e.g., "mercedes")
-  name           String
-  nationality    String
-  url            String?  // Wikipedia or official URL
-  logoUrl        String?  // Team logo URL
+  id            String  @id @default(cuid())
+  constructorId String  @unique // Ergast/Jolpica constructor ID (e.g., "mercedes")
+  name          String
+  nationality   String
+  url           String? // Wikipedia or official URL
+  logoUrl       String? // Team logo URL
 
   // Metadata
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  results        Result[]
-  qualifyings    Qualifying[]
-  sprintResults  SprintResult[]
-  standings      ConstructorStanding[]
+  results       Result[]
+  qualifyings   Qualifying[]
+  sprintResults SprintResult[]
+  standings     ConstructorStanding[]
 
   @@index([constructorId])
   @@index([nationality])
@@ -78,30 +78,30 @@ model Team {
 
 /// Represents a racing circuit
 model Circuit {
-  id            String   @id @default(cuid())
-  circuitId     String   @unique // Ergast/Jolpica circuit ID (e.g., "monaco")
-  name          String
-  location      String   // City
-  country       String
-  lat           Float?   // Latitude
-  lng           Float?   // Longitude
-  alt           Int?     // Altitude in meters
-  url           String?  // Wikipedia or official URL
-  imageUrl      String?  // Circuit layout image URL
+  id        String  @id @default(cuid())
+  circuitId String  @unique // Ergast/Jolpica circuit ID (e.g., "monaco")
+  name      String
+  location  String // City
+  country   String
+  lat       Float? // Latitude
+  lng       Float? // Longitude
+  alt       Int? // Altitude in meters
+  url       String? // Wikipedia or official URL
+  imageUrl  String? // Circuit layout image URL
 
   // Circuit details
-  length        Float?   // Length in km
-  corners       Int?     // Number of corners
-  drsZones      Int?     // Number of DRS zones
-  lapRecord     String?  // Lap record time
-  lapRecordYear Int?     // Year of lap record
+  length        Float? // Length in km
+  corners       Int? // Number of corners
+  drsZones      Int? // Number of DRS zones
+  lapRecord     String? // Lap record time
+  lapRecordYear Int? // Year of lap record
 
   // Metadata
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  races         Race[]
+  races Race[]
 
   @@index([circuitId])
   @@index([country])
@@ -110,16 +110,16 @@ model Circuit {
 
 /// Represents a Formula 1 season
 model Season {
-  id        String   @id @default(cuid())
-  year      Int      @unique
-  url       String?  // Wikipedia URL
+  id   String  @id @default(cuid())
+  year Int     @unique
+  url  String? // Wikipedia URL
 
   // Metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  races     Race[]
+  races Race[]
 
   @@index([year])
   @@map("seasons")
@@ -127,36 +127,42 @@ model Season {
 
 /// Represents a race event (Grand Prix)
 model Race {
-  id            String    @id @default(cuid())
-  raceId        String?   // Ergast/Jolpica race ID (optional, for legacy data)
-  year          Int
-  round         Int       // Round number in the season
-  raceName      String    // e.g., "Monaco Grand Prix"
+  id       String  @id @default(cuid())
+  raceId   String? // Ergast/Jolpica race ID (optional, for legacy data)
+  year     Int
+  round    Int // Round number in the season
+  raceName String // e.g., "Monaco Grand Prix"
 
   // Dates and times (UTC)
-  date          DateTime
-  time          String?   // Race start time
-  fp1Date       DateTime? // Free Practice 1
-  fp1Time       String?
-  fp2Date       DateTime?
-  fp2Time       String?
-  fp3Date       DateTime?
-  fp3Time       String?
-  qualiDate     DateTime? // Qualifying
-  qualiTime     String?
-  sprintDate    DateTime? // Sprint race (if applicable)
-  sprintTime    String?
+  date       DateTime
+  time       String? // Race start time
+  fp1Date    DateTime? // Free Practice 1
+  fp1Time    String?
+  fp2Date    DateTime?
+  fp2Time    String?
+  fp3Date    DateTime?
+  fp3Time    String?
+  qualiDate  DateTime? // Qualifying
+  qualiTime  String?
+  sprintDate DateTime? // Sprint race (if applicable)
+  sprintTime String?
 
-  url           String?   // Wikipedia or official URL
+  url String? // Wikipedia or official URL
 
   // Metadata
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  season        Season    @relation(fields: [year], references: [year], onDelete: Cascade)
-  circuit       Circuit   @relation(fields: [circuitId], references: [circuitId], onDelete: Restrict)
-  circuitId     String
+  season    Season  @relation(fields: [year], references: [year], onDelete: Cascade)
+  circuit   Circuit @relation(fields: [circuitId], references: [circuitId], onDelete: Restrict)
+  circuitId String
+
+  /**
+   * Cuándo se avisó de su resultado. Sin esto, un cron que se repita —o que
+   * se dispare a mano— mandaría el mismo aviso otra vez.
+   */
+  notifiedAt DateTime?
 
   results       Result[]
   qualifyings   Qualifying[]
@@ -175,40 +181,40 @@ model Race {
 
 /// Represents race results
 model Result {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Position and points
-  position        Int?     // Final position (null if DNF/DNS/DSQ)
-  positionText    String   // "1", "2", "R" (retired), "D" (disqualified), etc.
-  positionOrder   Int      // Order for sorting (includes DNF positions)
-  points          Float    @default(0)
+  position      Int? // Final position (null if DNF/DNS/DSQ)
+  positionText  String // "1", "2", "R" (retired), "D" (disqualified), etc.
+  positionOrder Int // Order for sorting (includes DNF positions)
+  points        Float  @default(0)
 
   // Grid and laps
-  grid            Int      // Starting grid position
-  laps            Int      // Laps completed
+  grid Int // Starting grid position
+  laps Int // Laps completed
 
   // Time and status
-  time            String?  // Race time (for winner) or gap to winner
-  milliseconds    BigInt?  // Time in milliseconds
-  fastestLap      Int?     // Fastest lap number
-  rank            Int?     // Fastest lap rank
-  fastestLapTime  String?  // Fastest lap time
-  fastestLapSpeed String?  // Fastest lap speed (km/h)
+  time            String? // Race time (for winner) or gap to winner
+  milliseconds    BigInt? // Time in milliseconds
+  fastestLap      Int? // Fastest lap number
+  rank            Int? // Fastest lap rank
+  fastestLapTime  String? // Fastest lap time
+  fastestLapSpeed String? // Fastest lap speed (km/h)
 
-  statusId        Int      // Status ID (1 = Finished, etc.)
-  status          String   // "Finished", "Accident", "Engine", etc.
+  statusId Int // Status ID (1 = Finished, etc.)
+  status   String // "Finished", "Accident", "Engine", etc.
 
   // Metadata
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  race            Race         @relation(fields: [raceId], references: [id], onDelete: Cascade)
-  raceId          String
-  driver          Driver       @relation(fields: [driverId], references: [id], onDelete: Restrict)
-  driverId        String
-  team            Team         @relation(fields: [constructorId], references: [id], onDelete: Restrict)
-  constructorId   String
+  race          Race   @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  raceId        String
+  driver        Driver @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  driverId      String
+  team          Team   @relation(fields: [constructorId], references: [id], onDelete: Restrict)
+  constructorId String
 
   @@unique([raceId, driverId])
   @@index([raceId])
@@ -220,23 +226,23 @@ model Result {
 
 /// Represents qualifying results
 model Qualifying {
-  id            String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  position      Int
-  q1            String?  // Q1 time
-  q2            String?  // Q2 time
-  q3            String?  // Q3 time
+  position Int
+  q1       String? // Q1 time
+  q2       String? // Q2 time
+  q3       String? // Q3 time
 
   // Metadata
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  race          Race         @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  race          Race   @relation(fields: [raceId], references: [id], onDelete: Cascade)
   raceId        String
-  driver        Driver       @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  driver        Driver @relation(fields: [driverId], references: [id], onDelete: Restrict)
   driverId      String
-  team          Team         @relation(fields: [constructorId], references: [id], onDelete: Restrict)
+  team          Team   @relation(fields: [constructorId], references: [id], onDelete: Restrict)
   constructorId String
 
   @@unique([raceId, driverId])
@@ -247,32 +253,32 @@ model Qualifying {
 
 /// Represents sprint race results
 model SprintResult {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  position        Int?
-  positionText    String
-  positionOrder   Int
-  points          Float    @default(0)
-  grid            Int
-  laps            Int
-  time            String?
-  milliseconds    BigInt?
-  fastestLap      Int?
-  fastestLapTime  String?
-  statusId        Int
-  status          String
+  position       Int?
+  positionText   String
+  positionOrder  Int
+  points         Float   @default(0)
+  grid           Int
+  laps           Int
+  time           String?
+  milliseconds   BigInt?
+  fastestLap     Int?
+  fastestLapTime String?
+  statusId       Int
+  status         String
 
   // Metadata
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  race            Race         @relation(fields: [raceId], references: [id], onDelete: Cascade)
-  raceId          String
-  driver          Driver       @relation(fields: [driverId], references: [id], onDelete: Restrict)
-  driverId        String
-  team            Team         @relation(fields: [constructorId], references: [id], onDelete: Restrict)
-  constructorId   String
+  race          Race   @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  raceId        String
+  driver        Driver @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  driverId      String
+  team          Team   @relation(fields: [constructorId], references: [id], onDelete: Restrict)
+  constructorId String
 
   @@unique([raceId, driverId])
   @@index([raceId])
@@ -286,22 +292,22 @@ model SprintResult {
 
 /// Represents constructor championship standings
 model ConstructorStanding {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  year           Int
-  round          Int      // Round number when this standing was recorded
-  position       Int?     // null when unclassified (positionText is "-")
-  positionText   String
-  points         Float
-  wins           Int      @default(0)
+  year         Int
+  round        Int // Round number when this standing was recorded
+  position     Int? // null when unclassified (positionText is "-")
+  positionText String
+  points       Float
+  wins         Int    @default(0)
 
   // Metadata
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  team           Team        @relation(fields: [constructorId], references: [id], onDelete: Restrict)
-  constructorId  String
+  team          Team   @relation(fields: [constructorId], references: [id], onDelete: Restrict)
+  constructorId String
 
   @@unique([year, round, constructorId])
   @@index([year])
@@ -311,25 +317,59 @@ model ConstructorStanding {
 
 /// Represents driver championship standings after a given round
 model DriverStanding {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  year           Int
-  round          Int      // Round number when this standing was recorded
-  position       Int?     // null when unclassified (positionText is "-")
-  positionText   String
-  points         Float
-  wins           Int      @default(0)
+  year         Int
+  round        Int // Round number when this standing was recorded
+  position     Int? // null when unclassified (positionText is "-")
+  positionText String
+  points       Float
+  wins         Int    @default(0)
 
   // Metadata
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  driver         Driver   @relation(fields: [driverId], references: [id], onDelete: Restrict)
-  driverId       String
+  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  driverId String
 
   @@unique([year, round, driverId])
   @@index([year])
   @@index([driverId])
   @@map("driver_standings")
+}
+
+/**
+ * Un navegador que quiere enterarse de los resultados.
+ * No hay cuentas en ApexData, así que esto es lo más parecido a un usuario: el
+ * navegador se suscribe, el servicio de push le da una dirección única y aquí
+ * se guarda con sus dos claves. Se borra sola cuando el servicio la rechaza,
+ * que es lo que pasa al desinstalar la app o al limpiar el navegador.
+ */
+model PushSubscription {
+  id String @id @default(cuid())
+
+  /**
+   * La URL que el navegador da para recibir avisos. Identifica la suscripción.
+   */
+  endpoint String @unique
+  /**
+   * Clave pública del navegador, para cifrar el contenido del aviso.
+   */
+  p256dh   String
+  /**
+   * Secreto de autenticación del navegador, del mismo protocolo.
+   */
+  auth     String
+
+  /**
+   * Para saber desde qué clase de aparato llegó, sin identificar a nadie.
+   */
+  userAgent String?
+
+  createdAt  DateTime  @default(now())
+  lastSentAt DateTime?
+
+  @@map("push_subscriptions")
 }

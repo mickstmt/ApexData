@@ -240,3 +240,40 @@ Si hiciera falta hacerlo a mano:
 npm run seed:season -- 2026
 npm run seed:standings -- 2026
 ```
+
+## Avisos de fin de carrera
+
+Los avisos push los manda **el cron semanal**, no la aplicación: la web no
+necesita ninguna clave nueva y en EasyPanel no hay nada que tocar.
+
+Hace falta **un solo secreto**, en GitHub:
+
+1. `Settings` → `Secrets and variables` → `Actions` → `New repository secret`.
+2. Nombre: `VAPID_PRIVATE_KEY`.
+3. Valor: la clave privada del par VAPID.
+
+Sin ese secreto el paso del cron no falla: avisa de que falta y sigue. El resto
+del sembrado semanal funciona igual.
+
+**Por qué solo la privada.** El par identifica al servidor ante el servicio de
+push del navegador. La pública viaja al cliente por definición —va dentro de la
+propia suscripción—, así que está escrita en `src/lib/push-claves.ts`: guardarla
+en una variable de entorno solo añadiría una forma de que la función muriera en
+silencio si alguien olvidara ponerla.
+
+**Si algún día hay que rotar el par**: se genera uno nuevo con
+`webpush.generateVAPIDKeys()`, se cambia la constante y se cambia el secreto. Las
+suscripciones existentes dejan de valer —están firmadas con la pública vieja— y
+se irán borrando solas al primer envío fallido, que es lo que hace el remitente
+con las direcciones que ya no responden.
+
+**Para probarlo a mano**, sin esperar al lunes:
+
+```bash
+npm run notificar -- --probar   # dice de qué carrera avisaría, sin enviar
+npm run notificar               # envía y marca la carrera como avisada
+```
+
+Solo avisa de carreras de los últimos ocho días: sin esa ventana, la primera
+ejecución contaría la última carrera, la siguiente la anterior, y semana a
+semana iría mandando resultados de 2010 como si fueran de ayer.

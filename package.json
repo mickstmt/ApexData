@@ -14,6 +14,7 @@
     "db:rls": "tsx scripts/check-rls.ts",
     "seed:season": "tsx scripts/seed/season.ts",
     "seed:standings": "tsx scripts/seed/standings.ts",
+    "notificar": "tsx scripts/notificar-carrera.ts",
     "images:drivers": "tsx scripts/images/drivers.ts",
     "images:logos": "tsx scripts/images/logos.ts",
     "images:circuits": "tsx scripts/images/circuits.ts",
@@ -50,13 +51,15 @@
     "next-themes": "^0.4.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.4.22",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.3.1",
