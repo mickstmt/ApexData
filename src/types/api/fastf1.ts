@@ -211,6 +211,35 @@ export interface SessionInfoResponse {
   results: Record<string, unknown>[];
 }
 
+/**
+ * Una clasificación reconstruida a partir de los tiempos de la sesión.
+ *
+ * `segment` es el tramo en el que cada piloto quedó —SQ1, SQ2, SQ3—, y es lo
+ * que hace que el orden sea el de verdad y no un simple orden por tiempo: quien
+ * cae en el primer tramo va detrás de quien llegó al segundo aunque su vuelta
+ * fuera mejor. Va a `null` para quien no marcó tiempo.
+ */
+export interface SessionClassificationEntry {
+  position: number;
+  driver: string;
+  driverName: string;
+  team: string | null;
+  number: string | number | null;
+  segment: number | null;
+  time: string | null;
+}
+
+export interface SessionClassificationResponse {
+  year: number;
+  event: string;
+  session: string;
+  session_type: string;
+  segments: number;
+  /** Siempre cierto: las sanciones de parrilla se aplican después. */
+  provisional: boolean;
+  classification: SessionClassificationEntry[];
+}
+
 // ============================================================================
 // HEALTH CHECK
 // ============================================================================
@@ -225,7 +254,15 @@ export interface HealthCheckResponse {
 // SESSION TYPE ENUM
 // ============================================================================
 
-export type SessionType = 'FP1' | 'FP2' | 'FP3' | 'Q' | 'S' | 'R';
+/**
+ * Las sesiones que se le pueden pedir al servicio, en el orden en que ocurren.
+ *
+ * `SQ` —la clasificación al sprint— no estaba, y por eso una práctica o una
+ * clasificación al sprint no tenían dónde llevar. No hacía falta tocar el
+ * servicio: `f1_service.get_session` le pasa el código a FastF1 tal cual, y
+ * FastF1 conoce `SQ` desde siempre. La restricción vivía entera aquí.
+ */
+export type SessionType = 'FP1' | 'FP2' | 'FP3' | 'SQ' | 'S' | 'Q' | 'R';
 
 /** Un punto del trazado, con la velocidad a la que se pasó por él. */
 export interface TrackPoint {

@@ -47,17 +47,28 @@ const SESSION_TYPES: { value: SessionType; label: string }[] = [
   { value: 'FP1', label: 'FP1' },
   { value: 'FP2', label: 'FP2' },
   { value: 'FP3', label: 'FP3' },
+  { value: 'SQ', label: 'Clasif. sprint' },
   { value: 'S', label: 'Sprint' },
 ];
+
+/** De dónde se llega: el Gran Premio y la sesión que traía el enlace. */
+export interface Preseleccion {
+  year: number;
+  round: number;
+  sesion: SessionType;
+}
 
 export function AnalysisClient({
   sessions,
   drivers,
   serviceConfigured,
+  preseleccion,
 }: {
   sessions: SessionOption[];
   drivers: DriverOption[];
   serviceConfigured: boolean;
+  /** Lo que pedía el enlace de entrada, si venía de una sesión concreta. */
+  preseleccion?: Preseleccion | null;
 }) {
   const DEMO_SESSIONS = sessions.map((session) => ({
     year: session.year,
@@ -67,10 +78,23 @@ export function AnalysisClient({
   const DRIVERS = drivers.map((driver) => driver.code);
   // Selection state. The list can legitimately be empty (a fresh database, or
   // no season from 2018 seeded yet), so it never indexes blindly.
+  //
+  // Y si se ha llegado desde una sesión concreta —una práctica de la portada,
+  // por ejemplo— se abre en ella en vez de en la última carrera: llegar aquí y
+  // encontrarse otro Gran Premio elegido es lo mismo que no haber enlazado.
+  const pedida =
+    preseleccion &&
+    DEMO_SESSIONS.find(
+      (sesion) => sesion.year === preseleccion.year && sesion.event === String(preseleccion.round)
+    );
+
   const [selectedSession, setSelectedSession] = useState(
-    DEMO_SESSIONS[0] ?? { year: new Date().getFullYear(), event: '1', name: 'Sin sesiones' }
+    pedida ??
+      DEMO_SESSIONS[0] ?? { year: new Date().getFullYear(), event: '1', name: 'Sin sesiones' }
   );
-  const [sessionType, setSessionType] = useState<SessionType>('Q');
+  const [sessionType, setSessionType] = useState<SessionType>(
+    pedida ? preseleccion!.sesion : 'Q'
+  );
   const [driver1, setDriver1] = useState(DRIVERS[0] ?? 'VER');
   const [driver2, setDriver2] = useState(DRIVERS[1] ?? 'HAM');
 

@@ -6,7 +6,8 @@ import logging
 from fastapi import APIRouter, HTTPException
 import fastf1
 from app.utils.cache_manager import cache_manager
-from app.utils.serialization import records
+from app.utils.classification import build_classification
+from app.utils.serialization import records, scalar
 from app.utils.events import event_key
 
 logger = logging.getLogger(__name__)
@@ -113,3 +114,73 @@ async def get_session_info(year: int, event: str, session_type: str):
     except Exception as e:
         logger.exception("Error fetching session info")
         raise HTTPException(status_code=500, detail="Error fetching session info")
+
+
+@router.get("/{year}/{event}/{session_type}/classification")
+async def get_qualifying_classification(year: int, event: str, session_type: str):
+    """
+    Provisional classification for a qualifying-style session (Q or SQ).
+
+    This exists because the results source used by the site — Jolpica — never
+    publishes practice or sprint-qualifying results, and publishes qualifying
+    hours after the flag. FastF1 has the timing the moment the session runs, so
+    the order can be rebuilt from the laps themselves.
+
+    Rebuilding it is not "sort by best lap": a qualifying result is banded by
+    segment. Someone knocked out in SQ1 stays behind everyone who reached SQ2
+    even on the rare occasion their time was quicker. FastF1 splits the
+    segments itself, so the split is not reimplemented here — drivers are
+    ranked inside the last segment they took part in, best segments first.
+
+    Drivers who set no time still appear, at the back and without a time,
+    rather than silently vanishing from the grid.
+    """
+    try:
+        cache_key = f"classification_{year}_{event}_{session_type}"
+
+        cached_data = cache_manager.get(cache_key)
+        if cached_data is not None:
+            return cached_data
+
+        session = fastf1.get_session(year, event_key(event), session_type)
+        session.load(telemetry=False, weather=False, messages=False)
+
+        # Names and teams come from the results table, which FastF1 fills from
+        # the entry list even when the finishing positions are still empty.
+        details = {}
+        results = getattr(session, "results", None)
+        if results is not None and not results.empty:
+            for _, row in results.iterrows():
+                code = row.get("Abbreviation")
+                if not code:
+                    continue
+                details[code] = {
+                    "driverName": row.get("FullName") or code,
+                    "team": row.get("TeamName") or None,
+                    "number": scalar(row.get("DriverNumber")),
+                }
+
+        segments = session.laps.split_qualifying_sessions()
+        classification = build_classification(segments, details)
+
+        result = {
+            "year": year,
+            "event": event,
+            "session": session.name,
+            "session_type": session_type,
+            "segments": sum(
+                1 for segment in segments if segment is not None and not segment.empty
+            ),
+            # Said out loud so the page can say it too: this is rebuilt from
+            # timing, and grid penalties are applied afterwards by the FIA.
+            "provisional": True,
+            "classification": classification,
+        }
+
+        cache_manager.set(cache_key, result)
+
+        return result
+
+    except Exception:
+        logger.exception("Error building classification")
+        raise HTTPException(status_code=500, detail="Error building classification")

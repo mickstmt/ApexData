@@ -7,7 +7,7 @@ import { teamColor } from '@/lib/team-colors';
 import { PriorityRows } from '@/components/ui/PriorityRows';
 import { SprintResults } from './SprintResults';
 import { SesionPendiente } from './SesionPendiente';
-import { comienzoDeCarrera, queEnseñar } from '@/lib/sesiones';
+import { comienzoDeCarrera, estadoDeSesion, queEnseñar } from '@/lib/sesiones';
 import type {
   Race,
   Circuit,
@@ -128,6 +128,28 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
   // interesa —antes de que el sprint se corra—, que es cuando alguien entra a
   // ver a qué hora es y desde dónde sale su piloto.
   const isSprintWeekend = race.sprintDate !== null || race.sprintResults.length > 0;
+
+  /**
+   * Si la sesión que decide una parrilla ya rodó.
+   *
+   * Solo entonces tiene sentido ir a buscar sus tiempos: pedirlos antes es
+   * pedirle a la cronometría una sesión que aún no existe.
+   */
+  const yaRodo = (cuando: Date | string | null, nombre: string) =>
+    ahora !== null &&
+    cuando !== null &&
+    estadoDeSesion(nombre, new Date(cuando), ahora) === 'pasada';
+
+  const parrillaDeLaCarrera = yaRodo(race.qualiDate, 'Clasificación')
+    ? ({ year, round: race.round, sesion: 'Q' } as const)
+    : undefined;
+
+  // La del sprint no puede salir de la base: la ordena la clasificación al
+  // sprint y esa sesión Jolpica no la publica. Rehacerla desde los tiempos es
+  // la única forma de enseñarla el sábado por la mañana.
+  const parrillaDelSprint = yaRodo(race.sprintQualiDate, 'Clasif. sprint')
+    ? ({ year, round: race.round, sesion: 'SQ' } as const)
+    : undefined;
 
   /**
    * Las pestañas van de lo más importante a lo menos, no en orden cronológico.
@@ -263,6 +285,7 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
           nombre="La carrera"
           estado={estadoCarrera}
           parrilla={race.qualifyings}
+          reconstruir={parrillaDeLaCarrera}
         />
       ) : activeTab === 'race' ? (
         <>
@@ -850,7 +873,13 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
         race.sprintResults.length > 0 ? (
           <SprintResults resultados={race.sprintResults} />
         ) : (
-          estadoSprint && <SesionPendiente nombre="El sprint" estado={estadoSprint} />
+          estadoSprint && (
+            <SesionPendiente
+              nombre="El sprint"
+              estado={estadoSprint}
+              reconstruir={parrillaDelSprint}
+            />
+          )
         )
       ) : (
         /*

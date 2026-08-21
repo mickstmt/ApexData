@@ -68,13 +68,31 @@
 ## Acciones pendientes del usuario
 
 1. ~~**Desplegar la web y el servicio de telemetría en EasyPanel**~~ → ambos hechos: la web el 2026-08-17 y la telemetría el 2026-08-18, con el volumen en `/app/cache` y `FASTF1_SERVICE_URL` ya configurada. ~~Comprobación de cutover del CI~~ → resuelta.
-2. 🔴 **Pulsar *Deploy* en el servicio de telemetría OTRA VEZ** (el del 2026-08-19 ya se hizo; este es por la corrección de la ronda, que es la que arregla «no hay datos de Verstappen») (`apexdata-telemetry`, proyecto `ditto`, en panel.dittochatbot.com). El código nuevo ya está en el repo, pero ese servicio no se despliega solo: hasta entonces, los botones «Trazado» y «Estrategia de neumáticos» de `/analysis` dan error en producción.
+2. 🔴 **Pulsar *Deploy* en el servicio de telemetría** por el endpoint `/classification`, que es el que reconstruye la parrilla del sprint (`apexdata-telemetry`, proyecto `ditto`, en panel.dittochatbot.com). Los deploys anteriores —2026-08-19 y 2026-08-21— ya se hicieron. Hasta que se pulse este, la pestaña del sprint enseña el aviso sin la parrilla: falla en silencio a propósito, no rompe la página.
 3. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
 4. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
 
 ---
 
 ## Bitácora
+
+### 2026-08-22 (22) — La parrilla del sprint, los enlaces que no llevaban a nada, y el parpadeo al retroceder ✅
+
+Tres cosas reportadas desde el teléfono, con una corrección de por medio.
+
+**La pestaña del sprint no enseñaba la parrilla, y debía.** Lo acordado era que una sesión sin correr enseñara la parrilla en vez de un hueco. Para la carrera funcionaba —sale de la clasificación, que está en la base—, pero para el sprint no: **al sprint lo ordena la clasificación al sprint, y esa sesión Jolpica no la publica nunca**. Ergast tampoco la tuvo. Así que el sábado por la mañana la pestaña decía solo «el sprint aún no se ha corrido» con la parrilla decidida desde el viernes.
+
+**Corrección de lo que dije el 21**: afirmé que pedirle `SQ` al servicio exigía tocarlo y volver a desplegarlo. Es falso. `f1_service.get_session` le pasa el código a FastF1 tal cual —nunca validó nada— y FastF1 conoce `SQ` desde siempre: la restricción vivía entera en `SessionType` y en los siete `validSessions` de nuestras rutas. Comprobado contra la sesión real del viernes: 22 pilotos, 254 vueltas, 3 tramos.
+
+Lo que sí hacía falta era **ordenar**, y ordenar no es «por mejor vuelta»: una clasificación va por tramos, y quien cae en SQ1 va detrás de quien llegó a SQ2 aunque su vuelta fuera mejor. FastF1 separa los tramos él mismo (`split_qualifying_sessions`), así que no se reimplementa: el nuevo endpoint `/api/sessions/{año}/{gp}/{sesión}/classification` solo hace el reparto por tramos, que es la parte que puede equivocarse y por eso vive en `app/utils/classification.py` con nueve pruebas sin red. Quien no marcó tiempo sale el último sin tiempo en vez de desaparecer: quien mira cuenta 22 coches.
+
+Verificado contra el GP de Países Bajos: RUS 1:11.567, NOR 1:11.608, LEC 1:11.622… hasta ALO 22.º, con su tramo y su escudería.
+
+**Los enlaces de práctica y clasificación al sprint no llevaban a ninguna parte.** Iban a `/analysis` pelado, y esa pantalla abría con el último Gran Premio **con resultados** ya elegido — el de Hungría. Dos causas: el enlace no llevaba datos, y la lista de sesiones de telemetría pedía `results: { some: {} }`, así que dejaba fuera justo el fin de semana en curso. Ahora el corte es «ya ha empezado algo» —la carrera o la primera sesión—, y el enlace viaja con Gran Premio y sesión (`/analysis?anio=2026&ronda=12&sesion=SQ`).
+
+**El parpadeo al retroceder con el gesto de iOS.** El worker avisaba de «contenido fresco» en **toda** navegación servida desde caché, y de ese aviso cuelga un `router.refresh()`. Retroceder repintaba la página entera sin que hubiera cambiado nada. Medido contra producción: dos peticiones seguidas a portada, análisis y ficha de carrera devuelven un HTML idéntico byte a byte —116.803, 84.214 y 116.989 bytes—, así que ahora se comparan los cuerpos y solo se avisa cuando de verdad cambió algo.
+
+**Verificación**: lint 0 · 153 unitarias · 39 de navegador · 37 de pytest · build sin base de datos.
 
 ### 2026-08-21 (21) — Avisos de fin de carrera: el Sprint 5 queda cerrado ✅
 

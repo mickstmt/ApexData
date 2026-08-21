@@ -340,9 +340,32 @@ test.describe('sesiones enlazadas', () => {
       if (/Carrera|Clasificación$|^Sprint$/.test(nombre)) {
         expect(href, `${nombre} debería abrir su pestaña`).toMatch(/\/results\/\d+\/\d+\?sesion=/);
       } else {
-        expect(href, `${nombre} debería llevar a Análisis`).toBe('/analysis');
+        // Y **a esa sesión**, no a Análisis a secas: el enlace pelado abría el
+        // último Gran Premio con resultados —otro fin de semana, otra sesión—
+        // y parecía que se hubiera equivocado de sitio.
+        expect(href, `${nombre} debería abrir su sesión en Análisis`).toMatch(
+          /^\/analysis\?anio=\d{4}&ronda=\d+&sesion=(FP1|FP2|FP3|SQ)$/
+        );
       }
     }
+  });
+
+  test('la sesión enlazada llega elegida a Análisis', async ({ page }) => {
+    await page.goto('/');
+
+    const practica = page.locator('a[href*="/analysis?anio="]').first();
+    if ((await practica.count()) === 0) test.skip(true, 'No hay fin de semana en curso');
+
+    const destino = new URL(await practica.getAttribute('href') ?? '', 'http://x');
+    await practica.click();
+    await page.waitForURL('**/analysis**');
+
+    // Que la dirección lleve los datos no sirve de nada si los selectores no
+    // los recogen: es justo lo que fallaba antes.
+    const selectores = page.locator('select');
+    const gp = `${destino.searchParams.get('anio')}-${destino.searchParams.get('ronda')}`;
+    await expect(selectores.first()).toHaveValue(gp);
+    await expect(selectores.nth(1)).toHaveValue(destino.searchParams.get('sesion') ?? '');
   });
 
   test('una sesión inventada en la dirección abre la carrera', async ({ page }) => {

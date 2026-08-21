@@ -31,10 +31,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const validSessions: SessionType[] = ['FP1', 'FP2', 'FP3', 'Q', 'S', 'R'];
+    const validSessions: SessionType[] = ['FP1', 'FP2', 'FP3', 'SQ', 'S', 'Q', 'R'];
     if (!validSessions.includes(session as SessionType)) {
       return NextResponse.json(
-        { error: 'Invalid session type. Must be one of: FP1, FP2, FP3, Q, S, R' },
+        { error: 'Invalid session type. Must be one of: FP1, FP2, FP3, SQ, S, Q, R' },
         { status: 400 }
       );
     }

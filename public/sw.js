@@ -154,15 +154,36 @@ async function paginaGuardadaPrimero(event) {
   });
 
   if (guardada) {
+    // Hay que clonarla ahora, en el mismo tirón síncrono: en cuanto se devuelve,
+    // `respondWith` consume el cuerpo y ya no se puede leer para comparar.
+    const paraComparar = guardada.clone();
+
     event.waitUntil(
-      red
-        .then(async () => {
-          // Solo se avisa cuando de verdad se sirvió una copia vieja: si la
-          // página se pintó con la respuesta fresca, no hay nada que refrescar.
-          const ventanas = await self.clients.matchAll({ type: 'window' });
-          for (const ventana of ventanas) ventana.postMessage({ tipo: 'contenido-fresco' });
-        })
-        .catch(() => undefined)
+      (async () => {
+        const fresca = await red.catch(() => null);
+        if (!fresca || !fresca.ok) return;
+
+        // Solo se avisa si la copia fresca **dice algo distinto**.
+        //
+        // Antes se avisaba en cada navegación servida desde la caché, y eso
+        // disparaba un `router.refresh()` siempre: al retroceder con el gesto
+        // de iOS la página reaparecía y parpadeaba una vez, sin que hubiera
+        // cambiado nada. Medido contra producción, dos peticiones seguidas a
+        // portada, análisis y ficha de carrera devuelven un HTML idéntico byte
+        // a byte —116.803, 84.214 y 116.989 bytes—, así que comparar los
+        // cuerpos distingue de verdad «llegaron datos nuevos» de «es la misma
+        // página». Leer los dos cuerpos cuesta una décima y ocurre por detrás,
+        // con la página ya pintada.
+        const [antes, ahora] = await Promise.all([
+          paraComparar.text().catch(() => null),
+          fresca.clone().text().catch(() => null),
+        ]);
+
+        if (antes === null || ahora === null || antes === ahora) return;
+
+        const ventanas = await self.clients.matchAll({ type: 'window' });
+        for (const ventana of ventanas) ventana.postMessage({ tipo: 'contenido-fresco' });
+      })()
     );
 
     return guardada;

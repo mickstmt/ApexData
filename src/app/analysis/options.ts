@@ -30,8 +30,27 @@ async function loadTelemetryOptions(): Promise<{
 }> {
   const now = new Date();
 
+  // El fin de semana en curso también cuenta.
+  //
+  // Antes la lista pedía `results: { some: {} }`, es decir, solo carreras ya
+  // corridas **y sembradas**. Eso dejaba fuera justo el fin de semana que se
+  // está viendo: el viernes hay práctica y clasificación al sprint rodadas, con
+  // sus tiempos en FastF1, y el Gran Premio no aparecía en el selector porque su
+  // carrera es el domingo. Quien llegaba aquí desde una práctica de la portada
+  // se encontraba con otro Gran Premio elegido.
+  //
+  // FastF1 tiene los datos en cuanto la sesión rueda, así que el corte correcto
+  // no es «ya hay resultados» sino «ya ha empezado algo»: la carrera, o la
+  // primera sesión del fin de semana.
   const races = await prisma.race.findMany({
-    where: { year: { gte: FASTF1_FIRST_SEASON }, date: { lte: now }, results: { some: {} } },
+    where: {
+      year: { gte: FASTF1_FIRST_SEASON },
+      OR: [
+        { date: { lte: now } },
+        { fp1Date: { lte: now } },
+        { sprintQualiDate: { lte: now } },
+      ],
+    },
     orderBy: [{ year: 'desc' }, { round: 'desc' }],
     take: 60,
     select: { year: true, round: true, raceName: true },
@@ -43,9 +62,15 @@ async function loadTelemetryOptions(): Promise<{
     name: `${race.year} · ${race.raceName}`,
   }));
 
-  // Drivers who took part in the most recent race with data, which is the
-  // grid a user will want to compare by default.
-  const latest = races[0];
+  // Los pilotos salen de la última carrera **con resultados**, que no tiene por
+  // qué ser la primera de la lista desde que el fin de semana en curso entra en
+  // ella: si se cogiera `races[0]` un viernes, el selector de pilotos saldría
+  // vacío.
+  const latest = await prisma.race.findFirst({
+    where: { year: { gte: FASTF1_FIRST_SEASON }, results: { some: {} } },
+    orderBy: [{ year: 'desc' }, { round: 'desc' }],
+    select: { year: true, round: true },
+  });
 
   const entries = latest
     ? await prisma.result.findMany({

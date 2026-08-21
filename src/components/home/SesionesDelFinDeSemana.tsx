@@ -32,20 +32,28 @@ export interface SesionParaLaTira {
  * demás, a Análisis, que es donde sí están sus tiempos porque vienen de FastF1.
  * Enviar una práctica a la ficha sería llevar a alguien a un cartel que explica
  * que ahí no hay nada.
+ *
+ * Y va **a esa sesión**, no a la pantalla de análisis a secas. Antes el enlace
+ * era `/analysis` pelado: se abría con el último Gran Premio con resultados
+ * elegido —otro fin de semana, otra sesión— y parecía que el enlace se hubiera
+ * equivocado de sitio. Ahora el Gran Premio y la sesión viajan en la dirección.
  */
-const DESTINO: Record<string, { pestaña?: string; analisis?: boolean }> = {
+const DESTINO: Record<string, { pestaña?: string; analisis?: string }> = {
   Carrera: { pestaña: 'race' },
   Clasificación: { pestaña: 'qualifying' },
   Sprint: { pestaña: 'sprint' },
-  'Clasif. sprint': { analisis: true },
-  'Práctica 1': { analisis: true },
-  'Práctica 2': { analisis: true },
-  'Práctica 3': { analisis: true },
+  'Clasif. sprint': { analisis: 'SQ' },
+  'Práctica 1': { analisis: 'FP1' },
+  'Práctica 2': { analisis: 'FP2' },
+  'Práctica 3': { analisis: 'FP3' },
 };
 
 function enlaceDe(nombre: string, year: number, round: number): string {
   const destino = DESTINO[nombre];
   if (destino?.pestaña) return `/results/${year}/${round}?sesion=${destino.pestaña}`;
+  if (destino?.analisis) {
+    return `/analysis?anio=${year}&ronda=${round}&sesion=${destino.analisis}`;
+  }
   return '/analysis';
 }
 

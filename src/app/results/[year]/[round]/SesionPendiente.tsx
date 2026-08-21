@@ -1,9 +1,9 @@
 'use client';
 
-import { CalendarClock, Construction, Flag, Radio } from 'lucide-react';
+import { CalendarClock, Construction, Radio } from 'lucide-react';
 import Link from 'next/link';
 import { LocalDateTime, RaceCountdown } from '@/components/home/RaceCountdown';
-import { teamColor } from '@/lib/team-colors';
+import { Parrilla, ParrillaDesdeTiempos } from './ParrillaProvisional';
 import type { QueEnseñar } from '@/lib/sesiones';
 import type { Driver, Qualifying, Team } from '@prisma/client';
 
@@ -28,11 +28,20 @@ export function SesionPendiente({
   estado,
   nombre,
   parrilla,
+  reconstruir,
 }: {
   estado: QueEnseñar;
   nombre: string;
-  /** El orden de la clasificación, si ya se corrió. */
+  /** El orden de la clasificación, si ya se corrió y ya está en la base. */
   parrilla?: ParrillaProvisional;
+  /**
+   * De qué sesión reconstruir la parrilla cuando la base no la tiene.
+   *
+   * Es el caso del sprint: lo ordena la clasificación al sprint, que Jolpica
+   * no publica nunca, así que la única forma de enseñarla el sábado por la
+   * mañana es rehacerla desde la cronometría de FastF1.
+   */
+  reconstruir?: { year: number; round: number; sesion: 'Q' | 'SQ' };
 }) {
   // `resultados` no llega nunca aquí —para eso están las tablas—, pero el tipo
   // lo admite y sin esta salida el resto no puede leer `cuando`.
@@ -97,47 +106,28 @@ export function SesionPendiente({
         <p className="mx-auto max-w-prose text-sm text-muted-foreground">{encabezado.cuerpo}</p>
       </div>
 
-      {parrilla && parrilla.length > 0 && (
-        <div className="mt-6">
-          <h3 className="mb-1 flex items-center gap-2 text-lg font-bold">
-            <Flag className="h-5 w-5 text-primary" aria-hidden />
-            Parrilla de salida
-          </h3>
-          <p className="mb-3 text-sm text-muted-foreground">
-            Según el orden de la clasificación. <b>Puede cambiar</b>: las sanciones de parrilla se
-            aplican después y no aparecen aquí hasta que hay resultados.
-          </p>
-
-          <ol className="grid gap-2 sm:grid-cols-2">
-            {parrilla.map((puesto) => (
-              <li
-                key={puesto.id}
-                className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-card py-2.5 pl-4 pr-4"
-              >
-                <span
-                  aria-hidden
-                  className="absolute inset-y-0 left-0 w-1"
-                  style={{ backgroundColor: teamColor(puesto.team.constructorId).color }}
-                />
-                <span className="w-6 shrink-0 text-center font-mono text-sm font-semibold tabular-nums text-muted-foreground">
-                  {puesto.position}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold">
-                    {puesto.driver.givenName} {puesto.driver.familyName}
-                  </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {puesto.team.name}
-                  </span>
-                </span>
-                <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
-                  {puesto.q3 || puesto.q2 || puesto.q1 || '—'}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </div>
+      {parrilla && parrilla.length > 0 ? (
+        <Parrilla
+          origen="Según el orden de la clasificación."
+          puestos={parrilla.map((puesto) => ({
+            clave: String(puesto.id),
+            puesto: puesto.position,
+            nombre: `${puesto.driver.givenName} ${puesto.driver.familyName}`,
+            equipo: puesto.team.name,
+            equipoId: puesto.team.constructorId,
+            tiempo: puesto.q3 || puesto.q2 || puesto.q1 || null,
+          }))}
+        />
+      ) : (
+        reconstruir && (
+          <ParrillaDesdeTiempos
+            year={reconstruir.year}
+            round={reconstruir.round}
+            sesion={reconstruir.sesion}
+          />
+        )
       )}
+
     </>
   );
 }

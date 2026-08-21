@@ -12,6 +12,7 @@ import type {
   SessionWeatherResponse,
   SeasonScheduleResponse,
   SessionInfoResponse,
+  SessionClassificationResponse,
   HealthCheckResponse,
   SessionType,
   TrackMapResponse,
@@ -283,6 +284,23 @@ class FastF1Client {
   ): Promise<SessionInfoResponse> {
     const endpoint = `/api/sessions/${year}/${event}/${sessionType}/info`;
     return this.fetch<SessionInfoResponse>(endpoint, 60000);
+  }
+
+  /**
+   * La clasificación reconstruida a partir de los tiempos de la sesión.
+   *
+   * Es lo que permite enseñar una parrilla el mismo día: Jolpica no publica la
+   * clasificación al sprint nunca y la de carrera tarda horas, mientras que
+   * FastF1 tiene los tiempos en cuanto la sesión rueda. Un minuto de espera
+   * porque la primera consulta descarga la sesión entera.
+   */
+  async getSessionClassification(
+    year: number,
+    event: string | number,
+    sessionType: SessionType
+  ): Promise<SessionClassificationResponse> {
+    const endpoint = `/api/sessions/${year}/${event}/${sessionType}/classification`;
+    return this.fetch<SessionClassificationResponse>(endpoint, 60000);
   }
 }
 

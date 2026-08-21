@@ -17,7 +17,7 @@ interface RouteParams {
   params: Promise<{ year: string; event: string; session: string }>;
 }
 
-const VALID_SESSIONS: SessionType[] = ['FP1', 'FP2', 'FP3', 'Q', 'S', 'R'];
+const VALID_SESSIONS: SessionType[] = ['FP1', 'FP2', 'FP3', 'SQ', 'S', 'Q', 'R'];
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
@@ -30,7 +30,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
     if (!VALID_SESSIONS.includes(session as SessionType)) {
       return NextResponse.json(
-        { error: 'Invalid session type. Must be one of: FP1, FP2, FP3, Q, S, R' },
+        { error: 'Invalid session type. Must be one of: FP1, FP2, FP3, SQ, S, Q, R' },
         { status: 400 }
       );
     }
