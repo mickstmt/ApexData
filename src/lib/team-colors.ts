@@ -177,6 +177,22 @@ export function compoundColor(compound: string | null | undefined): string {
 }
 
 /**
+ * El color del compuesto, pero legible como línea o como punto.
+ *
+ * Los colores oficiales valen tal cual para un bloque relleno con su borde
+ * —así los usa la tabla de vueltas—, pero no para dibujar. Medidos sobre el
+ * fondo claro: el medio da 1,36:1, el duro 1,07:1 y el intermedio 2,62:1, o
+ * sea que dos de los tres compuestos de una carrera en seco serían invisibles.
+ * Sobre el fondo oscuro los cinco pasan de sobra, así que solo hace falta
+ * derivar el claro: se oscurece conservando el tono hasta llegar al 3:1 que
+ * WCAG pide a un objeto gráfico.
+ */
+export function compoundInk(compound: string | null | undefined, oscuro: boolean): string {
+  const base = compoundColor(compound);
+  return oscuro ? base : readableOnLight(base, GRAPHIC_CONTRAST);
+}
+
+/**
  * De cómo llama FastF1 a un equipo al identificador que usa esta app.
  *
  * Hace falta porque la lista de pilotos de la página de análisis sale de la

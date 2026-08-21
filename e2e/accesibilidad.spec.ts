@@ -325,6 +325,9 @@ test.describe('dispersión de tiempos por vuelta', () => {
         Driver: 'VER',
         DriverNumber: '1',
         Team: 'Red Bull Racing',
+        Stint: 1,
+        Compound: 'SOFT',
+        TyreLife: i + 1,
         LapNumber: i + 1,
         // Vuelta 1: la más rápida de la sesión. Vuelta 5: parada en boxes, que
         // se sale del 110 % y tiene que quedar fuera de la escala.
@@ -334,6 +337,9 @@ test.describe('dispersión de tiempos por vuelta', () => {
         Driver: 'NOR',
         DriverNumber: '4',
         Team: 'McLaren',
+        Stint: 1,
+        Compound: 'HARD',
+        TyreLife: i + 1,
         LapNumber: i + 1,
         LapTime: `1:32.${(i % 3) + 1}00`,
       })),
@@ -387,6 +393,26 @@ test.describe('dispersión de tiempos por vuelta', () => {
         nodos.map((n) => n.textContent?.trim() ?? '').filter((t) => t === 'VER' || t === 'NOR')
       );
     expect(codigos).toEqual(['NOR', 'VER']);
+  });
+
+  test('la degradación nombra cada compuesto, no solo lo colorea', async ({ page }) => {
+    await page.goto('/analysis');
+    await page.getByRole('button', { name: /Carrera vuelta a vuelta/ }).click();
+
+    const grafico = page.locator('canvas[aria-label*="Caída de cada compuesto"]');
+    await expect(grafico).toBeVisible({ timeout: 20_000 });
+
+    // Los colores de compuesto no se distinguen solos en tema claro —el duro da
+    // 1,07:1 crudo, y ya derivado se separa del medio ΔE 12,1—, así que el
+    // nombre y los números tienen que estar escritos.
+    const tabla = page.locator('table').filter({ hasText: 'Caída' });
+    await expect(tabla).toContainText('Blando');
+    await expect(tabla).toContainText('Duro');
+    await expect(tabla.locator('tbody tr')).toHaveCount(2);
+
+    // Y la descripción del lienzo lleva las cifras, porque un canvas no tiene
+    // texto que un lector de pantalla pueda recorrer.
+    await expect(grafico).toHaveAttribute('aria-label', /s\/vuelta/);
   });
 
   test('las vueltas de boxes quedan fuera de escala y se dicen', async ({ page }) => {

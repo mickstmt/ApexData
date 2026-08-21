@@ -26,6 +26,7 @@ import { RaceProgress } from '@/components/charts/RaceProgress';
 import { teamIdFromName } from '@/lib/team-colors';
 import { LapScatter } from '@/components/charts/LapScatter';
 import { PaceBoxes } from '@/components/charts/PaceBoxes';
+import { TyreDegradation } from '@/components/charts/TyreDegradation';
 import { SessionWeather } from '@/components/telemetry/SessionWeather';
 import { compoundColor } from '@/lib/team-colors';
 import type { SessionOption, DriverOption } from './options';
@@ -714,6 +715,23 @@ export function AnalysisClient({
             </p>
             <div className="rounded-lg border border-border bg-card p-4">
               <PaceBoxes laps={raceLaps.laps} teamOf={teamOf} />
+            </div>
+          </div>
+        )}
+
+        {/* Cuánto se cae cada goma */}
+        {raceLaps && (
+          <div>
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
+              <Layers className="h-5 w-5 text-primary" aria-hidden />
+              Degradación de neumáticos
+            </h2>
+            <p className="mb-3 text-sm text-muted-foreground">
+              No cuál es más rápido cuando es nuevo —eso ya se sabe—, sino cuánto tiempo pierde por
+              vuelta mientras envejece, que es de donde salen las estrategias.
+            </p>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <TyreDegradation laps={raceLaps.laps} />
             </div>
           </div>
         )}
