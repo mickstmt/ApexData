@@ -147,6 +147,16 @@ model Race {
   sprintDate DateTime? // Sprint race (if applicable)
   sprintTime String?
 
+  /**
+   * La clasificación que ordena la parrilla del sprint, el viernes.
+   *
+   * Faltaba: un fin de semana al sprint se enseñaba como «Práctica 1 → Sprint»,
+   * saltándose la sesión que decide desde dónde sale cada uno. Jolpica la manda
+   * como `SprintQualifying` desde que existe el formato.
+   */
+  sprintQualiDate DateTime?
+  sprintQualiTime String?
+
   url String? // Wikipedia or official URL
 
   // Metadata

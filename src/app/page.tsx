@@ -11,6 +11,7 @@ import { DriverAvatar } from '@/components/ui/OptimizedImage';
 import { RaceCountdown, LocalDateTime } from '@/components/home/RaceCountdown';
 import { Championship, ChampionshipSkeleton } from '@/components/home/Championship';
 import { raceStart } from '@/lib/race-time';
+import { sesionesOrdenadas } from '@/lib/sesiones';
 
 // The hub is "what is happening now", so it must never be baked at build time.
 export const dynamic = 'force-dynamic';
@@ -80,18 +81,7 @@ export default async function Home() {
 
   const { nextRace, lastRace, year } = data;
 
-  const nextSessions = nextRace
-    ? (
-        [
-          ['Práctica 1', nextRace.fp1Date],
-          ['Práctica 2', nextRace.fp2Date],
-          ['Práctica 3', nextRace.fp3Date],
-          ['Sprint', nextRace.sprintDate],
-          ['Clasificación', nextRace.qualiDate],
-          ['Carrera', raceStart(nextRace)],
-        ] as const
-      ).filter(([, date]) => date !== null)
-    : [];
+  const nextSessions = nextRace ? sesionesOrdenadas(nextRace, raceStart(nextRace)) : [];
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
@@ -149,13 +139,13 @@ export default async function Home() {
             {nextSessions.length > 1 && (
               <div className="border-t border-border">
                 <ul className="grid grid-cols-2 divide-border sm:grid-cols-3 lg:grid-cols-6">
-                  {nextSessions.map(([label, date]) => (
-                    <li key={label} className="border-b border-r border-border p-3 last:border-r-0">
+                  {nextSessions.map(({ nombre, cuando }) => (
+                    <li key={nombre} className="border-b border-r border-border p-3 last:border-r-0">
                       <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {label}
+                        {nombre}
                       </div>
                       <div className="mt-0.5 text-sm">
-                        <LocalDateTime value={date!.toISOString()} />
+                        <LocalDateTime value={cuando.toISOString()} />
                       </div>
                     </li>
                   ))}

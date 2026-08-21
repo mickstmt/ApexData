@@ -59,6 +59,8 @@ export interface JolpicaRace {
   ThirdPractice?: JolpicaSession;
   Qualifying?: JolpicaSession;
   Sprint?: JolpicaSession;
+  /** La clasificación del sprint, el viernes de un fin de semana al sprint. */
+  SprintQualifying?: JolpicaSession;
   Results?: JolpicaRaceResult[];
   QualifyingResults?: JolpicaQualifyingResult[];
   SprintResults?: JolpicaRaceResult[];
@@ -205,6 +207,7 @@ export async function upsertRace(race: JolpicaRace) {
     fp3Date: sessionDate(race.ThirdPractice),
     qualiDate: sessionDate(race.Qualifying),
     sprintDate: sessionDate(race.Sprint),
+    sprintQualiDate: sessionDate(race.SprintQualifying),
   };
   const definedSchedule = Object.fromEntries(
     Object.entries(schedule).filter(([, value]) => value !== null)
