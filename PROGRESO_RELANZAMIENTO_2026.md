@@ -76,6 +76,30 @@
 
 ## Bitácora
 
+### 2026-08-20 (20) — La pantalla negra al abrir: medida y quitada ✅
+
+**Lo que el usuario veía**: tres o cuatro segundos de negro al abrir la app instalada, luego un parpadeo, luego la animación del logo y por fin los datos. Y una comparación que dio en el clavo: Flashscore arranca enseñando ya su color de fondo, el logo en el centro y el contenido, sin huecos.
+
+**El parpadeo eran dos marcas, no una.** iOS enseñaba su imagen de arranque con el logo **ya dibujado**; después venía el hueco; y al pintar el HTML, la pantalla de apertura **borraba ese logo y lo volvía a dibujar desde cero**. Arreglado dejando las imágenes de arranque **solo con el fondo**: el color es el mismo de principio a fin y la marca se dibuja una sola vez, ya dentro de la app. De paso se generan también en claro —solo había juego oscuro, así que en tema claro se pasaba de una pantalla negra a una app blanca—, las consultas llevan `orientation: portrait` como pide Apple, y con paleta de color las veintiséis pasan de 1,7 MB a 108 KB.
+
+**Los segundos en negro eran el documento viajando por la red.** El service worker atendía las navegaciones con estrategia red-primero, así que no se podía pintar **nada** hasta que llegara el HTML. Medido con red lenta y el servidor en la misma máquina: **2.051 ms esperando el documento y 2.108 hasta el primer pintado**. Contra el VPS desde un teléfono, los tres o cuatro segundos que se veían.
+
+Ahora las páginas se sirven **de la caché primero** y la red va por detrás; cuando llega la copia fresca, el worker avisa a la página y esta vuelve a pedir sus datos al servidor con `router.refresh()`, sin recargar ni perder el sitio. Medido igual, misma red lenta:
+
+| | Antes | Ahora |
+|---|---|---|
+| Primer pintado | 2.108 ms | **64 ms** |
+| Respuesta del documento | 2.051 ms | **3 ms** |
+| Transferido | 116 KB | **0 bytes** |
+
+También se precachea la portada al instalar, que es el `start_url`: sin eso, la primera apertura después de instalar seguía esperando a la red.
+
+**La contrapartida, dicha en claro**: durante ese momento se ven los datos de la última visita. Para una app de resultados compensa —la alternativa era esperar en negro—, y el HTML viejo no puede quedarse pegado, porque el aviso de versión nueva ya existía y se dispara con el ciclo del propio worker.
+
+**Un apunte de método.** Este hueco se había dejado fuera del cambio anterior como «decisión con contrapartida», pero el usuario ya había delegado la decisión al pedir lo que se recomendara: **la evaluación tocaba hacerla antes de implementar, no después**. Y sobre el iPhone 17: se comprobó que su geometría (402×874 a 3×) **sí estaba** cubierta, así que la culpa no era de la imagen de arranque sino de la red.
+
+**Verificado**: 26 pruebas de navegador, 96 unitarias, y comprobado a mano que el worker avisa, que la página vuelve a pedir sus datos y que sin conexión se sigue viendo la pantalla de siempre.
+
 ### 2026-08-20 (19) — Un respaldo que se restaura solo para demostrar que sirve ✅
 
 **El plan gratuito de Supabase no hace copias.** Hasta hoy, si algo se borraba no había de dónde recuperarlo — y no es teórico: esta misma sesión descubrió que a 2025 le faltaban dos carreras enteras sin que nadie lo hubiera notado.

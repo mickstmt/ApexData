@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { RefreshCw } from 'lucide-react';
 
 /**
@@ -13,6 +14,24 @@ import { RefreshCw } from 'lucide-react';
  */
 export function PwaRegister() {
   const [updateReady, setUpdateReady] = useState(false);
+  const router = useRouter();
+
+  /**
+   * El worker sirve la página guardada para que la app abra en el acto, y
+   * avisa por aquí cuando la copia fresca ha llegado. `router.refresh()` vuelve
+   * a pedir los componentes de servidor: los datos se ponen al día en su sitio,
+   * sin recargar ni perder dónde estabas.
+   */
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+
+    const alRecibir = (evento: MessageEvent) => {
+      if (evento.data?.tipo === 'contenido-fresco') router.refresh();
+    };
+
+    navigator.serviceWorker.addEventListener('message', alRecibir);
+    return () => navigator.serviceWorker.removeEventListener('message', alRecibir);
+  }, [router]);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
