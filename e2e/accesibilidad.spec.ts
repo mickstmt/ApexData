@@ -758,7 +758,13 @@ test.describe('ficha de circuito', () => {
     // El enlace del título se estira sobre la tarjeta entera: se pulsa el
     // nombre, pero el objetivo táctil es la tarjeta.
     await page.getByRole('link', { name: /Monza/ }).first().click();
-    await page.waitForURL('**/circuits/monza');
+    // `commit` y no `load`: la lista dispara treinta optimizaciones de imagen a
+    // la vez y en CI —dos núcleos— esa cola tapona el servidor; si el click cae
+    // antes de hidratar, la navegación es completa y su `load` espera a TODAS
+    // las imágenes: se clavaba el minuto entero dos veces seguidas. Lo que esta
+    // prueba vigila es que se llega y hay contenido, y el contenido lo
+    // comprueba la aserción de abajo — no le hace falta el evento `load`.
+    await page.waitForURL('**/circuits/monza', { waitUntil: 'commit' });
 
     // Con margen: `waitForURL` vuelve en cuanto cambia la dirección, pero el
     // contenido llega después, y en la tanda completa —con el servidor
