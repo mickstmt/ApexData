@@ -26,35 +26,32 @@ export interface SesionParaLaTira {
 }
 
 /**
- * A dónde lleva cada sesión.
+ * A dónde lleva cada sesión: a su pestaña en la ficha de la carrera.
  *
- * Las tres que publica Jolpica van a su pestaña en la ficha de la carrera; las
- * demás, a Análisis, que es donde sí están sus tiempos porque vienen de FastF1.
- * Enviar una práctica a la ficha sería llevar a alguien a un cartel que explica
- * que ahí no hay nada.
+ * Las prácticas y la clasificación al sprint iban a Análisis, y con razón
+ * mientras la ficha solo sabía enseñar un cartel diciendo que Jolpica no las
+ * publica: mandarlas allí era llevar a alguien a leer que no hay nada. Ahora
+ * esas pestañas piden los tiempos a la cronometría y los enseñan, así que el
+ * desvío ya no tiene sentido — desde la portada se entra a la ficha del fin de
+ * semana, sin cambiar de sección a mitad de camino.
  *
- * Y va **a esa sesión**, no a la pantalla de análisis a secas. Antes el enlace
- * era `/analysis` pelado: se abría con el último Gran Premio con resultados
- * elegido —otro fin de semana, otra sesión— y parecía que el enlace se hubiera
- * equivocado de sitio. Ahora el Gran Premio y la sesión viajan en la dirección.
+ * Análisis sigue estando, y su enlace directo también: es la herramienta para
+ * comparar vueltas, no el sitio al que ir a ver quién fue el más rápido.
  */
-const DESTINO: Record<string, { pestaña?: string; analisis?: string }> = {
-  Carrera: { pestaña: 'race' },
-  Clasificación: { pestaña: 'qualifying' },
-  Sprint: { pestaña: 'sprint' },
-  'Clasif. sprint': { analisis: 'SQ' },
-  'Práctica 1': { analisis: 'FP1' },
-  'Práctica 2': { analisis: 'FP2' },
-  'Práctica 3': { analisis: 'FP3' },
+const DESTINO: Record<string, string> = {
+  Carrera: 'race',
+  Clasificación: 'qualifying',
+  Sprint: 'sprint',
+  'Clasif. sprint': 'sprint-qualifying',
+  'Práctica 1': 'practice1',
+  'Práctica 2': 'practice2',
+  'Práctica 3': 'practice3',
 };
 
 function enlaceDe(nombre: string, year: number, round: number): string {
-  const destino = DESTINO[nombre];
-  if (destino?.pestaña) return `/results/${year}/${round}?sesion=${destino.pestaña}`;
-  if (destino?.analisis) {
-    return `/analysis?anio=${year}&ronda=${round}&sesion=${destino.analisis}`;
-  }
-  return '/analysis';
+  const pestaña = DESTINO[nombre];
+  if (pestaña) return `/results/${year}/${round}?sesion=${pestaña}`;
+  return `/results/${year}/${round}`;
 }
 
 

@@ -28,7 +28,7 @@
 
 **Próximo paso**: lo que queda de la deuda del Sprint 5 —aviso push tras cada GP, pantalla de administración, y el límite de peticiones con `slowapi`, que es el único que pide Deploy manual del servicio—, . El respaldo con `pg_dump` y el escaneo de secretos ya salen de esa lista: el primero hecho el 2026-08-20 y comprobado restaurándose, el segundo activado ese mismo día junto con la protección de subida. Queda además el mantenimiento: los 6 logos que faltan, Prisma 6→7 y los 14 avisos de lint.
 
-**Tests**: 100 unitarios (TypeScript) + 28 (Python) + **26 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 153 unitarios (TypeScript) + 28 (Python) + **43 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -75,6 +75,22 @@
 ---
 
 ## Bitácora
+
+### 2026-08-22 (26) — Las pestañas que escondían un dato que ya teníamos ✅
+
+Tres cosas reportadas por el usuario, y la primera es la de fondo.
+
+**Las pestañas CLASI. SPRINT y PL1/PL2/PL3 seguían enseñando un cartel.** Decía —con razón— que Jolpica no publica esas sesiones y que sus tiempos están en FastF1. Lo que había dejado de ser cierto es la conclusión: los dos endpoints llevan días respondiendo en producción, así que el cartel había pasado de explicar una ausencia a **esconder un dato que ya teníamos**. Ahora esas cuatro pestañas piden los tiempos a la cronometría y los pintan: la clasificación al sprint puesto a puesto, con el tramo (SQ1/SQ2/SQ3) escrito en cada fila —sin él el último parece un error de ordenación, porque el orden no es por tiempo— y su aviso de provisional; las prácticas, la vuelta más rápida de cada piloto con su compuesto y la advertencia de que una práctica **no es un resultado**.
+
+Se piden desde el navegador, no en el servidor, por la misma razón que la parrilla reconstruida: la primera consulta de una sesión descarga la sesión entera y puede tardar cerca de un minuto. El cartel sobrevive en un solo caso, el único en el que no se puede saber nada: temporada vieja, sin hora de sesión y sin carrera corrida.
+
+**Los enlaces de la portada ya no se van a Análisis.** «Práctica 1» y «Clasif. sprint» llevaban a `/analysis`, que era lo correcto mientras la ficha solo sabía enseñar el cartel. Con la ficha cableada, el desvío sobraba: las seis sesiones de la tira entran ahora a su pestaña del fin de semana. El enlace profundo de Análisis sigue existiendo y su prueba también, comprobado por sí mismo en vez de a través de la portada.
+
+**Y la animación de apertura, que de tanto arreglarla ya no sonaba nunca.** El guardia de ayer latía cada quince segundos *también con la app escondida*, y leía una ventana de un minuto. Resultado: cerrar la app y volver a abrirla enseguida —lo más normal del mundo— dejaba una marca fresca escrita en segundo plano y la apertura de verdad se contaba como recarga. El latido tiene que medir «esta página está delante ahora mismo», así que ahora solo late con `visibilityState === 'visible'`, cada cinco segundos, y la ventana baja a diez. Una recarga para estrenar versión ocurre en un par de segundos; diez le sobran.
+
+**Cómo se verificó, y qué no se pudo verificar desde casa.** Las tres pruebas de navegador nuevas **simulan** `/api/clasificacion/**` y `/api/laps/**`, como las de telemetría: el CI no tiene `FASTF1_SERVICE_URL`. Y esta máquina tampoco —el servicio vive sin dominio dentro de la red del VPS—, así que el camino sin simular solo se pudo comprobar en su degradación: sin servicio, las dos pestañas acaban en el aviso amable con su enlace a Análisis, sin un error de JavaScript. Que la pestaña enseñe los 22 puestos de verdad se comprueba en producción.
+
+**Verificación**: lint 0 · 153 unitarias · build sin base · 43 de navegador (3 nuevas), reconstruyendo antes de correrlas.
 
 ### 2026-08-22 (25) — La animación de apertura sonaba dos veces: era la app actualizándose ✅
 

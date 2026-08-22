@@ -77,12 +77,20 @@ export function SplashScreen() {
     /**
      * La marca de vida que decide si una carga es apertura o recarga.
      *
-     * Se apunta cada quince segundos y al esconderse la app. El guion del
-     * `<head>` la lee en la siguiente carga: si es de hace menos de un minuto,
-     * la app no se «abrió» —se recargó a sí misma, normalmente para estrenar
-     * una versión— y la animación de apertura no debe sonar otra vez.
+     * Se apunta cada cinco segundos **solo con la app a la vista**. El guion del
+     * `<head>` la lee en la siguiente carga: si es de hace muy poco, la app no
+     * se «abrió» —se recargó a sí misma, normalmente para estrenar una versión—
+     * y la animación de apertura no debe sonar otra vez.
+     *
+     * El primer guardia latía también con la app escondida, y con eso apagó la
+     * animación del todo: cerrarla y volver a abrirla enseguida dejaba una marca
+     * fresca escrita mientras estaba en segundo plano, así que la apertura de
+     * verdad se contaba como recarga. El latido tiene que medir «esta página
+     * está delante ahora mismo», no «este navegador tiene la pestaña por ahí».
      */
     const latir = () => {
+      if (document.visibilityState !== 'visible') return;
+
       try {
         localStorage.setItem('apexdata-viva', String(Date.now()));
       } catch {
@@ -95,8 +103,10 @@ export function SplashScreen() {
 
     if (instalada) {
       latir();
-      pulso = window.setInterval(latir, 15_000);
-      document.addEventListener('visibilitychange', latir);
+      // Cada cinco segundos, no cada quince: la ventana que lee el guion es
+      // ahora de diez, y con un latido más lento que la ventana una recarga
+      // legítima podría encontrarse la marca ya caducada.
+      pulso = window.setInterval(latir, 5_000);
     }
 
     // Fuera de la app instalada no se programa nada más: la regla CSS ya la
@@ -111,7 +121,6 @@ export function SplashScreen() {
       setOculta(true);
       return () => {
         if (pulso) window.clearInterval(pulso);
-        document.removeEventListener('visibilitychange', latir);
       };
     }
 
@@ -126,7 +135,6 @@ export function SplashScreen() {
       window.clearTimeout(retirar);
       window.clearTimeout(corte);
       if (pulso) window.clearInterval(pulso);
-      document.removeEventListener('visibilitychange', latir);
     };
   }, []);
 

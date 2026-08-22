@@ -320,58 +320,210 @@ test.describe('telemetría', () => {
 });
 
 test.describe('sesiones enlazadas', () => {
-  test('cada sesión de la portada lleva a donde están sus datos', async ({ page }) => {
+  test('cada sesión de la portada lleva a su pestaña de la ficha', async ({ page }) => {
     await page.goto('/');
 
     const tira = page.locator('ul[class*="grid-cols-2"] a');
     if ((await tira.count()) === 0) test.skip(true, 'No hay carrera próxima en el calendario');
 
+    // El nombre sale del primer nodo de texto y no del `textContent` entero:
+    // la sesión en curso mete además un «En curso» dentro del mismo div, y con
+    // la primera palabra sola no se distinguía «Práctica 1» de «Práctica 2».
     const enlaces = await tira.evaluateAll((as) =>
       as.map((a) => ({
-        nombre: a.querySelector('div')?.textContent?.trim().split(/\s+/)[0] ?? '',
+        nombre: a.querySelector('div')?.firstChild?.textContent?.trim() ?? '',
         href: a.getAttribute('href') ?? '',
       }))
     );
 
+    // Todas van a la ficha del fin de semana, cada una a su pestaña. Las
+    // prácticas y la clasificación al sprint iban a Análisis mientras la ficha
+    // solo sabía enseñar un cartel; ahora esas pestañas traen sus tiempos de la
+    // cronometría, así que el desvío sobraba.
+    const PESTAÑA: Record<string, string> = {
+      Carrera: 'race',
+      Clasificación: 'qualifying',
+      Sprint: 'sprint',
+      'Clasif. sprint': 'sprint-qualifying',
+      'Práctica 1': 'practice1',
+      'Práctica 2': 'practice2',
+      'Práctica 3': 'practice3',
+    };
+
     for (const { nombre, href } of enlaces) {
-      // Las tres que publica Jolpica van a su pestaña; las demás, a Análisis,
-      // que es donde sí están sus tiempos. Mandar una práctica a la ficha sería
-      // llevar a alguien a un cartel que explica que ahí no hay nada.
-      if (/Carrera|Clasificación$|^Sprint$/.test(nombre)) {
-        expect(href, `${nombre} debería abrir su pestaña`).toMatch(/\/results\/\d+\/\d+\?sesion=/);
-      } else {
-        // Y **a esa sesión**, no a Análisis a secas: el enlace pelado abría el
-        // último Gran Premio con resultados —otro fin de semana, otra sesión—
-        // y parecía que se hubiera equivocado de sitio.
-        expect(href, `${nombre} debería abrir su sesión en Análisis`).toMatch(
-          /^\/analysis\?anio=\d{4}&ronda=\d+&sesion=(FP1|FP2|FP3|SQ)$/
-        );
-      }
+      expect(PESTAÑA[nombre], `«${nombre}» no es una sesión conocida`).toBeDefined();
+      expect(href, `${nombre} debería abrir su pestaña`).toMatch(
+        new RegExp(`^/results/\\d+/\\d+\\?sesion=${PESTAÑA[nombre]}$`)
+      );
     }
   });
 
-  test('la sesión enlazada llega elegida a Análisis', async ({ page }) => {
-    await page.goto('/');
+  test('el enlace directo llega elegido a Análisis', async ({ page }) => {
+    // La portada ya no enlaza aquí, pero la dirección con sesión sigue siendo
+    // una entrada válida —y la que usa cualquiera que guarde el enlace—, así
+    // que se comprueba por sí misma en vez de a través de la portada.
+    await page.goto('/analysis');
 
-    const practica = page.locator('a[href*="/analysis?anio="]').first();
-    if ((await practica.count()) === 0) test.skip(true, 'No hay fin de semana en curso');
+    const gp = await page.locator('select').first().inputValue();
+    const [anio, ronda] = gp.split('-');
 
-    const destino = new URL(await practica.getAttribute('href') ?? '', 'http://x');
-    await practica.click();
-    await page.waitForURL('**/analysis**');
+    await page.goto(`/analysis?anio=${anio}&ronda=${ronda}&sesion=SQ`);
 
     // Que la dirección lleve los datos no sirve de nada si los selectores no
     // los recogen: es justo lo que fallaba antes.
     const selectores = page.locator('select');
-    const gp = `${destino.searchParams.get('anio')}-${destino.searchParams.get('ronda')}`;
     await expect(selectores.first()).toHaveValue(gp);
-    await expect(selectores.nth(1)).toHaveValue(destino.searchParams.get('sesion') ?? '');
+    await expect(selectores.nth(1)).toHaveValue('SQ');
   });
 
   test('una sesión inventada en la dirección abre la carrera', async ({ page }) => {
     await page.goto('/results/2024/1?sesion=inventada');
 
     await expect(page.getByRole('tab', { selected: true })).toHaveText(/CARRERA/i);
+  });
+});
+
+test.describe('tiempos de FastF1 en la ficha de la carrera', () => {
+  /**
+   * Las respuestas del servicio, simuladas.
+   *
+   * Como en las pruebas de telemetría: el CI no tiene `FASTF1_SERVICE_URL`, así
+   * que pedirlas de verdad sería esperar a algo que no va a llegar. Lo que se
+   * vigila aquí es que la pestaña **cablee** esos datos —el orden, el tramo, el
+   * compuesto, los avisos—, no que el servicio responda.
+   *
+   * Los dos fines de semana elegidos son de 2024, que no guarda las horas de
+   * sus sesiones: sin fecha pero con la carrera corrida hace dos años, la ficha
+   * pide los tiempos igualmente. Así la prueba no depende de qué día se corra.
+   */
+  const CLASIFICACION_AL_SPRINT = {
+    year: 2024,
+    event: 'Chinese Grand Prix',
+    session: 'Sprint Qualifying',
+    session_type: 'SQ',
+    segments: 3,
+    provisional: true,
+    classification: [
+      {
+        position: 1,
+        driver: 'NOR',
+        driverName: 'Lando Norris',
+        team: 'McLaren',
+        number: 4,
+        segment: 3,
+        time: '1:57.940',
+      },
+      {
+        position: 2,
+        driver: 'HAM',
+        driverName: 'Lewis Hamilton',
+        team: 'Mercedes',
+        number: 44,
+        segment: 3,
+        time: '1:58.020',
+      },
+      // Caído en el primer tramo: va detrás pese a nada, y el chip lo explica.
+      {
+        position: 20,
+        driver: 'BOT',
+        driverName: 'Valtteri Bottas',
+        team: 'Kick Sauber',
+        number: 77,
+        segment: 1,
+        time: '1:59.900',
+      },
+    ],
+  };
+
+  const VUELTAS_DE_PRACTICA = {
+    session: { year: 2024, event: 'Bahrain Grand Prix', type: 'FP1', name: 'Practice 1' },
+    fastest_laps: [
+      {
+        Driver: 'VER',
+        DriverNumber: '1',
+        LapNumber: 14,
+        LapTime: '1:32.267',
+        Compound: 'SOFT',
+        Team: 'Red Bull Racing',
+      },
+      // Sin equipo: `LapData.Team` es opcional y FastF1 lo deja vacío en alguna
+      // vuelta suelta. La fila tiene que salir igual, con su barra en gris.
+      {
+        Driver: 'ALO',
+        DriverNumber: '14',
+        LapNumber: 11,
+        LapTime: '1:32.891',
+        Compound: 'MEDIUM',
+      },
+    ],
+  };
+
+  test('la clasificación al sprint enseña el orden, con el tramo de cada piloto', async ({
+    page,
+  }) => {
+    await page.route('**/api/clasificacion/**', (route) =>
+      route.fulfill({ json: CLASIFICACION_AL_SPRINT })
+    );
+
+    await page.goto('/results/2024/5?sesion=sprint-qualifying');
+
+    // Antes, aquí había un cartel diciendo que Jolpica no publica esta sesión.
+    // Era cierto y lo sigue siendo; lo que había cambiado es que FastF1 sí, y
+    // el cartel había pasado de explicar una ausencia a esconder un dato.
+    await expect(page.getByText('Lando Norris')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Valtteri Bottas')).toBeVisible();
+
+    // El orden no es por tiempo: quien cae en SQ1 va detrás de quien llegó a
+    // SQ3. Sin el tramo escrito, el último parece un error de ordenación.
+    const puestos = page.locator('[role="tabpanel"] ol li');
+    await expect(puestos.first()).toContainText('SQ3');
+    await expect(puestos.last()).toContainText('SQ1');
+
+    // Y que es provisional, porque las sanciones se aplican después.
+    await expect(page.getByText(/provisional/i).first()).toBeVisible();
+  });
+
+  test('una práctica enseña la vuelta rápida de cada piloto, y avisa de que no es un resultado', async ({
+    page,
+  }) => {
+    await page.route('**/api/laps/**/fastest**', (route) =>
+      route.fulfill({ json: VUELTAS_DE_PRACTICA })
+    );
+
+    await page.goto('/results/2024/1?sesion=practice1');
+
+    // `exact`, porque «VER» sin más también cae dentro de «Volver a Resultados»
+    // y la búsqueda por texto no distingue mayúsculas.
+    await expect(page.getByText('VER', { exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('1:32.267')).toBeVisible();
+    await expect(page.getByText('SOFT', { exact: true })).toBeVisible();
+
+    // El piloto sin equipo sale igual: si esto se rompe, la pestaña se queda a
+    // medias por una vuelta a la que FastF1 no le puso equipo.
+    await expect(page.getByText('ALO', { exact: true })).toBeVisible();
+
+    // La advertencia no es un formalismo: cada equipo rueda su programa con la
+    // gasolina que le conviene, y sin decirlo este orden se lee como una
+    // clasificación.
+    await expect(page.getByText(/no es un resultado/i)).toBeVisible();
+  });
+
+  test('si la cronometría falla, lo dice y ofrece análisis', async ({ page }) => {
+    // Producción devuelve 500 —no 404— para una sesión que no se ha corrido:
+    // el 404 honesto está en el repo pero aún sin desplegar. Por eso la pestaña
+    // trata cualquier error igual en vez de fiarse del código de estado.
+    await page.route('**/api/laps/**/fastest**', (route) =>
+      route.fulfill({ status: 500, json: { error: 'Session not available' } })
+    );
+
+    await page.goto('/results/2024/1?sesion=practice1');
+
+    await expect(page.getByText(/No se han podido traer/i)).toBeVisible({ timeout: 30_000 });
+    // Dentro del panel: la barra de navegación tiene su propio enlace a
+    // Análisis y sin acotar habría dos coincidencias.
+    await expect(
+      page.locator('[role="tabpanel"]').getByRole('link', { name: 'análisis' })
+    ).toBeVisible();
   });
 });
 

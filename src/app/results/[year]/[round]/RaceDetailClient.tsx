@@ -7,6 +7,7 @@ import { teamColor } from '@/lib/team-colors';
 import { PriorityRows } from '@/components/ui/PriorityRows';
 import { SprintResults } from './SprintResults';
 import { SesionPendiente } from './SesionPendiente';
+import { ClasificacionSprint, VueltasDePractica } from './TiemposDeSesion';
 import { comienzoDeCarrera, estadoDeSesion, queEnseñar } from '@/lib/sesiones';
 import type {
   Race,
@@ -150,6 +151,75 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
   const parrillaDelSprint = yaRodo(race.sprintQualiDate, 'Clasif. sprint')
     ? ({ year, round: race.round, sesion: 'SQ' } as const)
     : undefined;
+
+  /**
+   * Las pestañas cuyos tiempos no salen de la base, sino de la cronometría.
+   *
+   * Prácticas y clasificación al sprint: Jolpica no las publica —Ergast nunca
+   * las tuvo—, pero FastF1 sí, y los endpoints llevan tiempo respondiendo. Aquí
+   * solo se dice qué sesión pedir y cuándo se corrió; el resto lo deciden
+   * `queEnseñar` y los componentes de `TiemposDeSesion`.
+   *
+   * `nombre` es como la llama `sesiones.ts` —de ahí sale su duración—, y
+   * `titulo` como se la nombra dentro de una frase.
+   */
+  const CRONOMETRADAS: Partial<
+    Record<
+      SessionTab,
+      {
+        sesion: 'SQ' | 'FP1' | 'FP2' | 'FP3';
+        cuando: Date | null;
+        nombre: string;
+        titulo: string;
+      }
+    >
+  > = {
+    'sprint-qualifying': {
+      sesion: 'SQ',
+      cuando: race.sprintQualiDate,
+      nombre: 'Clasif. sprint',
+      titulo: 'La clasificación al sprint',
+    },
+    practice1: {
+      sesion: 'FP1',
+      cuando: race.fp1Date,
+      nombre: 'Práctica 1',
+      titulo: 'La práctica libre 1',
+    },
+    practice2: {
+      sesion: 'FP2',
+      cuando: race.fp2Date,
+      nombre: 'Práctica 2',
+      titulo: 'La práctica libre 2',
+    },
+    practice3: {
+      sesion: 'FP3',
+      cuando: race.fp3Date,
+      nombre: 'Práctica 3',
+      titulo: 'La práctica libre 3',
+    },
+  };
+
+  const cronometrada = CRONOMETRADAS[activeTab];
+
+  const estadoCronometrada =
+    ahora === null || !cronometrada || cronometrada.cuando === null
+      ? null
+      : queEnseñar({
+          nombre: cronometrada.nombre,
+          cuando: cronometrada.cuando,
+          tieneResultados: false,
+          ahora,
+        });
+
+  /**
+   * Sin fecha de sesión, la carrera decide.
+   *
+   * Las temporadas viejas no guardan las horas de las prácticas. Si la carrera
+   * ya se corrió, esa sesión quedó atrás con total seguridad y sus tiempos se
+   * pueden pedir; si ni eso se sabe, se conserva el cartel de siempre.
+   */
+  const elFinDeSemanaYaPaso = yaRodo(comienzoDeLaCarrera, 'Carrera');
 
   /**
    * Las pestañas van de lo más importante a lo menos, no en orden cronológico.
@@ -881,19 +951,45 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
             />
           )
         )
+      ) : ahora === null || !cronometrada ? (
+        // Antes de hidratar no se sabe qué hora es, y de eso depende todo lo de
+        // abajo: se pinta nada, como en el resto de las pestañas.
+        null
+      ) : estadoCronometrada?.tipo === 'aun-no-corre' ||
+        estadoCronometrada?.tipo === 'en-curso' ? (
+        // Aún no se corre o está rodando: la cuenta atrás, igual que las demás.
+        // Pedir la sesión ahora sería pedirle a la cronometría algo que todavía
+        // no existe.
+        <SesionPendiente nombre={cronometrada.titulo} estado={estadoCronometrada} />
+      ) : estadoCronometrada?.tipo === 'sin-publicar' || elFinDeSemanaYaPaso ? (
+        /*
+         * Ya se corrió: los tiempos están y se piden.
+         *
+         * Esta pestaña enseñaba un cartel diciendo que Jolpica no publica las
+         * prácticas ni la clasificación al sprint. Era verdad y sigue siéndolo,
+         * pero desde hace tiempo esos tiempos llegan por FastF1 y los dos
+         * endpoints responden en producción: el cartel había pasado de explicar
+         * una ausencia a esconder un dato que ya teníamos.
+         *
+         * El segundo caso —sin fecha de sesión pero con la carrera ya corrida—
+         * es el de las temporadas viejas, que no guardan las horas de las
+         * prácticas: si el domingo quedó atrás, el viernes también.
+         */
+        cronometrada.sesion === 'SQ' ? (
+          <ClasificacionSprint year={year} round={race.round} />
+        ) : (
+          <VueltasDePractica
+            year={year}
+            round={race.round}
+            sesion={cronometrada.sesion}
+            nombre={cronometrada.titulo}
+          />
+        )
       ) : (
         /*
-         * Prácticas y clasificación al sprint: no es un retraso, es que la
-         * fuente no las publica. `SesionPendiente` lo dice con esas palabras.
-         *
-         * Lo que sigue debajo es el texto anterior, que se mantiene aquí para
-         * que el componente decida en un solo sitio.
-         *
-         * No es falta de ganas: **Jolpica no publica resultados de prácticas
-         * libres** —Ergast nunca los tuvo— ni de la clasificación al sprint. Esos
-         * datos existen en FastF1, como tiempos de vuelta, que es de donde los
-         * sacará la app cuando esta pestaña deje de decir esto. Decir «en
-         * desarrollo» sin más deja pensando que es un olvido.
+         * No hay forma de saber si esa sesión llegó a correrse: sin su hora y
+         * sin una carrera pasada, preguntar por sus tiempos sería adivinar. Se
+         * conserva el cartel de siempre, que al menos dice a dónde ir.
          */
         <div className="rounded-lg border border-border bg-card p-10 text-center">
           <Construction className="mx-auto mb-4 h-12 w-12 text-muted-foreground" aria-hidden />

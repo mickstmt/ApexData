@@ -93,8 +93,14 @@ export default function RootLayout({
             recarga sola segundos después para estrenarla; sin esta marca, esa
             recarga volvía a disparar la animación de apertura encima de la
             portada, como si se hubiera vuelto a abrir. La página apunta cada
-            pocos segundos que sigue viva (ver SplashScreen); si la marca es de
-            hace menos de un minuto, esto no es una apertura.
+            cinco segundos que sigue viva y a la vista (ver SplashScreen); si la
+            marca es de hace menos de diez segundos, esto no es una apertura.
+
+            Diez y no sesenta, que fue el primer número: con un minuto de
+            ventana, cerrar la app y volver a abrirla enseguida —lo más normal
+            del mundo— contaba como recarga y la animación no sonaba nunca. Una
+            recarga para estrenar versión ocurre en un par de segundos; diez le
+            sobran.
 
             Va como guion en crudo y EL PRIMERO del body: tiene que decidir
             antes de que el parser llegue a la capa de apertura — desde React
@@ -102,7 +108,7 @@ export default function RootLayout({
             escrito a mano porque App Router lo ignora. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var v=+localStorage.getItem('apexdata-viva')||0;if(Date.now()-v<60000)document.documentElement.setAttribute('data-reapertura','');}catch(e){}`,
+            __html: `try{var v=+localStorage.getItem('apexdata-viva')||0;if(Date.now()-v<10000)document.documentElement.setAttribute('data-reapertura','');}catch(e){}`,
           }}
         />
         <ThemeProvider
