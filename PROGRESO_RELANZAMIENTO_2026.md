@@ -76,6 +76,20 @@
 
 ## Bitácora
 
+### 2026-08-22 (23) — Dos cosas que dijeron los registros del servicio ✅
+
+El usuario pegó los registros del servicio recién desplegado. Dijeron dos cosas que no se veían desde fuera.
+
+**«Cannot calculate qualifying results: missing information about deleted laps».** FastF1 avisaba de que él mismo sabe calcular la clasificación, pero le faltaban los **mensajes de dirección de carrera** —que es donde viven las vueltas anuladas—, porque la sesión se cargaba con `messages=False`. Con ellos cargados devuelve el orden oficial con los tiempos de cada tramo, y en esta sesión hubo **1 vuelta anulada**. El orden coincidía esta vez, pero una vuelta borrada por límites de pista podría haber ordenado mal la parrilla. Ahora se usa el cálculo de FastF1 (`from_results`) y el reparto por tramos propio queda como respaldo; la respuesta dice cuál de los dos se usó (`rebuilt`).
+
+**Dos 500 que no eran errores.** `GET /api/laps/2026/12/S/fastest` y `/Q/fastest` respondían 500 con un `DataNotLoadedError`. La causa: esas sesiones **aún no se habían corrido**. FastF1 no falla al pedirlas —carga todo en blanco y termina «for 0 drivers»— y la primera línea que toca las vueltas revienta. Decir «error del servidor» era mentir: no se había roto nada, no era la hora. Ahora hay un ayudante único (`app/utils/loading.py`) que carga cualquier sesión y devuelve **404 con la frase honesta**, y ese 404 viaja intacto hasta la pantalla (`SesionSinDatosError`) en vez de convertirse en un 500 por el camino. Comprobado: la pantalla de análisis dice «La sesión S de 2026 ronda 12 todavía no tiene datos. La cronometría aparece cuando la sesión se corre.»
+
+Salió a la luz por el cambio del día anterior: al meter el fin de semana en curso en el selector de telemetría, elegir el sábado un viernes pasó a ser algo normal de hacer.
+
+**De paso**: la prueba de la ficha de circuito fallaba una de cada dos veces en tanda completa y pasaba aislada — `waitForURL` vuelve en cuanto cambia la dirección, pero el contenido llega después y con el servidor atendiendo a todas las demás los cinco segundos por defecto se quedaban cortos.
+
+**Verificación**: lint 0 · 153 unitarias · 39 de navegador · 41 de pytest · build sin base de datos · las tres rutas comprobadas contra el servicio real.
+
 ### 2026-08-22 (22) — La parrilla del sprint, los enlaces que no llevaban a nada, y el parpadeo al retroceder ✅
 
 Tres cosas reportadas desde el teléfono, con una corrección de por medio.

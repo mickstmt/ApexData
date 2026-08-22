@@ -6,9 +6,10 @@ import logging
 from fastapi import APIRouter, HTTPException
 import fastf1
 from app.utils.cache_manager import cache_manager
-from app.utils.classification import build_classification
+from app.utils.classification import build_classification, from_results
 from app.utils.serialization import records, scalar
 from app.utils.events import event_key
+from app.utils.loading import load_session
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,9 @@ async def get_season_schedule(year: int):
 
         return result
 
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
+        raise
     except Exception as e:
         logger.exception("Error fetching schedule")
         raise HTTPException(status_code=500, detail="Error fetching schedule")
@@ -71,6 +75,9 @@ async def get_event_info(year: int, event: str):
 
         return result
 
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
+        raise
     except Exception as e:
         logger.exception("Error fetching event")
         raise HTTPException(status_code=500, detail="Error fetching event")
@@ -90,8 +97,7 @@ async def get_session_info(year: int, event: str, session_type: str):
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event_key(event), session_type)
-        session.load()
+        session = load_session(year, event, session_type)
 
         # Get session results
         results = session.results if hasattr(session, 'results') else None
@@ -111,6 +117,9 @@ async def get_session_info(year: int, event: str, session_type: str):
 
         return result
 
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
+        raise
     except Exception as e:
         logger.exception("Error fetching session info")
         raise HTTPException(status_code=500, detail="Error fetching session info")
@@ -143,7 +152,11 @@ async def get_qualifying_classification(year: int, event: str, session_type: str
             return cached_data
 
         session = fastf1.get_session(year, event_key(event), session_type)
-        session.load(telemetry=False, weather=False, messages=False)
+        # The messages are not optional here: deleted laps live in them, and
+        # without them FastF1 refuses to work out the order —"missing
+        # information about deleted laps"— and a lap cancelled for track limits
+        # would still count towards the grid.
+        session.load(telemetry=False, weather=False, messages=True)
 
         # Names and teams come from the results table, which FastF1 fills from
         # the entry list even when the finishing positions are still empty.
@@ -161,7 +174,14 @@ async def get_qualifying_classification(year: int, event: str, session_type: str
                 }
 
         segments = session.laps.split_qualifying_sessions()
-        classification = build_classification(segments, details)
+
+        # FastF1's own classification first; the banding by segment is only the
+        # fallback for a session it could not work out.
+        classification = from_results(getattr(session, "results", None))
+        rebuilt = not classification
+
+        if rebuilt:
+            classification = build_classification(segments, details)
 
         result = {
             "year": year,
@@ -174,6 +194,8 @@ async def get_qualifying_classification(year: int, event: str, session_type: str
             # Said out loud so the page can say it too: this is rebuilt from
             # timing, and grid penalties are applied afterwards by the FIA.
             "provisional": True,
+            # Whether this came from FastF1's own ordering or from our fallback.
+            "rebuilt": rebuilt,
             "classification": classification,
         }
 
@@ -181,6 +203,9 @@ async def get_qualifying_classification(year: int, event: str, session_type: str
 
         return result
 
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
+        raise
     except Exception:
         logger.exception("Error building classification")
         raise HTTPException(status_code=500, detail="Error building classification")

@@ -11,6 +11,7 @@ from app.utils.cache_manager import cache_manager
 from app.utils.serialization import records
 from app.utils.track import group_by_driver, stints_from_laps
 from app.utils.events import event_key
+from app.utils.loading import load_session
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,7 @@ async def get_session_laps(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event_key(event), session_type)
-        session.load()
+        session = load_session(year, event, session_type)
 
         laps = session.laps
 
@@ -90,6 +90,9 @@ async def get_session_laps(
 
         return result
 
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
+        raise
     except Exception as e:
         logger.exception("Error fetching laps")
         raise HTTPException(status_code=500, detail="Error fetching laps")
@@ -115,8 +118,7 @@ async def get_session_stints(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event_key(event), session_type)
-        session.load()
+        session = load_session(year, event, session_type)
 
         if session.laps.empty:
             raise HTTPException(status_code=404, detail="No lap data available for this session")
@@ -150,6 +152,9 @@ async def get_session_stints(
 
     except HTTPException:
         raise
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
+        raise
     except Exception:
         logger.exception("Error fetching stints")
         raise HTTPException(status_code=500, detail="Error fetching stints")
@@ -174,8 +179,7 @@ async def get_fastest_laps(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event_key(event), session_type)
-        session.load()
+        session = load_session(year, event, session_type)
 
         laps = session.laps
 
@@ -203,6 +207,9 @@ async def get_fastest_laps(
 
         return result
 
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
+        raise
     except Exception as e:
         logger.exception("Error fetching fastest laps")
         raise HTTPException(status_code=500, detail="Error fetching fastest laps")
@@ -227,8 +234,7 @@ async def get_driver_lap_analysis(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event_key(event), session_type)
-        session.load()
+        session = load_session(year, event, session_type)
 
         driver_laps = session.laps.pick_drivers(driver)
 
@@ -277,6 +283,9 @@ async def get_driver_lap_analysis(
 
         return result
 
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
+        raise
     except Exception as e:
         logger.exception("Error analyzing driver laps")
         raise HTTPException(status_code=500, detail="Error analyzing driver laps")

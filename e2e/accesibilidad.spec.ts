@@ -745,7 +745,13 @@ test.describe('ficha de circuito', () => {
     await page.getByRole('link', { name: /Monza/ }).first().click();
     await page.waitForURL('**/circuits/monza');
 
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Monza');
+    // Con margen: `waitForURL` vuelve en cuanto cambia la dirección, pero el
+    // contenido llega después, y en la tanda completa —con el servidor
+    // atendiendo a todas las demás— los cinco segundos por defecto se quedan
+    // cortos. Aislada pasaba siempre; en tanda fallaba una de cada dos.
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Monza', {
+      timeout: 30_000,
+    });
 
     // Las dos cifras que distinguen un circuito de otro. Con expresión regular
     // anclada porque «desde la pole» también sale en cada fila del historial.

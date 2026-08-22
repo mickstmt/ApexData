@@ -8,7 +8,7 @@ carrera.
 
 import pandas as pd
 
-from app.utils.classification import build_classification
+from app.utils.classification import build_classification, from_results
 
 
 def tramo(pares: list[tuple[str, str]]) -> pd.DataFrame:
@@ -102,3 +102,69 @@ class TestPilotos:
 
         assert orden[0]["driverName"] == "VER"
         assert orden[0]["team"] is None
+
+
+class TestDesdeResultados:
+    """El camino bueno: la clasificación que calcula FastF1 con las vueltas
+    anuladas ya descontadas."""
+
+    def resultados(self, filas: list[dict]) -> pd.DataFrame:
+        marco = pd.DataFrame(filas)
+        for columna in ("Q1", "Q2", "Q3"):
+            if columna in marco.columns:
+                marco[columna] = pd.to_timedelta(marco[columna])
+        return marco
+
+    def test_respeta_el_orden_que_da_fastf1(self):
+        orden = from_results(
+            self.resultados(
+                [
+                    {"Position": 2.0, "Abbreviation": "NOR", "FullName": "Lando Norris",
+                     "TeamName": "McLaren", "DriverNumber": "4",
+                     "Q1": "0:01:13.0", "Q2": "0:01:12.1", "Q3": "0:01:11.6"},
+                    {"Position": 1.0, "Abbreviation": "RUS", "FullName": "George Russell",
+                     "TeamName": "Mercedes", "DriverNumber": "63",
+                     "Q1": "0:01:13.2", "Q2": "0:01:12.2", "Q3": "0:01:11.5"},
+                ]
+            )
+        )
+
+        assert [fila["driver"] for fila in orden] == ["RUS", "NOR"]
+        assert [fila["position"] for fila in orden] == [1, 2]
+
+    def test_el_tiempo_es_el_del_ultimo_tramo_alcanzado(self):
+        # No es la mejor vuelta de la sesión: es la que ordena la parrilla.
+        orden = from_results(
+            self.resultados(
+                [
+                    {"Position": 1.0, "Abbreviation": "RUS", "FullName": "George Russell",
+                     "TeamName": "Mercedes", "DriverNumber": "63",
+                     "Q1": "0:01:13.2", "Q2": "0:01:12.2", "Q3": "0:01:11.5"},
+                    {"Position": 11.0, "Abbreviation": "LAW", "FullName": "Liam Lawson",
+                     "TeamName": "Red Bull Racing", "DriverNumber": "30",
+                     "Q1": "0:01:13.4", "Q2": "0:01:13.1", "Q3": pd.NaT},
+                    {"Position": 17.0, "Abbreviation": "BEA", "FullName": "Oliver Bearman",
+                     "TeamName": "Haas F1 Team", "DriverNumber": "87",
+                     "Q1": "0:01:14.7", "Q2": pd.NaT, "Q3": pd.NaT},
+                ]
+            )
+        )
+
+        assert [(fila["segment"], fila["time"]) for fila in orden] == [
+            (3, "1:11.500"),
+            (2, "1:13.100"),
+            (1, "1:14.700"),
+        ]
+
+    def test_sin_posiciones_no_devuelve_nada(self):
+        # Es la señal de que hay que recurrir al reparto por tramos: FastF1 deja
+        # `Position` vacío cuando no pudo calcular el orden.
+        vacio = self.resultados(
+            [{"Position": float("nan"), "Abbreviation": "RUS", "Q1": "0:01:13.2"}]
+        )
+
+        assert from_results(vacio) == []
+
+    def test_sin_resultados_tampoco(self):
+        assert from_results(None) == []
+        assert from_results(pd.DataFrame()) == []

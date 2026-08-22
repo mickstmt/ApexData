@@ -10,7 +10,7 @@
 
 import { NextResponse } from 'next/server';
 import { fastf1Client } from '@/services';
-import { TelemetryUnavailableError } from '@/services/fastf1/client';
+import { SesionSinDatosError, TelemetryUnavailableError } from '@/services/fastf1/client';
 import type { SessionType } from '@/types';
 
 const ORDENAN_POR_VUELTA: SessionType[] = ['Q', 'SQ'];
@@ -42,6 +42,11 @@ export async function GET(
 
     return NextResponse.json(clasificacion);
   } catch (error) {
+    // Aún no se ha corrido: no es un fallo, es que no es la hora.
+    if (error instanceof SesionSinDatosError) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+
     if (error instanceof TelemetryUnavailableError) {
       return NextResponse.json({ error: error.message }, { status: 503 });
     }

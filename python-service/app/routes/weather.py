@@ -8,6 +8,7 @@ import fastf1
 from app.utils.cache_manager import cache_manager
 from app.utils.serialization import records
 from app.utils.events import event_key
+from app.utils.loading import load_session
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +38,7 @@ async def get_session_weather(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event_key(event), session_type)
-        session.load()
+        session = load_session(year, event, session_type)
 
         weather = session.weather_data
 
@@ -59,6 +59,9 @@ async def get_session_weather(
 
         return result
 
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
+        raise
     except Exception as e:
         logger.exception("Error fetching weather")
         raise HTTPException(status_code=500, detail="Error fetching weather")

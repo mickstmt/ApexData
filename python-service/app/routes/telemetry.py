@@ -11,6 +11,7 @@ from app.utils.cache_manager import cache_manager
 from app.utils.serialization import records, format_lap_time
 from app.utils.track import track_points
 from app.utils.events import event_key
+from app.utils.loading import load_session
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,7 @@ async def compare_drivers_telemetry(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event_key(event), session_type)
-        session.load()
+        session = load_session(year, event, session_type)
 
         laps_d1 = session.laps.pick_drivers(driver1)
         laps_d2 = session.laps.pick_drivers(driver2)
@@ -99,6 +99,9 @@ async def compare_drivers_telemetry(
 
     except HTTPException:
         raise
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
+        raise
     except Exception as e:
         logger.exception("Error comparing telemetry")
         raise HTTPException(status_code=500, detail="Error comparing telemetry")
@@ -126,8 +129,7 @@ async def get_driver_track(
         if cached_data is not None:
             return cached_data
 
-        session = fastf1.get_session(year, event_key(event), session_type)
-        session.load()
+        session = load_session(year, event, session_type)
 
         driver_laps = session.laps.pick_drivers(driver)
         if driver_laps.empty:
@@ -176,6 +178,9 @@ async def get_driver_track(
 
     except HTTPException:
         raise
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
+        raise
     except Exception:
         logger.exception("Error fetching track map")
         raise HTTPException(status_code=500, detail="Error fetching track map")
@@ -212,8 +217,7 @@ async def get_driver_telemetry(
             return cached_data
 
         # Load session
-        session = fastf1.get_session(year, event_key(event), session_type)
-        session.load()
+        session = load_session(year, event, session_type)
 
         # Get driver laps (use pick_drivers instead of deprecated pick_driver)
         driver_laps = session.laps.pick_drivers(driver)
@@ -257,6 +261,9 @@ async def get_driver_telemetry(
         return result
 
     except HTTPException:
+        raise
+    except HTTPException:
+        # El 404 de una sesión sin correr no es un fallo nuestro.
         raise
     except Exception as e:
         logger.exception("Error fetching telemetry")

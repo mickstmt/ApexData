@@ -42,6 +42,21 @@ export class TelemetryUnavailableError extends Error {
   }
 }
 
+/**
+ * La sesión existe en el calendario pero todavía no ha rodado.
+ *
+ * FastF1 no falla al pedirla: la carga entera en blanco y termina «for 0
+ * drivers», y la primera línea que toca las vueltas revienta. Contarlo como un
+ * error del servidor hacía que la pantalla dijera que algo se había roto por
+ * nuestra parte cuando lo único que pasa es que aún no es la hora.
+ */
+export class SesionSinDatosError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SesionSinDatosError';
+  }
+}
+
 const DEFAULT_TIMEOUT = 30000; // 30 seconds (telemetry requests can be slow)
 
 // ============================================================================
@@ -90,9 +105,15 @@ class FastF1Client {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(
-          error.detail || `FastF1 API error: ${response.status} ${response.statusText}`
-        );
+        const mensaje =
+          error.detail || `FastF1 API error: ${response.status} ${response.statusText}`;
+
+        // Una sesión que aún no se ha corrido no es un fallo: el servicio
+        // responde 404 y eso tiene que llegar tal cual hasta el navegador, en
+        // vez de convertirse en «error del servidor» por el camino.
+        if (response.status === 404) throw new SesionSinDatosError(mensaje);
+
+        throw new Error(mensaje);
       }
 
       return await response.json();
