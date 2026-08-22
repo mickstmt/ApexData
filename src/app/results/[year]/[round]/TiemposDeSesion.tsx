@@ -68,10 +68,12 @@ function Cargando({ que }: { que: string }) {
  * El fallo, dicho sin adivinar la causa.
  *
  * Puede ser que la cronometría todavía no tenga la sesión, que el servicio esté
- * ocupado o que la sesión no exista. Distinguirlo desde aquí exigiría fiarse del
- * código de estado, y el 404 honesto aún no está desplegado en producción: hasta
- * entonces una sesión sin correr llega como 500. Así que se trata cualquier
- * error igual y se ofrece la salida que sí funciona.
+ * ocupado o que la sesión no exista. El servicio distingue el primer caso —una
+ * sesión sin correr responde 404, comprobado en producción—, pero aquí no se
+ * aprovecha a propósito: esta pestaña solo se pide cuando la sesión **ya rodó**,
+ * así que un 404 aquí significa «la cronometría aún no la tiene», que es lo
+ * mismo que dice cualquier otro fallo. Separar los mensajes sería inventar una
+ * diferencia que quien mira no puede usar.
  */
 function Fallo({ que }: { que: string }) {
   return (

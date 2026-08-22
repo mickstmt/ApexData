@@ -90,7 +90,9 @@ Se piden desde el navegador, no en el servidor, por la misma razón que la parri
 
 **Cómo se verificó, y qué no se pudo verificar desde casa.** Las tres pruebas de navegador nuevas **simulan** `/api/clasificacion/**` y `/api/laps/**`, como las de telemetría: el CI no tiene `FASTF1_SERVICE_URL`. Y esta máquina tampoco —el servicio vive sin dominio dentro de la red del VPS—, así que el camino sin simular solo se pudo comprobar en su degradación: sin servicio, las dos pestañas acaban en el aviso amable con su enlace a Análisis, sin un error de JavaScript. Que la pestaña enseñe los 22 puestos de verdad se comprueba en producción.
 
-**Verificación**: lint 0 · 153 unitarias · build sin base · 43 de navegador (3 nuevas), reconstruyendo antes de correrlas.
+**Verificación**: lint 0 · 153 unitarias · build sin base · 43 de navegador (3 nuevas), reconstruyendo antes de correrlas. Y en producción, con navegador de verdad tras el relevo: la pestaña CLASI. SPRINT enseña **los 22 puestos** (Russell 1:11.567, SQ3) con su aviso de provisional y sin un error de JavaScript, y el enlace «Práctica 1» de la portada abre su pestaña con los tiempos en vez del cartel.
+
+**Un pendiente que ya no lo era.** Se venía anotando que el 404 honesto y la clasificación oficial con vueltas anuladas —entrada (23)— seguían sin desplegar, a la espera de pulsar *Deploy* a mano el lunes. Medido en producción: `GET /api/laps/2026/20/FP1/fastest` (una ronda futura) responde **404**, no 500, y `/api/clasificacion/2026/12/SQ` trae `rebuilt: false`. Las dos cosas están vivas: el Deploy del servicio de hoy se las llevó por delante. **No hace falta el Deploy del lunes.** Vale como recordatorio de medir antes de dar por pendiente lo que quizá ya se hizo.
 
 ### 2026-08-22 (25) — La animación de apertura sonaba dos veces: era la app actualizándose ✅
 

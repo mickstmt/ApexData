@@ -509,9 +509,10 @@ test.describe('tiempos de FastF1 en la ficha de la carrera', () => {
   });
 
   test('si la cronometría falla, lo dice y ofrece análisis', async ({ page }) => {
-    // Producción devuelve 500 —no 404— para una sesión que no se ha corrido:
-    // el 404 honesto está en el repo pero aún sin desplegar. Por eso la pestaña
-    // trata cualquier error igual en vez de fiarse del código de estado.
+    // Un 500 a propósito, que es el fallo que la pestaña no puede interpretar:
+    // el servicio sí distingue una sesión sin correr con un 404, pero aquí solo
+    // se llega cuando la sesión ya rodó, así que cualquier error se trata igual.
+    // Si algún día se separan los mensajes, esta prueba sigue valiendo.
     await page.route('**/api/laps/**/fastest**', (route) =>
       route.fulfill({ status: 500, json: { error: 'Session not available' } })
     );
