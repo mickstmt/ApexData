@@ -76,6 +76,16 @@
 
 ## Bitácora
 
+### 2026-08-22 (24) — El CI falló, y la causa era la conexión única, no el código ✅
+
+Dos pruebas de navegador fallaron en CI sin que lo que vigilan estuviera roto. La causa se encontró reproduciendo la restricción exacta del CI en local: allí la base admite **una sola conexión** (`connection_limit=1`, así viene la URL del secreto) y con dos navegadores pidiendo a la vez la conexión se agota — Prisma espera diez segundos, se rinde, y la página se pinta **vacía**: «Timed out fetching a new connection from the connection pool». La prueba no encuentra el botón que busca y falla por eso, no por el margen o la pestaña que vigila.
+
+Medido con la restricción reproducida (`connection_limit=1`, `CI=1`): con dos procesos, dos o tres inestables por tanda y a veces un fallo (~5–7 min); con **uno**, treinta y nueve de treinta y nueve a la primera (5,0 min). No cuesta tiempo porque los dos procesos tampoco avanzaban en paralelo de verdad: se encolaban en la misma conexión.
+
+Cambios: un solo proceso en CI; **reintento con traza** en CI (el `trace: 'on-first-retry'` estaba configurado desde el principio pero sin reintentos, así que esa traza no se había generado nunca); las aserciones esperan quince segundos en CI en vez de cinco; y tres pruebas endurecidas para que esperen el contenido antes de medirlo. También el reporter de GitHub, que publica cada fallo como anotación legible por API sin credenciales — hoy hubo que reproducir el fallo a ciegas porque el log del job las pide.
+
+**Verificación**: la tanda completa con la restricción del CI reproducida en local, tres veces: la última, 39/39 a la primera.
+
 ### 2026-08-22 (23) — Dos cosas que dijeron los registros del servicio ✅
 
 El usuario pegó los registros del servicio recién desplegado. Dijeron dos cosas que no se veían desde fuera.

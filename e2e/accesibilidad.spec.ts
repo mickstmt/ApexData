@@ -384,6 +384,10 @@ test.describe('pestañas de una carrera', () => {
     // viene a ver— quedaba la última, detrás de tres prácticas sin datos, y en
     // un teléfono había que arrastrar la fila para llegar a ella.
     const pestanas = page.getByRole('tab');
+    // Se espera a que haya pestañas antes de leerlas. Sin esto la lista podía
+    // venir vacía y el fallo era `undefined no es una cadena`, que no dice nada
+    // del defecto que esta prueba vigila.
+    await expect(pestanas.first()).toBeVisible({ timeout: 30_000 });
     expect((await pestanas.allInnerTexts())[0]).toMatch(/CARRERA/i);
     await expect(page.getByRole('tab', { selected: true })).toHaveText(/CARRERA/i);
 
@@ -417,11 +421,17 @@ test.describe('márgenes en móvil', () => {
     // 380 px dentro de una columna de 358 —los hijos de una rejilla no encogen
     // por debajo de su contenido salvo que se les diga— y empujaban el
     // documento a 396. Se veía como un «Ver todo» pegado al borde derecho.
+    // Se espera a que la portada esté entera antes de medirla: medir un
+    // documento a medio pintar es medir otro documento. Con una sola conexión
+    // a la base —lo que hay en CI— las tarjetas tardan, y esta prueba fallaba
+    // por eso y no por el margen que vigila.
+    const enlace = page.getByRole('link', { name: 'Ver todo' }).first();
+    await expect(enlace).toBeVisible();
+
     const ancho = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(ancho).toBeLessThanOrEqual(390);
 
     // Y el enlace vuelve a respetar el margen del contenedor.
-    const enlace = page.getByRole('link', { name: 'Ver todo' }).first();
     const caja = (await enlace.boundingBox())!;
     expect(390 - caja.x - caja.width).toBeGreaterThanOrEqual(12);
   });
@@ -718,6 +728,11 @@ test.describe('acento por equipo favorito', () => {
   });
 
   test('las filas de tu equipo se distinguen, y sin equipo no se tiñe nada', async ({ page }) => {
+    // Tres navegaciones, y una es la clasificación general —la página que más
+    // consulta—. En CI, con dos procesos compartiendo una sola conexión a la
+    // base, no cabe en el minuto por defecto: abortaba la última navegación.
+    test.slow();
+
     await page.goto('/favorites');
     await page.getByRole('button', { name: 'Mercedes' }).click();
 
@@ -730,7 +745,7 @@ test.describe('acento por equipo favorito', () => {
 
     // Al quitar el equipo, el acento vuelve al verde de la marca y las filas
     // dejan de distinguirse.
-    await page.goto('/favorites');
+    await page.goto('/favorites', { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Sin equipo' }).click();
     await expect.poll(() => tono(page), { timeout: 5000 }).toBe('72 100% 20%');
   });
