@@ -88,6 +88,23 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${display.variable} ${inter.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="flex min-h-dvh flex-col" suppressHydrationWarning>
+        {/* ¿Es una apertura de verdad, o la app recargándose a sí misma?
+            Cuando llega una versión nueva, la app abre con la vieja y se
+            recarga sola segundos después para estrenarla; sin esta marca, esa
+            recarga volvía a disparar la animación de apertura encima de la
+            portada, como si se hubiera vuelto a abrir. La página apunta cada
+            pocos segundos que sigue viva (ver SplashScreen); si la marca es de
+            hace menos de un minuto, esto no es una apertura.
+
+            Va como guion en crudo y EL PRIMERO del body: tiene que decidir
+            antes de que el parser llegue a la capa de apertura — desde React
+            llegaría tarde y se vería un fogonazo. No puede ir en un <head>
+            escrito a mano porque App Router lo ignora. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var v=+localStorage.getItem('apexdata-viva')||0;if(Date.now()-v<60000)document.documentElement.setAttribute('data-reapertura','');}catch(e){}`,
+          }}
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

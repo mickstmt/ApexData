@@ -630,6 +630,36 @@ test.describe('pantalla de apertura', () => {
     await expect(capa).toHaveCount(0, { timeout: 6000 });
   });
 
+  test('la app recargándose a sí misma no la vuelve a enseñar', async ({ page }) => {
+    // El caso real: llega una versión nueva, la app abre con la vieja y se
+    // recarga sola segundos después para estrenarla. Esa recarga volvía a
+    // disparar la animación de apertura encima de la portada ya pintada, como
+    // si la app se hubiera vuelto a abrir.
+    // `commit`, como en la prueba de arriba: la capa se retira sola a los
+    // 2,2 s y esperar `load` puede llegar tarde para verla.
+    await page.goto('/?splash', { waitUntil: 'commit' });
+    await expect(page.locator('[data-splash]')).toBeVisible();
+
+    // La marca de vida que el guion del head lee en la carga siguiente. En la
+    // app instalada la escribe el propio componente cada quince segundos; aquí
+    // se escribe a mano porque `?splash` no arranca el latido.
+    await page.evaluate(() => localStorage.setItem('apexdata-viva', String(Date.now())));
+    await page.reload({ waitUntil: 'commit' });
+
+    // El guion corre antes del primer pintado: el documento queda marcado y la
+    // capa ni se pinta. `auto` y no `forzada`, porque la regla CSS solo
+    // esconde el valor de verdad — así que se comprueba el atributo.
+    await expect(page.locator('html')).toHaveAttribute('data-reapertura', '');
+
+    // Y una apertura de verdad —la marca de vida ya vieja— vuelve a sonar.
+    await page.evaluate(() =>
+      localStorage.setItem('apexdata-viva', String(Date.now() - 5 * 60_000))
+    );
+    await page.reload({ waitUntil: 'commit' });
+    await expect(page.locator('html')).not.toHaveAttribute('data-reapertura', '');
+    await expect(page.locator('[data-splash]')).toBeVisible();
+  });
+
   test('en una pestaña normal no se ve ni un fotograma', async ({ page }) => {
     // La esconde una regla CSS, no JavaScript: si dependiera de hidratarse,
     // habría un parpadeo en cada visita desde el navegador.

@@ -74,11 +74,47 @@ export function SplashScreen() {
     const instalada = window.matchMedia('(display-mode: standalone)').matches;
     const pedida = new URLSearchParams(window.location.search).has('splash');
 
-    // Fuera de la app instalada no se programa nada: la regla CSS ya la
+    /**
+     * La marca de vida que decide si una carga es apertura o recarga.
+     *
+     * Se apunta cada quince segundos y al esconderse la app. El guion del
+     * `<head>` la lee en la siguiente carga: si es de hace menos de un minuto,
+     * la app no se «abrió» —se recargó a sí misma, normalmente para estrenar
+     * una versión— y la animación de apertura no debe sonar otra vez.
+     */
+    const latir = () => {
+      try {
+        localStorage.setItem('apexdata-viva', String(Date.now()));
+      } catch {
+        // Sin almacenamiento no hay latido, y lo único que pasa es que la
+        // animación puede repetirse: exactamente lo que ocurría antes.
+      }
+    };
+
+    let pulso: number | undefined;
+
+    if (instalada) {
+      latir();
+      pulso = window.setInterval(latir, 15_000);
+      document.addEventListener('visibilitychange', latir);
+    }
+
+    // Fuera de la app instalada no se programa nada más: la regla CSS ya la
     // esconde, y así tampoco quedan temporizadores sueltos en una pestaña.
     if (!instalada && !pedida) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // El guion del head ya decidió que esto es una recarga: la capa está
+    // escondida por CSS desde antes del primer pintado; aquí solo se desmonta
+    // sin programar la secuencia.
+    if (!pedida && document.documentElement.hasAttribute('data-reapertura')) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOculta(true);
+      return () => {
+        if (pulso) window.clearInterval(pulso);
+        document.removeEventListener('visibilitychange', latir);
+      };
+    }
+
     if (pedida) setForzada(true);
 
     const desvanecer = window.setTimeout(() => setDesvaneciendo(true), INICIO_DESVANECIDO_MS);
@@ -89,6 +125,8 @@ export function SplashScreen() {
       window.clearTimeout(desvanecer);
       window.clearTimeout(retirar);
       window.clearTimeout(corte);
+      if (pulso) window.clearInterval(pulso);
+      document.removeEventListener('visibilitychange', latir);
     };
   }, []);
 

@@ -247,6 +247,18 @@ dialog[data-hoja][open]::backdrop {
   }
 }
 
+/* La apertura solo suena una vez.
+
+   Cuando la app se actualiza sola —abre con la versión vieja, descubre la
+   nueva y se recarga para estrenarla— esa recarga volvía a disparar la
+   animación de apertura encima de la portada ya pintada, como si la app se
+   hubiera vuelto a abrir. El guion de `layout.tsx` marca el documento cuando
+   la app estaba viva hace un momento, y esta regla esconde la capa ANTES del
+   primer pintado: hacerlo desde React llegaría tarde y se vería un fogonazo. */
+html[data-reapertura] [data-splash='auto'] {
+  display: none !important;
+}
+
 @keyframes splash-trazo {
   from {
     stroke-dashoffset: 1;

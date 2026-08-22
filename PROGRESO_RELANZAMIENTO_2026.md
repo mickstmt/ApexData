@@ -76,6 +76,18 @@
 
 ## Bitácora
 
+### 2026-08-22 (25) — La animación de apertura sonaba dos veces: era la app actualizándose ✅
+
+El usuario reportó que la app abre bien, se queda unos tres segundos en la portada y **vuelve a enseñar la animación de apertura**, como si se hubiera abierto otra vez. Y que los arreglos del día «seguían sin verse» en su teléfono.
+
+Las dos cosas son el mismo fenómeno, y ninguna es un fallo del despliegue: para abrir al instante, la PWA enseña primero **la copia guardada** (la versión anterior) y se pone al día por detrás. Cuando hay versión nueva en el servidor, la app se **recarga sola** unos segundos después para estrenarla — y esa recarga volvía a disparar la animación de apertura encima de la portada ya pintada. Con cinco despliegues en un día, el usuario lo vio una y otra vez; los «arreglos que no se veían» eran la primera apertura sirviendo la copia vieja, antes de esa recarga.
+
+El arreglo: la página apunta cada quince segundos que sigue viva (`localStorage`), y un guion en crudo al principio del `body` —App Router ignora un `<head>` escrito a mano, se comprobó— lee esa marca en la carga siguiente: si es de hace menos de un minuto, esto no es una apertura sino la app recargándose, se marca `data-reapertura` en el documento y una regla CSS esconde la capa **antes del primer pintado** (desde React llegaría tarde y se vería un fogonazo). La animación queda solo para las aperturas de verdad.
+
+Con prueba de navegador: recarga con marca fresca → sin animación; apertura con marca vieja → con animación. Una lección de esa prueba: falló dos veces contra una compilación vieja — el servidor de pruebas reutiliza `.next` y no se había reconstruido tras tocar el layout.
+
+**Verificación**: lint 0 · 153 unitarias · 40 de navegador · build limpio.
+
 ### 2026-08-22 (24) — El CI falló, y la causa era la conexión única, no el código ✅
 
 Dos pruebas de navegador fallaron en CI sin que lo que vigilan estuviera roto. La causa se encontró reproduciendo la restricción exacta del CI en local: allí la base admite **una sola conexión** (`connection_limit=1`, así viene la URL del secreto) y con dos navegadores pidiendo a la vez la conexión se agota — Prisma espera diez segundos, se rinde, y la página se pinta **vacía**: «Timed out fetching a new connection from the connection pool». La prueba no encuentra el botón que busca y falla por eso, no por el margen o la pestaña que vigila.
