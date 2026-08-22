@@ -435,6 +435,14 @@ test.describe('tiempos de FastF1 en la ficha de la carrera', () => {
     ],
   };
 
+  /*
+   * Con un piloto repetido a propósito.
+   *
+   * El endpoint no agrupa: devuelve las N vueltas más rápidas de la sesión, así
+   * que quien está en forma ocupa varios puestos y otros pilotos no salen. Es lo
+   * que el usuario vio en PL1. La pestaña se queda con una por piloto, y esta
+   * respuesta lo comprueba: llegan tres vueltas de dos pilotos.
+   */
   const VUELTAS_DE_PRACTICA = {
     session: { year: 2024, event: 'Bahrain Grand Prix', type: 'FP1', name: 'Practice 1' },
     fastest_laps: [
@@ -454,6 +462,14 @@ test.describe('tiempos de FastF1 en la ficha de la carrera', () => {
         LapNumber: 11,
         LapTime: '1:32.891',
         Compound: 'MEDIUM',
+      },
+      {
+        Driver: 'VER',
+        DriverNumber: '1',
+        LapNumber: 6,
+        LapTime: '1:33.400',
+        Compound: 'MEDIUM',
+        Team: 'Red Bull Racing',
       },
     ],
   };
@@ -506,6 +522,13 @@ test.describe('tiempos de FastF1 en la ficha de la carrera', () => {
     // gasolina que le conviene, y sin decirlo este orden se lee como una
     // clasificación.
     await expect(page.getByText(/no es un resultado/i)).toBeVisible();
+
+    // Cada piloto, una sola vez. Llegaron tres vueltas de dos pilotos; se
+    // pintan dos filas, y la de VER es su mejor tiempo, no el otro.
+    const filas = page.locator('[role="tabpanel"] ol li');
+    await expect(filas).toHaveCount(2);
+    await expect(filas.first()).toContainText('1:32.267');
+    await expect(page.getByText('1:33.400')).toHaveCount(0);
   });
 
   test('si la cronometría falla, lo dice y ofrece análisis', async ({ page }) => {
@@ -525,6 +548,74 @@ test.describe('tiempos de FastF1 en la ficha de la carrera', () => {
     await expect(
       page.locator('[role="tabpanel"]').getByRole('link', { name: 'análisis' })
     ).toBeVisible();
+  });
+});
+
+test.describe('retroceder', () => {
+  test('hacia delante se funde; hacia atrás no, que el navegador ya anima eso', async ({ page }) => {
+    // El síntoma que reportó el usuario: con el gesto de deslizar desde el
+    // borde, la pantalla anterior «se refresca o parpadea», y con los botones
+    // de la app no. La causa que quedaba: iOS arrastra la pantalla anterior con
+    // su animación nativa y, encima, `PageTransition` hacía su fundido — el
+    // contenido ya puesto se iba a opacidad cero y volvía.
+    //
+    // El gesto no se puede emular, pero dispara `popstate` igual que el
+    // retroceso del navegador, que es lo que aquí se mide.
+    //
+    // Y hay que llegar **por un enlace**, no con un segundo `goto`: dos `goto`
+    // son dos cargas de documento, así que volver atrás recarga la página
+    // entera y no hay `popstate` que valga. Dentro de la app instalada la
+    // navegación es siempre de este tipo, que es el caso que se quiere medir.
+    // Este matiz costó un falso negativo al construir la prueba.
+    await page.goto('/');
+
+    // Se vigila la opacidad **durante** cada navegación, no en un instante
+    // suelto: un fundido de 300 ms se escapa de un muestreo único.
+    //
+    // Se miden las dos direcciones con la misma sonda a propósito, y no se
+    // compara contra un número elegido a dedo: la navegación hacia delante es
+    // la referencia de «esto sí se funde», así que la prueba se calibra sola y
+    // sigue valiendo si mañana cambia la duración.
+    await page.evaluate(() => {
+      const w = window as unknown as { __minima: number };
+      w.__minima = 1;
+      const mirar = () => {
+        const capa = document.querySelector('[data-pagina]');
+        if (capa) {
+          const o = parseFloat(getComputedStyle(capa).opacity);
+          if (!Number.isNaN(o)) w.__minima = Math.min(w.__minima, o);
+        }
+        requestAnimationFrame(mirar);
+      };
+      requestAnimationFrame(mirar);
+    });
+
+    const reiniciar = () =>
+      page.evaluate(() => {
+        (window as unknown as { __minima: number }).__minima = 1;
+      });
+    const leer = () => page.evaluate(() => (window as unknown as { __minima: number }).__minima);
+
+    // Hacia delante: el fundido de siempre, que es el que se diseñó y con el
+    // que el usuario dice que todo va bien.
+    await reiniciar();
+    await page.getByRole('link', { name: 'Calendario', exact: true }).first().click();
+    await page.waitForURL('**/calendar');
+    await expect(page.locator('[data-pagina]')).toHaveAttribute('data-pagina', 'con-transicion');
+    await page.waitForTimeout(700);
+    const haciaDelante = await leer();
+
+    // Hacia atrás: nada. Y aquí sí es un `popstate` de verdad, dentro del mismo
+    // documento, que es lo que hace el gesto de iOS.
+    await reiniciar();
+    await page.goBack();
+    await page.waitForURL((url) => url.pathname === '/');
+    await expect(page.locator('[data-pagina]')).toHaveAttribute('data-pagina', 'sin-transicion');
+    await page.waitForTimeout(700);
+    const haciaAtras = await leer();
+
+    expect(haciaDelante, 'la transición de siempre debería seguir viéndose').toBeLessThan(0.5);
+    expect(haciaAtras, 'al retroceder la página no debería atenuarse').toBeGreaterThan(0.9);
   });
 });
 

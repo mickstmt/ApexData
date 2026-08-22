@@ -7,6 +7,8 @@
  * to mark the quickest lap of the session has to read them as numbers.
  */
 
+import type { LapData } from '@/types';
+
 /** "1:29.165" | "59.900" -> milliseconds. Null for anything unparseable. */
 export function lapTimeToMs(value: string | null | undefined): number | null {
   if (!value) return null;
@@ -39,4 +41,31 @@ export function fastestLapIndex(times: (string | null | undefined)[]): number | 
   }
 
   return best;
+}
+
+/**
+ * La vuelta más rápida de **cada piloto**, ordenadas de la mejor a la peor.
+ *
+ * Hace falta porque el endpoint `/fastest` no hace eso: ordena **todas** las
+ * vueltas de la sesión por tiempo y corta las N primeras. Con N=20 en la PL1 de
+ * Zandvoort 2026 salían 20 vueltas de solo **diez** pilotos —Piastri tres veces,
+ * Leclerc otras tres— y faltaban doce. Para una tabla que dice «la vuelta rápida
+ * de cada uno», hay que quedarse con una por piloto.
+ *
+ * Se compara en milisegundos y no por el orden en que vienen: fiarse de que la
+ * lista llegue ordenada ata esta función a un detalle del servicio que puede
+ * cambiar, y «1:12.949» contra «59.900» tampoco se puede comparar como texto.
+ */
+export function mejorVueltaPorPiloto(vueltas: LapData[]): LapData[] {
+  const mejor = new Map<string, { vuelta: LapData; ms: number }>();
+
+  for (const vuelta of vueltas) {
+    const ms = lapTimeToMs(vuelta.LapTime);
+    if (ms === null) continue;
+
+    const actual = mejor.get(vuelta.Driver);
+    if (!actual || ms < actual.ms) mejor.set(vuelta.Driver, { vuelta, ms });
+  }
+
+  return [...mejor.values()].sort((a, b) => a.ms - b.ms).map(({ vuelta }) => vuelta);
 }

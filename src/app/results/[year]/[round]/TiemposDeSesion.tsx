@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Loader2, Timer, TriangleAlert } from 'lucide-react';
 import { compoundColor, teamColor, teamIdFromName } from '@/lib/team-colors';
+import { mejorVueltaPorPiloto } from '@/lib/lap-times';
 import type { FastestLapsResponse, SessionClassificationResponse } from '@/types';
 
 /**
@@ -199,13 +200,30 @@ export function VueltasDePractica({
   sesion: 'FP1' | 'FP2' | 'FP3';
   nombre: string;
 }) {
+  /*
+   * Se piden **todas** las vueltas, no veinte.
+   *
+   * `/fastest?limit=20` devuelve las veinte vueltas más rápidas de la sesión,
+   * que no es lo mismo que la vuelta rápida de cada piloto: en la PL1 de
+   * Zandvoort 2026 esas veinte eran de solo diez pilotos, con Piastri y Leclerc
+   * repetidos tres veces cada uno. Con el límite alto llega la sesión entera
+   * —601 vueltas, 150 KB medidos— y `mejorVueltaPorPiloto` se queda con una por
+   * piloto, que son los 22 que se quieren ver.
+   *
+   * Traer 150 KB para pintar 22 filas es un desperdicio y está anotado como
+   * pendiente del servicio, que es quien debería agrupar. Cuando lo haga, esta
+   * misma petición devolverá ya solo 22 y aquí no habrá que tocar nada: reducir
+   * una lista ya reducida no cambia nada.
+   */
   const { datos, cargando, fallo } = usePeticion<FastestLapsResponse>(
-    `/api/laps/${year}/${round}/${sesion}/fastest?limit=20`
+    `/api/laps/${year}/${round}/${sesion}/fastest?limit=2000`
   );
 
   if (cargando) return <Cargando que={`los tiempos de ${nombre}`} />;
   if (fallo || !datos) return <Fallo que={`los tiempos de ${nombre}`} />;
-  if (datos.fastest_laps.length === 0) return <Vacio que="vueltas cronometradas" />;
+
+  const porPiloto = mejorVueltaPorPiloto(datos.fastest_laps);
+  if (porPiloto.length === 0) return <Vacio que="vueltas cronometradas" />;
 
   return (
     <div>
@@ -218,7 +236,7 @@ export function VueltasDePractica({
       </div>
 
       <ol className="grid gap-2 sm:grid-cols-2">
-        {datos.fastest_laps.map((vuelta, indice) => {
+        {porPiloto.map((vuelta, indice) => {
           // `Team` puede no venir: FastF1 lo deja vacío en alguna vuelta suelta.
           const equipoId = teamIdFromName(vuelta.Team);
 

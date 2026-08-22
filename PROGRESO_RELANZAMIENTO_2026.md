@@ -28,7 +28,7 @@
 
 **Próximo paso**: lo que queda de la deuda del Sprint 5 —aviso push tras cada GP, pantalla de administración, y el límite de peticiones con `slowapi`, que es el único que pide Deploy manual del servicio—, . El respaldo con `pg_dump` y el escaneo de secretos ya salen de esa lista: el primero hecho el 2026-08-20 y comprobado restaurándose, el segundo activado ese mismo día junto con la protección de subida. Queda además el mantenimiento: los 6 logos que faltan, Prisma 6→7 y los 14 avisos de lint.
 
-**Tests**: 153 unitarios (TypeScript) + 28 (Python) + **43 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 157 unitarios (TypeScript) + 28 (Python) + **44 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -71,10 +71,31 @@
 2. ~~**Pulsar *Deploy* en el servicio de telemetría** por el endpoint `/classification`~~ → hecho el 2026-08-22, comprobado en producción: `/api/clasificacion/2026/12/SQ` devuelve los 22 puestos y la pestaña del sprint enseña la parrilla. Recordatorio permanente: **el servicio de telemetría no se despliega solo**; cualquier cambio bajo `python-service/` necesita pulsar *Deploy* a mano en panel.dittochatbot.com.
 3. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
 4. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
+5. **Pulsar *Deploy* del servicio** cuando se agrupe `/fastest` por piloto (aún sin escribir, ver bitácora 27). Sin eso la pestaña de prácticas seguirá funcionando, solo que trayendo 150 KB en vez de 5 KB.
 
 ---
 
 ## Bitácora
+
+### 2026-08-22 (27) — Veinte vueltas no son veintidós pilotos, y el gesto de volver ✅
+
+Dos cosas que el usuario vio en la app ya desplegada.
+
+**En PL1 salían pilotos repetidos y faltaban otros.** No era la pestaña: es que `/fastest?limit=20` **no agrupa por piloto**. Ordena todas las vueltas de la sesión por tiempo y corta las veinte primeras, así que quien está en forma ocupa varios puestos. Medido contra producción en la PL1 de Zandvoort: esas veinte vueltas eran de **diez** pilotos —Piastri tres veces, Leclerc otras tres— y faltaban doce. La pestaña dice «la vuelta más rápida de cada piloto», así que estaba enseñando otra cosa.
+
+Arreglado del lado web, que es el único que se puede desplegar hoy: se piden todas las vueltas de la sesión y `mejorVueltaPorPiloto` se queda con una por piloto, comparando en milisegundos y no por el orden de llegada —fiarse de que la lista venga ordenada ata el código a un detalle del servicio, y «59.900» contra «1:12.949» tampoco se compara como texto—. Ahora salen los 22.
+
+**Lo que cuesta, dicho claro**: traer la sesión entera son **601 vueltas y 150 KB** medidos, sin comprimir, para pintar 22 filas. Funciona y es inmediato desde la caché del servicio (0,15 s), pero el sitio correcto para agrupar es el servicio. **Queda como pendiente** (necesita *Deploy* manual): cuando agrupe él, esta misma petición devolverá 22 filas y aquí no habrá que tocar nada, porque reducir una lista ya reducida no cambia nada. El panel «Vueltas Más Rápidas» de `/analysis` tiene el mismo comportamiento, pero ahí el título promete literalmente las vueltas más rápidas, así que se deja como está.
+
+**El parpadeo al retroceder con el gesto: quedaba una segunda causa.** La entrada (22) quitó el `router.refresh()` que disparaba el worker, y aun así seguía. La que faltaba: **iOS ya anima el retroceso** —arrastra la pantalla anterior desde el borde— y encima corría el fundido de `PageTransition`. Por eso solo pasaba con el gesto y no con los botones de la app: ahí el fundido es la única animación, y es la que se diseñó.
+
+**Y el arreglo obvio no bastaba.** Marcar la página que entra para que no se funda dejaba el problema a medias, porque la página que **se va** conserva las props de su último render, y ese render fue antes del `popstate`. Medido: con la entrada ya marcada, la opacidad seguía bajando a **0,005**. La salida va ahora por `custom` de `AnimatePresence`, que se relee en el momento de retirar el elemento — que es justo para lo que existe.
+
+**Dos trampas del método, anotadas porque volverán.** La primera: la tanda de navegador dio **21 fallos en pruebas sin relación entre sí**, y no era el código — había quedado vivo un `next start` de antes que `reuseExistingServer` reutiliza, sirviendo chunks que ya no existían (`MIME type 'text/plain'`). No basta con reconstruir: hay que **matar el servidor** de la tanda anterior. La segunda: la primera versión de la prueba del retroceso llegaba a la segunda página con un `goto`, que es una carga de documento entera, así que al volver no había `popstate` que medir y la prueba pasaba por el motivo equivocado. Ahora llega por un enlace, como en la app.
+
+La prueba mide las dos direcciones con la misma sonda y no contra un número elegido a dedo: hacia delante la opacidad baja de 0,5 —el fundido de siempre sigue ahí— y hacia atrás se queda por encima de 0,9.
+
+**Verificación**: lint 0 · 157 unitarias (4 nuevas) · build sin base · 44 de navegador (1 nueva), con el servidor reiniciado.
 
 ### 2026-08-22 (26) — Las pestañas que escondían un dato que ya teníamos ✅
 
