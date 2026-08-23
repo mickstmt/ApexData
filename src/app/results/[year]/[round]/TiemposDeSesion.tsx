@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Loader2, Timer, TriangleAlert } from 'lucide-react';
 import { compoundColor, teamColor, teamIdFromName } from '@/lib/team-colors';
-import { mejorVueltaPorPiloto } from '@/lib/lap-times';
+import { intervalosAlAnterior, mejorVueltaPorPiloto } from '@/lib/lap-times';
 import type { FastestLapsResponse, SessionClassificationResponse } from '@/types';
 
 /**
@@ -133,6 +133,8 @@ export function ClasificacionSprint({ year, round }: { year: number; round: numb
   if (fallo || !datos) return <Fallo que="los tiempos de la clasificación al sprint" />;
   if (datos.classification.length === 0) return <Vacio que="tiempos de esta sesión" />;
 
+  const intervalos = intervalosAlAnterior(datos.classification);
+
   return (
     <div>
       <div className="mb-4 rounded-lg border border-border bg-card p-4">
@@ -144,7 +146,7 @@ export function ClasificacionSprint({ year, round }: { year: number; round: numb
       </div>
 
       <ol className="grid gap-2 sm:grid-cols-2">
-        {datos.classification.map((fila) => {
+        {datos.classification.map((fila, indice) => {
           const equipoId = teamIdFromName(fila.team);
 
           return (
@@ -171,8 +173,16 @@ export function ClasificacionSprint({ year, round }: { year: number; round: numb
                 )}
               </span>
               <Tramo segmento={fila.segment} />
-              <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
-                {fila.time ?? '—'}
+              <span className="shrink-0 text-right">
+                <span className="block font-mono text-xs tabular-nums text-muted-foreground">
+                  {fila.time ?? '—'}
+                </span>
+                {intervalos[indice] && (
+                  <span className="block font-mono text-[10px] tabular-nums text-muted-foreground">
+                    <span className="sr-only">Diferencia con el de delante: </span>
+                    {intervalos[indice]}
+                  </span>
+                )}
               </span>
             </li>
           );

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Trophy, Calendar, MapPin, Flag, Zap, Construction, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { teamColor } from '@/lib/team-colors';
+import { intervalosAlAnterior } from '@/lib/lap-times';
 import { PriorityRows } from '@/components/ui/PriorityRows';
 import { SprintResults } from './SprintResults';
 import { SesionPendiente } from './SesionPendiente';
@@ -246,6 +247,26 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
   ];
 
   // Find fastest lap
+  /**
+   * A cuánto quedó cada piloto del que tiene delante.
+   *
+   * El tiempo que se enseña de cada uno es su mejor vuelta, y esa vuelta viene
+   * de un tramo distinto según hasta dónde llegó: Q3 los diez primeros, Q2 los
+   * cinco siguientes, Q1 el resto. La diferencia solo se da dentro del mismo
+   * tramo — restar a través de esa frontera no significa nada, y sale negativa
+   * cuando alguien rueda en Q3 más lento que su propia vuelta de Q2.
+   */
+  const intervaloDeQualy = new Map<string, string | null>();
+  if (race.qualifyings) {
+    const calculados = intervalosAlAnterior(
+      race.qualifyings.map((entry) => ({
+        time: entry.q3 || entry.q2 || entry.q1,
+        segment: entry.q3 ? 3 : entry.q2 ? 2 : 1,
+      }))
+    );
+    race.qualifyings.forEach((entry, indice) => intervaloDeQualy.set(entry.id, calculados[indice]));
+  }
+
   const fastestLapResult = race.results
     .filter((r) => r.fastestLapTime)
     .sort((a, b) => {
@@ -712,8 +733,16 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                       <span className="min-w-0 flex-1 truncate font-semibold">
                         {entry.driver.familyName}
                       </span>
-                      <span className="shrink-0 font-mono text-sm tabular-nums text-muted-foreground">
-                        {entry.q3 || entry.q2 || entry.q1 || '—'}
+                      <span className="shrink-0 text-right">
+                        <span className="block font-mono text-sm tabular-nums text-muted-foreground">
+                          {entry.q3 || entry.q2 || entry.q1 || '—'}
+                        </span>
+                        {intervaloDeQualy.get(entry.id) && (
+                          <span className="block font-mono text-[10px] tabular-nums text-muted-foreground">
+                            <span className="sr-only">Diferencia con el de delante: </span>
+                            {intervaloDeQualy.get(entry.id)}
+                          </span>
+                        )}
                       </span>
                     </>
                   )}
@@ -755,6 +784,16 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                         <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-32">Q1</th>
                         <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-32">Q2</th>
                         <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-32">Q3</th>
+                        <th
+                          scope="col"
+                          className="p-4 text-right text-sm font-semibold text-foreground w-28"
+                        >
+                          {/* El `title` no lo ve quien va con el dedo ni quien
+                              va con lector de pantalla; la aclaración va en el
+                              propio encabezado, oculta a la vista. */}
+                          INT.
+                          <span className="sr-only"> (diferencia con el piloto de delante)</span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -849,6 +888,13 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                               ) : (
                                 <span className="text-sm text-muted-foreground">—</span>
                               )}
+                            </td>
+
+                            {/* Diferencia con el de delante */}
+                            <td className="p-4 text-right">
+                              <span className="font-mono text-sm tabular-nums text-muted-foreground">
+                                {intervaloDeQualy.get(result.id) ?? '—'}
+                              </span>
                             </td>
                           </tr>
                         );

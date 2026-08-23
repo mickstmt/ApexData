@@ -69,3 +69,35 @@ export function mejorVueltaPorPiloto(vueltas: LapData[]): LapData[] {
 
   return [...mejor.values()].sort((a, b) => a.ms - b.ms).map(({ vuelta }) => vuelta);
 }
+
+/**
+ * La diferencia de cada piloto con el que tiene justo delante: «+0.211».
+ *
+ * Solo se compara **dentro del mismo tramo**, y esa es la parte que importa. En
+ * una clasificación el orden no lo manda el reloj: quien cae en Q1 va detrás de
+ * quien llegó a Q2 aunque su vuelta fuera mejor, y el mejor tiempo que se enseña
+ * de cada uno viene de tramos distintos. Restar a través de esa frontera da un
+ * número que no significa nada —y puede salir **negativo**, porque un piloto
+ * puede rodar en Q3 más lento que su propia vuelta de Q2—. Así que el primero de
+ * cada tramo no lleva diferencia: no hay nadie con quien compararlo.
+ *
+ * Devuelve una entrada por fila, alineada con la lista que entra, y `null`
+ * donde no hay diferencia que dar.
+ */
+export function intervalosAlAnterior(
+  filas: { time: string | null | undefined; segment?: number | null }[]
+): (string | null)[] {
+  return filas.map((fila, indice) => {
+    if (indice === 0) return null;
+
+    const anterior = filas[indice - 1];
+    if ((fila.segment ?? null) !== (anterior.segment ?? null)) return null;
+
+    const ms = lapTimeToMs(fila.time);
+    const msAnterior = lapTimeToMs(anterior.time);
+    if (ms === null || msAnterior === null) return null;
+
+    const diferencia = (ms - msAnterior) / 1000;
+    return `${diferencia >= 0 ? '+' : '−'}${Math.abs(diferencia).toFixed(3)}`;
+  });
+}

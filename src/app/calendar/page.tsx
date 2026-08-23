@@ -4,6 +4,7 @@ import { fallbackRaces } from '@/lib/fallback-data';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { Chip } from '@/components/ui/Chip';
+import { IrALaProximaCarrera } from './IrALaProximaCarrera';
 
 export const metadata = {
   title: 'Calendario F1 | ApexData',
@@ -141,6 +142,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
       {/* Races List */}
       {races.length > 0 ? (
         <div className="space-y-4">
+          <IrALaProximaCarrera temporada={displayYear} />
           {races.map((race) => {
             const raceDate = new Date(race.date);
             const isPast = raceDate < today;
@@ -149,6 +151,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
             return (
               <div
                 key={race.id}
+                data-fecha={raceDate.toISOString()}
                 className={`rounded-lg border p-6 transition-all ${
                   isToday
                     ? 'border-primary bg-primary/5'

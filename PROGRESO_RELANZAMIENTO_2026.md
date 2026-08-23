@@ -28,7 +28,7 @@
 
 **Próximo paso**: lo que queda de la deuda del Sprint 5 —aviso push tras cada GP, pantalla de administración, y el límite de peticiones con `slowapi`, que es el único que pide Deploy manual del servicio—, . El respaldo con `pg_dump` y el escaneo de secretos ya salen de esa lista: el primero hecho el 2026-08-20 y comprobado restaurándose, el segundo activado ese mismo día junto con la protección de subida. Queda además el mantenimiento: los 6 logos que faltan, Prisma 6→7 y los 14 avisos de lint.
 
-**Tests**: 157 unitarios (TypeScript) + 28 (Python) + **44 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: 162 unitarios (TypeScript) + 28 (Python) + **48 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -76,6 +76,30 @@
 ---
 
 ## Bitácora
+
+### 2026-08-23 (28) — El calendario abría por marzo, y un recuadro vacío al lado de la carrera ✅
+
+Tres cosas pedidas por el usuario sobre la app ya desplegada.
+
+**El calendario abría por la ronda 1.** En agosto, eso es un gran premio de marzo que terminó hace medio año, y había que arrastrar la temporada entera para llegar a lo único que se suele venir a mirar. Ahora abre por el que viene y lo señala con el mismo realce que el día de hoy — aterrizar a mitad de una lista sin que nada explique por qué es peor que haber tenido que arrastrar.
+
+Cuál es «el que viene» se decide **en el navegador**: la página se sirve cacheada, y una respuesta guardada en marzo seguiría señalando la ronda 1 en agosto. Es el mismo motivo por el que la tira de sesiones reparte sus estados después de montar. Una carrera cuenta como en curso durante todo su día, porque `date` trae la fecha y no siempre la hora buena. Medido: señala el 23 de agosto —el gran premio de mañana—, lo deja a 276 px del borde en una ventana de 844, y en una temporada terminada no toca nada y la página abre por su título.
+
+**El recuadro vacío al lado de CARRERA.** Los dos formatos de fin de semana dan cinco sesiones, y cinco en una rejilla de dos, tres o seis columnas siempre deja un hueco suelto al final. Ahora la última ocupa dos huecos: la cuenta sale exacta en los tres anchos, y de paso la carrera —que es el acto principal— gana el doble de presencia. Medido en 390 px: la fila de la carrera mide 356 de los 356 px de la lista y empieza donde empieza ella, sin arrastre horizontal.
+
+**Las diferencias en clasificación.** Cada piloto lleva ahora a cuánto quedó del que tiene delante, tanto en CLASI. como en CLASI. SPRINT, y en la tabla de escritorio como columna propia.
+
+**Solo dentro del mismo tramo, y esa es la parte que importa.** El tiempo que se enseña de cada uno es su mejor vuelta, y esa vuelta viene de un tramo distinto según hasta dónde llegó: Q3 los diez primeros, Q2 los cinco siguientes, Q1 el resto. Restar a través de esa frontera da un número que no significa nada, y puede salir **negativo**, porque un piloto puede rodar en Q3 más lento que su propia vuelta de Q2. Así que el primero de cada tramo no lleva diferencia: no hay nadie con quien compararlo. Es un recorte deliberado, no un olvido.
+
+**Dos errores propios, que es lo que evita repetirlos.**
+
+El primero: puse la diferencia en `text-muted-foreground/70` y quedaba en **3,52** de contraste en tema claro. Para texto de 10 px el listón es 4,5, así que no pasaba. Sin el `/70` sube a **7,38 en claro y 7,03 en oscuro**. No se vio mirando una captura: se vio midiendo el color contra el fondo compuesto.
+
+El segundo, dos veces la misma trampa. La revisión de código encontró que una prueba mía era **vacua**: comprobaba `border-primary` con un regex, y toda tarjeta futura ya lleva `hover:border-primary`, así que pasaba aunque no se marcara nada. Se corrigió comparando clases enteras. Y al escribir la prueba de cambio de temporada caí en lo mismo por otro camino: usaba `goto`, que recarga el documento, así que el componente montaba de nuevo y el fallo que buscaba no podía aparecer. Ahora cambia la temporada **con el selector**, como en la app.
+
+**Y un hallazgo de la revisión que no se sostuvo.** Decía que el efecto no se repetiría al cambiar de temporada, por ser la misma ruta. Se comprobó contra un build hecho a propósito con el fallo: las marcas se actualizaban bien igualmente —2024 sin marca, vuelta a 2026 marcada—, porque hoy el componente sí vuelve a montarse. El cambio se dejó de todos modos, atando el efecto a la temporada: eso depende de cómo Next reconcilia un segmento cuando cambian sus `searchParams`, y no es algo que este componente deba dar por bueno. Pero no se apunta como arreglo de un fallo que no se pudo reproducir.
+
+**Verificación**: lint 0 · 162 unitarias (5 nuevas) · build igual al CI, sin base de datos · 48 de navegador (4 nuevas) · contraste medido en los dos temas · `buildId` del servidor comparado con el de disco antes de medir.
 
 ### 2026-08-22 (27) — Veinte vueltas no son veintidós pilotos, y el gesto de volver ✅
 

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { fastestLapIndex, lapTimeToMs, mejorVueltaPorPiloto } from '@/lib/lap-times';
+import {
+  fastestLapIndex,
+  intervalosAlAnterior,
+  lapTimeToMs,
+  mejorVueltaPorPiloto,
+} from '@/lib/lap-times';
 import type { LapData } from '@/types';
 
 describe('lapTimeToMs', () => {
@@ -88,5 +93,47 @@ describe('mejorVueltaPorPiloto', () => {
     ]);
 
     expect(resultado.map((v) => v.Driver)).toEqual(['VER']);
+  });
+});
+
+describe('intervalosAlAnterior', () => {
+  const fila = (time: string | null, segment: number | null = 3) => ({ time, segment });
+
+  it('da la diferencia con el piloto de delante, no con el primero', () => {
+    const r = intervalosAlAnterior([
+      fila('1:11.567'),
+      fila('1:11.608'),
+      fila('1:11.622'),
+    ]);
+
+    expect(r).toEqual([null, '+0.041', '+0.014']);
+  });
+
+  it('no compara a través de un cambio de tramo', () => {
+    // El primero de Q2 no tiene con quién compararse: el de delante marcó su
+    // tiempo en Q3, y restar eso da un número que no significa nada.
+    const r = intervalosAlAnterior([fila('1:11.567', 3), fila('1:12.100', 2), fila('1:12.300', 2)]);
+
+    expect(r).toEqual([null, null, '+0.200']);
+  });
+
+  it('deja sin diferencia a quien no marcó tiempo, y al siguiente', () => {
+    const r = intervalosAlAnterior([fila('1:11.567'), fila(null), fila('1:12.000')]);
+
+    expect(r).toEqual([null, null, null]);
+  });
+
+  it('enseña el signo cuando el de delante fue más lento', () => {
+    // Pasa de verdad dentro de un tramo si la fuente ordena por otra cosa; se
+    // dice tal cual en vez de esconderlo detrás de un «+».
+    const r = intervalosAlAnterior([fila('1:12.000'), fila('1:11.800')]);
+
+    expect(r[1]).toBe('−0.200');
+  });
+
+  it('sin tramos, compara toda la lista seguida', () => {
+    const r = intervalosAlAnterior([{ time: '1:12.949' }, { time: '1:13.070' }]);
+
+    expect(r).toEqual([null, '+0.121']);
   });
 });

@@ -84,20 +84,44 @@ export function SesionesDelFinDeSemana({
 
   const proxima = estados.indexOf('pendiente');
 
+  /*
+   * La última sesión ocupa dos huecos, y con eso desaparece el recuadro vacío.
+   *
+   * Los dos formatos de fin de semana dan **cinco** sesiones: el normal (tres
+   * prácticas, clasificación y carrera) y el del sprint (una práctica, clasif.
+   * al sprint, sprint, clasificación y carrera). Cinco en una rejilla de dos,
+   * tres o seis columnas siempre deja un hueco suelto al final, justo al lado
+   * de CARRERA. Con la última ocupando dos, la cuenta sale exacta en los tres
+   * anchos: 6 huecos en 2 columnas son 3 filas, en 3 columnas 2 filas, y en 6
+   * columnas una sola fila.
+   *
+   * Se comprueba el cinco en vez de darlo por hecho: si algún fin de semana
+   * llegara con otro número de sesiones, ensanchar la última descuadraría la
+   * rejilla en vez de arreglarla, y es mejor volver al hueco vacío que a una
+   * fila rota.
+   */
+  const ultima = sesiones.length - 1;
+  const carreraAncha = sesiones.length === 5;
+
   return (
     <ul className="grid grid-cols-2 divide-border sm:grid-cols-3 lg:grid-cols-6">
       {sesiones.map((sesion, indice) => {
         const estado = estados[indice];
         const esProxima = indice === proxima;
         const enCurso = estado === 'en-curso';
+        // La carrera es el acto principal: al ocupar el doble de ancho, se le
+        // da también el doble de presencia en vez de dejarla flotando.
+        const anchaYPrincipal = carreraAncha && indice === ultima;
 
         return (
           <li
             key={sesion.nombre}
             aria-current={esProxima || enCurso ? 'step' : undefined}
             className={`border-b border-r border-border last:border-r-0 ${
-              enCurso || esProxima ? 'bg-primary/5' : ''
-            } ${estado === 'pasada' ? 'opacity-55' : ''}`}
+              carreraAncha && indice === ultima ? 'col-span-2' : ''
+            } ${enCurso || esProxima ? 'bg-primary/5' : ''} ${
+              estado === 'pasada' ? 'opacity-55' : ''
+            }`}
           >
             <Link
               href={enlaceDe(sesion.nombre, year, round)}
@@ -115,7 +139,7 @@ export function SesionesDelFinDeSemana({
               )}
             </div>
 
-            <div className="mt-0.5 text-sm">
+            <div className={`mt-0.5 ${anchaYPrincipal ? 'text-base font-semibold sm:text-lg' : 'text-sm'}`}>
               <LocalDateTime value={sesion.cuando} />
             </div>
 

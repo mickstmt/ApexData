@@ -497,6 +497,15 @@ test.describe('tiempos de FastF1 en la ficha de la carrera', () => {
 
     // Y que es provisional, porque las sanciones se aplican después.
     await expect(page.getByText(/provisional/i).first()).toBeVisible();
+
+    // La diferencia con el de delante: 1:58.020 menos 1:57.940 son 80 ms.
+    await expect(puestos.nth(1)).toContainText('+0.080');
+
+    // Al primero no se le pone ninguna —no tiene delante a nadie—, y al de SQ1
+    // tampoco: su tiempo y el del anterior salen de tramos distintos, así que
+    // restarlos daría un número que no significa nada.
+    await expect(puestos.first()).not.toContainText('+');
+    await expect(puestos.last()).not.toContainText('+');
   });
 
   test('una práctica enseña la vuelta rápida de cada piloto, y avisa de que no es un resultado', async ({
@@ -616,6 +625,103 @@ test.describe('retroceder', () => {
 
     expect(haciaDelante, 'la transición de siempre debería seguir viéndose').toBeLessThan(0.5);
     expect(haciaAtras, 'al retroceder la página no debería atenuarse').toBeGreaterThan(0.9);
+  });
+});
+
+test.describe('la tira de sesiones del fin de semana', () => {
+  test('la carrera ocupa el hueco que quedaba vacío al final', async ({ page }) => {
+    // En móvil, que es donde se vio: la rejilla va a dos columnas y el hueco
+    // suelto quedaba justo al lado de CARRERA. En escritorio son seis columnas
+    // y esos dos huecos son un tercio del ancho, no todo — medirlo allí daba un
+    // falso fallo.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    const celdas = page.locator('ul[class*="grid-cols-2"] > li');
+    const cuantas = await celdas.count();
+    if (cuantas === 0) test.skip(true, 'No hay carrera próxima en el calendario');
+
+    // Cinco sesiones en una rejilla de dos columnas dejaban un recuadro vacío
+    // justo al lado de CARRERA. Ahora la última ocupa los dos huecos.
+    test.skip(cuantas !== 5, 'Este fin de semana no trae las cinco sesiones de siempre');
+
+    const ultima = celdas.nth(cuantas - 1);
+    await expect(ultima).toContainText(/Carrera/i);
+    await expect(ultima).toHaveClass(/col-span-2/);
+
+    // Y se comprueba de verdad que no queda hueco: con dos columnas, la última
+    // ocupa todo el ancho de la lista en vez de la mitad.
+    const lista = await page.locator('ul[class*="grid-cols-2"]').boundingBox();
+    const caja = await ultima.boundingBox();
+    expect(caja!.width).toBeGreaterThan(lista!.width * 0.9);
+
+    // La fila de la carrera empieza donde empieza la lista: si hubiera quedado
+    // un hueco a su izquierda, esto lo cazaría.
+    expect(Math.abs(caja!.x - lista!.x)).toBeLessThan(2);
+  });
+});
+
+test.describe('calendario', () => {
+  test('abre por el gran premio que viene, no por el de marzo', async ({ page }) => {
+    await page.goto('/calendar');
+
+    const tarjetas = page.locator('[data-fecha]');
+    await expect(tarjetas.first()).toBeVisible();
+
+    // La marcada es la primera cuyo día no ha terminado todavía. Se calcula
+    // aquí igual que en la app, a partir de las fechas que la propia página
+    // trae, para no depender de en qué punto de la temporada se corra esto.
+    const fechas = await tarjetas.evaluateAll((nodos) =>
+      nodos.map((n) => (n as HTMLElement).dataset.fecha ?? '')
+    );
+    const UN_DIA = 24 * 60 * 60 * 1000;
+    const esperada = fechas.findIndex((f) => Date.now() < Date.parse(f) + UN_DIA);
+    test.skip(esperada === -1, 'La temporada que se enseña ya terminó entera');
+
+    const objetivo = tarjetas.nth(esperada);
+
+    // Por `classList`, que compara clases enteras, y no con un regex sobre el
+    // atributo: toda tarjeta futura lleva ya `hover:border-primary`, así que
+    // /border-primary/ casaba con ella y la prueba pasaba aunque no se marcara
+    // nada. Se comprobó borrando el marcado: seguía en verde.
+    const marcada = await objetivo.evaluate((n) => ({
+      borde: n.classList.contains('border-primary'),
+      fondo: n.classList.contains('bg-primary/5'),
+    }));
+    expect(marcada).toEqual({ borde: true, fondo: true });
+
+    // Y está a la vista sin arrastrar, que es lo que se pedía.
+    await expect(objetivo).toBeInViewport();
+  });
+
+  test('al cambiar de temporada vuelve a señalar la que toca', async ({ page }) => {
+    // Se cambia **con el selector**, no con `goto`. Ese es el punto entero: el
+    // selector navega a `?season=…`, la misma ruta, y la página se reconcilia
+    // sin volver a montarse. Con `goto` el documento se recarga, el componente
+    // monta de nuevo y el fallo no aparece — la primera versión de esta prueba
+    // hacía eso y pasaba en verde contra el código roto.
+    await page.goto('/calendar');
+    await expect(page.locator('[data-fecha].border-primary')).toHaveCount(1);
+
+    const selector = page.getByLabel('Temporada', { exact: true });
+    await selector.selectOption('2024');
+    await page.waitForURL('**/calendar?season=2024');
+    await expect(page.locator('[data-fecha]').first()).toBeVisible();
+
+    // Y de vuelta a la temporada con carreras por delante: tiene que volver a
+    // señalarla, y solo a una.
+    await selector.selectOption(String(new Date().getFullYear()));
+    await expect(page.locator('[data-fecha].border-primary')).toHaveCount(1);
+  });
+
+  test('una temporada terminada abre por el principio, sin saltos', async ({ page }) => {
+    // Sin ninguna por venir no hay a dónde ir, y moverse sería peor que no
+    // hacer nada: la página tiene que abrir por su título.
+    await page.goto('/calendar?season=2024');
+    await expect(page.locator('[data-fecha]').first()).toBeVisible();
+    await page.waitForTimeout(600);
+
+    expect(await page.evaluate(() => window.scrollY)).toBeLessThan(10);
   });
 });
 
