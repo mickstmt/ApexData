@@ -77,6 +77,16 @@
 
 ## Bitácora
 
+### 2026-08-24 (34) — La prueba de desborde, en las catorce pantallas — y lo que encontró ✅
+
+La prueba de que la app no se sale a lo ancho existía solo para la portada, porque fue ahí donde se vio el defecto. Pero el defecto no era de la portada: era de una rejilla cuyos hijos no encogían por debajo de su contenido, y ese patrón está en media app. Ahora hay una prueba por pantalla, catorce en total.
+
+**Encontró un defecto real a la primera**: `/standings` empujaba el documento a **905 px en una ventana de 390**. La causa es sutil y merece quedar escrita — la alternativa accesible del gráfico del campeonato es una `<table className="sr-only">`, y **`overflow: hidden` no se aplica a un elemento `display: table`**. Esa clase depende justo de ese recorte, así que la tabla se dibujaba a su ancho real fuera de la pantalla. Se veía como una barra de desplazamiento horizontal en toda la página sin nada visible que la justificara. Había dos tablas con el mismo fallo: la del campeonato y la de estrategia de neumáticos.
+
+El arreglo es envolverlas en un `<div className="sr-only">`, que sí recorta. Comprobado que sigue siendo accesible: la tabla se anuncia con su nombre y sus cinco filas, mide 873 px dentro de un contenedor recortado, y el documento se queda en 390.
+
+**Verificación**: lint 0 · 204 unitarias · 65 de navegador (14 nuevas).
+
 ### 2026-08-24 (33) — La política de contenido, con nonce: el informe de seguridad queda cerrado ✅
 
 Lo último que quedaba abierto. La cabecera solo decía `frame-ancestors 'none'` —no me metas en un marco, y nada más—: sin `script-src`, un script inyectado se ejecutaría sin obstáculo y podría mandar lo que quisiera a donde quisiera. No tapa un agujero abierto, porque la auditoría buscó XSS y no encontró ninguno: es la red que decide qué pasa **si algún día lo hay**.

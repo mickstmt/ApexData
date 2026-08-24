@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { compoundColor } from '@/lib/team-colors';
-import type { DriverStints } from '@/types';
+import { compoundColor } from "@/lib/team-colors";
+import type { DriverStints } from "@/types";
 
 /**
  * Estrategia de neumáticos: un tramo por juego montado, piloto a piloto.
@@ -18,7 +18,7 @@ import type { DriverStints } from '@/types';
  */
 
 /** Blanco o negro según el compuesto, para que la inicial se lea encima. */
-const TINTA_CLARA = new Set(['SOFT', 'WET', 'INTERMEDIATE', 'UNKNOWN']);
+const TINTA_CLARA = new Set(["SOFT", "WET", "INTERMEDIATE", "UNKNOWN"]);
 
 export function StintChart({
   drivers,
@@ -29,7 +29,9 @@ export function StintChart({
 }) {
   if (drivers.length === 0 || totalLaps <= 0) return null;
 
-  const compuestos = [...new Set(drivers.flatMap((d) => d.stints.map((s) => s.compound)))];
+  const compuestos = [
+    ...new Set(drivers.flatMap((d) => d.stints.map((s) => s.compound))),
+  ];
 
   return (
     <figure className="m-0">
@@ -46,7 +48,10 @@ export function StintChart({
                 y el MEDIUM 1,42:1 — una barra blanca sobre fondo blanco. El aro
                 define la forma sin cambiar el color, y la inicial más la leyenda
                 dan la identidad sin depender de él. */}
-            <div className="flex h-7 flex-1 gap-0.5 overflow-hidden rounded-md" aria-hidden>
+            <div
+              className="flex h-7 flex-1 gap-0.5 overflow-hidden rounded-md"
+              aria-hidden
+            >
               {driver.stints.map((stint) => {
                 const fondo = compoundColor(stint.compound);
                 const claro = TINTA_CLARA.has(stint.compound.toUpperCase());
@@ -58,11 +63,11 @@ export function StintChart({
                     style={{
                       backgroundColor: fondo,
                       width: `${(stint.laps / totalLaps) * 100}%`,
-                      color: claro ? '#FFFFFF' : '#15151A',
+                      color: claro ? "#FFFFFF" : "#15151A",
                     }}
                     className="flex items-center justify-center text-[10px] font-bold ring-1 ring-inset ring-border"
                   >
-                    {stint.laps >= 4 ? stint.compound.charAt(0) : ''}
+                    {stint.laps >= 4 ? stint.compound.charAt(0) : ""}
                   </div>
                 );
               })}
@@ -86,30 +91,38 @@ export function StintChart({
       </figcaption>
 
       {/* Lo que el gráfico dice, para quien no puede verlo. */}
-      <table className="sr-only">
-        <caption>Estrategia de neumáticos por piloto</caption>
-        <thead>
-          <tr>
-            <th scope="col">Piloto</th>
-            <th scope="col">Tramos</th>
-          </tr>
-        </thead>
-        <tbody>
-          {drivers.map((driver) => (
-            <tr key={driver.driver}>
-              <th scope="row">{driver.driver}</th>
-              <td>
-                {driver.stints
-                  .map(
-                    (stint) =>
-                      `${stint.compound} de la vuelta ${stint.start_lap} a la ${stint.end_lap}`
-                  )
-                  .join('; ')}
-              </td>
+      <div className="sr-only">
+        {/* El `sr-only` va en un `div` que envuelve, no en la `table`.
+        `overflow: hidden` —de lo que depende esa clase para recortar— **no se
+        aplica a un elemento `display: table`**, así que la tabla se dibujaba a
+        su ancho real fuera de la pantalla y empujaba el documento: medido,
+        905 px en una ventana de 390. Se veía como una barra de desplazamiento
+        horizontal en toda la página, sin nada visible que la justificara. */}
+        <table>
+          <caption>Estrategia de neumáticos por piloto</caption>
+          <thead>
+            <tr>
+              <th scope="col">Piloto</th>
+              <th scope="col">Tramos</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {drivers.map((driver) => (
+              <tr key={driver.driver}>
+                <th scope="row">{driver.driver}</th>
+                <td>
+                  {driver.stints
+                    .map(
+                      (stint) =>
+                        `${stint.compound} de la vuelta ${stint.start_lap} a la ${stint.end_lap}`,
+                    )
+                    .join("; ")}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   );
 }

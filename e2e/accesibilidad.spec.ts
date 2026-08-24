@@ -865,6 +865,57 @@ test.describe('márgenes en móvil', () => {
     expect(390 - caja.x - caja.width).toBeGreaterThanOrEqual(12);
   });
 
+  /**
+   * Las catorce pantallas, medidas a lo ancho de un teléfono.
+   *
+   * La de la portada existía porque el defecto se vio ahí, pero el defecto no
+   * era de la portada: era de una rejilla cuyos hijos no encogían por debajo de
+   * su contenido, y ese patrón está en media app. Una prueba por pantalla es lo
+   * que convierte «lo arreglamos donde se vio» en «no puede volver a pasar».
+   *
+   * Se mide con margen de un píxel: un `scrollWidth` de 391 en una pantalla de
+   * 390 es redondeo del navegador, no un desbordamiento que nadie vea.
+   */
+  const PANTALLAS: [string, string][] = [
+    ['portada', '/'],
+    ['resultados', '/results'],
+    ['ficha de carrera', '/results/2024/1'],
+    ['clasificación', '/standings'],
+    ['pilotos', '/drivers'],
+    ['ficha de piloto', '/drivers/max_verstappen'],
+    ['equipos', '/constructors'],
+    ['ficha de equipo', '/constructors/ferrari'],
+    ['circuitos', '/circuits'],
+    ['ficha de circuito', '/circuits/monza'],
+    ['calendario', '/calendar'],
+    ['telemetría', '/analysis'],
+    ['favoritos', '/favorites'],
+    ['sin conexión', '/offline'],
+  ];
+
+  for (const [nombre, ruta] of PANTALLAS) {
+    test(`${nombre} no se sale de la pantalla a lo ancho`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(ruta);
+
+      // Se espera al contenido antes de medir: un documento a medio pintar es
+      // otro documento, y con la base cargada eso pasa de los cinco segundos.
+      await expect(page.locator('main, [role="main"], #contenido').first()).toBeVisible({
+        timeout: 30_000,
+      });
+
+      const ancho = await page.evaluate(() => ({
+        documento: document.documentElement.scrollWidth,
+        ventana: document.documentElement.clientWidth,
+      }));
+
+      expect(
+        ancho.documento,
+        `${nombre} (${ruta}) empuja el documento a ${ancho.documento} px`
+      ).toBeLessThanOrEqual(ancho.ventana + 1);
+    });
+  }
+
   test('el icono de la pestaña activa cabe dentro de su fondo', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');

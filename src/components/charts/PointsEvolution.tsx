@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useId, useRef, useState } from 'react';
-import { teamInk } from '@/lib/team-colors';
+import { useId, useRef, useState } from "react";
+import { teamInk } from "@/lib/team-colors";
 
 /**
  * Championship points, round by round.
@@ -40,8 +40,10 @@ export function PointsEvolution({
   const plotHeight = height - PADDING.top - PADDING.bottom;
 
   const maxPoints = Math.max(10, ...series.flatMap((s) => s.points));
-  const x = (round: number) => PADDING.left + (plotWidth * (round - 1)) / Math.max(1, rounds - 1);
-  const y = (points: number) => PADDING.top + plotHeight - (plotHeight * points) / maxPoints;
+  const x = (round: number) =>
+    PADDING.left + (plotWidth * (round - 1)) / Math.max(1, rounds - 1);
+  const y = (points: number) =>
+    PADDING.top + plotHeight - (plotHeight * points) / maxPoints;
 
   // Team-mates get a dashed line so a shared colour is never ambiguous.
   const seenTeam = new Set<string>();
@@ -52,7 +54,9 @@ export function PointsEvolution({
     seenTeam.add(key);
   }
 
-  const ticks = Array.from({ length: 5 }, (_, i) => Math.round((maxPoints / 4) * i));
+  const ticks = Array.from({ length: 5 }, (_, i) =>
+    Math.round((maxPoints / 4) * i),
+  );
 
   const handleMove = (event: React.PointerEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
@@ -60,7 +64,8 @@ export function PointsEvolution({
 
     const box = svg.getBoundingClientRect();
     const position = ((event.clientX - box.left) / box.width) * width;
-    const round = Math.round(((position - PADDING.left) / plotWidth) * (rounds - 1)) + 1;
+    const round =
+      Math.round(((position - PADDING.left) / plotWidth) * (rounds - 1)) + 1;
 
     setHoverRound(Math.min(rounds, Math.max(1, round)));
   };
@@ -70,29 +75,37 @@ export function PointsEvolution({
       {/* La alternativa textual del gráfico: `role="img"` con una etiqueta
           decía de qué iba, pero no qué contaba. Con la tabla, quien usa lector
           de pantalla lee los mismos números. */}
-      <table className="sr-only">
-        <caption>Puntos acumulados por ronda de los cinco primeros</caption>
-        <thead>
-          <tr>
-            <th scope="col">Piloto</th>
-            {Array.from({ length: rounds }, (_, index) => (
-              <th key={index} scope="col">
-                Ronda {index + 1}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {series.map((s) => (
-            <tr key={s.driverId}>
-              <th scope="row">{s.name}</th>
+      <div className="sr-only">
+        {/* El `sr-only` va en un `div` que envuelve, no en la `table`.
+        `overflow: hidden` —de lo que depende esa clase para recortar— **no se
+        aplica a un elemento `display: table`**, así que la tabla se dibujaba a
+        su ancho real fuera de la pantalla y empujaba el documento: medido,
+        905 px en una ventana de 390. Se veía como una barra de desplazamiento
+        horizontal en toda la página, sin nada visible que la justificara. */}
+        <table>
+          <caption>Puntos acumulados por ronda de los cinco primeros</caption>
+          <thead>
+            <tr>
+              <th scope="col">Piloto</th>
               {Array.from({ length: rounds }, (_, index) => (
-                <td key={index}>{s.points[index] ?? '—'}</td>
+                <th key={index} scope="col">
+                  Ronda {index + 1}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {series.map((s) => (
+              <tr key={s.driverId}>
+                <th scope="row">{s.name}</th>
+                {Array.from({ length: rounds }, (_, index) => (
+                  <td key={index}>{s.points[index] ?? "—"}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <div className="overflow-x-auto" aria-hidden>
         <svg
@@ -106,7 +119,12 @@ export function PointsEvolution({
         >
           <defs>
             <clipPath id={clipId}>
-              <rect x={PADDING.left} y={PADDING.top} width={plotWidth} height={plotHeight} />
+              <rect
+                x={PADDING.left}
+                y={PADDING.top}
+                width={plotWidth}
+                height={plotHeight}
+              />
             </clipPath>
           </defs>
 
@@ -162,8 +180,11 @@ export function PointsEvolution({
           <g clipPath={`url(#${clipId})`}>
             {series.map((s) => {
               const path = s.points
-                .map((points, index) => `${index === 0 ? 'M' : 'L'} ${x(index + 1)} ${y(points)}`)
-                .join(' ');
+                .map(
+                  (points, index) =>
+                    `${index === 0 ? "M" : "L"} ${x(index + 1)} ${y(points)}`,
+                )
+                .join(" ");
 
               return (
                 <path
@@ -176,7 +197,7 @@ export function PointsEvolution({
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeDasharray={dashed.has(s.driverId) ? '6 4' : undefined}
+                  strokeDasharray={dashed.has(s.driverId) ? "6 4" : undefined}
                 />
               );
             })}
@@ -234,20 +255,30 @@ export function PointsEvolution({
       {/* The readout sits outside the plot so a finger never covers it. */}
       <figcaption className="mt-2 flex min-h-[24px] flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {hoverRound === null ? (
-          <span>Pasa el dedo o el cursor por el gráfico para ver cada ronda.</span>
+          <span>
+            Pasa el dedo o el cursor por el gráfico para ver cada ronda.
+          </span>
         ) : (
           <>
-            <span className="font-semibold text-foreground tabular-nums">Ronda {hoverRound}</span>
+            <span className="font-semibold text-foreground tabular-nums">
+              Ronda {hoverRound}
+            </span>
             {series.map((s) => (
-              <span key={s.driverId} className="inline-flex items-center gap-1.5">
+              <span
+                key={s.driverId}
+                className="inline-flex items-center gap-1.5"
+              >
                 <span
                   aria-hidden
                   className="team-ink inline-block h-2.5 w-2.5 rounded-sm"
-                  style={{ ...teamInk(s.constructorId), backgroundColor: 'currentColor' }}
+                  style={{
+                    ...teamInk(s.constructorId),
+                    backgroundColor: "currentColor",
+                  }}
                 />
                 {s.name}
                 <span className="font-mono tabular-nums text-foreground">
-                  {s.points[hoverRound - 1] ?? '—'}
+                  {s.points[hoverRound - 1] ?? "—"}
                 </span>
               </span>
             ))}
