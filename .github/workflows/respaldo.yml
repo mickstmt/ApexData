@@ -105,7 +105,10 @@ jobs:
           # creada y vacía en vez de romper las claves foráneas. Las
           # suscripciones no son un dato que haga falta recuperar: si se
           # perdieran, cada teléfono se vuelve a suscribir al abrir la app.
-          pg_dump "$ORIGEN" --schema=public --format=custom --no-owner --no-privileges             --exclude-table-data='public.push_subscriptions'             --file "$NOMBRE"
+          pg_dump "$ORIGEN" \
+            --schema=public --format=custom --no-owner --no-privileges \
+            --exclude-table-data='public.push_subscriptions' \
+            --file "$NOMBRE"
 
           echo "Tamaño: $(du -h "$NOMBRE" | cut -f1)"
 
@@ -117,7 +120,7 @@ jobs:
             exit 1
           fi
 
-          echo "Comprobado: el volcado no lleva datos de suscripciones push.""
+          echo "Comprobado: el volcado no lleva datos de suscripciones push."
 
       - name: Comprobar que el volcado se restaura
         run: |
