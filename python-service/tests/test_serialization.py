@@ -106,3 +106,35 @@ class TestCacheGuard:
         payload = {"telemetry": records(frame)}
 
         assert json.dumps(payload, allow_nan=False)
+
+
+class TestFormatLapTimeNegativo:
+    """Una diferencia entre dos vueltas puede ser negativa, y salía sin sentido.
+
+    `divmod(-0.455, 60)` es `(-1.0, 59.545)`, así que la diferencia de 0,455 s
+    entre dos vueltas de clasificación se formateaba como «-1:59.545». Los
+    tiempos de vuelta son siempre positivos, así que no se vio hasta que una
+    comparación restó dos.
+    """
+
+    def test_una_diferencia_de_menos_de_un_minuto(self):
+        # Se niega el Timedelta entero: pandas interpreta «-0 days …» como
+        # positivo, así que escribir el signo dentro de la cadena no basta.
+        assert format_lap_time(-pd.Timedelta("0:00:00.455")) == "-0.455"
+
+    def test_una_diferencia_de_mas_de_un_minuto(self):
+        assert format_lap_time(-pd.Timedelta("0:01:02.500")) == "-1:02.500"
+
+    def test_es_lo_que_pasa_al_restar_dos_vueltas(self):
+        # El caso real: NOR 1:11.163 contra VER 1:11.618 en Zandvoort. Daba
+        # «-1:59.545».
+        nor = pd.Timedelta("0:01:11.163")
+        ver = pd.Timedelta("0:01:11.618")
+        assert format_lap_time(nor - ver) == "-0.455"
+
+    def test_el_positivo_no_cambia(self):
+        assert format_lap_time(pd.Timedelta("0:00:00.455")) == "0.455"
+        assert format_lap_time(pd.Timedelta("0:01:29.165")) == "1:29.165"
+
+    def test_el_cero_no_lleva_signo(self):
+        assert format_lap_time(pd.Timedelta(0)) == "0.000"

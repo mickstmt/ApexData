@@ -77,6 +77,24 @@
 
 ## Bitácora
 
+### 2026-08-24 (35) — Dónde se gana y se pierde una vuelta ✅
+
+El gráfico que faltaba, y el que de verdad hacía falta. Las trazas de velocidad superpuestas dicen quién va más rápido en cada curva, pero no responden a lo que uno se pregunta mirándolas: **de dónde salen las cuatro décimas**. Casi nunca están donde parece — suelen acumularse en tres frenadas y devolverse en una recta.
+
+**Elegido sobre mockup**, como manda la regla: tres formas dibujadas con datos reales de la clasificación de Zandvoort, y el usuario eligió el área bicolor sin dudar. El hueco entre la curva y el cero lleva el color de quien va delante ahí: la superficie transmite **cuánto**, el signo **quién**.
+
+**Dos cosas salieron al construirlo, y ninguna se veía desde fuera:**
+
+1. **El `delta_time` del servicio estaba mal desde siempre.** Devolvía `-1:59.545` para una diferencia real de 0,455 s, porque `divmod(-0.455, 60)` es `(-1.0, 59.545)`. Los tiempos de vuelta son siempre positivos, así que el fallo llevaba meses escondido esperando a que alguien restara dos. Arreglado con cuatro pruebas.
+
+2. **El delta hay que calcularlo por fracción de vuelta, no por metro absoluto.** La primera versión daba −0,385 s donde el crono decía −0,455. Las dos trazas no recorren la misma distancia —4.238 y 4.244 metros, por trazada y muestreo— y cortar por la más corta perdía los últimos seis metros, que a esa velocidad son justo esas siete centésimas. Normalizando cada vuelta a la suya, **el delta final cuadra exactamente con la diferencia de los cronos**. Un gráfico que no cuadra con el crono no se cree, con razón.
+
+**El señalado es compartido**, y es lo que convierte dos gráficos en una sola lectura: pasar el dedo por el delta mueve el cursor de las trazas de velocidad al mismo metro. Comprobado en navegador — el delta marca 2.349 m y las trazas señalan 2.352. Va en un estado **aparte** del de la vuelta suelta: se puede tener cargada la telemetría de un piloto en la vuelta 12 y una comparación de las vueltas rápidas de otros dos, y compartir cursor señalaría puntos de vueltas que no tienen nada que ver. Es el mismo cuidado que ya tenía el mapa con `mismoPiloto`.
+
+**Detalles que no se ven pero cuentan**: dos compañeros de equipo comparten color, y entonces las dos áreas serían la misma y el gráfico dejaría de decir quién manda — cuando pasa, el segundo se separa hasta distinguirse. El mejor momento del primer piloto va señalado con un punto, porque es lo que se busca en cuanto se entiende el gráfico y encontrarlo a ojo en cuatrocientos puntos es incómodo. Y la tabla alternativa da una fila cada quinientos metros, no cuatrocientas: existe para poder seguir la historia, no para volcar el vector.
+
+**Verificación**: lint 0 · 218 unitarias · 68 de navegador · 51 de pytest · comprobado contra los datos reales de Zandvoort en los dos temas, cero errores de consola.
+
 ### 2026-08-24 (34) — La prueba de desborde, en las catorce pantallas — y lo que encontró ✅
 
 La prueba de que la app no se sale a lo ancho existía solo para la portada, porque fue ahí donde se vio el defecto. Pero el defecto no era de la portada: era de una rejilla cuyos hijos no encogían por debajo de su contenido, y ese patrón está en media app. Ahora hay una prueba por pantalla, catorce en total.

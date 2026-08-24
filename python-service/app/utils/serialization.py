@@ -16,17 +16,25 @@ import pandas as pd
 
 
 def format_lap_time(value) -> str | None:
-    """Timedelta -> "M:SS.mmm", the way lap and sector times are read."""
+    """Timedelta -> "M:SS.mmm", the way lap and sector times are read.
+
+    Negative durations are formatted with a leading sign, not by feeding the
+    negative number to divmod. That is what used to happen, and it produced
+    nonsense: the gap between two qualifying laps 0.455s apart came out as
+    "-1:59.545", because `divmod(-0.455, 60)` is `(-1.0, 59.545)`. Lap times are
+    always positive, so it went unnoticed until a comparison subtracted two.
+    """
     if value is None or pd.isna(value):
         return None
 
     total = value.total_seconds()
-    minutes, seconds = divmod(total, 60)
+    signo = "-" if total < 0 else ""
+    minutes, seconds = divmod(abs(total), 60)
 
     if minutes:
-        return f"{int(minutes)}:{seconds:06.3f}"
+        return f"{signo}{int(minutes)}:{seconds:06.3f}"
 
-    return f"{seconds:.3f}"
+    return f"{signo}{seconds:.3f}"
 
 
 def records(frame: pd.DataFrame) -> list[dict]:

@@ -773,6 +773,93 @@ test.describe('pestañas de una carrera', () => {
   });
 });
 
+test.describe('delta entre dos vueltas', () => {
+  /**
+   * Dos vueltas hechas a mano para que la respuesta sea comprobable.
+   *
+   * NOR tarda 60 s y VER 61: el delta final tiene que ser exactamente −1,000 s.
+   * Y NOR pierde medio segundo en el primer tercio antes de recuperarlo, así
+   * que la curva cruza el cero y el gráfico tiene que pintar las dos áreas.
+   */
+  const COMPARACION = {
+    driver1: {
+      code: 'NOR',
+      lap_number: 10,
+      lap_time: '1:00.000',
+      compound: 'SOFT',
+      telemetry: [
+        { Distance: 0, Time: '0.000', Speed: 300 },
+        { Distance: 1000, Time: '20.500', Speed: 280 },
+        { Distance: 2000, Time: '39.000', Speed: 290 },
+        { Distance: 3000, Time: '1:00.000', Speed: 300 },
+      ],
+    },
+    driver2: {
+      code: 'VER',
+      lap_number: 11,
+      lap_time: '1:01.000',
+      compound: 'SOFT',
+      telemetry: [
+        { Distance: 0, Time: '0.000', Speed: 300 },
+        { Distance: 1000, Time: '20.000', Speed: 285 },
+        { Distance: 2000, Time: '40.000', Speed: 288 },
+        { Distance: 3000, Time: '1:01.000', Speed: 300 },
+      ],
+    },
+    delta_time: '-1.000',
+  };
+
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/telemetry-compare/**', (route) => route.fulfill({ json: COMPARACION }));
+  });
+
+  test('el delta final coincide con la diferencia entre los dos cronos', async ({ page }) => {
+    await page.goto('/analysis');
+    await page.getByRole('button', { name: /Comparar/ }).click();
+
+    // La comprobación que de verdad importa: un gráfico que no cuadra con el
+    // crono no se cree. NOR 1:00.000 contra VER 1:01.000 son −1,000 s.
+    const resumen = page.locator('figure', { hasText: 'Al final de la vuelta' }).last();
+    await expect(resumen).toContainText('−1.000 s', { timeout: 30_000 });
+  });
+
+  test('el dedo señala el mismo metro aquí y en las trazas de arriba', async ({ page }) => {
+    await page.goto('/analysis');
+    await page.getByRole('button', { name: /Comparar/ }).click();
+
+    const delta = page.locator('canvas[aria-label*="Delta acumulado"]');
+    await delta.scrollIntoViewIfNeeded();
+    await expect(delta).toBeVisible({ timeout: 30_000 });
+
+    // Fuera de la ventana, `boundingBox` da coordenadas a las que el ratón no
+    // puede ir y el señalado no se dispara: de ahí el desplazamiento de arriba.
+    const caja = (await delta.boundingBox())!;
+    await page.mouse.move(caja.x + caja.width * 0.6, caja.y + caja.height / 2);
+
+    // El delta cuenta el metro señalado...
+    const pie = page.locator('figure', { hasText: 'En el metro' }).last();
+    await expect(pie).toContainText(/En el metro [\d.]+/);
+
+    // ...y las trazas de velocidad tienen que estar señalando ese mismo punto,
+    // que es lo que convierte dos gráficos en una sola lectura.
+    const metros = (await pie.innerText()).match(/En el metro ([\d.]+)/)![1].replace('.', '');
+    const enLasTrazas = await page.getByText(/^\d+ m$/).first().innerText();
+
+    expect(Math.abs(Number(enLasTrazas.replace(' m', '')) - Number(metros))).toBeLessThan(60);
+  });
+
+  test('la curva tiene alternativa en texto', async ({ page }) => {
+    await page.goto('/analysis');
+    await page.getByRole('button', { name: /Comparar/ }).click();
+
+    // Un lienzo no tiene nada que leer: sin la tabla, el gráfico no existe para
+    // quien usa un lector de pantalla.
+    const tabla = page.getByRole('table', { name: /Delta acumulado de NOR respecto a VER/i });
+    await expect(tabla).toBeAttached({ timeout: 30_000 });
+    expect(await tabla.locator('tbody tr').count()).toBeGreaterThan(3);
+  });
+});
+
 test.describe('política de contenido', () => {
   test('un script metido por el marcado no llega a ejecutarse', async ({ page }) => {
     await page.goto('/');

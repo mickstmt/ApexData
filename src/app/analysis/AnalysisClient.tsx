@@ -25,6 +25,7 @@ import { StintChart } from '@/components/telemetry/StintChart';
 import { RaceProgress } from '@/components/charts/RaceProgress';
 import { teamIdFromName } from '@/lib/team-colors';
 import { LapScatter } from '@/components/charts/LapScatter';
+import { DeltaVuelta } from '@/components/charts/DeltaVuelta';
 import { PaceBoxes } from '@/components/charts/PaceBoxes';
 import { TyreDegradation } from '@/components/charts/TyreDegradation';
 import { SessionWeather } from '@/components/telemetry/SessionWeather';
@@ -144,6 +145,17 @@ export function AnalysisClient({
    * nuevo que la distancia de cada punto del trazado.
    */
   const [cursorVuelta, setCursorVuelta] = useState<number | null>(null);
+
+  /**
+   * El señalado de la comparación va aparte del de la vuelta suelta.
+   *
+   * Son dos vueltas distintas: se puede tener cargada la telemetría de un
+   * piloto en la vuelta 12 y una comparación de las vueltas rápidas de otros
+   * dos. Compartir cursor entre las dos cosas señalaría puntos de vueltas que
+   * no tienen nada que ver — el mismo cuidado que ya tenía el mapa con
+   * `mismoPiloto`.
+   */
+  const [cursorComparacion, setCursorComparacion] = useState<number | null>(null);
 
   // Loading state
   const [loading, setLoading] = useState<{
@@ -626,6 +638,8 @@ export function AnalysisClient({
               Comparación de Velocidad
             </h2>
             <TelemetryChart
+              cursor={cursorComparacion}
+              onCursor={setCursorComparacion}
               traces={[comparison.driver1, comparison.driver2].map((entry) => ({
                 driver: entry.code,
                 constructorId: teamOf(entry.code),
@@ -635,6 +649,29 @@ export function AnalysisClient({
                 brake: entry.telemetry.map((point) => point.Brake ?? 0),
               }))}
             />
+
+            {/* El delta va DEBAJO de las trazas y no en su propia sección: es
+                la lectura de las mismas dos vueltas, y separarlas obligaría a
+                relacionar a ojo una curva de arriba con otra de abajo. Comparten
+                cursor, así que el dedo señala el mismo metro en las dos. */}
+            <div className="mt-6 rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-1 text-lg font-bold">Dónde se gana y se pierde</h3>
+              <p className="mb-3 text-sm text-muted-foreground">
+                El tiempo que {comparison.driver1.code} lleva ganado o perdido respecto a{' '}
+                {comparison.driver2.code} en cada punto del trazado. Pasa el dedo: el metro
+                señalado es el mismo aquí y en las trazas de arriba.
+              </p>
+              <DeltaVuelta
+                piloto1={comparison.driver1.code}
+                piloto2={comparison.driver2.code}
+                equipo1={teamOf(comparison.driver1.code)}
+                equipo2={teamOf(comparison.driver2.code)}
+                traza1={comparison.driver1.telemetry}
+                traza2={comparison.driver2.telemetry}
+                cursor={cursorComparacion}
+                onCursor={setCursorComparacion}
+              />
+            </div>
           </div>
         )}
 
