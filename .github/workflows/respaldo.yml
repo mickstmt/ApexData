@@ -92,9 +92,32 @@ jobs:
           # esquemas internos de Supabase (auth, storage, graphql) no los usa
           # nadie aquí y al restaurarlos en un Postgres normal solo generan
           # ruido y peso.
-          pg_dump "$ORIGEN" --schema=public --format=custom --no-owner --no-privileges --file "$NOMBRE"
+          # `push_subscriptions` se queda fuera, y esto no es opcional.
+          #
+          # El artefacto que este trabajo sube vive en un repositorio PÚBLICO, y
+          # esa tabla guarda, por cada dispositivo suscrito, su dirección única
+          # de push y dos secretos criptográficos (`p256dh` y `auth`). Volcarla
+          # ahí es publicarlos. El resto del volcado son resultados de F1, que
+          # son públicos por naturaleza.
+          #
+          # Se excluyen los DATOS pero se conserva la ESTRUCTURA
+          # (`--exclude-table-data`), para que una restauración deje la tabla
+          # creada y vacía en vez de romper las claves foráneas. Las
+          # suscripciones no son un dato que haga falta recuperar: si se
+          # perdieran, cada teléfono se vuelve a suscribir al abrir la app.
+          pg_dump "$ORIGEN" --schema=public --format=custom --no-owner --no-privileges             --exclude-table-data='public.push_subscriptions'             --file "$NOMBRE"
 
           echo "Tamaño: $(du -h "$NOMBRE" | cut -f1)"
+
+          # Que la exclusión funcionó se comprueba, no se supone: un cambio de
+          # nombre de tabla o de esquema la dejaría sin efecto en silencio, y el
+          # fallo solo se vería cuando los secretos ya estuvieran publicados.
+          if pg_restore --list "$NOMBRE" | grep -q 'TABLE DATA public push_subscriptions'; then
+            echo "::error::El volcado contiene los datos de push_subscriptions. No se sube."
+            exit 1
+          fi
+
+          echo "Comprobado: el volcado no lleva datos de suscripciones push.""
 
       - name: Comprobar que el volcado se restaura
         run: |

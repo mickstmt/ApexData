@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  MAXIMO_AUTH,
+  MAXIMO_P256DH,
+  claveDePushValida,
+  destinoDePushValido,
+} from '@/lib/push-destino';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +41,26 @@ export async function POST(request: NextRequest) {
   if (!endpoint || !keys?.p256dh || !keys?.auth) {
     return NextResponse.json(
       { error: 'Faltan la dirección o las claves de la suscripción.' },
+      { status: 400 }
+    );
+  }
+
+  // Esta es la única ruta pública que escribe en la base, y no tiene sesión
+  // detrás: lo que no se compruebe aquí, no se comprueba en ningún sitio. Ver
+  // `push-destino.ts` para las tres cosas que esto cierra.
+  if (!destinoDePushValido(endpoint)) {
+    return NextResponse.json(
+      { error: 'Esa dirección no es la de un servicio de avisos conocido.' },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !claveDePushValida(keys.p256dh, MAXIMO_P256DH) ||
+    !claveDePushValida(keys.auth, MAXIMO_AUTH)
+  ) {
+    return NextResponse.json(
+      { error: 'Las claves de la suscripción no tienen la forma esperada.' },
       { status: 400 }
     );
   }

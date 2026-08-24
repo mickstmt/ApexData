@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import { prisma } from '@/lib/prisma';
+import { destinoDePushValido } from '@/lib/push-destino';
 import { VAPID_PUBLICA } from '@/lib/push-claves';
 
 /**
@@ -58,7 +59,24 @@ export async function avisarATodos(aviso: Aviso): Promise<ResultadoEnvio> {
     return { enviados: 0, caducados: 0, fallidos: 0 };
   }
 
-  const suscripciones = await prisma.pushSubscription.findMany();
+  const guardadas = await prisma.pushSubscription.findMany();
+
+  // Se vuelve a comprobar el destino aquí, aunque `/api/push` ya lo valide.
+  //
+  // No es desconfianza de la ruta: es que las filas guardadas ANTES de que esa
+  // validación existiera siguen en la tabla, y este bucle es el que de verdad
+  // emite la petición. Una dirección inventada convertiría el aviso del domingo
+  // en una petición nuestra contra la red interna del VPS, así que la
+  // comprobación tiene que estar donde se dispara, no solo donde se guarda.
+  const suscripciones = guardadas.filter((suscripcion) => {
+    if (destinoDePushValido(suscripcion.endpoint)) return true;
+
+    console.warn(
+      `[push] Se salta una dirección que no es de un servicio conocido (id ${suscripcion.id}).`
+    );
+    return false;
+  });
+
   const carga = JSON.stringify(aviso);
 
   const resultados = await Promise.all(

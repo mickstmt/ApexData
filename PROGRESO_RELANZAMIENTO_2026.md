@@ -34,7 +34,7 @@
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
 - ~~El venv local tiene FastF1 3.7.0~~ → resuelto el 2026-08-19: se creó `python-service/.venv` desde `requirements-dev.txt`, con **FastF1 3.8.3**. Está en `.gitignore`, así que es de esta máquina.
 - ~~Pendientes de S4: mapa del circuito por velocidad y estrategia de neumáticos~~ → **hechos el 2026-08-19**, con dos endpoints nuevos en el servicio Python. **Exigen pulsar *Deploy* a mano en el panel**: sin eso, los dos botones nuevos de `/analysis` responden con error en producción.
-- 15 warnings de lint (variables sin usar, algún `any`) — limpieza cosmética pendiente.
+- ~~15 warnings de lint~~ → **resuelto**: `npm run lint` sale limpio, 0 avisos, y así se mantiene desde entonces (comprobado el 2026-08-24).
 - 🟡 **Estados de carga: la mayor parte, resuelta el 2026-08-18**. De 6 páginas con `loading.tsx` se pasa a 12, la home transmite por partes con `<Suspense>` y las páginas históricas tienen caché de una hora. Queda pendiente el `<Suspense>` de la ficha de piloto (5 consultas secuenciales), que es la mitad del punto 6 del orden de ataque.
 - **Recortado de S5 el 2026-08-18, decisión del usuario** (se registra en lugar de desaparecer, que era justo el fallo de método diagnosticado):
   - **Push post-GP** (§8.8 del plan): sin `push` ni `notificationclick` en `public/sw.js`.
@@ -50,7 +50,7 @@
 - ⚪ **Medido y descartado por ahora: Postgres en el VPS.** Daría ~1 ms por consulta frente a los 101 ms de red hasta Virginia, pero con la conexión directa ya resuelta, el salto restante no compensa asumir backups y actualizaciones propios. Queda anotado por si algún día la latencia vuelve a molestar.
 - ⚪ **Nota histórica: el pooler cuesta 5× lo que la conexión directa** (medido el 2026-08-18; no se ha cambiado nada, por decisión del usuario). Sobre el mismo host `aws-1-us-east-1`: una `SELECT 1` por el **pooler (6543)** tarda **506 ms**; por la **conexión directa (5432)**, **101 ms**, que es exactamente el ida y vuelta de red hasta Virginia. Además `connection_limit=1` serializa: cinco consultas en paralelo tardan lo mismo que en fila india. Se nota donde no hay caché: la home, con 4 consultas encadenadas, tarda **1,4 s**, y `/api/health`, con una sola, **540 ms**; las páginas con `unstable_cache` responden en 55-90 ms y estaban tapando el problema. El pooler tiene sentido en serverless, donde cada petición es un proceso nuevo; aquí hay un contenedor permanente.
 - **El servicio de telemetría no tiene despliegue automático**: el CI solo dispara el webhook de la web, así que un cambio en `python-service/` exige pulsar *Deploy* a mano en el panel.
-- 🟢 **Auditoría triple del 2026-08-17: cerrada el 2026-08-19.** Los tres informes se contrastaron punto por punto contra el código (ver la bitácora de cierre). Del informe 1 y del 2 no queda nada sin resolver o sin recortar explícitamente. **Recortado a propósito, con motivo**: (a) `PageTransition` —la acusación de 300 ms era de ~20 ms medidos, y el arreglo tenía un riesgo peor que el defecto—; (b) el `role="img"` de `TelemetryChart`, sin alternativa textual, porque una vuelta son miles de muestras y una tabla equivalente no es legible —el gráfico del campeonato sí la tiene—; (c) la «golden rule» de safe-area en `Header`, que se desvía del plan pero funciona por su altura fija. **Del informe 3 (huecos silenciosos) siguen abiertos** los puntos 1, 2 (parcial: existe `PriorityRows`, faltan Chip y Sheet), 4, 5, 7 y 9, listados abajo.
+- 🟢 **Auditoría triple del 2026-08-17: cerrada el 2026-08-19.** Los tres informes se contrastaron punto por punto contra el código (ver la bitácora de cierre). Del informe 1 y del 2 no queda nada sin resolver o sin recortar explícitamente. **Recortado a propósito, con motivo**: (a) `PageTransition` —la acusación de 300 ms era de ~20 ms medidos, y el arreglo tenía un riesgo peor que el defecto—; (b) el `role="img"` de `TelemetryChart`, sin alternativa textual, porque una vuelta son miles de muestras y una tabla equivalente no es legible —el gráfico del campeonato sí la tiene—; (c) la «golden rule» de safe-area en `Header`, que se desvía del plan pero funciona por su altura fija. **Del informe 3 (huecos silenciosos)**: el punto 2 quedó **cerrado el 2026-08-20** — `PriorityRows`, `Chip` y `Sheet` existen los tres en `src/components/ui/`. Siguen abiertos los puntos 1, 4, 5, 7 y 9.
 
 **Decisiones tomadas**:
 - ✅ **Las pruebas de navegador corren en CI** (2026-08-18). El job `e2e` construye con credenciales falsas —como el job `web`, para no perder la garantía de que la app compila sin base de datos— y sirve la app con el secret `DATABASE_URL` que ya existía para el cron. El despliegue depende ahora de las tres cosas: tipos, tests y navegador.
@@ -59,7 +59,7 @@
 - ✅ **Hosting del microservicio Python: el mismo VPS** (2026-08-16). El usuario ya tiene un VPS con varios aplicativos desplegados; el servicio FastF1 (que ya tiene Dockerfile) se despliega ahí en S5. Esto elimina el único coste previsto (~$5/mes de Railway) → **coste total del proyecto: $0/mes**. Pendiente de recabar en S5: proveedor/SO del VPS, RAM/disco disponibles, si usa Docker y qué reverse proxy (Nginx/Caddy/Traefik) sirve los demás aplicativos.
 
 **Decisiones pendientes**:
-- [ ] **Qué hacer con la latencia de la base de datos**, con las medidas ya sobre la mesa (ver la deuda técnica): pasar la app a la conexión directa —5× más rápido, gratis, una variable en EasyPanel— o llevarse Postgres al VPS —~1 ms, pero los backups y las actualizaciones pasan a ser cosa nuestra—. El usuario pidió medir primero y decidir después.
+- ~~**Qué hacer con la latencia de la base de datos**~~ → **decidido y hecho el 2026-08-19**: la app pasó al puerto 5432 (modo sesión) con `connection_limit=5`. Medido el 2026-08-24, `/api/health` en producción responde en **~165 ms**, en línea con los 155 ms de entonces. Llevarse Postgres al VPS queda descartado por ahora (ver deuda técnica).
 - [ ] Ampliar el histórico más atrás de 2010 (opcional; ~10 min por temporada, desatendido).
 - [ ] Subdominio para la app (p. ej. `apexdata.izistoreperu.com`) — se elige al crear la app en EasyPanel.
 
@@ -71,11 +71,36 @@
 2. ~~**Pulsar *Deploy* en el servicio de telemetría** por el endpoint `/classification`~~ → hecho el 2026-08-22, comprobado en producción: `/api/clasificacion/2026/12/SQ` devuelve los 22 puestos y la pestaña del sprint enseña la parrilla. Recordatorio permanente: **el servicio de telemetría no se despliega solo**; cualquier cambio bajo `python-service/` necesita pulsar *Deploy* a mano en panel.dittochatbot.com.
 3. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
 4. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
-5. **Pulsar *Deploy* del servicio** cuando se agrupe `/fastest` por piloto (aún sin escribir, ver bitácora 27). Sin eso la pestaña de prácticas seguirá funcionando, solo que trayendo 150 KB en vez de 5 KB.
+5. 🔴 **Pulsar *Deploy* del servicio**: el agrupado de `/fastest` por piloto y la huella de arranque **ya están en el repo** (2026-08-24, bitácora 29), pero el servicio no se despliega solo. Comprobado ese día a las 09:40 hora de Lima: producción seguía devolviendo pilotos repetidos con `limit=7` y `limit=9` —claves de caché nuevas, así que no era caché—, señal de que el contenedor aún corría el código anterior. **Cómo confirmarlo**: en la consola del servicio, la primera línea al arrancar debe decir `ApexData Telemetry v1.0.0 desplegado y arrancado: … UTC (… hora de Lima)`. Si esa línea no aparece, el Deploy no entró. Mientras tanto no se rompe nada: la web sigue agrupando en el navegador.
 
 ---
 
 ## Bitácora
+
+### 2026-08-24 (30) — Auditoría de seguridad: cuatro frentes, y un agujero que anulaba el aislamiento del servicio ✅
+
+A petición del usuario, cuatro auditorías en paralelo —inyección y datos, secretos y configuración, superficie y abuso, y cliente/PWA— cada una con la instrucción de no especular y de construir el escenario de explotación o bajar la severidad.
+
+**Dato que cambia el modelo de amenaza: el repositorio es público.** Comprobado con la API de GitHub. Condiciona los dos hallazgos de arriba.
+
+**ALTO — La web era un proxy hacia el servicio interno.** Los segmentos de la URL se interpolaban tal cual, y Next decodifica `%2F`, `%3F` y `%23` dentro de un segmento dinámico. Resultado, comprobado en producción y encontrado por dos auditorías por separado:
+
+    GET /api/laps/2100/..%2F..%2F..%2Fhealth%23/R
+    → {"status":"healthy","cache_enabled":true,"cache_dir":"./cache/fastf1"}
+
+Esa es la respuesta del **servicio**, no la de la web. El servicio se dejó sin dominio a propósito —para no exponer a internet algo sin límite de peticiones— y ese aislamiento estaba anulado desde dentro. De paso, `../../..` borraba los segmentos de año y sesión, saltándose sus validaciones. Arreglado en `src/services/fastf1/segmentos.ts`, la única puerta por la que se sale hacia el servicio: trece construcciones de URL, siete rutas, y validar en cada una era olvidarse en la siguiente. Con 17 pruebas.
+
+**ALTO — El respaldo mensual iba a publicar las claves de las suscripciones push.** `respaldo.yml` sube el volcado completo como artefacto de un repositorio **público**, y `push_subscriptions` guarda por cada dispositivo su dirección única y dos secretos criptográficos. El volcado vivo (2026-08-20) es anterior a esa tabla, así que **no hay fuga**: la exposición era inminente, con fecha —el cron del **1 de septiembre**—. Ahora se excluyen sus datos conservando la estructura, y el propio flujo **comprueba con `pg_restore --list` que la exclusión funcionó** y falla si no: un renombrado de tabla la dejaría sin efecto en silencio, y eso solo se vería con los secretos ya publicados.
+
+**ALTO — `/api/push` aceptaba cualquier dirección.** Es la única ruta pública que escribe en la base y solo comprobaba que los campos existieran. Eso permitía tres cosas: convertir el aviso del domingo en peticiones nuestras contra la red interna del VPS (con las respuestas 404/410 borrando la fila, es decir, un oráculo de puertos vivos), llenar la tabla sin tope, y guardar filas de megabytes. Ahora solo se aceptan los cuatro servidores de push reales, con la comparación hecha por sufijo con punto —`endsWith` a secas dejaría pasar `fcm.googleapis.com.atacante.net`—, y las claves acotadas. La comprobación se repite en `avisarATodos()`, porque las filas guardadas antes de esto siguen en la tabla y ahí es donde se dispara la petición.
+
+**Menores, arreglados de paso**: `notificationclick` anclado a nuestro origen (`new URL(x, base)` ignora la base si `x` es absoluta: una `url` ajena en el aviso abría esa página con nuestro icono); tres rutas devolvían `error.message` de Prisma al cliente —la consulta entera, con nombres de modelos y campos— por un `parseInt` sin comprobar NaN; `limit` y `offset` acotados; `poweredByHeader: false`; y las imágenes se sirven con `sandbox`, porque los 79 SVG vienen de GitHub y Wikimedia y la CSP estricta solo cubría `/_next/image`, no la ruta estática.
+
+**Lo que salió bien, que también es información**: cero SQL injection —los cinco usos de SQL crudo son plantillas parametrizadas, y no hay un solo `$queryRawUnsafe`—; RLS en las once tablas, incluida la de push; ningún secreto en el bundle ni en el historial de git; la clave VAPID privada separada en su propio módulo que ningún componente importa; el `Dockerfile` rechazando los build args de EasyPanel a propósito para no cocer la contraseña en las capas; CORS del servicio restringido a un único origen y fallando cerrado; `/docs` y `/openapi.json` efectivamente apagados en producción; el optimizador de imágenes sin `remotePatterns`, que evita el proxy abierto; y ningún XSS ni redirección abierta en todo el cliente.
+
+**Verificación**: los cuatro vectores comprobados cortados contra el build de producción (travesía con año válido, query inyectada, piloto inyectado y destino de push interno: los cuatro 400) y una petición legítima intacta. lint 0 · 176 unitarias · 48 de navegador.
+
+**Queda abierto y anotado**: no hay límite de peticiones en ninguna capa, la CSP solo trae `frame-ancestors`, y en el servicio `session.load()` bloquea el único worker.
 
 ### 2026-08-24 (29) — El agrupado a su sitio, la huella de cada despliegue, y una prueba que dependía del domingo ✅
 

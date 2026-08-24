@@ -104,9 +104,37 @@ df -h /app/cache && ls -la /app/cache
 
 El 404 de `/docs` es el resultado correcto: confirma que `ENVIRONMENT` llegó.
 
-**Esta app no tiene despliegue automático.** El CI solo dispara el webhook de
-la web, así que un cambio en `python-service/` exige pulsar **Deploy** a mano
-en el panel.
+#### Despliegue automático del servicio
+
+Durante semanas esta app **no tenía despliegue automático**, y eso costó caro:
+se subía un cambio bajo `python-service/`, la web se relevaba sola, y el
+servicio seguía con el código anterior sin que nada lo dijera. Comprobarlo
+contra producción daba «código viejo» y parecía un despliegue fallido cuando en
+realidad nunca se había pedido.
+
+Desde el 2026-08-24 el CI lo dispara, **solo cuando `python-service/` cambia**
+—la mayoría de los pushes son de la web, y reconstruirlo para nada cuesta
+minutos y tira abajo su caché de FastF1— y **antes que el de la web**, para no
+dejar una ventana con la página nueva llamando a un servicio sin el endpoint
+que necesita.
+
+Para activarlo, igual que con la web pero en la app `apexdata-telemetry`:
+
+1. EasyPanel → app **`apexdata-telemetry`** → pestaña **Deployments**, al final
+   de la página: recuadro **Deployment Trigger**. Copia la URL.
+2. GitHub → repo → *Settings* → *Secrets and variables* → *Actions* → **New
+   repository secret**: nombre `EASYPANEL_SERVICE_HOOK`, valor esa URL.
+3. Deja **Auto Deploy DESACTIVADO** en la pestaña *Github* de esa app, por lo
+   mismo que en la web: si disparan las dos, una build cancela a la otra a
+   mitad y el log muere con «context canceled», que parece una muerte por
+   memoria y no lo es.
+
+Sin ese secreto no se rompe nada: el paso avisa con un `::warning::` en el CI y
+el servicio se queda esperando un *Deploy* a mano.
+
+**Cómo saber si un despliegue entró de verdad**: la primera línea de su consola
+al arrancar dice `ApexData Telemetry vX desplegado y arrancado: … UTC (… hora de
+Lima)`. La web hace lo mismo con `[ApexData] Desplegado y arrancado: … · build …`.
 
 ### 3. Variables de entorno de la web
 

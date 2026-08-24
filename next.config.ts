@@ -27,6 +27,10 @@ const nextConfig: NextConfig = {
   // Traces only the modules the app imports, so the Docker image ships a
   // fraction of a full node_modules and the build's memory peak stays lower.
   output: 'standalone',
+
+  // Sin `X-Powered-By: Next.js` en cada respuesta: decirle a quien pregunta
+  // qué framework y qué versión corre solo le ahorra el sondeo.
+  poweredByHeader: false,
   /**
    * Las dos pantallas retiradas.
    *
@@ -74,6 +78,28 @@ const nextConfig: NextConfig = {
         // serving an old app after a deploy.
         source: '/sw.js',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' }],
+      },
+      {
+        /**
+         * Las imágenes, servidas sin poder ejecutar nada.
+         *
+         * `dangerouslyAllowSVG` va acompañado de una CSP estricta, pero esa CSP
+         * **solo se aplica a `/_next/image`**: abrir directamente
+         * `/images/circuits/adelaide.svg` sirve el archivo con las cabeceras
+         * generales, y un SVG es un documento que puede llevar `<script>`.
+         *
+         * Y estos SVG no son nuestros: `scripts/images/*` los descarga de
+         * repositorios de GitHub y de Wikimedia. Hoy están limpios —se
+         * revisaron los 79 el 2026-08-24, cero contenido activo—, pero si
+         * alguno de esos orígenes se compromete y alguien vuelve a ejecutar
+         * `npm run images:all`, entraría un SVG con script servido desde
+         * nuestro propio dominio. Esto lo deja inerte de antemano.
+         */
+        source: '/images/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: "default-src 'none'; style-src 'unsafe-inline'; sandbox" },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+        ],
       },
     ];
   },

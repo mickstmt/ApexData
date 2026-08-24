@@ -133,6 +133,61 @@ jobs:
       group: deploy-easypanel-apexdata
       cancel-in-progress: false
     steps:
+      - uses: actions/checkout@v5
+        with:
+          # Dos commits, para poder ver qué cambió en este push.
+          fetch-depth: 0
+
+      - name: ¿Cambió el servicio de telemetría?
+        id: servicio
+        env:
+          ANTES: ${{ github.event.before }}
+        # El servicio no se desplegaba solo, y eso costó una semana de
+        # confusión: se subía un cambio bajo `python-service/`, la web se
+        # relevaba sola, y el servicio seguía con el código anterior sin que
+        # nada lo dijera. Comparar contra producción daba «código viejo» y
+        # parecía un despliegue fallido cuando en realidad nunca se pidió.
+        #
+        # Solo se dispara cuando esa carpeta cambia: la mayoría de los pushes
+        # son de la web y reconstruir el servicio para nada cuesta minutos y
+        # tira abajo su caché de FastF1.
+        run: |
+          if [ -z "$ANTES" ] || [ "$ANTES" = "0000000000000000000000000000000000000000" ]; then
+            echo "Push sin base de comparación; se asume que el servicio cambió."
+            echo "cambio=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git diff --name-only "$ANTES" "${{ github.sha }}" | grep -q '^python-service/'; then
+            echo "cambio=true" >> "$GITHUB_OUTPUT"
+            git diff --name-only "$ANTES" "${{ github.sha }}" | grep '^python-service/' | sed 's/^/  /'
+          else
+            echo "Sin cambios en python-service/: no hace falta desplegarlo."
+            echo "cambio=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Desplegar el servicio de telemetría
+        if: steps.servicio.outputs.cambio == 'true'
+        env:
+          HOOK: ${{ secrets.EASYPANEL_SERVICE_HOOK }}
+        # Va ANTES que el de la web a propósito: si la web se relevara primero,
+        # habría una ventana con la página nueva llamando a un servicio que aún
+        # no tiene el endpoint que necesita.
+        #
+        # Igual que el de la web, la integración de GitHub de EasyPanel para
+        # `apexdata-telemetry` debe quedar DESACTIVADA: si disparan las dos, una
+        # build cancela a la otra a mitad.
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::EASYPANEL_SERVICE_HOOK no está configurado y este push cambia python-service/."
+            echo "::warning::El servicio seguirá con el código anterior hasta que alguien pulse Deploy a mano."
+            exit 0
+          fi
+
+          curl -fsS "$HOOK"
+          echo "Despliegue del servicio pedido. Su consola dirá al arrancar:"
+          echo "  ApexData Telemetry vX desplegado y arrancado: … UTC (… hora de Lima)"
+
       # IMPORTANT: EasyPanel's own GitHub integration must stay DISABLED for
       # this app. If both fire, the webhook build cancels the one already in
       # progress and the log dies mid-step with "context canceled" — which

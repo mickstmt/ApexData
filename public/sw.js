@@ -240,7 +240,16 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const destino = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  // El destino se ancla a ESTE origen, siempre.
+  //
+  // `new URL(x, base)` ignora la base cuando `x` es absoluta, así que una `url`
+  // con `https://otro-sitio/` en la carga del aviso abriría esa página desde
+  // una notificación con nuestro icono: el patrón clásico de suplantación por
+  // push. Hoy la carga la construye nuestro propio guion, pero el worker es el
+  // código con más privilegios del origen y no debe confiar en su entrada.
+  const pedida = new URL(event.notification.data?.url || '/', self.location.origin);
+  const destino =
+    pedida.origin === self.location.origin ? pedida.href : `${self.location.origin}/`;
 
   event.waitUntil(
     (async () => {

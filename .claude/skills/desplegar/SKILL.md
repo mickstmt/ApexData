@@ -25,10 +25,30 @@ curl -s https://apexdata.meeks.fun/api/health
 # esta es la única forma de saber desde fuera si está en pie.
 ```
 
-## El servicio de telemetría: MANUAL
+## El servicio de telemetría
 
-Un cambio en `python-service/` **no se despliega con el push**. Hay que pedirle
-al usuario que pulse *Deploy*:
+Desde el 2026-08-24 el CI **también lo despliega**, pero solo cuando
+`python-service/` cambia, y antes que la web. Depende del secreto
+`EASYPANEL_SERVICE_HOOK`: si no está puesto, el paso deja un `::warning::` en el
+CI y **hay que pulsar *Deploy* a mano**. Mira el resumen del run para saber cuál
+de las dos cosas pasó.
+
+Comprueba SIEMPRE que entró, no lo des por hecho — comparar contra producción es
+lo único que vale:
+
+```bash
+# Firma del código nuevo: una vuelta por piloto, sin repetidos.
+curl -s "https://apexdata.meeks.fun/api/laps/2026/12/FP1/fastest?limit=7"
+```
+
+Usa un `limit` que no se haya pedido antes: el servicio cachea por clave, y
+repetir uno viejo puede devolver una respuesta anterior y hacer creer que el
+despliegue falló.
+
+En su consola, la primera línea al arrancar es la prueba:
+`ApexData Telemetry vX desplegado y arrancado: … UTC (… hora de Lima)`.
+
+### Si hay que pulsarlo a mano
 
 1. panel.dittochatbot.com
 2. Proyecto **`ditto`** → app **`apexdata-telemetry`** (no `apexdata`, que es la web)

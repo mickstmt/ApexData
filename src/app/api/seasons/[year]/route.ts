@@ -73,7 +73,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch season',
+        // El mensaje de Prisma enseña la consulta entera: se registra, no se devuelve.
+        error: 'No se pudo completar la consulta.',
       },
       { status: 500 }
     );

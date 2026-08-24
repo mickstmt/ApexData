@@ -7,6 +7,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jolpicaClient } from '@/services';
 import { prisma } from '@/lib/prisma';
 
+/**
+ * Un parámetro numérico de la URL, con suelo y techo.
+ *
+ * Sin esto, `?limit=abc` daba un 500 con el cuerpo de la consulta de Prisma
+ * dentro —nombres de modelo y de campos, gratis para quien preguntara— y
+ * `?offset=-5` reventaba con un error de aserción. Comprobado en producción el
+ * 2026-08-24.
+ */
+function acotar(valor: string | null, porDefecto: number, minimo: number, maximo: number): number {
+  if (!valor) return porDefecto;
+
+  const numero = Number.parseInt(valor, 10);
+  if (!Number.isFinite(numero)) return porDefecto;
+
+  return Math.min(Math.max(numero, minimo), maximo);
+}
+
 export const dynamic = 'force-dynamic'; // Disable static optimization
 
 export async function GET(request: NextRequest) {
@@ -46,8 +63,9 @@ export async function GET(request: NextRequest) {
     if (!year || year === 'current') {
       const driversFromDb = await prisma.driver.findMany({
         where: nationality ? { nationality } : undefined,
-        take: limit ? parseInt(limit) : 50,
-        skip: offset ? parseInt(offset) : 0,
+        // Acotado, y con NaN contemplado.
+        take: acotar(limit, 50, 1, 100),
+        skip: acotar(offset, 0, 0, 100_000),
         orderBy: { familyName: 'asc' },
       });
 
@@ -89,7 +107,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch drivers',
+        // El mensaje de Prisma enseña la consulta entera: se registra, no se devuelve.
+        error: 'No se pudo completar la consulta.',
       },
       { status: 500 }
     );

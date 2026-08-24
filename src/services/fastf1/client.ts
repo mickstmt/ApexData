@@ -18,6 +18,12 @@ import type {
   TrackMapResponse,
   StintsResponse,
 } from '@/types';
+import {
+  numeroAcotado,
+  segmentoAnio,
+  segmentoEvento,
+  segmentoPiloto,
+} from './segmentos';
 
 // ============================================================================
 // CONFIGURATION
@@ -161,9 +167,9 @@ class FastF1Client {
     driver: string,
     lap?: number
   ): Promise<DriverTelemetryResponse> {
-    let endpoint = `/api/telemetry/${year}/${event}/${sessionType}/${driver}`;
+    let endpoint = `/api/telemetry/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/${segmentoPiloto(driver)}`;
     if (lap !== undefined) {
-      endpoint += `?lap=${lap}`;
+      endpoint += `?lap=${numeroAcotado(lap, 1, 200)}`;
     }
     // Telemetry requests can be slow on first load
     return this.fetch<DriverTelemetryResponse>(endpoint, 60000);
@@ -182,13 +188,13 @@ class FastF1Client {
     lap2?: number
   ): Promise<TelemetryComparisonResponse> {
     const params = new URLSearchParams({
-      driver1,
-      driver2,
+      driver1: segmentoPiloto(driver1),
+      driver2: segmentoPiloto(driver2),
     });
-    if (lap1 !== undefined) params.append('lap1', lap1.toString());
-    if (lap2 !== undefined) params.append('lap2', lap2.toString());
+    if (lap1 !== undefined) params.append('lap1', String(numeroAcotado(lap1, 1, 200)));
+    if (lap2 !== undefined) params.append('lap2', String(numeroAcotado(lap2, 1, 200)));
 
-    const endpoint = `/api/telemetry/${year}/${event}/${sessionType}/compare?${params}`;
+    const endpoint = `/api/telemetry/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/compare?${params}`;
     return this.fetch<TelemetryComparisonResponse>(endpoint, 60000);
   }
 
@@ -206,9 +212,9 @@ class FastF1Client {
     sessionType: SessionType,
     driver?: string
   ): Promise<SessionLapsResponse> {
-    let endpoint = `/api/laps/${year}/${event}/${sessionType}`;
+    let endpoint = `/api/laps/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}`;
     if (driver) {
-      endpoint += `?driver=${driver}`;
+      endpoint += `?driver=${segmentoPiloto(driver)}`;
     }
     return this.fetch<SessionLapsResponse>(endpoint, 60000);
   }
@@ -229,8 +235,8 @@ class FastF1Client {
     driver: string,
     lap?: number
   ): Promise<TrackMapResponse> {
-    const query = lap ? `?lap=${lap}` : '';
-    const endpoint = `/api/telemetry/${year}/${event}/${sessionType}/${driver}/track${query}`;
+    const query = lap ? `?lap=${numeroAcotado(lap, 1, 200)}` : '';
+    const endpoint = `/api/telemetry/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/${segmentoPiloto(driver)}/track${query}`;
     return this.fetch<TrackMapResponse>(endpoint, 60000);
   }
 
@@ -240,7 +246,7 @@ class FastF1Client {
     event: string | number,
     sessionType: SessionType
   ): Promise<StintsResponse> {
-    const endpoint = `/api/laps/${year}/${event}/${sessionType}/stints`;
+    const endpoint = `/api/laps/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/stints`;
     return this.fetch<StintsResponse>(endpoint, 60000);
   }
 
@@ -250,7 +256,7 @@ class FastF1Client {
     sessionType: SessionType,
     limit: number = 10
   ): Promise<FastestLapsResponse> {
-    const endpoint = `/api/laps/${year}/${event}/${sessionType}/fastest?limit=${limit}`;
+    const endpoint = `/api/laps/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/fastest?limit=${numeroAcotado(limit, 1, 100)}`;
     return this.fetch<FastestLapsResponse>(endpoint, 60000);
   }
 
@@ -263,7 +269,7 @@ class FastF1Client {
     sessionType: SessionType,
     driver: string
   ): Promise<DriverLapAnalysisResponse> {
-    const endpoint = `/api/laps/${year}/${event}/${sessionType}/driver/${driver}/analysis`;
+    const endpoint = `/api/laps/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/driver/${segmentoPiloto(driver)}/analysis`;
     return this.fetch<DriverLapAnalysisResponse>(endpoint, 60000);
   }
 
@@ -279,7 +285,7 @@ class FastF1Client {
     event: string | number,
     sessionType: SessionType
   ): Promise<SessionWeatherResponse> {
-    const endpoint = `/api/weather/${year}/${event}/${sessionType}`;
+    const endpoint = `/api/weather/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}`;
     return this.fetch<SessionWeatherResponse>(endpoint);
   }
 
@@ -291,7 +297,7 @@ class FastF1Client {
    * Get the event schedule for a season
    */
   async getSeasonSchedule(year: number): Promise<SeasonScheduleResponse> {
-    const endpoint = `/api/sessions/${year}`;
+    const endpoint = `/api/sessions/${segmentoAnio(year)}`;
     return this.fetch<SeasonScheduleResponse>(endpoint);
   }
 
@@ -303,7 +309,7 @@ class FastF1Client {
     event: string | number,
     sessionType: SessionType
   ): Promise<SessionInfoResponse> {
-    const endpoint = `/api/sessions/${year}/${event}/${sessionType}/info`;
+    const endpoint = `/api/sessions/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/info`;
     return this.fetch<SessionInfoResponse>(endpoint, 60000);
   }
 
@@ -320,7 +326,7 @@ class FastF1Client {
     event: string | number,
     sessionType: SessionType
   ): Promise<SessionClassificationResponse> {
-    const endpoint = `/api/sessions/${year}/${event}/${sessionType}/classification`;
+    const endpoint = `/api/sessions/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/classification`;
     return this.fetch<SessionClassificationResponse>(endpoint, 60000);
   }
 }
