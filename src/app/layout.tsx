@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import type { Metadata, Viewport } from 'next';
 import { Chakra_Petch, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
@@ -80,11 +81,16 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // El número de un solo uso que autoriza los scripts de esta página. Lo genera
+  // el middleware, que es el único sitio donde puede ir a la vez en la cabecera
+  // de la respuesta y en el HTML.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
   return (
     <html lang="es" className={`${display.variable} ${inter.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="flex min-h-dvh flex-col" suppressHydrationWarning>
@@ -107,11 +113,13 @@ export default function RootLayout({
             llegaría tarde y se vería un fogonazo. No puede ir en un <head>
             escrito a mano porque App Router lo ignora. */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `try{var v=+localStorage.getItem('apexdata-viva')||0;if(Date.now()-v<10000)document.documentElement.setAttribute('data-reapertura','');}catch(e){}`,
           }}
         />
         <ThemeProvider
+          nonce={nonce}
           attribute="class"
           defaultTheme="system"
           enableSystem

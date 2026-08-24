@@ -20,6 +20,11 @@ const securityHeaders = [
     key: 'Permissions-Policy',
     value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
   },
+  // La política de contenido NO va aquí: la escribe `middleware.ts`, porque
+  // lleva un nonce distinto en cada petición y esto es una lista fija. Lo que
+  // sí queda es `frame-ancestors` para las rutas que el middleware no toca
+  // —archivos estáticos—, donde no hay documento que proteger pero tampoco
+  // cuesta nada.
   { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
 ];
 

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { Limitador, presupuestoDe, quienPide } from '@/lib/limite-peticiones';
+import { llevaPolitica, nuevoNonce, politicaDeContenido } from '@/lib/csp';
 
 /**
  * El límite de peticiones, aplicado antes que nada.
@@ -16,13 +17,20 @@ import { Limitador, presupuestoDe, quienPide } from '@/lib/limite-peticiones';
  * El estado vive en memoria del proceso. Con un solo contenedor eso es exacto;
  * si algún día hubiera varios, cada uno llevaría su cuenta y el límite real
  * sería el múltiplo. Se dice aquí para que no sorprenda.
+ *
+ * Aquí también nace el **nonce** de la política de contenido. Tiene que ser
+ * aquí y no en el layout porque debe ir en dos sitios a la vez: en la cabecera
+ * de la respuesta y en el HTML, y el layout solo puede escribir lo segundo.
+ * Viaja al layout como cabecera de la petición.
  */
 
 const limitador = new Limitador();
 
 export function middleware(peticion: NextRequest) {
-  const cupo = presupuestoDe(peticion.nextUrl.pathname);
-  if (!cupo) return NextResponse.next();
+  const ruta = peticion.nextUrl.pathname;
+  const cupo = presupuestoDe(ruta);
+
+  if (!cupo) return conPolitica(peticion, ruta);
 
   // La clave lleva la clase además de la dirección: cada tipo de ruta tiene su
   // propio cubo, así que gastarse la telemetría no cierra la puerta a lo barato.
@@ -32,7 +40,7 @@ export function middleware(peticion: NextRequest) {
     Date.now()
   );
 
-  if (permitida) return NextResponse.next();
+  if (permitida) return conPolitica(peticion, ruta);
 
   return NextResponse.json(
     {
@@ -51,6 +59,39 @@ export function middleware(peticion: NextRequest) {
   );
 }
 
+/**
+ * La respuesta, con su política y su nonce si es un documento.
+ *
+ * El nonce se pasa al layout por una cabecera de PETICIÓN: es la única forma de
+ * que el HTML lleve el mismo número que la cabecera de la respuesta. Leerlo en
+ * el layout hace que las páginas se sirvan siempre en el momento, que es lo que
+ * ya hacían casi todas.
+ */
+function conPolitica(peticion: NextRequest, ruta: string) {
+  if (!llevaPolitica(ruta)) return NextResponse.next();
+
+  const nonce = nuevoNonce();
+  const cabeceras = new Headers(peticion.headers);
+  cabeceras.set('x-nonce', nonce);
+
+  const respuesta = NextResponse.next({ request: { headers: cabeceras } });
+  respuesta.headers.set(
+    'Content-Security-Policy',
+    politicaDeContenido(nonce, process.env.NODE_ENV !== 'production')
+  );
+
+  return respuesta;
+}
+
 export const config = {
-  matcher: '/api/:path*',
+  matcher: [
+    /**
+     * Todo menos lo que no es un documento ni una ruta de datos.
+     *
+     * Los archivos con nombre de huella (`/_next/static/…`) se sirven miles de
+     * veces y no ejecutan nada: pasarlos por aquí sería trabajo por nada. Sus
+     * cabeceras las pone `next.config.ts`.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest|sw.js|images/|icons/|splash/).*)',
+  ],
 };

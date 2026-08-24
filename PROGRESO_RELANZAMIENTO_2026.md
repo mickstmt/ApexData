@@ -77,6 +77,33 @@
 
 ## Bitácora
 
+### 2026-08-24 (33) — La política de contenido, con nonce: el informe de seguridad queda cerrado ✅
+
+Lo último que quedaba abierto. La cabecera solo decía `frame-ancestors 'none'` —no me metas en un marco, y nada más—: sin `script-src`, un script inyectado se ejecutaría sin obstáculo y podría mandar lo que quisiera a donde quisiera. No tapa un agujero abierto, porque la auditoría buscó XSS y no encontró ninguno: es la red que decide qué pasa **si algún día lo hay**.
+
+**Con nonce y no con lista de dominios**, porque `script-src 'self'` no sirve de nada frente a un XSS: el script inyectado vive en la propia página, así que ya *es* «self». Lo único que distingue un script nuestro de uno metido por un atacante es un número que solo el servidor conoce y que cambia en cada petición. El nonce nace en el middleware —el único sitio que puede ponerlo a la vez en la cabecera de la respuesta y en el HTML— y viaja al layout como cabecera de la petición.
+
+**Comprobado en un navegador de verdad, con los tres vectores reales:**
+
+| Ataque | Resultado |
+|---|---|
+| `<img onerror=…>` metido por el marcado | bloqueado |
+| `<script src="https://…">` por el marcado | bloqueado |
+| `<base href>` desviando las rutas relativas | bloqueado |
+| `fetch()` a un host ajeno | bloqueado |
+
+Y cero violaciones recorriendo las diez pantallas más el cambio de tema.
+
+**Un aviso para quien pruebe esto en el futuro**: el primer intento pareció fallar —«el script inyectado sí se ejecuta»—, y era un artefacto de la prueba: `page.evaluate` inyecta por el depurador, que **no pasa por la política**. Crear un `<script>` así «funciona» y no demuestra nada. Hay que probarlo a través del marcado, que es como llega un XSS de verdad. Las tres pruebas de navegador nuevas lo hacen así, con el porqué escrito al lado.
+
+**`style-src` admite `'unsafe-inline'` a propósito**, y conviene que conste: React escribe los `style={{…}}` como atributos, Tailwind inyecta su hoja y framer-motion cambia transformaciones en cada fotograma. Ponerles nonce exigiría reescribir media interfaz para protegerse de una inyección de CSS que, con `script-src` cerrado, tiene alcance muy corto.
+
+**De paso**: la prueba del calendario fallaba una de cada dos veces en tanda completa. La marca de «la carrera que toca» la pinta el navegador tras hidratar —depende de qué hora es ahora, y eso el servidor no lo sabe—, y con la máquina cargada eso pasa de los cinco segundos por defecto.
+
+**Verificación**: lint 0 · 204 unitarias · 51 de navegador · los tres vectores comprobados contra el build de producción.
+
+**Con esto, el informe de seguridad del 2026-08-24 queda cerrado entero.**
+
 ### 2026-08-24 (32) — Una petición pesada ya no deja al servicio sin atender a nadie ✅
 
 El último hallazgo de la auditoría con arreglo pendiente. Las rutas del servicio estaban declaradas `async def` pero llamaban a `session.load()` dentro, es decir, **en el propio bucle de eventos**: descargar una sesión entera —36 segundos medidos la primera vez— dejaba al servicio incapaz de responder a nada más, ni siquiera a la comprobación de salud. Con un solo proceso y sin límite de peticiones, unas veinte peticiones a sesiones distintas eran doce minutos de telemetría caída a coste cero para quien las lanzara.
@@ -140,7 +167,7 @@ Esa es la respuesta del **servicio**, no la de la web. El servicio se dejó sin 
 
 **Verificación**: los cuatro vectores comprobados cortados contra el build de producción (travesía con año válido, query inyectada, piloto inyectado y destino de push interno: los cuatro 400) y una petición legítima intacta. lint 0 · 176 unitarias · 48 de navegador.
 
-**Queda abierto y anotado**: ~~no hay límite de peticiones~~ → hecho el mismo día (bitácora 31). ~~y en el servicio `session.load()` bloquea el único worker~~ → hecho el mismo día (bitácora 32). Sigue abierto solo: la CSP trae únicamente `frame-ancestors`.
+**Queda abierto y anotado**: ~~no hay límite de peticiones~~ → hecho el mismo día (bitácora 31). ~~y en el servicio `session.load()` bloquea el único worker~~ → hecho el mismo día (bitácora 32). ~~la CSP trae únicamente `frame-ancestors`~~ → hecho el mismo día (bitácora 33). **No queda nada abierto del informe.**
 
 ### 2026-08-24 (29) — El agrupado a su sitio, la huella de cada despliegue, y una prueba que dependía del domingo ✅
 
