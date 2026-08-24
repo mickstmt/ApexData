@@ -1118,11 +1118,16 @@ test.describe('márgenes en móvil', () => {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto(ruta);
 
-      // Se espera al contenido antes de medir: un documento a medio pintar es
-      // otro documento, y con la base cargada eso pasa de los cinco segundos.
+      // Se espera al contenido Y a que la página asiente antes de medir.
+      //
+      // Un documento a medio pintar es otro documento: con solo esperar al
+      // contenido, `/drivers` dio 400 px una vez y 390 las tres siguientes —una
+      // imagen aún sin dimensionar ocupa lo que quiera durante un instante—. La
+      // prueba vigila el ancho final, no el de un fotograma intermedio.
       await expect(page.locator('main, [role="main"], #contenido').first()).toBeVisible({
         timeout: 30_000,
       });
+      await page.waitForLoadState('networkidle');
 
       const ancho = await page.evaluate(() => ({
         documento: document.documentElement.scrollWidth,

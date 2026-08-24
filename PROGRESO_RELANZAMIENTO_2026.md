@@ -69,13 +69,32 @@
 
 1. ~~**Desplegar la web y el servicio de telemetría en EasyPanel**~~ → ambos hechos: la web el 2026-08-17 y la telemetría el 2026-08-18, con el volumen en `/app/cache` y `FASTF1_SERVICE_URL` ya configurada. ~~Comprobación de cutover del CI~~ → resuelta.
 2. ~~**Pulsar *Deploy* en el servicio de telemetría** por el endpoint `/classification`~~ → hecho el 2026-08-22, comprobado en producción: `/api/clasificacion/2026/12/SQ` devuelve los 22 puestos y la pestaña del sprint enseña la parrilla. Recordatorio permanente: **el servicio de telemetría no se despliega solo**; cualquier cambio bajo `python-service/` necesita pulsar *Deploy* a mano en panel.dittochatbot.com.
-3. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
-4. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
-5. 🔴 **Pulsar *Deploy* del servicio**: el agrupado de `/fastest` por piloto y la huella de arranque **ya están en el repo** (2026-08-24, bitácora 29), pero el servicio no se despliega solo. Comprobado ese día a las 09:40 hora de Lima: producción seguía devolviendo pilotos repetidos con `limit=7` y `limit=9` —claves de caché nuevas, así que no era caché—, señal de que el contenedor aún corría el código anterior. **Cómo confirmarlo**: en la consola del servicio, la primera línea al arrancar debe decir `ApexData Telemetry v1.0.0 desplegado y arrancado: … UTC (… hora de Lima)`. Si esa línea no aparece, el Deploy no entró. Mientras tanto no se rompe nada: la web sigue agrupando en el navegador.
+3. 🔔 **Activar los avisos push**: abrir la app instalada en la pantalla de inicio, entrar a **Favoritos** y pulsar el boton de avisos. Comprobado el 2026-08-24: la base tiene **cero suscripciones**, asi que el aviso del GP de Paises Bajos se envio a nadie aunque la carrera quedara marcada como avisada. La cadena entera esta probada salvo este ultimo paso, que solo se puede dar desde un telefono.
+4. **6 logos de equipo** que no están en fuentes libres (son marcas registradas): Ferrari, Red Bull, Aston Martin, RB, Cadillac y AlphaTauri. Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
+5. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
+6. 🔴 **Pulsar *Deploy* del servicio**: el agrupado de `/fastest` por piloto y la huella de arranque **ya están en el repo** (2026-08-24, bitácora 29), pero el servicio no se despliega solo. Comprobado ese día a las 09:40 hora de Lima: producción seguía devolviendo pilotos repetidos con `limit=7` y `limit=9` —claves de caché nuevas, así que no era caché—, señal de que el contenedor aún corría el código anterior. **Cómo confirmarlo**: en la consola del servicio, la primera línea al arrancar debe decir `ApexData Telemetry v1.0.0 desplegado y arrancado: … UTC (… hora de Lima)`. Si esa línea no aparece, el Deploy no entró. Mientras tanto no se rompe nada: la web sigue agrupando en el navegador.
 
 ---
 
 ## Bitácora
+
+### 2026-08-24 (38) — El CI rojo del domingo, y el aviso push que no llego a nadie ✅
+
+El usuario reporto un aviso de fallo de CI un domingo, sin estar trabajando. No era CI: era **«Refresh after each session»**, el tic horario, y falla solo una vez en todo el dia — **el de las 16:24 UTC, el primero tras la bandera a cuadros**. El de las 17:19 sembro la carrera sin novedad.
+
+**La causa probable, y el hueco que la deja pasar**: `fetchJolpica` reintentaba si le limitaban las peticiones (429), pero **un 5xx reventaba al primer intento**, y una caida de red ni se reintentaba. Diez minutos despues de una carrera, media aficion pide los resultados a la vez. Ahora se reintentan las tres cosas con espera creciente —5, 10, 20 s— y, cuando la fuente no responde tras cuatro intentos, el guion **se va en silencio con codigo 0**: la razon de ser del tic horario es volver a intentarlo dentro de una hora, no pintar el repositorio de rojo y avisar al usuario un domingo por la manana.
+
+**No se pudo leer el registro** —GitHub lo sirve solo con credenciales—, asi que ademas se arreglo eso: los dos sembradores escriben ahora `::warning::` y `::error::`, que salen en el resumen de la ejecucion **y se leen por API sin autenticacion**. La proxima vez el motivo estara a la vista sin tener que deducirlo.
+
+**Y el aviso push del domingo: se envio a cero telefonos.** Hay **cero suscripciones guardadas** en la base, y la carrera quedo marcada como avisada igualmente. Desde fuera parecia que los avisos funcionaban: el flujo en verde y ni una palabra. Ahora, si no hay a quien avisar, se dice con un `::warning::`, y tambien si habia suscripciones y no se entrego ninguna.
+
+La cadena completa esta bien montada —claves VAPID, service worker, envio, marca idempotente—; lo que falta es que alguien se suscriba. El boton vive **solo en `/favorites`**, y hace falta tener la app instalada en la pantalla de inicio.
+
+**De paso**: la prueba de desborde de `/drivers` fallo una vez dando 400 px y las tres siguientes 390. Media antes de que la pagina asentara —una imagen aun sin dimensionar ocupa lo que quiera durante un instante—; ahora espera a que la red se calme, porque lo que vigila es el ancho final y no el de un fotograma intermedio.
+
+**Verificacion**: lint 0 · 230 unitarias · 71 de navegador bajo la restriccion del CI (una sola conexion), cero inestables.
+
+**Pendiente del usuario**: entrar a **Favoritos** desde la app instalada y activar los avisos. Sin eso, el domingo que viene volvera a enviarse a nadie — con la diferencia de que ahora el flujo lo dira.
 
 ### 2026-08-24 (37) — La ficha de piloto: de 1,3 s a 30 ms, y una caché que creía funcionar ✅
 

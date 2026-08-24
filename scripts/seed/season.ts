@@ -17,6 +17,7 @@ import {
   upsertRace,
   classifiedPosition,
   type JolpicaRace,
+  FuenteNoDisponibleError,
 } from './jolpica';
 import { anosPedidos, PRIMERA_TEMPORADA_SPRINT } from './temporadas';
 
@@ -227,6 +228,29 @@ async function main() {
 main()
   .catch((error) => {
     console.error('\n❌ Error:', error);
+    /**
+     * Un tropiezo de la fuente no es un fallo nuestro.
+     *
+     * Este guion lo llama el tic horario, cuya razon de ser es **volver a
+     * intentarlo**: si Jolpica esta saturada diez minutos despues de una
+     * carrera, lo correcto es irse en silencio y probar dentro de una hora, no
+     * pintar el repositorio de rojo y avisar al usuario un domingo por la
+     * manana. Paso el 2026-08-23 a las 16:24 UTC, el primer tic tras la bandera
+     * a cuadros; el de las 17:19 sembro la carrera sin novedad.
+     *
+     * Se deja constancia con un `::warning::`, que GitHub ensena en el resumen
+     * de la ejecucion **y sirve por API sin credenciales** — a diferencia del
+     * registro, que las exige. La proxima vez se podra leer el motivo sin
+     * entrar a mirar.
+     */
+    if (error instanceof FuenteNoDisponibleError) {
+      console.warn(`::warning::La fuente no respondio: ${error.message}`);
+      console.warn('::warning::No se siembra nada esta vez; el siguiente intento lo recogera.');
+      process.exit(0);
+    }
+
+    // Cualquier otra cosa SI es un fallo, y se cuenta de forma legible por API.
+    console.error(`::error::${(error as Error)?.message ?? error}`);
     process.exit(1);
   })
   .finally(async () => {

@@ -96,18 +96,52 @@ export interface JolpicaQualifyingResult {
 // Shared with the app so both read a result the same way.
 export { classifiedPosition } from '../../src/lib/results';
 
+/**
+ * La fuente no responde, y no es culpa nuestra.
+ *
+ * Se distingue de cualquier otro fallo a propósito: un tropiezo de Jolpica es
+ * un motivo para volver a intentarlo dentro de una hora, no para pintar el
+ * repositorio de rojo. El 2026-08-23, el tic de las 16:24 UTC —el primero tras
+ * la bandera a cuadros— murió aquí y le llegó al usuario un aviso de fallo un
+ * domingo por la mañana; el de las 17:19 sembró la carrera sin novedad.
+ */
+export class FuenteNoDisponibleError extends Error {
+  constructor(mensaje: string) {
+    super(mensaje);
+    this.name = 'FuenteNoDisponibleError';
+  }
+}
+
+const INTENTOS = 4;
+
 export async function fetchJolpica<T>(path: string): Promise<T | null> {
   const url = `${BASE_URL}${path}`;
+  let ultimo = '';
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+  for (let intento = 1; intento <= INTENTOS; intento++) {
+    let response: Response;
+
+    try {
+      response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    } catch (error) {
+      // La red se cayó a mitad. Antes esto ni se intentaba de nuevo: la promesa
+      // de `fetch` se rechazaba y el sembrado entero moría.
+      ultimo = `sin respuesta (${(error as Error).message})`;
+      await esperar(intento);
+      continue;
+    }
 
     if (response.status === 404) return null;
 
-    if (response.status === 429) {
-      const wait = attempt * 5000;
-      console.log(`     ⏳ Rate limit, esperando ${wait / 1000}s...`);
-      await sleep(wait);
+    // 429 es «vas muy rápido»; 5xx es «estoy mal ahora mismo». Las dos se
+    // arreglan esperando, y ninguna es un error de este programa. Antes solo se
+    // reintentaba la primera, y un 502 pasajero tumbaba la ejecución al primer
+    // intento — que es justo lo que pasa cuando media afición pide los
+    // resultados a la vez, diez minutos después de una carrera.
+    if (response.status === 429 || response.status >= 500) {
+      ultimo = `${response.status} ${response.statusText}`;
+      console.log(`     ⏳ Jolpica responde ${ultimo}; intento ${intento} de ${INTENTOS}.`);
+      await esperar(intento);
       continue;
     }
 
@@ -119,7 +153,14 @@ export async function fetchJolpica<T>(path: string): Promise<T | null> {
     return (await response.json()) as T;
   }
 
-  throw new Error(`Jolpica sigue limitando las peticiones tras 3 intentos en ${path}`);
+  throw new FuenteNoDisponibleError(
+    `Jolpica no respondió tras ${INTENTOS} intentos en ${path} (lo último: ${ultimo}).`
+  );
+}
+
+/** Espera creciente entre intentos: 5, 10, 20 segundos. */
+function esperar(intento: number) {
+  return sleep(5000 * 2 ** (intento - 1));
 }
 
 export async function upsertDriver(driver: JolpicaDriver) {

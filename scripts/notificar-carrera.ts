@@ -97,6 +97,29 @@ async function main() {
     `Enviados: ${resultado.enviados} | caducados y borrados: ${resultado.caducados} | fallidos: ${resultado.fallidos}`
   );
 
+  /**
+   * Cero suscripciones no es un exito silencioso.
+   *
+   * Tal como estaba, mandar a nadie y marcar la carrera como avisada se leia
+   * exactamente igual que un envio correcto: en verde y sin una palabra. Paso
+   * con el GP de Paises Bajos del 2026-08-23 —la carrera quedo marcada a las
+   * 17:22 UTC y no habia ni una suscripcion guardada—, y desde fuera parecia
+   * que los avisos funcionaban.
+   *
+   * El `::warning::` sale en el resumen de la ejecucion y se puede leer por API
+   * sin credenciales, asi que la proxima vez se ve sin entrar a mirar.
+   */
+  if (suscritos === 0) {
+    console.warn('::warning::No hay ninguna suscripcion guardada: el aviso no ha llegado a nadie.');
+    console.warn(
+      '::warning::Se activan desde /favorites, con la app instalada en la pantalla de inicio.'
+    );
+  } else if (resultado.enviados === 0) {
+    console.warn(
+      `::warning::Habia ${suscritos} suscripciones y no se entrego ninguna (${resultado.fallidos} fallidas, ${resultado.caducados} caducadas).`
+    );
+  }
+
   // Se marca aunque no hubiera nadie suscrito: la carrera ya está contada, y
   // dejarla sin marcar haría que el aviso saliera la semana siguiente, cuando
   // ya no es noticia.
