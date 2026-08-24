@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { aggregateSeasons, compareDuels, type SeasonAggregate } from '@/lib/results';
 
@@ -135,3 +136,119 @@ export async function getHeadToHead(
     qualifying: compareDuels(teamQualifying, driverPk, teammatePk),
   };
 }
+
+/**
+ * La última temporada en la que corrió, en una consulta suelta y barata.
+ *
+ * Existe para romper una cadena: el cara a cara necesita saber el año, y hasta
+ * ahora lo sacaba del resultado de `getDriverStats`, así que no podía empezar
+ * hasta que aquella terminaba. Preguntándolo aparte, las dos arrancan a la vez.
+ */
+async function ultimaTemporada(driverPk: string): Promise<number | null> {
+  const ultimo = await prisma.result.findFirst({
+    where: { driverId: driverPk },
+    orderBy: [{ race: { year: 'desc' } }, { race: { round: 'desc' } }],
+    select: { race: { select: { year: true } } },
+  });
+
+  return ultimo?.race.year ?? null;
+}
+
+/**
+ * Todo lo que la ficha de piloto enseña por debajo de la cabecera, cacheado.
+ *
+ * Medido antes de esto contra la base de producción: la ficha tardaba **1,8–2,0
+ * segundos** en completarse. El primer byte llegaba en 70 ms —el `<Suspense>` ya
+ * estaba puesto y funcionaba—, pero las estadísticas se hacían esperar casi dos
+ * segundos porque eran **tres viajes encadenados**: estadísticas, luego el
+ * equipo de la última temporada, luego los datos de ese equipo.
+ *
+ * Aquí se arreglan las dos cosas. Una: el año de la última temporada se pregunta
+ * en paralelo con las estadísticas, así que el cara a cara arranca antes.
+ *
+ * Y dos, la que de verdad cuenta: **esto es historia**. Lo que hizo Alonso en
+ * 2011 no va a cambiar, y lo de esta temporada cambia como mucho una vez por
+ * fin de semana. Guardarlo una hora convierte una página lenta en una instantánea
+ * para todo el mundo menos para quien llegue primero — el mismo trato que ya
+ * tienen la clasificación general y el selector de telemetría.
+ */
+export const getDriverPerformance = unstable_cache(
+  async (driverPk: string) => {
+    const [stats, ultima] = await Promise.all([
+      getDriverStats(driverPk),
+      ultimaTemporada(driverPk),
+    ]);
+
+    const headToHead = ultima ? await getHeadToHead(driverPk, ultima) : null;
+
+    return { stats, headToHead };
+  },
+  ['driver-performance'],
+  { revalidate: 3600 }
+);
+
+/**
+ * La cabecera de la ficha: el piloto y sus diez últimos resultados.
+ *
+ * Se cachea por la misma razón que el resto, y porque era lo que quedaba
+ * mandando: con el bloque de estadísticas ya guardado, esta consulta —un piloto
+ * con diez resultados y sus uniones a carrera, circuito y equipo— seguía
+ * corriéndose entera en cada visita y era la que fijaba el tiempo de la página.
+ *
+ * Devuelve `null` cuando no existe ese piloto, y eso también se guarda: una
+ * dirección inventada no debería costar una consulta cada vez que alguien la
+ * pida. Los errores NO se cachean —se dejan propagar— porque guardar un fallo
+ * de conexión una hora convertiría un tropiezo en una avería.
+ *
+ * ## Por qué `select` y no `include`
+ *
+ * No es estilo: con `include` esto **no se cacheaba en absoluto**. La caché de
+ * Next guarda serializando a JSON, y `Result.milliseconds` es un `BigInt`, que
+ * `JSON.stringify` no sabe convertir. Cada petición lanzaba un
+ * «Do not know how to serialize a BigInt» que moría como rechazo no capturado
+ * —sin romper la página, así que no se veía— y la consulta se repetía entera:
+ * 1.320 ms en cada visita, medidos, con la caché puesta y creyendo que
+ * funcionaba.
+ *
+ * Enumerar los campos arregla las dos cosas a la vez: deja fuera el `BigInt` y
+ * evita traer columnas que la ficha no enseña. Son los siete que se pintan.
+ */
+export const getDriverFicha = unstable_cache(
+  async (driverId: string) => {
+    return prisma.driver.findUnique({
+      where: { driverId },
+      select: {
+        id: true,
+        driverId: true,
+        givenName: true,
+        familyName: true,
+        code: true,
+        permanentNumber: true,
+        dateOfBirth: true,
+        nationality: true,
+        url: true,
+        imageUrl: true,
+        results: {
+          take: 10,
+          orderBy: { race: { date: 'desc' } },
+          select: {
+            id: true,
+            position: true,
+            points: true,
+            race: {
+              select: {
+                year: true,
+                round: true,
+                raceName: true,
+                circuit: { select: { name: true } },
+              },
+            },
+            team: { select: { constructorId: true, name: true } },
+          },
+        },
+      },
+    });
+  },
+  ['driver-ficha'],
+  { revalidate: 3600 }
+);

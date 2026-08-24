@@ -77,6 +77,30 @@
 
 ## Bitácora
 
+### 2026-08-24 (37) — La ficha de piloto: de 1,3 s a 30 ms, y una caché que creía funcionar ✅
+
+El último pendiente de rendimiento. Y empezó desmintiendo al propio documento: **el `<Suspense>` ya estaba puesto** desde el 19 de agosto —otra viñeta rancia— y funcionaba: el primer byte llegaba en 70 ms. Lo que seguía mal era la espera, no el arranque.
+
+**Medido antes de tocar nada**, contra la base de producción: la ficha tardaba **1,8–2,0 s** en completarse, y por dentro eran **tres viajes encadenados** —estadísticas, luego el equipo de la última temporada, luego los datos de ese equipo—, ninguno cacheado. Dos arreglos: el año de la última temporada se pregunta en paralelo con las estadísticas, y todo el bloque se guarda una hora, porque esto es historia. Lo que hizo Alonso en 2011 no va a cambiar.
+
+**Y entonces la medición dijo que faltaba algo.** Con el bloque cacheado la página seguía tardando 1,34 s, siempre lo mismo. Instrumentando por dentro salió el reparto: `getDriverPerformance` **1 ms**, y `getDriverFicha` **1.320 ms aunque estuviera cacheada**.
+
+**No se estaba cacheando, y fallaba en silencio.** La caché de Next guarda serializando a JSON, y `Result.milliseconds` es un `BigInt`, que `JSON.stringify` no sabe convertir. Cada petición lanzaba un `Do not know how to serialize a BigInt` que moría como rechazo no capturado: no rompía la página, así que no se veía en ningún sitio, y la consulta se repetía entera. Es exactamente el tipo de fallo que una suite verde no encuentra.
+
+El arreglo es enumerar los campos con `select` en vez de `include`: deja fuera el `BigInt` y de paso no trae columnas que la ficha no enseña. Son los siete que se pintan.
+
+| | Antes | Después |
+|---|---|---|
+| Primer byte | 70 ms | 30 ms |
+| Página completa (en caliente) | **1.340 ms** | **30 ms** |
+| Rechazos no capturados por visita | 1 | 0 |
+
+**Y se barrió la app entera** buscando el mismo fallo escondido —trece pantallas, dos visitas cada una—: **cero rechazos no capturados**. Ninguna otra caché toca ese campo.
+
+**Verificación**: lint 0 · 230 unitarias · 71 de navegador · medición antes/después contra la base de producción.
+
+**Nota medida para más adelante**: quedan páginas sin cachear que se notan —portada 3,2 s, clasificación 2,8 s, ficha de carrera 2,2 s, medidas desde esta máquina, que está al doble de distancia de la base que el servidor—. No se tocan aquí porque algunas enseñan cosas que cambian sin parar (la cuenta atrás de la portada) y merecen decidirse una a una.
+
 ### 2026-08-24 (36) — Quién manda en cada parte del circuito ✅
 
 La pareja del delta, y la que lo hace legible para quien no se sepa el trazado de memoria. El delta dice **cuánto** se gana y se pierde a lo largo de la vuelta; esto dice **dónde**, sobre el asfalto: el circuito partido en veinticinco tramos, cada uno del color de quien menos tardó en pasarlo.

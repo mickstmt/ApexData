@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Calendar, Flag, Hash, Trophy, Medal, Timer, Zap } from 'lucide-react';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DriverAvatar } from '@/components/ui/OptimizedImage';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { TimingRow } from '@/components/ui/TimingRow';
-import { getDriverStats, getHeadToHead } from '@/lib/driver-stats';
+import { getDriverFicha, getDriverPerformance } from '@/lib/driver-stats';
 import { teamColor } from '@/lib/team-colors';
 import { driverAge, formatBirthDate } from '@/lib/driver-age';
 
@@ -25,7 +24,10 @@ export async function generateMetadata({ params }: DriverDetailPageProps) {
   const { driverId } = await params;
 
   try {
-    const driver = await prisma.driver.findUnique({ where: { driverId } });
+    // La misma copia guardada que usa la página, no una consulta aparte: Next
+    // espera a los metadatos antes de soltar la cabecera del documento, así que
+    // una consulta suya sin cachear se pagaba en cada visita y retrasaba TODO.
+    const driver = await getDriverFicha(driverId);
 
     if (driver) {
       return {
@@ -66,10 +68,13 @@ function StatTile({
  * Todo lo que exige consultar más allá de la ficha: las estadísticas de
  * carrera, el cara a cara con el compañero y la tabla por temporada.
  *
- * Vive en su propio `<Suspense>` porque son cinco consultas más —y encadenadas
- * entre sí, porque el cara a cara necesita saber antes cuál fue la última
- * temporada—. Con la base de datos a 100 ms de ida y vuelta en el mejor caso,
- * eso era medio segundo largo en el que no se veía ni el nombre del piloto.
+ * Vive en su propio `<Suspense>` porque son cinco consultas más, y sin él no se
+ * veía ni el nombre del piloto hasta que terminaban todas.
+ *
+ * El `<Suspense>` arregló el primer byte —70 ms medidos— pero no la espera: la
+ * ficha seguía tardando **1,8-2,0 segundos** en completarse. Eso lo arregla
+ * `getDriverPerformance`, que paraleliza lo que se puede y guarda el resultado
+ * una hora, porque esto es historia y no cambia. Ver ahí el porqué.
  */
 async function DriverPerformance({
   driverId,
@@ -78,9 +83,7 @@ async function DriverPerformance({
   driverId: string;
   accentColor: string;
 }) {
-  const stats = await getDriverStats(driverId);
-  const latestSeason = stats.seasons[0];
-  const headToHead = latestSeason ? await getHeadToHead(driverId, latestSeason.year) : null;
+  const { stats, headToHead } = await getDriverPerformance(driverId);
 
   return (
     <>
@@ -246,19 +249,7 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
   let hasError = false;
 
   try {
-    driver = await prisma.driver.findUnique({
-      where: { driverId },
-      include: {
-        results: {
-          take: 10,
-          orderBy: { race: { date: 'desc' } },
-          include: {
-            race: { include: { circuit: true } },
-            team: true,
-          },
-        },
-      },
-    });
+    driver = await getDriverFicha(driverId);
   } catch (error) {
     console.error('Error fetching driver:', error);
     hasError = true;
