@@ -881,6 +881,16 @@ test.describe('dispersión de tiempos por vuelta', () => {
 
   test('cada vuelta es un punto, y el resumen dice ritmo y constancia', async ({ page }) => {
     await page.goto('/analysis');
+
+    // Los pilotos del resumen se eligen a mano, no se heredan: la tabla
+    // enseña los dos pilotos de los selectores, y los selectores abren con
+    // los dos primeros de la última carrera con datos — que cambian cada
+    // domingo. Esta prueba estuvo verde hasta que el GP de Países Bajos
+    // sembró un podio distinto y el segundo por defecto dejó de estar en el
+    // fixture: dependía de producción sin saberlo.
+    await page.getByLabel('Piloto 1').selectOption('VER');
+    await page.getByLabel('Piloto 2').selectOption('NOR');
+
     await page.getByRole('button', { name: /Carrera vuelta a vuelta/ }).click();
 
     const grafico = page.locator('canvas[aria-label*="Dispersión"]');

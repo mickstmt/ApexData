@@ -77,6 +77,20 @@
 
 ## Bitácora
 
+### 2026-08-24 (29) — El agrupado a su sitio, la huella de cada despliegue, y una prueba que dependía del domingo ✅
+
+Primera sesión tras el fin de semana. Antes de nada, la comprobación grande: **el sistema entero funcionó solo** — sprint, clasificación y carrera del GP de Países Bajos sembrados automáticamente (22 filas cada uno, ganó Norris), y el aviso push enviado el domingo a las 12:22 hora del usuario.
+
+**El agrupado por piloto pasa al servicio.** La sesión de casa lo resolvió desde el navegador —pedir 2.000 vueltas y reducirlas en el teléfono— porque no podía desplegar el servicio, y lo dejó anotado. Ahora `/fastest` devuelve **la mejor vuelta de cada piloto**, una por cabeza y ordenadas: `limit` cuenta pilotos, no vueltas. La clave de caché cambia a `_v2` para que producción no sirva respuestas viejas sin agrupar. El apaño del navegador se queda como red de seguridad: es idempotente.
+
+**Cada arranque deja huella, a petición del usuario.** No había forma de mirar la consola del panel y saber si un Deploy entró de verdad o se estaba leyendo un contenedor de hace días. Ahora ambos lados escriben al arrancar fecha y hora en UTC y en hora de Lima: el servicio con su ciclo de vida (`ApexData Telemetry v1.0.0 desplegado y arrancado: …`) y la web con `src/instrumentation.ts`, que además dice el build (`[ApexData] Desplegado y arrancado: … · build …`).
+
+**Una prueba rota por el resultado del domingo.** La dispersión de tiempos estuvo verde hasta que el GP de Países Bajos sembró un podio distinto: la tabla resume los dos pilotos de los selectores, que abren con los dos primeros de la última carrera con datos — y el segundo dejó de ser uno de los del fixture. La prueba dependía de producción sin saberlo; ahora elige VER y NOR a mano.
+
+**Verificación**: lint 0 · 162 unitarias · 48 de navegador · 41 de pytest · huellas de arranque comprobadas en ambos lados · agrupado verificado contra la PL1 real (22 filas, 22 pilotos, cero repetidos, Antonelli 1:12.949 primero).
+
+**Pendiente del usuario**: pulsar Deploy del servicio para estrenar el agrupado y la huella (el Deploy que corrió hoy temprano era de código sin cambios, no estrenó nada).
+
 ### 2026-08-23 (28) — El calendario abría por marzo, y un recuadro vacío al lado de la carrera ✅
 
 Tres cosas pedidas por el usuario sobre la app ya desplegada.

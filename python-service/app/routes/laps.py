@@ -168,12 +168,17 @@ async def get_fastest_laps(
     limit: int = Query(10, description="Number of fastest laps to return"),
 ):
     """
-    Get the fastest laps from a session
+    The best lap OF EACH DRIVER, quickest first.
 
-    Returns the top N fastest laps with driver info and lap details
+    One row per driver, not the N quickest laps of the session: measured on
+    Zandvoort FP1, the twenty quickest laps belonged to only ten drivers —
+    Piastri and Leclerc three times each — which reads as a leaderboard but is
+    not one. `limit` therefore counts drivers. The page was compensating by
+    asking for two thousand laps and reducing them in the browser; grouping
+    belongs here, where the laps already are.
     """
     try:
-        cache_key = f"fastest_laps_{year}_{event}_{session_type}_{limit}"
+        cache_key = f"fastest_laps_v2_{year}_{event}_{session_type}_{limit}"
 
         cached_data = cache_manager.get(cache_key)
         if cached_data is not None:
@@ -186,8 +191,12 @@ async def get_fastest_laps(
         # Filter out invalid laps
         laps = laps[laps['LapTime'].notna()]
 
-        # Sort by lap time and get top N
-        fastest = laps.sort_values('LapTime').head(limit)
+        # Each driver's single best lap, then quickest first.
+        fastest = (
+            laps.loc[laps.groupby('Driver')['LapTime'].idxmin()]
+            .sort_values('LapTime')
+            .head(limit)
+        )
 
         result = {
             "session": {
