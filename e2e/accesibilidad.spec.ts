@@ -1400,7 +1400,12 @@ test.describe('ficha de circuito', () => {
     // mismo. Con el año como clave, las dos filas compartían identificador:
     // desplegar una abría las dos.
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/circuits/red_bull_ring');
+
+    // `domcontentloaded` y no el `load` por defecto: esta ficha lleva banderas,
+    // fotos y el trazado, y esperar a que carguen TODAS las imágenes agotaba el
+    // minuto de la prueba en CI. Lo que se comprueba aquí es el marcado, que
+    // está desde el primer momento.
+    await page.goto('/circuits/red_bull_ring', { waitUntil: 'domcontentloaded' });
 
     const de2021 = page.locator('[aria-controls^="detalle-2021"]');
     await expect(de2021).toHaveCount(2);

@@ -58,6 +58,17 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3100',
     trace: 'on-first-retry',
+    /**
+     * Navegar tiene su propio límite, más largo que el de una aserción.
+     *
+     * `page.goto` espera por defecto al evento `load`, que no llega hasta que
+     * han cargado **todas las imágenes**. Una ficha de circuito lleva banderas,
+     * fotos y el trazado, y en CI —con dos procesos compartiendo una sola
+     * conexión a la base— eso se pasaba de los sesenta segundos del límite de
+     * la prueba entera: el fallo salía como «test timeout» y no como lo que
+     * era, una navegación lenta.
+     */
+    navigationTimeout: process.env.CI ? 45_000 : 20_000,
   },
   projects: [
     {

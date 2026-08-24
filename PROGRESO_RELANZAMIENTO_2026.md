@@ -95,6 +95,8 @@ El gráfico que faltaba, y el que de verdad hacía falta. Las trazas de velocida
 
 **Verificación**: lint 0 · 218 unitarias · 68 de navegador · 51 de pytest · comprobado contra los datos reales de Zandvoort en los dos temas, cero errores de consola.
 
+**Y una consecuencia de crecer**: con 68 pruebas en vez de 51, el CI tumbó una que antes pasaba —la ficha del Red Bull Ring, agotando el minuto entero en `page.goto`—. La causa no era la prueba: `goto` espera por defecto al evento `load`, que no llega hasta que han cargado **todas las imágenes**, y esa ficha lleva banderas, fotos y el trazado. Ahora navegar tiene su propio límite, separado del de la prueba, y esa ficha carga sin esperar a las imágenes, que no es lo que comprueba. Verificado reproduciendo la restricción del CI en local —una sola conexión a la base—: 68 de 68, cero inestables, 8,5 minutos.
+
 ### 2026-08-24 (34) — La prueba de desborde, en las catorce pantallas — y lo que encontró ✅
 
 La prueba de que la app no se sale a lo ancho existía solo para la portada, porque fue ahí donde se vio el defecto. Pero el defecto no era de la portada: era de una rejilla cuyos hijos no encogían por debajo de su contenido, y ese patrón está en media app. Ahora hay una prueba por pantalla, catorce en total.
