@@ -38,7 +38,7 @@ async def get_session_weather(
         if cached_data is not None:
             return cached_data
 
-        session = load_session(year, event, session_type)
+        session = await load_session(year, event, session_type)
 
         weather = session.weather_data
 

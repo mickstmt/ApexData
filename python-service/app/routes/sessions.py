@@ -97,7 +97,7 @@ async def get_session_info(year: int, event: str, session_type: str):
         if cached_data is not None:
             return cached_data
 
-        session = load_session(year, event, session_type)
+        session = await load_session(year, event, session_type)
 
         # Get session results
         results = session.results if hasattr(session, 'results') else None

@@ -43,7 +43,7 @@ async def get_session_laps(
         if cached_data is not None:
             return cached_data
 
-        session = load_session(year, event, session_type)
+        session = await load_session(year, event, session_type)
 
         laps = session.laps
 
@@ -118,7 +118,7 @@ async def get_session_stints(
         if cached_data is not None:
             return cached_data
 
-        session = load_session(year, event, session_type)
+        session = await load_session(year, event, session_type)
 
         if session.laps.empty:
             raise HTTPException(status_code=404, detail="No lap data available for this session")
@@ -184,7 +184,7 @@ async def get_fastest_laps(
         if cached_data is not None:
             return cached_data
 
-        session = load_session(year, event, session_type)
+        session = await load_session(year, event, session_type)
 
         laps = session.laps
 
@@ -243,7 +243,7 @@ async def get_driver_lap_analysis(
         if cached_data is not None:
             return cached_data
 
-        session = load_session(year, event, session_type)
+        session = await load_session(year, event, session_type)
 
         driver_laps = session.laps.pick_drivers(driver)
 

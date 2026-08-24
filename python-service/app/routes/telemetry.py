@@ -42,7 +42,7 @@ async def compare_drivers_telemetry(
         if cached_data is not None:
             return cached_data
 
-        session = load_session(year, event, session_type)
+        session = await load_session(year, event, session_type)
 
         laps_d1 = session.laps.pick_drivers(driver1)
         laps_d2 = session.laps.pick_drivers(driver2)
@@ -129,7 +129,7 @@ async def get_driver_track(
         if cached_data is not None:
             return cached_data
 
-        session = load_session(year, event, session_type)
+        session = await load_session(year, event, session_type)
 
         driver_laps = session.laps.pick_drivers(driver)
         if driver_laps.empty:
@@ -217,7 +217,7 @@ async def get_driver_telemetry(
             return cached_data
 
         # Load session
-        session = load_session(year, event, session_type)
+        session = await load_session(year, event, session_type)
 
         # Get driver laps (use pick_drivers instead of deprecated pick_driver)
         driver_laps = session.laps.pick_drivers(driver)

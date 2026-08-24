@@ -77,6 +77,27 @@
 
 ## Bitácora
 
+### 2026-08-24 (32) — Una petición pesada ya no deja al servicio sin atender a nadie ✅
+
+El último hallazgo de la auditoría con arreglo pendiente. Las rutas del servicio estaban declaradas `async def` pero llamaban a `session.load()` dentro, es decir, **en el propio bucle de eventos**: descargar una sesión entera —36 segundos medidos la primera vez— dejaba al servicio incapaz de responder a nada más, ni siquiera a la comprobación de salud. Con un solo proceso y sin límite de peticiones, unas veinte peticiones a sesiones distintas eran doce minutos de telemetría caída a coste cero para quien las lanzara.
+
+**Medido antes y después**, sondeando la salud cada 300 ms mientras corría una carga pesada:
+
+| | Primer sondeo | Segundo |
+|---|---|---|
+| Antes | **agotó los 8 s sin respuesta** | 1,41 s |
+| Después | **2 ms** | 2 ms |
+
+La carga se va a un hilo, y el semáforo la mantiene en **una cada vez** a propósito: FastF1 no promete ser seguro entre hilos y su caché es un SQLite compartido. Lo que se gana no es paralelismo, es que el servicio siga vivo mientras tanto — la salud responde y lo que ya está en caché se sirve al instante.
+
+**Y el veredicto «no hay datos» se recuerda cinco minutos.** El camino de error no cacheaba nada, así que pedir una sesión sin correr costaba 3,5 s **cada vez**: repetirlo salía gratis a quien lo pedía y caro a nosotros. Cinco minutos es poco para molestar un sábado por la mañana, cuando los datos están a punto de llegar, y bastante para que insistir no sirva de nada.
+
+Cinco pruebas nuevas sin red, con la parte que descarga sustituida por una función lenta de mentira: que el bucle siga latiendo durante una carga, que dos cargas no se solapen, y que un veredicto conocido no se reintente.
+
+**Verificación**: 46 de pytest · medición antes/después contra el servicio real.
+
+**Con esto se cierra el informe de seguridad** salvo la CSP con `script-src`, que es defensa a futuro y no un agujero actual.
+
 ### 2026-08-24 (31) — Límite de peticiones: la raíz de casi todo lo que encontró la auditoría ✅
 
 Casi todos los hallazgos del informe eran explotables por la misma razón: **nada impedía repetirlos**. Una petición barata que cuesta cara del otro lado solo hace daño en bucle. Esto lo corta en `src/middleware.ts`, y va ahí y no en cada ruta para que una ruta nueva quede cubierta el día que se crea.
@@ -119,7 +140,7 @@ Esa es la respuesta del **servicio**, no la de la web. El servicio se dejó sin 
 
 **Verificación**: los cuatro vectores comprobados cortados contra el build de producción (travesía con año válido, query inyectada, piloto inyectado y destino de push interno: los cuatro 400) y una petición legítima intacta. lint 0 · 176 unitarias · 48 de navegador.
 
-**Queda abierto y anotado**: ~~no hay límite de peticiones~~ → hecho el mismo día (bitácora 31). Siguen abiertos: la CSP solo trae `frame-ancestors`, y en el servicio `session.load()` bloquea el único worker.
+**Queda abierto y anotado**: ~~no hay límite de peticiones~~ → hecho el mismo día (bitácora 31). ~~y en el servicio `session.load()` bloquea el único worker~~ → hecho el mismo día (bitácora 32). Sigue abierto solo: la CSP trae únicamente `frame-ancestors`.
 
 ### 2026-08-24 (29) — El agrupado a su sitio, la huella de cada despliegue, y una prueba que dependía del domingo ✅
 
