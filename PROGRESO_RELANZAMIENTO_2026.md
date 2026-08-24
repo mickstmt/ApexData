@@ -77,6 +77,25 @@
 
 ## Bitácora
 
+### 2026-08-24 (31) — Límite de peticiones: la raíz de casi todo lo que encontró la auditoría ✅
+
+Casi todos los hallazgos del informe eran explotables por la misma razón: **nada impedía repetirlos**. Una petición barata que cuesta cara del otro lado solo hace daño en bucle. Esto lo corta en `src/middleware.ts`, y va ahí y no en cada ruta para que una ruta nueva quede cubierta el día que se crea.
+
+**Cubo de fichas, no ventana fija.** Una ventana de «60 por minuto» deja pasar 120 seguidas a caballo de dos ventanas, que es justo la ráfaga que hace daño. El cubo gotea de forma continua: quien navega despacio no nota que existe —comprobado con 200 peticiones a ritmo humano, cero cortes— y quien va en bucle se queda seco.
+
+**Tres presupuestos, porque las rutas no cuestan igual**: telemetría 20/min (cada fallo de caché descarga una sesión entera y bloquea el único proceso del servicio), escritura 5/hora (`/api/push` es la única ruta pública que escribe, y cada dirección distinta crea una fila), y el resto de la API 60/min. `/api/health` queda exenta: la sondean el CI y EasyPanel sin parar.
+
+**Dos defectos encontrados al probarlo contra el servidor de verdad, no en la teoría:**
+
+1. **Todas las rutas de `/api/` daban 500, incluida la exenta.** No era el limitador: desde que existe `middleware.ts`, Next compila también una variante *edge* de `instrumentation.ts`, y ahí `node:fs` no existe. El import estaba arriba del archivo, así que el módulo entero fallaba al evaluarse. Ahora se importa dentro de `register()`, después de comprobar el entorno.
+2. **El cubo iba por dirección, no por dirección y clase de ruta.** Agotar la telemetría dejaba a la misma persona sin poder abrir la lista de pilotos, y las capacidades de una clase pisaban las de la otra. La clave lleva ahora la clase delante.
+
+Ninguno de los dos se veía en las pruebas unitarias: los dos salieron de lanzar peticiones contra el build de producción.
+
+**Verificación**: contra el servidor real, 30 seguidas a telemetría → 8 pasan y 22 dan `429` con `Retry-After`; 6 a `/api/push` → 3 y corta; `/api/health` 15 de 15 en 200; las páginas sin limitar; y agotada la telemetría, `/api/drivers` sigue respondiendo 200. lint 0 · 192 unitarias · 48 de navegador.
+
+**Nota para cuando haya más de un contenedor**: el estado vive en memoria del proceso. Con uno solo la cuenta es exacta; con varios, cada uno llevaría la suya y el límite real sería el múltiplo.
+
 ### 2026-08-24 (30) — Auditoría de seguridad: cuatro frentes, y un agujero que anulaba el aislamiento del servicio ✅
 
 A petición del usuario, cuatro auditorías en paralelo —inyección y datos, secretos y configuración, superficie y abuso, y cliente/PWA— cada una con la instrucción de no especular y de construir el escenario de explotación o bajar la severidad.
@@ -100,7 +119,7 @@ Esa es la respuesta del **servicio**, no la de la web. El servicio se dejó sin 
 
 **Verificación**: los cuatro vectores comprobados cortados contra el build de producción (travesía con año válido, query inyectada, piloto inyectado y destino de push interno: los cuatro 400) y una petición legítima intacta. lint 0 · 176 unitarias · 48 de navegador.
 
-**Queda abierto y anotado**: no hay límite de peticiones en ninguna capa, la CSP solo trae `frame-ancestors`, y en el servicio `session.load()` bloquea el único worker.
+**Queda abierto y anotado**: ~~no hay límite de peticiones~~ → hecho el mismo día (bitácora 31). Siguen abiertos: la CSP solo trae `frame-ancestors`, y en el servicio `session.load()` bloquea el único worker.
 
 ### 2026-08-24 (29) — El agrupado a su sitio, la huella de cada despliegue, y una prueba que dependía del domingo ✅
 
