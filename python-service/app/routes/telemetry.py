@@ -18,6 +18,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _rotacion_del_circuito(session, year: int, event: str) -> float:
+    """Los grados que hay que girar el trazado para verlo como en televisión.
+
+    Sin rotación el circuito sale tumbado respecto a como todo el mundo lo ha
+    visto siempre, y cuesta reconocerlo. Si FastF1 no la tiene, cero: un mapa
+    girado raro es mejor que ningún mapa.
+    """
+    try:
+        return float(session.get_circuit_info().rotation)
+    except Exception:
+        logger.warning("Circuit rotation unavailable for %s %s", year, event)
+        return 0.0
+
+
 # NOTE: this literal route must stay declared BEFORE /{year}/{event}/{session_type}/{driver},
 # otherwise Starlette matches "compare" as a driver code and the comparison never runs.
 @router.get("/{year}/{event}/{session_type}/compare")
@@ -90,7 +104,12 @@ async def compare_drivers_telemetry(
                 "compound": str(lap_d2['Compound']) if pd.notna(lap_d2['Compound']) else None,
                 "telemetry": records(tel_d2)
             },
-            "delta_time": format_lap_time(lap_d1['LapTime'] - lap_d2['LapTime'])
+            "delta_time": format_lap_time(lap_d1['LapTime'] - lap_d2['LapTime']),
+            # Los grados que hay que girar el trazado para verlo como en
+            # televisión. El mapa de velocidad ya los servía; la comparación no,
+            # y sin ellos el mapa de minisectores sale tumbado y cuesta
+            # reconocer el circuito.
+            "rotation": _rotacion_del_circuito(session, year, event),
         }
 
         cache_manager.set(cache_key, result)
@@ -157,11 +176,7 @@ async def get_driver_track(
 
         # La rotación es opcional: si FastF1 no la trae, el mapa se dibuja sin
         # girar en vez de no dibujarse.
-        try:
-            rotation = float(session.get_circuit_info().rotation)
-        except Exception:
-            logger.warning("Circuit rotation unavailable for %s %s", year, event)
-            rotation = 0.0
+        rotation = _rotacion_del_circuito(session, year, event)
 
         result = {
             "driver": driver,

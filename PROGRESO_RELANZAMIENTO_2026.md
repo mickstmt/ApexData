@@ -77,6 +77,24 @@
 
 ## Bitácora
 
+### 2026-08-24 (36) — Quién manda en cada parte del circuito ✅
+
+La pareja del delta, y la que lo hace legible para quien no se sepa el trazado de memoria. El delta dice **cuánto** se gana y se pierde a lo largo de la vuelta; esto dice **dónde**, sobre el asfalto: el circuito partido en veinticinco tramos, cada uno del color de quien menos tardó en pasarlo.
+
+**Veinticinco tramos** sale de partir un circuito normal en trozos de doscientos metros, que es la escala de una curva con su frenada y su salida. Con muchos más el mapa se vuelve confeti —las dos trazas se cruzan decenas de veces por curva—; con muchos menos, un tramo mezcla dos curvas donde mandaron pilotos distintos y el color miente por promedio.
+
+**Se reparte tiempo, no velocidad media.** Dos pilotos pueden llevar la misma media en un tramo y llegar con dos décimas de diferencia si uno frenó más tarde. Y por debajo de cinco milésimas el tramo se declara empatado: esa diferencia está por debajo de lo que distingue la cronometría entre dos trazadas, y pintar un dueño ahí le quitaría credibilidad al mapa entero.
+
+**Comprobado contra Zandvoort**: la suma de las diferencias por tramo da **exactamente −0,455 s**, la diferencia real entre los dos cronos. Y de ahí sale el dato que el mapa cuenta y ninguna tabla diría: **Verstappen es más rápido en 14 de los 25 tramos y aun así pierde la vuelta**, porque los de Norris son mucho más gordos. El componente lo dice con esas palabras cuando ocurre, para evitar la lectura equivocada de contar colores.
+
+**Las tres cosas comparten cursor**: pasar el dedo por el asfalto mueve el señalado del delta y el de las trazas de velocidad, y al revés. Tres gráficos, una sola lectura.
+
+**Del servicio**: la comparación ahora devuelve también la rotación del circuito. Sin ella el mapa sale tumbado respecto a como todo el mundo lo ha visto siempre y cuesta reconocerlo. Es el primer cambio del servicio que se despliega **solo**, por el disparador que se montó hoy.
+
+**Un detalle de método**: la prueba de navegador del señalado falló dos veces por el propio dato de prueba, no por el componente. El mapa busca el punto del trazado más cercano al dedo y solo responde dentro de cuarenta píxeles —a propósito, para que mover el ratón por una esquina vacía no haga saltar el señalado—, y el cuadrado de prueba tenía cinco puntos, así que solo las esquinas eran señalables. Con telemetría de verdad hay quinientos. La prueba ahora genera cuarenta puntos y barre el lienzo buscando el asfalto en vez de adivinar dónde cae.
+
+**Verificación**: lint 0 · 230 unitarias · 71 de navegador · 51 de pytest · comprobado con datos reales de Zandvoort en los dos temas, cero errores de consola · tanda completa bajo la restricción del CI (una sola conexión): 71 de 71, cero inestables.
+
 ### 2026-08-24 (35) — Dónde se gana y se pierde una vuelta ✅
 
 El gráfico que faltaba, y el que de verdad hacía falta. Las trazas de velocidad superpuestas dicen quién va más rápido en cada curva, pero no responden a lo que uno se pregunta mirándolas: **de dónde salen las cuatro décimas**. Casi nunca están donde parece — suelen acumularse en tres frenadas y devolverse en una recta.

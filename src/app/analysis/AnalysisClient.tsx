@@ -26,6 +26,7 @@ import { RaceProgress } from '@/components/charts/RaceProgress';
 import { teamIdFromName } from '@/lib/team-colors';
 import { LapScatter } from '@/components/charts/LapScatter';
 import { DeltaVuelta } from '@/components/charts/DeltaVuelta';
+import { MapaMinisectores } from '@/components/charts/MapaMinisectores';
 import { PaceBoxes } from '@/components/charts/PaceBoxes';
 import { TyreDegradation } from '@/components/charts/TyreDegradation';
 import { SessionWeather } from '@/components/telemetry/SessionWeather';
@@ -668,6 +669,30 @@ export function AnalysisClient({
                 equipo2={teamOf(comparison.driver2.code)}
                 traza1={comparison.driver1.telemetry}
                 traza2={comparison.driver2.telemetry}
+                cursor={cursorComparacion}
+                onCursor={setCursorComparacion}
+              />
+            </div>
+
+            {/* El delta dice CUÁNTO; esto dice DÓNDE, sobre el asfalto. Una
+                curva que baja no le dice nada a quien no se sepa el trazado de
+                memoria; un trozo de pista pintado de naranja sí. Comparten el
+                mismo cursor que el delta y las trazas. */}
+            <div className="mt-6 rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-1 text-lg font-bold">Quién manda en cada parte del circuito</h3>
+              <p className="mb-3 text-sm text-muted-foreground">
+                El trazado repartido en tramos: cada uno se lo queda quien menos tardó en pasarlo.
+                Pasa el dedo por el asfalto o por el delta de arriba — las dos cosas señalan el
+                mismo punto.
+              </p>
+              <MapaMinisectores
+                piloto1={comparison.driver1.code}
+                piloto2={comparison.driver2.code}
+                equipo1={teamOf(comparison.driver1.code)}
+                equipo2={teamOf(comparison.driver2.code)}
+                traza1={comparison.driver1.telemetry}
+                traza2={comparison.driver2.telemetry}
+                rotacion={comparison.rotation ?? 0}
                 cursor={cursorComparacion}
                 onCursor={setCursorComparacion}
               />

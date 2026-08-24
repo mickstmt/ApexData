@@ -860,6 +860,139 @@ test.describe('delta entre dos vueltas', () => {
   });
 });
 
+test.describe('mapa de minisectores', () => {
+  /**
+   * Un circuito cuadrado, con puntos suficientes para poder señalarlo.
+   *
+   * Cuarenta puntos y no cinco: el mapa busca el punto del trazado más cercano
+   * al dedo y solo responde dentro de cuarenta píxeles —a propósito, para que
+   * mover el ratón por una esquina vacía no haga saltar el señalado—. Con cinco
+   * puntos solo las esquinas serían señalables, que es un artefacto del dato de
+   * prueba y no del componente: con telemetría de verdad hay quinientos.
+   *
+   * NOR vuela en la primera mitad de la vuelta y se hunde en la segunda; VER al
+   * revés. Los dos hacen el mismo tiempo, así que el reparto sale mitad y mitad.
+   */
+  function vuelta(rapidoPrimero: boolean) {
+    const lado = 10;
+    const puntos = [];
+
+    for (let i = 0; i <= lado * 4; i++) {
+      const parte = i / (lado * 4);
+      const paso = i % lado;
+      const cara = Math.min(3, Math.floor(i / lado));
+
+      // Recorrido del cuadrado, cara a cara.
+      const esquinas = [
+        [paso * 100, 0],
+        [1000, paso * 100],
+        [1000 - paso * 100, 1000],
+        [0, 1000 - paso * 100],
+      ][cara];
+
+      // El tiempo avanza más despacio en la mitad donde uno es fuerte.
+      const primera = parte < 0.5;
+      const rapido = rapidoPrimero ? primera : !primera;
+      const segundos = primera
+        ? parte * (rapido ? 30 : 42)
+        : 20 * (rapidoPrimero ? 1.5 : 2.1) + (parte - 0.5) * (rapido ? 30 : 42);
+
+      puntos.push({
+        X: esquinas[0],
+        Y: esquinas[1],
+        Distance: parte * 4000,
+        Time: segundos.toFixed(3),
+        Speed: 300,
+      });
+    }
+
+    return puntos;
+  }
+
+  const COMPARACION = {
+    driver1: {
+      code: 'NOR',
+      lap_number: 10,
+      lap_time: '40.000',
+      compound: 'SOFT',
+      telemetry: vuelta(true),
+    },
+    driver2: {
+      code: 'VER',
+      lap_number: 11,
+      lap_time: '40.000',
+      compound: 'SOFT',
+      telemetry: vuelta(false),
+    },
+    delta_time: '0.000',
+    rotation: 0,
+  };
+
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/telemetry-compare/**', (route) => route.fulfill({ json: COMPARACION }));
+  });
+
+  test('reparte el circuito y dice cuántos tramos gana cada uno', async ({ page }) => {
+    await page.goto('/analysis');
+    await page.getByRole('button', { name: /Comparar/ }).click();
+
+    const mapa = page.locator('canvas[aria-label*="Circuito repartido"]');
+    await expect(mapa).toBeVisible({ timeout: 30_000 });
+
+    // La etiqueta del lienzo lleva el reparto, porque un lienzo no tiene nada
+    // que leer: es lo único que oye quien usa un lector de pantalla antes de
+    // llegar a la tabla.
+    const etiqueta = (await mapa.getAttribute('aria-label')) ?? '';
+    expect(etiqueta).toMatch(/NOR es más rápido en \d+/);
+    expect(etiqueta).toMatch(/VER en \d+/);
+  });
+
+  test('el dedo sobre el asfalto señala el mismo punto en el delta', async ({ page }) => {
+    await page.goto('/analysis');
+    await page.getByRole('button', { name: /Comparar/ }).click();
+
+    const mapa = page.locator('canvas[aria-label*="Circuito repartido"]');
+    await mapa.scrollIntoViewIfNeeded();
+    await expect(mapa).toBeVisible({ timeout: 30_000 });
+
+    // Se barre hasta dar con el asfalto en vez de adivinar dónde cae.
+    //
+    // El mapa solo responde si el dedo está a menos de cuarenta píxeles de la
+    // pista, a propósito: sin ese margen, mover el ratón por una esquina vacía
+    // haría saltar el señalado al azar. Y dónde cae el trazado dentro del
+    // lienzo depende de la forma del circuito, así que fijar un punto a mano
+    // hace que la prueba dependa de la geometría y no del comportamiento.
+    const caja = (await mapa.boundingBox())!;
+    const tramo = page.locator('figcaption', { hasText: /Tramo \d+ de/ });
+
+    for (let fila = 1; fila <= 8 && !(await tramo.count()); fila++) {
+      for (let columna = 1; columna <= 8 && !(await tramo.count()); columna++) {
+        await page.mouse.move(
+          caja.x + (caja.width * columna) / 9,
+          caja.y + (caja.height * fila) / 9
+        );
+      }
+    }
+
+    // El mapa cuenta el tramo...
+    await expect(page.locator('figcaption', { hasText: /Tramo \d+ de/ })).toBeVisible();
+
+    // ...y el delta, que está arriba, tiene que haberse movido a ese metro. Es
+    // lo que convierte tres gráficos en una sola lectura.
+    await expect(page.locator('figcaption', { hasText: /En el metro/ })).toBeVisible();
+  });
+
+  test('el reparto tiene alternativa en texto', async ({ page }) => {
+    await page.goto('/analysis');
+    await page.getByRole('button', { name: /Comparar/ }).click();
+
+    const tabla = page.getByRole('table', { name: /Reparto del circuito entre NOR y VER/i });
+    await expect(tabla).toBeAttached({ timeout: 30_000 });
+    // Una fila por tramo: aquí sí se vuelcan todos, porque son veinticinco.
+    expect(await tabla.locator('tbody tr').count()).toBeGreaterThan(20);
+  });
+});
+
 test.describe('política de contenido', () => {
   test('un script metido por el marcado no llega a ejecutarse', async ({ page }) => {
     await page.goto('/');

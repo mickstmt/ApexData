@@ -52,6 +52,8 @@ export interface TelemetryComparisonResponse {
     telemetry: TelemetryPoint[];
   };
   delta_time: string;
+  /** Grados que hay que girar el trazado para verlo como en televisión. */
+  rotation?: number;
 }
 
 // ============================================================================
