@@ -40,7 +40,10 @@ _is_production = settings.ENVIRONMENT == "production"
 app = FastAPI(
     title="ApexData F1 Telemetry Service",
     description="Microservice for F1 telemetry data using FastF1",
-    version="1.0.0",
+    # La versión sale en la huella de arranque, así que decir siempre «1.0.0»
+    # la deja a medias: dice CUÁNDO arrancó pero no QUÉ arrancó. Se sube a mano
+    # con cada cambio del servicio, que son pocos y espaciados.
+    version="1.1.0",
     docs_url=None if _is_production else "/docs",
     redoc_url=None if _is_production else "/redoc",
     openapi_url=None if _is_production else "/openapi.json",
