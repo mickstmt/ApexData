@@ -78,6 +78,21 @@
 
 ## Bitácora
 
+### 2026-08-25 (41) — El calendario lleva a los resultados ✅
+
+Lo pidio el usuario y tenia razon: teniendo los resultados guardados, mirar el calendario y no poder ir a ellos era pedirle a la gente que volviera a buscar el mismo Gran Premio en otra pantalla.
+
+Cada tarjeta lleva ahora a su ficha, con el mismo patron que la lista de circuitos: **un solo enlace, el del titulo, estirado sobre la tarjeta entera** con `after:inset-0`. Asi el objetivo tactil es la tarjeta —no un renglon de texto— sin anidar controles, que es el defecto que la auditoria de accesibilidad senalo en su dia. El enlace a Wikipedia se queda por encima con su propia capa, comprobado.
+
+**Se enlazan todas, tambien las que no se han corrido**: desde el 2026-08-22 esa ficha cuenta cuanto falta y ensena la parrilla provisional, asi que ya no lleva a una pantalla vacia.
+
+**Dos cosas de las pruebas que costaron mas que el cambio**, y las dos por medir en vez de comportarse:
+
+1. Pulsar con coordenadas del raton fallaba **solo en la tanda completa**. La pagina se desplaza sola hasta la proxima carrera —eso hace `IrALaProximaCarrera`— y con la maquina cargada ese desplazamiento cae ENTRE medir la tarjeta y pulsar: las coordenadas quedan viejas. `locator.click` vuelve a resolver la posicion y espera a que el elemento deje de moverse.
+2. `waitForURL` espera al evento `load` por defecto, y esa ficha va llena de imagenes. Se espera a `commit`: lo que se comprueba es que el clic navega, no que terminen de bajar las fotos.
+
+**Verificacion**: lint 0 · 230 unitarias · 73 de navegador · comprobado contra el servidor: 23 carreras enlazadas, pulsar la tarjeta lleva a `/results/2026/1` y el enlace externo sigue apuntando a Wikipedia.
+
 ### 2026-08-25 (40) — Nueve logos de equipo, y el que no sobrevive a ser una silueta ✅
 
 El usuario aporto once SVG de equipos. Antes de copiar nada se comprobo que ninguno lleva contenido ejecutable —vienen de fuera y esto es cadena de suministro— y se **miraron como los pinta la app de verdad**, que es la unica forma de saber si sirven: la app los tine de negro sobre claro y de blanco sobre oscuro, asi que el color del archivo no se usa y **solo cuenta la forma**.

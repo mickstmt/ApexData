@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react';
 import { fallbackRaces } from '@/lib/fallback-data';
@@ -152,7 +153,9 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
               <div
                 key={race.id}
                 data-fecha={raceDate.toISOString()}
-                className={`rounded-lg border p-6 transition-all ${
+                // `relative`, para que el enlace del titulo pueda estirarse
+                // sobre la tarjeta entera. Ver el comentario de mas abajo.
+                className={`relative rounded-lg border p-6 transition-all ${
                   isToday
                     ? 'border-primary bg-primary/5'
                     : isPast
@@ -173,7 +176,31 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                   {/* Race info */}
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-xl font-bold">{race.raceName}</h3>
+                      {/* El calendario lleva a la ficha de la carrera.
+                          Teniendo los resultados guardados, mirar el calendario
+                          y no poder ir a ellos era pedirle a la gente que
+                          volviera a buscar el mismo Gran Premio en otra
+                          pantalla.
+
+                          Un solo enlace que se estira sobre la tarjeta entera:
+                          asi el objetivo tactil es la tarjeta —no un renglon de
+                          texto— sin anidar controles, que es el defecto que la
+                          auditoria senalo. Mismo patron que la lista de
+                          circuitos. El enlace a Wikipedia de mas abajo se queda
+                          por encima con su propia capa.
+
+                          Se enlazan TODAS, tambien las que no se han corrido:
+                          desde el 2026-08-22 esa ficha cuenta cuanto falta y
+                          ensena la parrilla provisional, asi que ya no lleva a
+                          una pantalla vacia. */}
+                      <h3 className="text-xl font-bold">
+                        <Link
+                          href={`/results/${displayYear}/${race.round}`}
+                          className="after:absolute after:inset-0 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
+                          {race.raceName}
+                        </Link>
+                      </h3>
                       {isToday && (
                         <Chip tono="solido">HOY</Chip>
                       )}
@@ -206,7 +233,10 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                         href={race.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center text-sm text-primary hover:underline"
+                        // `relative z-10`: sin esto, el enlace estirado del
+                        // titulo queda encima y pulsar aqui abriria la ficha en
+                        // vez de Wikipedia.
+                        className="relative z-10 inline-flex items-center text-sm text-primary hover:underline"
                       >
                         Más información →
                       </a>

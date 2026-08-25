@@ -694,6 +694,55 @@ test.describe('calendario', () => {
     await expect(objetivo).toBeInViewport();
   });
 
+  test('cada carrera lleva a su ficha, y el objetivo es la tarjeta entera', async ({ page }) => {
+    await page.goto('/calendar');
+    await expect(page.locator('[data-fecha]').first()).toBeVisible({ timeout: 30_000 });
+
+    // Teniendo los resultados guardados, mirar el calendario y no poder ir a
+    // ellos era pedirle a la gente que volviera a buscar el mismo Gran Premio
+    // en otra pantalla.
+    const enlaces = page.locator('[data-fecha] h3 a');
+    expect(await enlaces.count()).toBeGreaterThan(10);
+    await expect(enlaces.first()).toHaveAttribute('href', /^\/results\/\d{4}\/\d+$/);
+
+    // Y se pulsa la TARJETA, no el renglón del título: el enlace se estira por
+    // encima con `after:inset-0`, que es lo que hace que el objetivo táctil sea
+    // grande sin anidar controles.
+    const tarjeta = page.locator('[data-fecha]').first();
+    const caja = (await tarjeta.boundingBox())!;
+
+    // Se pulsa con `locator.click`, no con coordenadas del raton.
+    //
+    // La pagina se desplaza sola hasta la proxima carrera —eso hace
+    // `IrALaProximaCarrera`—, y con la maquina cargada ese desplazamiento cae
+    // ENTRE medir la tarjeta y pulsar: las coordenadas quedan viejas y el clic
+    // aterriza en otro sitio. Localmente pasaba siempre; en la tanda, nunca.
+    // `locator.click` vuelve a resolver la posicion y espera a que el elemento
+    // deje de moverse.
+    //
+    // Bien dentro y lejos del titulo, que es lo que la prueba demuestra: el
+    // objetivo es la tarjeta, no el renglon.
+    await tarjeta.click({ position: { x: caja.width * 0.9, y: caja.height * 0.5 } });
+
+    // `commit` y no el `load` por defecto: lo que se comprueba es que el clic
+    // navega, y esperar a que carguen todas las imagenes de la ficha se pasa
+    // del limite sin que eso diga nada del enlace.
+    await page.waitForURL('**/results/**', { timeout: 30_000, waitUntil: 'commit' });
+  });
+
+  test('el enlace a Wikipedia sigue siendo suyo', async ({ page }) => {
+    await page.goto('/calendar');
+    await expect(page.locator('[data-fecha]').first()).toBeVisible({ timeout: 30_000 });
+
+    // El enlace estirado del título cubre la tarjeta entera, así que sin una
+    // capa propia este se volvería incliclable y llevaría a la ficha.
+    const externo = page.locator('[data-fecha] a[target="_blank"]').first();
+    if ((await externo.count()) === 0) test.skip(true, 'Esta temporada no trae enlaces externos');
+
+    await expect(externo).toHaveAttribute('href', /^https?:\/\//);
+    await expect(externo).toHaveClass(/z-10/);
+  });
+
   test('al cambiar de temporada vuelve a señalar la que toca', async ({ page }) => {
     // Se cambia **con el selector**, no con `goto`. Ese es el punto entero: el
     // selector navega a `?season=…`, la misma ruta, y la página se reconcilia
