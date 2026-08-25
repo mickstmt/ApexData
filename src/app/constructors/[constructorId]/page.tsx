@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, Flag, Trophy, Medal, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TeamLogo } from '@/components/ui/OptimizedImage';
+import { teamColor } from '@/lib/team-colors';
 
 // Los datos de esta página cambian como mucho una vez por carrera, así que
 // una hora de caché evita ir a Virginia en cada visita sin que nadie note
@@ -151,7 +152,15 @@ export default async function ConstructorDetailPage({ params }: ConstructorDetai
       {/* Cabecera */}
       <div className="mb-12 grid gap-8 md:grid-cols-[200px_1fr]">
         <div className="flex items-center justify-center md:items-start">
-          <div className="flex h-48 w-48 items-center justify-center rounded-lg border border-border bg-card p-6">
+          {/* `relative` y `overflow-hidden` por la barra de color de la
+              izquierda: la identidad del equipo tiene que estar presente aqui,
+              no solo en el logo. Hasta hoy esta pantalla no tenia ninguna. */}
+          <div className="relative flex h-48 w-48 items-center justify-center overflow-hidden rounded-lg border border-border bg-card p-6">
+            <span
+              aria-hidden
+              className="absolute inset-y-0 left-0 w-1.5"
+              style={{ backgroundColor: teamColor(constructor!.constructorId).color }}
+            />
             <TeamLogo
               src={constructor!.logoUrl}
               name={constructor!.name}

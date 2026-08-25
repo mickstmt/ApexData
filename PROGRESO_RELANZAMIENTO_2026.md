@@ -70,13 +70,34 @@
 1. ~~**Desplegar la web y el servicio de telemetría en EasyPanel**~~ → ambos hechos: la web el 2026-08-17 y la telemetría el 2026-08-18, con el volumen en `/app/cache` y `FASTF1_SERVICE_URL` ya configurada. ~~Comprobación de cutover del CI~~ → resuelta.
 2. ~~**Pulsar *Deploy* en el servicio de telemetría** por el endpoint `/classification`~~ → hecho el 2026-08-22, comprobado en producción: `/api/clasificacion/2026/12/SQ` devuelve los 22 puestos y la pestaña del sprint enseña la parrilla. Recordatorio permanente: **el servicio de telemetría no se despliega solo**; cualquier cambio bajo `python-service/` necesita pulsar *Deploy* a mano en panel.dittochatbot.com.
 3. 🔔 **Activar los avisos push**: abrir la app instalada en la pantalla de inicio, entrar a **Favoritos** y pulsar el boton de avisos. Comprobado el 2026-08-24: la base tiene **cero suscripciones**, asi que el aviso del GP de Paises Bajos se envio a nadie aunque la carrera quedara marcada como avisada. La cadena entera esta probada salvo este ultimo paso, que solo se puede dar desde un telefono.
-4. ~~**6 logos de equipo**~~ → el usuario los aporto el 2026-08-25 y quedan **diez de once** instalados, incluido Aston Martin. **Falta solo Ferrari**, y no por no tenerlo: se probaron tres archivos distintos y ninguno sobrevive al tratamiento monocromo, porque **el caballo esta pintado de negro SOBRE el escudo amarillo**, no recortado. Al tenirlo todo de un color, caballo y escudo pasan a ser el mismo color y solo queda la silueta del escudo. **Lo que si serviria**: un logo donde el caballo sea un agujero transparente, o uno de solo el caballo sin escudo — en una busqueda, «Ferrari prancing horse silhouette SVG» o «Ferrari logo one color». Mientras tanto sale con su nombre escrito y no se rompe nada. Los detalles historicos de antes: Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
+4. ~~**6 logos de equipo**~~ → **cerrado el 2026-08-25**: los once equipos de 2026 tienen su logo, Ferrari incluido, con cero equipos cayendo al respaldo de iniciales. Ver la bitacora del dia para como se resolvio lo del escudo. Los detalles historicos de antes: Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
 5. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
 6. 🔴 **Pulsar *Deploy* del servicio**: el agrupado de `/fastest` por piloto y la huella de arranque **ya están en el repo** (2026-08-24, bitácora 29), pero el servicio no se despliega solo. Comprobado ese día a las 09:40 hora de Lima: producción seguía devolviendo pilotos repetidos con `limit=7` y `limit=9` —claves de caché nuevas, así que no era caché—, señal de que el contenedor aún corría el código anterior. **Cómo confirmarlo**: en la consola del servicio, la primera línea al arrancar debe decir `ApexData Telemetry v1.0.0 desplegado y arrancado: … UTC (… hora de Lima)`. Si esa línea no aparece, el Deploy no entró. Mientras tanto no se rompe nada: la web sigue agrupando en el navegador.
 
 ---
 
 ## Bitácora
+
+### 2026-08-25 (44) — Ferrari entra con su escudo, y el sistema se hace verdadero ✅
+
+Los once equipos de 2026 tienen ya su logo. Y la forma de llegar merece quedar escrita, porque la decision se tomo mal dos veces antes de tomarse bien.
+
+**El error de partida fue mio.** Al ver que diez funcionaban y uno no, lo presente como un 91 % de acierto. El usuario lo rechazo, con razon: *«no estas teniendo en consideracion el peso que tiene Ferrari en la formula, es literalmente la escuderia con mas prestigio»*. No es uno de once intercambiables — es la unica marca **figurativa** de la parrilla (los otros diez son logotipos tipograficos: «McLaren», «Williams», «Cadillac» son el nombre escrito) y la mas reconocible del deporte.
+
+**Se consulto con tres agentes** —accesibilidad, sistema de diseno y producto— usando la skill de UI/UX que pidio el usuario, y el resultado fue mas util por lo que descarto que por lo que propuso:
+
+- **Ninguna opcion incumple WCAG**: los logotipos estan exentos del requisito de contraste y el nombre del equipo va escrito al lado. Esto no era una decision de accesibilidad.
+- **La opcion de la «pastilla clara en tema oscuro» quedo invalidada por dos frentes a la vez**: daria ~18:1, mas brillante que el propio texto principal (16,5:1), y ademas **no arregla el tema claro**, donde el blanco de Cadillac y Alpine ya desaparece hoy.
+- **La opcion de «todo en color con respaldo de texto» se midio**: en tema oscuro quedarian **4 logos reales y 7 nombres escritos**. No es autenticidad, es una lista a medio cargar.
+- **La guia de la propia skill condena lo que haciamos**: *«Correct Brand Logos — avoid recoloring unofficially»* y *«color-dark-mode: dark mode uses tonal variants, not inverted colors»*.
+
+**Y una acusacion que resulto cierta.** El comentario del componente decia que el monocromo se justifica porque «la identidad ya la lleva su barra de color». Comprobado: **esa barra no existia en tres de las cuatro pantallas** con logo — rejilla de equipos, ficha de equipo y favoritos. La coartada era falsa. Ahora la barra esta en todas, con el mismo patron de la clasificacion general, y el monocromo pasa de excusa a regla.
+
+**La solucion, elegida por el usuario sobre mockup**: silueta para los diez logotipos, **color de verdad para el escudo**. Una sola excepcion, declarada en `logoVaEnColor` con el criterio para anadir otra. Y medida: el escudo se lee bien sobre el fondo oscuro —23 % de su tinta por debajo de 3:1— y mal sobre el claro, asi que lleva respaldo oscuro **solo en tema claro**, que es ademas la version que publican las guias de marca para fondos claros.
+
+**De paso, un defecto de accesibilidad**: `alt="Logo de Mercedes"` junto al nombre escrito hacia que un lector de pantalla dijera «Mercedes» hasta tres veces seguidas. Ahora es `alt=""`: es decoracion y se anuncia como tal.
+
+**Verificacion**: lint 0 · 234 unitarias · 79 de navegador · comprobado en la pantalla de equipos en los dos temas: **11 logos y 0 equipos con iniciales**.
 
 ### 2026-08-25 (43) — Aston Martin entra; Ferrari, explicado con una imagen ✅
 

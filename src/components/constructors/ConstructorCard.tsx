@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { TeamLogo } from '@/components/ui/OptimizedImage';
+import { teamColor } from '@/lib/team-colors';
 
 interface ConstructorCardProps {
   team: {
@@ -27,6 +28,17 @@ export function ConstructorCard({ team, index = 0 }: ConstructorCardProps) {
         whileTap={{ scale: 0.98 }}
       className="group relative overflow-hidden rounded-lg border border-border bg-card p-6 transition-all duration-100 ease-out focus-within:border-primary hover:border-primary hover:shadow-lg active:scale-[0.98] motion-reduce:active:scale-100"
     >
+      {/* La barra de color del equipo.
+          El sistema dice que la identidad vive en el color y por eso el logo se
+          pinta a una tinta — pero esa premisa era falsa aqui: hasta hoy, esta
+          pantalla no tenia ni un pixel de color de equipo. Es el mismo patron
+          que ya usa la clasificacion general. */}
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-1"
+        style={{ backgroundColor: teamColor(team.constructorId).color }}
+      />
+
       {/* Fuera del enlace y por encima de él: un botón dentro de un <a> es
           HTML inválido y da dos paradas de teclado por tarjeta. */}
       <div className="absolute right-2 top-2 z-20">

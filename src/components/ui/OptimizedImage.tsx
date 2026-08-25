@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import { Skeleton } from './Skeleton';
-import { teamInk } from '@/lib/team-colors';
+import { logoVaEnColor, teamInk } from '@/lib/team-colors';
 
 interface OptimizedImageProps {
   src: string;
@@ -194,20 +194,51 @@ export function TeamLogo({
 
   const height = size === 'sm' ? 24 : size === 'md' ? 36 : 48;
 
-  // `next/image` obliga a declarar ancho y alto, y eso fija una proporción
-  // igual para todos: con logos que van de 4,8:1 (alfa) a 1:2,1 (sauber), la
-  // proporción declarada sería falsa en casi todos. Un `<img>` deja que cada
-  // SVG traiga la suya. Además no se pierde nada: el optimizador de imágenes
-  // no procesa SVG, los sirve tal cual.
-  return (
+  /**
+   * La excepción: una marca figurativa no puede ser una silueta.
+   *
+   * La regla general tiñe el logo de una sola tinta para que se lea en los dos
+   * temas. Con los diez logotipos tipográficos funciona —un nombre escrito
+   * sobrevive a ser silueta— pero el escudo de Ferrari no: su caballo está
+   * pintado sobre el campo, no recortado, así que teñirlo lo convierte en un
+   * bloque macizo. Ver `logoVaEnColor` para el porqué y para el criterio de
+   * cuándo añadir otra.
+   */
+  const enColor = logoVaEnColor(constructorId);
+
+  const imagen = (
+    // `next/image` obliga a declarar ancho y alto, y eso fija una proporción
+    // igual para todos: con logos que van de 4,8:1 (alfa) a 1:2,1 (sauber), la
+    // proporción declarada sería falsa en casi todos. Un `<img>` deja que cada
+    // SVG traiga la suya. Además no se pierde nada: el optimizador de imágenes
+    // no procesa SVG, los sirve tal cual.
+    //
+    // `alt=""`: el nombre del equipo va escrito al lado en las tres pantallas
+    // que usan esto, así que un texto alternativo lo haría sonar dos y hasta
+    // tres veces seguidas en un lector de pantalla. Es decoración y se anuncia
+    // como tal.
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
-      alt={`Logo de ${name}`}
+      alt=""
       height={height}
       loading="lazy"
       decoding="async"
-      className={`w-auto object-contain object-left brightness-0 dark:brightness-0 dark:invert ${box[size]}`}
+      className={`w-auto object-contain object-left ${box[size]} ${
+        enColor ? '' : 'brightness-0 dark:brightness-0 dark:invert'
+      }`}
     />
+  );
+
+  if (!enColor) return imagen;
+
+  // El respaldo oscuro va SOLO en tema claro, y está medido: el escudo se lee
+  // bien sobre el fondo oscuro —23 % de su tinta por debajo de 3:1— y mal sobre
+  // el claro, donde el amarillo se pierde. Es además la versión que las guías
+  // de marca publican para fondos claros.
+  return (
+    <span className="inline-flex items-center rounded-md bg-foreground px-1.5 py-1 dark:bg-transparent dark:p-0">
+      {imagen}
+    </span>
   );
 }

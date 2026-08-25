@@ -1110,6 +1110,40 @@ test.describe('política de contenido', () => {
   });
 });
 
+test.describe('logos de equipo', () => {
+  test('los once equipos de 2026 tienen logo, ninguno cae a iniciales', async ({ page }) => {
+    await page.goto('/constructors');
+    await expect(page.locator('img[alt=""]').first()).toBeVisible({ timeout: 30_000 });
+
+    // El respaldo de iniciales sigue existiendo para las escuderías históricas
+    // sin archivo, pero en la parrilla actual ya no debería usarse ninguno.
+    expect(await page.locator('img[alt=""]').count()).toBeGreaterThanOrEqual(11);
+  });
+
+  test('cada tarjeta lleva la barra de color de su equipo', async ({ page }) => {
+    await page.goto('/constructors');
+    await expect(page.locator('img[alt=""]').first()).toBeVisible({ timeout: 30_000 });
+
+    // La premisa del sistema —«la identidad vive en el color, por eso el logo
+    // va a una tinta»— era falsa aquí: esta pantalla no tenía ni un píxel de
+    // color de equipo. Sin la barra, el monocromo no se sostiene.
+    const barras = page.locator('[aria-hidden="true"].absolute.inset-y-0.left-0');
+    expect(await barras.count()).toBeGreaterThanOrEqual(11);
+
+    const color = await barras.first().evaluate((e) => getComputedStyle(e).backgroundColor);
+    expect(color).not.toBe('rgba(0, 0, 0, 0)');
+  });
+
+  test('el logo no se anuncia dos veces al lector de pantalla', async ({ page }) => {
+    await page.goto('/constructors');
+    await expect(page.locator('img[alt=""]').first()).toBeVisible({ timeout: 30_000 });
+
+    // Con el nombre del equipo escrito al lado, un `alt` con el nombre lo hacía
+    // sonar dos y hasta tres veces seguidas. Es decoración y se anuncia así.
+    expect(await page.locator('img[alt^="Logo de"]').count()).toBe(0);
+  });
+});
+
 test.describe('trazado a pantalla completa', () => {
   test('se abre con el dedo y se agranda de verdad', async ({ page }) => {
     await page.setViewportSize({ width: 430, height: 900 });

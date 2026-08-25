@@ -144,6 +144,35 @@ const FALLBACK: TeamColor = withLightVariant(FALLBACK_IDENTITY);
 /** Every team with a palette of its own, current and historical. */
 export const TEAM_IDS = Object.keys(TEAM_COLORS);
 
+/**
+ * Los logos que NO se convierten en silueta.
+ *
+ * La regla general es que un recurso importado no trae su propia tinta: se
+ * pinta de un solo color para que se lea en los dos temas, igual que los 36
+ * trazados de circuito. Con diez de los once funciona, porque son logotipos
+ * tipográficos — «McLaren», «Williams», «Cadillac» son el nombre escrito, y un
+ * nombre escrito sobrevive a ser una silueta.
+ *
+ * Ferrari no. Su escudo es la única marca **figurativa** de la parrilla, y su
+ * caballo está pintado de negro SOBRE el campo amarillo, no recortado de él: al
+ * teñir todo de una tinta, caballo y campo pasan a ser el mismo color y queda
+ * un bloque macizo. Medido sobre tres archivos distintos, siempre igual.
+ *
+ * Así que va en su color. La excepción es deliberadamente **una sola**: una
+ * excepción se lee como una decisión, y once se leerían como un parche. Si
+ * mañana entra otra marca figurativa, se añade aquí y no se rediseña nada.
+ *
+ * Medido: el escudo se lee bien sobre el fondo oscuro —solo un 23 % de su tinta
+ * queda por debajo de 3:1— y mal sobre el claro, donde el amarillo se pierde.
+ * Por eso lleva un respaldo oscuro **solo en tema claro**, que es además la
+ * versión que publican las guías de marca para fondos claros.
+ */
+const LOGOS_EN_COLOR = new Set(['ferrari']);
+
+export function logoVaEnColor(constructorId: string | null | undefined): boolean {
+  return constructorId !== null && constructorId !== undefined && LOGOS_EN_COLOR.has(constructorId);
+}
+
 export function teamColor(constructorId: string | null | undefined): TeamColor {
   if (!constructorId) return FALLBACK;
   return TEAM_COLORS[constructorId] ?? FALLBACK;
