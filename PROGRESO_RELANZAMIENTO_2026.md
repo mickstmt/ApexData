@@ -78,6 +78,31 @@
 
 ## Bitácora
 
+### 2026-08-25 (46) — El podio sube arriba, y la parrilla gana cara y bandera ✅
+
+Empezo con una pregunta del usuario: por que en clasificacion y resultados se ven las iniciales y no las fotos ni las banderas. Medido: **clasificacion y pilotos ya las tenian** —23 fotos y 16 banderas— y lo que se veia con iniciales eran las temporadas historicas, porque de 84 pilotos en la base solo 29 tienen foto. **El hueco real estaba en la ficha de carrera: cero imagenes en las cuatro tablas.**
+
+**La palanca no era la foto, era el estado.** Se pintaba `result.status` tal cual: en ingles y sin abreviar. «Collision damage», dieciseis caracteres, en el hueco mas estrecho de la pantalla — medido con la tipografia real a 358 px, al apellido le quedaban **99 px** cuando «Hulkenberg» necesita 89, y con «van der Garde» ya truncaba antes de anadir nada. Abreviar a **DNF / DNS / DSQ** libera **88 px**, y es lo que paga todo lo demas. Los **78 estados** de la base quedan traducidos para el detalle, y de paso las **28 nacionalidades**.
+
+**La foto no cabe en la fila, y no por poco.** Con 28 px, el apellido baja a 59 px y trunca hasta al ganador; y a ese tamano **la cara mide unos 11 px**, porque el original es 206x206 con el rostro en un 40 % del encuadre. Se puso el prototipo con una fila real —Verstappen ganando en Barein 2024— para verlo. Va al **detalle que se despliega**, donde hay 324 px y solo una fila abierta a la vez: ahi una foto es una foto, no veinte. La bandera si cabe en la fila: 16 px y 603 B, y solo hay 16 distintas.
+
+**El podio, arriba.** El ganador salia **tres veces**: tarjeta, fila 1 y un bloque «Podio» que llegaba a 2.042 px del principio, o sea resumiendo aquello por lo que acababas de pasar. Ahora va antes de la tabla y con la forma del podio real —segundo, ganador mas alto, tercero—, y el bloque duplicado desaparece de carrera y de clasificacion. Elegido por el usuario entre tres formas, sobre prototipo.
+
+**La plata y el bronce existian y no se veian.** Los tres tokens estaban desde el principio, pero en la tabla el 2.º y el 3.º compartian el acento de la marca. Van al dorsal con **borde del metal, no solo relleno**: la plata *es* gris, y un relleno gris al 20 % sobre tarjeta gris da **ΔE 8,8** contra el dorsal del cuarto en oscuro y 7,8 en claro, por debajo del umbral al que se distinguen dos rellenos pequenos. El borde contrasta 8,7:1.
+
+**El numero pegado a la foto no es decoracion.** En tema claro el anillo de oro y el de bronce dan **ΔE 1,2 en deuteranopia** —el umbral de percepcion esta en 2,3—, es decir el mismo color para cerca del 6 % de los hombres. En oscuro no pasa (21,6). El anillo refuerza; el numero es el dato, y quitarlo incumpliria la 1.4.1.
+
+**Clasificacion tiene poleman, no podio**: el sabado solo se reparte un puesto y el 2.º y el 3.º de la Q3 no reciben nada. Foto con anillo de oro, bandera, gentilicio y el mejor tiempo.
+
+**Dos defectos preexistentes, encontrados midiendo:**
+
+- **Todas las fotos de piloto eran cuadradas**, en toda la app, clasificacion incluida. El contenedor de `OptimizedImage` llevaba `rounded-full` **sin `overflow-hidden`**, asi que el recorte no se aplicaba nunca y la imagen se desbordaba sobre lo de abajo. Costaba verlo porque el fondo transparente disimulaba el borde recto.
+- **Siete pilotos y dos circuitos** —Sochi y Corea— pedian una bandera que devolvia 400 y se veia rota en el calendario y en la ficha de circuito. `CountryFlag` solo se protege de que falte el *mapeo*, no el *archivo*, y el guion saca los codigos de la base sin que nadie lo hubiera vuelto a ejecutar. Ahora estan las **48**, con una prueba que falla si vuelve a faltar alguna — comprobada borrando `ru.svg`.
+
+**Piezas nuevas**: `src/lib/estado-resultado.ts`, `src/lib/medallas.ts`, `src/components/results/` (podio, ficha de piloto y poleman), y una prop `encabezado` en `PriorityRows` para la banda que no cabe en un par etiqueta/valor.
+
+**Verificacion**: lint 0 · tipos 0 · **253 unitarias** · **85 de navegador**, dos de ellas nuevas —que el podio sale una sola vez y antes de la tabla, y que ningun estado en ingles llega a la fila—. Comprobado en los dos temas a 390 px, sin desbordamiento horizontal ni imagenes rotas.
+
 ### 2026-08-25 (45) — Los coches de las escuderias ✅
 
 El usuario aporto los once coches de 2026 y pidio integrarlos. Primera decision tomada con la norma nueva: **consultar la skill de UI/UX y varios agentes antes de proponer nada**.

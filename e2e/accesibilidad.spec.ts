@@ -175,9 +175,21 @@ test.describe('semántica y objetivos táctiles (informe 2, puntos 6, 9, 12-14)'
     await fila.click();
 
     await expect(fila).toHaveAttribute('aria-expanded', 'true');
-    const etiquetas = await page.locator('dl:visible dt').allInnerTexts();
+
+    // Se mira dentro de lo que el propio botón dice que despliega, no sólo en
+    // la lista de definiciones: el nombre completo y el equipo viven ahora en
+    // la banda de cabecera, junto a la foto. Lo que se comprueba es que no se
+    // pierde ningún dato de los que la tabla oculta en móvil, no dónde va cada
+    // uno.
+    const id = await fila.getAttribute('aria-controls');
+    const detalle = page.locator(`#${id}`);
+
+    await expect(detalle.getByRole('link', { name: /Verstappen/ })).toBeVisible();
+    await expect(detalle.getByRole('link', { name: /Red Bull/ })).toBeVisible();
+
+    const etiquetas = await detalle.locator('dt').allInnerTexts();
     expect(etiquetas).toEqual(
-      expect.arrayContaining(['Piloto', 'Equipo', 'Dorsal', 'Vueltas', 'Puntos'])
+      expect.arrayContaining(['Dorsal', 'Parrilla', 'Vueltas', 'Puntos'])
     );
   });
 
@@ -817,8 +829,49 @@ test.describe('pestañas de una carrera', () => {
     await expect(pestana).toBeVisible();
     await pestana.click();
 
-    await expect(page.getByText('GANADOR DEL SPRINT')).toBeVisible();
+    // La tarjeta de ganador suelta se sustituyó por el podio de tres: un
+    // sprint reparte trofeo y puntos a los tres primeros, igual que la carrera.
+    await expect(page.getByRole('heading', { name: /Podio del sprint/i })).toBeVisible();
     expect(await page.locator('table tbody tr').count()).toBeGreaterThan(15);
+  });
+
+  test('el podio va antes de la tabla y sale una sola vez', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/results/2026/1');
+
+    // El defecto: había una tarjeta de GANADOR arriba y, después de las
+    // veintidós filas, un bloque «Podio» que repetía a los tres primeros. El
+    // ganador salía tres veces y el resumen llegaba después de lo resumido.
+    const podio = page.locator('[aria-labelledby="podio"]');
+    await expect(podio).toHaveCount(1);
+
+    const primeraFila = page.locator('button[aria-controls^="detalle-"]').first();
+    await expect(primeraFila).toBeVisible();
+
+    const [yPodio, yTabla] = await Promise.all([
+      podio.evaluate((e) => e.getBoundingClientRect().top + window.scrollY),
+      primeraFila.evaluate((e) => e.getBoundingClientRect().top + window.scrollY),
+    ]);
+    expect(yPodio).toBeLessThan(yTabla);
+  });
+
+  test('el estado de quien no termina no sale en inglés', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    // Esta carrera tiene abandonos y alguien que no tomó la salida, así que la
+    // prueba puede fallar de verdad si la abreviatura deja de aplicarse.
+    await page.goto('/results/2026/1');
+
+    const filas = page.locator('button[aria-controls^="detalle-"]');
+    await expect(filas.first()).toBeVisible();
+    const texto = (await filas.allInnerTexts()).join(' ');
+
+    // El defecto: se pintaba `result.status` tal cual, en inglés y sin
+    // abreviar. «Collision damage» son dieciséis caracteres y truncaba el
+    // apellido en un iPhone.
+    for (const crudo of ['Retired', 'Did not start', 'Collision', 'Finished', 'Lapped']) {
+      expect(texto, `«${crudo}» no debería salir en la fila`).not.toContain(crudo);
+    }
+    expect(texto).toMatch(/DNF|DNS|DSQ/);
   });
 });
 

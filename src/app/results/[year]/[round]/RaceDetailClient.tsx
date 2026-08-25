@@ -1,11 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Trophy, Calendar, MapPin, Flag, Zap, Construction, Clock } from 'lucide-react';
+import { Calendar, MapPin, Flag, Zap, Construction, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { teamColor } from '@/lib/team-colors';
 import { intervalosAlAnterior } from '@/lib/lap-times';
 import { PriorityRows } from '@/components/ui/PriorityRows';
+import { PodioDeCarrera, type PuestoDelPodio } from '@/components/results/PodioDeCarrera';
+import { FichaDePiloto } from '@/components/results/FichaDePiloto';
+import { PoleDelSabado } from '@/components/results/PoleDelSabado';
+import { clasesDeDorsal } from '@/lib/medallas';
+import { CountryFlag } from '@/components/ui/CountryFlag';
+import { estadoEnPalabras, resumirEstado } from '@/lib/estado-resultado';
 import { SprintResults } from './SprintResults';
 import { SesionPendiente } from './SesionPendiente';
 import { ClasificacionSprint, VueltasDePractica } from './TiemposDeSesion';
@@ -274,6 +280,26 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
       return a.fastestLapTime.localeCompare(b.fastestLapTime);
     })[0];
 
+  /**
+   * Los tres del podio, en orden de llegada.
+   *
+   * Se filtra por `position` y no por las tres primeras filas: en una carrera
+   * con descalificaciones, `results` puede traer arriba a alguien sin posición.
+   */
+  const podioDeLaCarrera: PuestoDelPodio[] = race.results
+    .filter((r) => r.position !== null && r.position <= 3)
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((r) => ({
+      driverId: r.driver.driverId,
+      givenName: r.driver.givenName,
+      familyName: r.driver.familyName,
+      imageUrl: r.driver.imageUrl,
+      nationality: r.driver.nationality,
+      constructorId: r.team.constructorId,
+      teamName: r.team.name,
+      points: r.points,
+    }));
+
   return (
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
@@ -380,24 +406,14 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
         />
       ) : activeTab === 'race' ? (
         <>
-          {/* Race Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {/* Winner */}
-            {race.results[0] && (
-              <div className="rounded-lg border border-border bg-card p-6">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  <Trophy className="h-4 w-4" />
-                  <span className="font-semibold">GANADOR</span>
-                </div>
-                <div className="text-2xl font-bold">
-                  {race.results[0].driver.givenName} {race.results[0].driver.familyName}
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  {race.results[0].team.name}
-                </div>
-              </div>
-            )}
+          {/* El podio, arriba: sustituye a la tarjeta de GANADOR y al bloque
+              «Podio» que había después de la tabla. El ganador salía tres veces
+              y el resumen llegaba a 2.042 px del principio, o sea después de
+              aquello que resumía. */}
+          <PodioDeCarrera puestos={podioDeLaCarrera} />
 
+          {/* Race Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {/* Laps */}
             <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
@@ -436,57 +452,61 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
               rows={race.results}
               getKey={(result) => result.id}
               label={(result) => `${result.driver.givenName} ${result.driver.familyName}`}
-              lead={(result) => (
-                <>
-                  <span
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-bold ${
-                      result.position === 1
-                        ? 'bg-podium-gold/20 text-podium-gold'
-                        : result.position && result.position <= 3
-                          ? 'bg-primary/20 text-primary'
-                          : 'bg-muted/50 text-foreground'
-                    }`}
-                  >
-                    {result.positionText}
-                  </span>
-                  <span
-                    aria-hidden
-                    className="h-8 w-1 shrink-0 rounded-sm"
-                    style={{ backgroundColor: teamColor(result.team.constructorId).color }}
-                  />
-                  <span className="min-w-0 flex-1 truncate font-semibold">
-                    {result.driver.familyName}
-                  </span>
-                  <span className="shrink-0 font-mono text-sm tabular-nums text-muted-foreground">
-                    {result.time || result.status}
-                  </span>
-                </>
-              )}
-              detail={(result) => [
-                {
-                  label: 'Piloto',
-                  value: (
-                    <Link href={`/drivers/${result.driver.driverId}`} className="hover:text-primary">
-                      {result.driver.givenName} {result.driver.familyName}
-                    </Link>
-                  ),
-                },
-                {
-                  label: 'Equipo',
-                  value: (
-                    <Link
-                      href={`/constructors/${result.team.constructorId}`}
-                      className="hover:text-primary"
+              lead={(result) => {
+                const estado = resumirEstado(result.time, result.status);
+                return (
+                  <>
+                    <span
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-bold ${clasesDeDorsal(result.position)}`}
                     >
-                      {result.team.name}
-                    </Link>
-                  ),
-                },
-                { label: 'Dorsal', value: result.driver.permanentNumber ?? '—' },
-                { label: 'Vueltas', value: result.laps },
-                { label: 'Puntos', value: result.points },
-                { label: 'Parrilla', value: result.grid || '—' },
-              ]}
+                      {result.positionText}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="h-8 w-1 shrink-0 rounded-sm"
+                      style={{ backgroundColor: teamColor(result.team.constructorId).color }}
+                    />
+                    <CountryFlag nationality={result.driver.nationality} size={16} />
+                    <span className="min-w-0 flex-1 truncate font-semibold">
+                      {result.driver.familyName}
+                    </span>
+                    {/* El motivo del abandono se queda en el detalle: aquí sólo
+                        cabe la sigla, y con «Collision damage» el apellido
+                        truncaba. */}
+                    <span
+                      className={`shrink-0 font-mono text-sm tabular-nums ${
+                        estado.clase === 'terminado' || estado.clase === 'vueltas'
+                          ? 'text-muted-foreground'
+                          : 'font-bold text-destructive'
+                      }`}
+                    >
+                      <span aria-hidden>{estado.corto}</span>
+                      <span className="sr-only">{estadoEnPalabras(estado)}</span>
+                    </span>
+                  </>
+                );
+              }}
+              encabezado={(result) => (
+                <FichaDePiloto
+                  driverId={result.driver.driverId}
+                  givenName={result.driver.givenName}
+                  familyName={result.driver.familyName}
+                  imageUrl={result.driver.imageUrl}
+                  nationality={result.driver.nationality}
+                  constructorId={result.team.constructorId}
+                  teamName={result.team.name}
+                />
+              )}
+              detail={(result) => {
+                const estado = resumirEstado(result.time, result.status);
+                return [
+                  { label: 'Dorsal', value: result.driver.permanentNumber ?? '—' },
+                  { label: 'Parrilla', value: result.grid || '—' },
+                  { label: 'Vueltas', value: result.laps },
+                  { label: 'Puntos', value: result.points },
+                  ...(estado.motivo ? [{ label: 'Motivo', value: estado.motivo }] : []),
+                ];
+              }}
             />
 
             <div className="hidden overflow-x-auto md:block">
@@ -582,7 +602,12 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                           {result.time ? (
                             <span className="font-mono text-sm font-semibold">{result.time}</span>
                           ) : (
-                            <span className="text-sm text-muted-foreground">{result.status}</span>
+                            // En escritorio cabe el motivo entero, así que aquí
+                            // no se abrevia: la sigla es para la fila estrecha.
+                            <span className="text-sm text-muted-foreground">
+                              {resumirEstado(result.time, result.status).motivo ??
+                                resumirEstado(result.time, result.status).corto}
+                            </span>
                           )}
                         </td>
 
@@ -604,42 +629,10 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
             </div>
           </div>
 
-          {/* Additional Info */}
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Podium */}
-            <div className="rounded-lg border border-border bg-card p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-primary" />
-                Podio
-              </h2>
-              <div className="space-y-3">
-                {race.results.slice(0, 3).map((result, index) => (
-                  <div key={result.id} className="flex items-center gap-3">
-                    <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
-                        index === 0
-                          ? 'bg-podium-gold/20 text-podium-gold'
-                          : index === 1
-                          ? 'bg-podium-silver/20 text-podium-silver'
-                          : 'bg-podium-bronze/20 text-podium-bronze'
-                      }`}
-                    >
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold">
-                        {result.driver.givenName} {result.driver.familyName}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {result.team.name}
-                      </div>
-                    </div>
-                    <div className="font-bold text-primary">{result.points} pts</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
+          {/* El bloque «Podio» que había aquí se ha quitado: repetía las tres
+              primeras filas de la tabla por la que acabas de pasar, a 2.042 px
+              del principio. El podio vive ahora arriba, antes de la tabla. */}
+          <div className="mt-8 grid grid-cols-1 gap-6">
             {/* Circuit Info */}
             <div className="rounded-lg border border-border bg-card p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -678,32 +671,19 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
           {/* Qualifying Results */}
           {race.qualifyings && race.qualifyings.length > 0 ? (
             <>
-              {/* Pole Position */}
+              {/* El poleman. No es un podio de tres: el sábado sólo se reparte
+                  un puesto, y el 2.º y el 3.º de la Q3 no reciben nada. */}
               {race.qualifyings[0] && (
-                <div className="mb-8">
-                  <div className="rounded-lg border border-primary bg-primary/5 p-6">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                      <Trophy className="h-4 w-4 text-primary" />
-                      <span className="font-semibold">POLE POSITION</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-2xl font-bold">
-                          {race.qualifyings[0].driver.givenName} {race.qualifyings[0].driver.familyName}
-                        </div>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {race.qualifyings[0].team.name}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-3xl font-bold font-mono text-primary">
-                          {race.qualifyings[0].q3 || race.qualifyings[0].q2 || race.qualifyings[0].q1}
-                        </div>
-                        <div className="text-sm text-muted-foreground">Mejor tiempo</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <PoleDelSabado
+                  driverId={race.qualifyings[0].driver.driverId}
+                  givenName={race.qualifyings[0].driver.givenName}
+                  familyName={race.qualifyings[0].driver.familyName}
+                  imageUrl={race.qualifyings[0].driver.imageUrl}
+                  nationality={race.qualifyings[0].driver.nationality}
+                  constructorId={race.qualifyings[0].team.constructorId}
+                  teamName={race.qualifyings[0].team.name}
+                  tiempo={race.qualifyings[0].q3 || race.qualifyings[0].q2 || race.qualifyings[0].q1}
+                />
               )}
 
               {/* Qualifying Table */}
@@ -715,13 +695,7 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                   lead={(entry) => (
                     <>
                       <span
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-bold ${
-                          entry.position === 1
-                            ? 'bg-podium-gold/20 text-podium-gold'
-                            : entry.position <= 3
-                              ? 'bg-primary/20 text-primary'
-                              : 'bg-muted/50 text-foreground'
-                        }`}
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-bold ${clasesDeDorsal(entry.position)}`}
                       >
                         {entry.position}
                       </span>
@@ -730,6 +704,7 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                         className="h-8 w-1 shrink-0 rounded-sm"
                         style={{ backgroundColor: teamColor(entry.team.constructorId).color }}
                       />
+                      <CountryFlag nationality={entry.driver.nationality} size={16} />
                       <span className="min-w-0 flex-1 truncate font-semibold">
                         {entry.driver.familyName}
                       </span>
@@ -746,29 +721,25 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                       </span>
                     </>
                   )}
+                  encabezado={(entry) => (
+                    <FichaDePiloto
+                      driverId={entry.driver.driverId}
+                      givenName={entry.driver.givenName}
+                      familyName={entry.driver.familyName}
+                      imageUrl={entry.driver.imageUrl}
+                      nationality={entry.driver.nationality}
+                      constructorId={entry.team.constructorId}
+                      teamName={entry.team.name}
+                    />
+                  )}
                   detail={(entry) => [
-                    {
-                      label: 'Piloto',
-                      value: (
-                        <Link href={`/drivers/${entry.driver.driverId}`} className="hover:text-primary">
-                          {entry.driver.givenName} {entry.driver.familyName}
-                        </Link>
-                      ),
-                    },
-                    {
-                      label: 'Equipo',
-                      value: (
-                        <Link
-                          href={`/constructors/${entry.team.constructorId}`}
-                          className="hover:text-primary"
-                        >
-                          {entry.team.name}
-                        </Link>
-                      ),
-                    },
                     { label: 'Q1', value: <span className="font-mono">{entry.q1 || '—'}</span> },
                     { label: 'Q2', value: <span className="font-mono">{entry.q2 || '—'}</span> },
                     { label: 'Q3', value: <span className="font-mono">{entry.q3 || '—'}</span> },
+                    {
+                      label: 'Dorsal',
+                      value: entry.driver.permanentNumber ?? '—',
+                    },
                   ]}
                 />
 
@@ -904,44 +875,12 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                 </div>
               </div>
 
-              {/* Additional Info */}
-              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Top 3 */}
-                <div className="rounded-lg border border-border bg-card p-6">
-                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-primary" />
-                    Top 3 de la clasificación
-                  </h2>
-                  <div className="space-y-3">
-                    {race.qualifyings.slice(0, 3).map((result, index) => (
-                      <div key={result.id} className="flex items-center gap-3">
-                        <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
-                            index === 0
-                              ? 'bg-podium-gold/20 text-podium-gold'
-                              : index === 1
-                              ? 'bg-podium-silver/20 text-podium-silver'
-                              : 'bg-podium-bronze/20 text-podium-bronze'
-                          }`}
-                        >
-                          {index + 1}
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-semibold">
-                            {result.driver.givenName} {result.driver.familyName}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {result.team.name}
-                          </div>
-                        </div>
-                        <div className="font-mono font-bold text-primary">
-                          {result.q3 || result.q2 || result.q1}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
+              {/* El bloque «Top 3 de la clasificación» que había aquí se ha
+                  quitado: repetía las tres primeras filas de la tabla por la
+                  que acabas de pasar, y la fila de qualy ya enseña el tiempo y
+                  el intervalo al de delante, que ese bloque ni siquiera tenía.
+                  El poleman está arriba y la plata y el bronce, en la tabla. */}
+              <div className="mt-8 grid grid-cols-1 gap-6">
                 {/* Session Info */}
                 <div className="rounded-lg border border-border bg-card p-6">
                   <h2 className="text-xl font-bold mb-4 flex items-center gap-2">

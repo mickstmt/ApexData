@@ -1,9 +1,13 @@
 'use client';
 
-import { Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { teamColor } from '@/lib/team-colors';
 import { PriorityRows } from '@/components/ui/PriorityRows';
+import { PodioDeCarrera, type PuestoDelPodio } from '@/components/results/PodioDeCarrera';
+import { FichaDePiloto } from '@/components/results/FichaDePiloto';
+import { CountryFlag } from '@/components/ui/CountryFlag';
+import { clasesDeDorsal } from '@/lib/medallas';
+import { estadoEnPalabras, resumirEstado } from '@/lib/estado-resultado';
 import type { Driver, SprintResult, Team } from '@prisma/client';
 
 /**
@@ -29,28 +33,30 @@ export function SprintResults({ resultados }: { resultados: SprintConPiloto[] })
     );
   }
 
-  const ganador = resultados[0];
+  /**
+   * Los tres del podio del sprint, en orden de llegada.
+   *
+   * Un sprint tiene podio de verdad: se sube al cajón y puntúan los tres. Por
+   * eso lleva el mismo bloque que la carrera y no la tarjeta de ganador suelta
+   * que había antes.
+   */
+  const podio: PuestoDelPodio[] = resultados
+    .filter((fila) => fila.position !== null && fila.position <= 3)
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((fila) => ({
+      driverId: fila.driver.driverId,
+      givenName: fila.driver.givenName,
+      familyName: fila.driver.familyName,
+      imageUrl: fila.driver.imageUrl,
+      nationality: fila.driver.nationality,
+      constructorId: fila.team.constructorId,
+      teamName: fila.team.name,
+      points: fila.points,
+    }));
 
   return (
     <>
-      <div className="mb-8 rounded-lg border border-primary bg-primary/5 p-6">
-        <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-          <Trophy className="h-4 w-4 text-primary" aria-hidden />
-          <span className="font-semibold">GANADOR DEL SPRINT</span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="truncate text-2xl font-bold">
-              {ganador.driver.givenName} {ganador.driver.familyName}
-            </div>
-            <div className="mt-1 truncate text-sm text-muted-foreground">{ganador.team.name}</div>
-          </div>
-          <div className="shrink-0 text-right">
-            <div className="font-mono text-3xl font-bold text-primary">{ganador.points}</div>
-            <div className="text-sm text-muted-foreground">puntos</div>
-          </div>
-        </div>
-      </div>
+      <PodioDeCarrera puestos={podio} titulo="Podio del sprint" />
 
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <PriorityRows
@@ -59,51 +65,55 @@ export function SprintResults({ resultados }: { resultados: SprintConPiloto[] })
           label={(fila) => `${fila.driver.givenName} ${fila.driver.familyName}`}
           lead={(fila) => (
             <>
-              <span className="w-6 shrink-0 text-center font-mono text-sm font-semibold tabular-nums text-muted-foreground">
+              <span
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-bold ${clasesDeDorsal(fila.position)}`}
+              >
                 {fila.position ?? fila.positionText}
               </span>
               <span
                 aria-hidden
-                className="h-6 w-1 shrink-0 rounded-sm"
+                className="h-8 w-1 shrink-0 rounded-sm"
                 style={{ backgroundColor: teamColor(fila.team.constructorId).color }}
               />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold">
-                  {fila.driver.givenName} {fila.driver.familyName}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {fila.team.name}
-                </span>
+              <CountryFlag nationality={fila.driver.nationality} size={16} />
+              <span className="min-w-0 flex-1 truncate font-semibold">
+                {fila.driver.familyName}
               </span>
               <span className="shrink-0 font-mono text-sm font-semibold tabular-nums">
+                {/* Solo los ocho primeros puntúan en un sprint: el resto no
+                    lleva cero, lleva raya, que no es lo mismo. */}
                 {fila.points > 0 ? `+${fila.points}` : '—'}
               </span>
             </>
           )}
-          detail={(fila) => [
-            {
-              label: 'Piloto',
-              value: (
-                <Link href={`/drivers/${fila.driver.driverId}`} className="hover:text-primary">
-                  {fila.driver.givenName} {fila.driver.familyName}
-                </Link>
-              ),
-            },
-            {
-              label: 'Equipo',
-              value: (
-                <Link
-                  href={`/constructors/${fila.team.constructorId}`}
-                  className="hover:text-primary"
-                >
-                  {fila.team.name}
-                </Link>
-              ),
-            },
-            { label: 'Salió', value: <span className="tabular-nums">{fila.grid}.º</span> },
-            { label: 'Vueltas', value: <span className="font-mono">{fila.laps}</span> },
-            { label: 'Tiempo', value: <span className="font-mono">{fila.time ?? fila.status}</span> },
-          ]}
+          encabezado={(fila) => (
+            <FichaDePiloto
+              driverId={fila.driver.driverId}
+              givenName={fila.driver.givenName}
+              familyName={fila.driver.familyName}
+              imageUrl={fila.driver.imageUrl}
+              nationality={fila.driver.nationality}
+              constructorId={fila.team.constructorId}
+              teamName={fila.team.name}
+            />
+          )}
+          detail={(fila) => {
+            const estado = resumirEstado(fila.time, fila.status);
+            return [
+              { label: 'Salió', value: <span className="tabular-nums">{fila.grid}.º</span> },
+              { label: 'Vueltas', value: <span className="font-mono">{fila.laps}</span> },
+              {
+                label: 'Tiempo',
+                value: (
+                  <span className="font-mono">
+                    <span aria-hidden>{estado.corto}</span>
+                    <span className="sr-only">{estadoEnPalabras(estado)}</span>
+                  </span>
+                ),
+              },
+              ...(estado.motivo ? [{ label: 'Motivo', value: estado.motivo }] : []),
+            ];
+          }}
         />
 
         <div className="hidden overflow-x-auto md:block">
@@ -158,7 +168,10 @@ export function SprintResults({ resultados }: { resultados: SprintConPiloto[] })
                   </td>
                   <td className="p-4 text-right tabular-nums">{fila.grid}.º</td>
                   <td className="p-4 text-right font-mono text-sm tabular-nums text-muted-foreground">
-                    {fila.time ?? fila.status}
+                    {/* En escritorio hay sitio de sobra, así que aquí va el
+                        motivo completo en vez de la sigla. */}
+                    {resumirEstado(fila.time, fila.status).motivo ??
+                      resumirEstado(fila.time, fila.status).corto}
                   </td>
                   <td className="p-4 text-right font-mono font-semibold tabular-nums">
                     {/* Solo los ocho primeros puntúan en un sprint: el resto no

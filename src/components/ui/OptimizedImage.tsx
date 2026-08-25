@@ -119,7 +119,12 @@ export function DriverAvatar({
       alt={`Foto de ${name}`}
       width={dimension}
       height={dimension}
-      className={`rounded-full ${sizeClasses[size]}`}
+      // `overflow-hidden` va con `rounded-full` y no es opcional: el redondeo
+      // está en la envoltura y la foto es un hijo, así que sin recortar salía
+      // **cuadrada** en toda la app —clasificación incluida— y se desbordaba
+      // sobre lo que tuviera debajo. Costaba verlo porque el fondo de las
+      // fotos es transparente y el borde recto se confundía con el aire.
+      className={`overflow-hidden rounded-full ${sizeClasses[size]}`}
       objectFit="cover"
     />
   );

@@ -90,3 +90,54 @@ export const COUNTRY_TO_ISO: Record<string, string> = {
   USA: 'us',
   'United States': 'us',
 };
+
+/**
+ * El gentilicio en español, en masculino singular.
+ *
+ * La base guarda la nacionalidad como la manda Jolpica —«British», «Dutch»— y
+ * hasta ahora se pintaba tal cual, en inglés, dentro de una app en español.
+ *
+ * Están las 28 nacionalidades que hay en la base. Una que no esté se devuelve
+ * como llegó: es preferible una palabra en inglés a un hueco.
+ */
+const GENTILICIOS: Record<string, string> = {
+  American: 'Estadounidense',
+  Argentine: 'Argentino',
+  Australian: 'Australiano',
+  Austrian: 'Austriaco',
+  Belgian: 'Belga',
+  Brazilian: 'Brasileño',
+  British: 'Británico',
+  Canadian: 'Canadiense',
+  Chinese: 'Chino',
+  Colombian: 'Colombiano',
+  Czech: 'Checo',
+  Danish: 'Danés',
+  Dutch: 'Neerlandés',
+  Finnish: 'Finlandés',
+  French: 'Francés',
+  German: 'Alemán',
+  Hungarian: 'Húngaro',
+  Indian: 'Indio',
+  Indonesian: 'Indonesio',
+  Irish: 'Irlandés',
+  Italian: 'Italiano',
+  Japanese: 'Japonés',
+  Malaysian: 'Malasio',
+  Mexican: 'Mexicano',
+  Monegasque: 'Monegasco',
+  'New Zealander': 'Neozelandés',
+  Polish: 'Polaco',
+  Portuguese: 'Portugués',
+  Russian: 'Ruso',
+  Spanish: 'Español',
+  Swedish: 'Sueco',
+  Swiss: 'Suizo',
+  Thai: 'Tailandés',
+  Venezuelan: 'Venezolano',
+};
+
+export function gentilicio(nacionalidad: string | null | undefined): string {
+  if (!nacionalidad) return '';
+  return GENTILICIOS[nacionalidad] ?? nacionalidad;
+}

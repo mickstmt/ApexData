@@ -34,6 +34,7 @@ export function PriorityRows<T>({
   lead,
   detail,
   label,
+  encabezado,
 }: {
   rows: T[];
   getKey: (row: T) => string;
@@ -41,6 +42,17 @@ export function PriorityRows<T>({
   detail: (row: T) => DetailEntry[];
   /** Cómo se nombra una fila para quien no ve la pantalla: «Ver más de …». */
   label: (row: T) => string;
+  /**
+   * Una banda libre encima de la lista de definiciones, para lo que no cabe en
+   * un par etiqueta/valor: una foto, un nombre completo, una bandera.
+   *
+   * Va aquí y no en `lead` por dos razones medidas. En la fila no cabe —una
+   * foto de 28 px deja el apellido en 59 px y trunca desde «Antonelli»—, y a
+   * ese tamaño la cara mide unos 11 px, que no identifica a nadie. En cambio
+   * **sólo hay una fila abierta a la vez**, así que aquí una foto es una foto,
+   * no veinte, y hay 324 px de ancho para ella.
+   */
+  encabezado?: (row: T) => React.ReactNode;
 }) {
   const [abierta, setAbierta] = useState<string | null>(null);
 
@@ -70,17 +82,20 @@ export function PriorityRows<T>({
             </button>
 
             {expandida && (
-              <dl
-                id={`detalle-${key}`}
-                className="grid grid-cols-2 gap-x-4 gap-y-2 bg-muted/30 px-4 pb-4 pt-1 text-sm"
-              >
-                {detail(row).map((entry) => (
-                  <div key={entry.label} className="flex items-baseline justify-between gap-2">
-                    <dt className="text-muted-foreground">{entry.label}</dt>
-                    <dd className="m-0 min-w-0 truncate text-right font-medium">{entry.value}</dd>
-                  </div>
-                ))}
-              </dl>
+              // La banda y la lista van dentro del mismo `id`, que es el que
+              // anuncia `aria-controls`: si la banda quedara fuera, el botón
+              // diría que despliega algo que no la incluye.
+              <div id={`detalle-${key}`}>
+                {encabezado && <div className="bg-muted/30 px-4 pt-3">{encabezado(row)}</div>}
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 bg-muted/30 px-4 pb-4 pt-1 text-sm">
+                  {detail(row).map((entry) => (
+                    <div key={entry.label} className="flex items-baseline justify-between gap-2">
+                      <dt className="text-muted-foreground">{entry.label}</dt>
+                      <dd className="m-0 min-w-0 truncate text-right font-medium">{entry.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
             )}
           </div>
         );
