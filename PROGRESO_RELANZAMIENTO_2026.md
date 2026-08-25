@@ -70,13 +70,25 @@
 1. ~~**Desplegar la web y el servicio de telemetría en EasyPanel**~~ → ambos hechos: la web el 2026-08-17 y la telemetría el 2026-08-18, con el volumen en `/app/cache` y `FASTF1_SERVICE_URL` ya configurada. ~~Comprobación de cutover del CI~~ → resuelta.
 2. ~~**Pulsar *Deploy* en el servicio de telemetría** por el endpoint `/classification`~~ → hecho el 2026-08-22, comprobado en producción: `/api/clasificacion/2026/12/SQ` devuelve los 22 puestos y la pestaña del sprint enseña la parrilla. Recordatorio permanente: **el servicio de telemetría no se despliega solo**; cualquier cambio bajo `python-service/` necesita pulsar *Deploy* a mano en panel.dittochatbot.com.
 3. 🔔 **Activar los avisos push**: abrir la app instalada en la pantalla de inicio, entrar a **Favoritos** y pulsar el boton de avisos. Comprobado el 2026-08-24: la base tiene **cero suscripciones**, asi que el aviso del GP de Paises Bajos se envio a nadie aunque la carrera quedara marcada como avisada. La cadena entera esta probada salvo este ultimo paso, que solo se puede dar desde un telefono.
-4. ~~**6 logos de equipo**~~ → el usuario aporto once SVG el 2026-08-25 y quedan instalados nueve. **Falta solo Aston Martin** (no venia en la carpeta) y **Ferrari**, que si venia pero no sobrevive al tratamiento monocromo: el caballo es un hueco de color dentro del escudo, asi que al aplanar a una silueta se rellena entero y sale un cuadrado negro. Las dos versiones aportadas —`ferrari.svg` y `scuderia ferrari.svg`— dan el mismo borron. Decision pendiente, con las opciones vistas. Los detalles historicos de antes: Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
+4. ~~**6 logos de equipo**~~ → el usuario los aporto el 2026-08-25 y quedan **diez de once** instalados, incluido Aston Martin. **Falta solo Ferrari**, y no por no tenerlo: se probaron tres archivos distintos y ninguno sobrevive al tratamiento monocromo, porque **el caballo esta pintado de negro SOBRE el escudo amarillo**, no recortado. Al tenirlo todo de un color, caballo y escudo pasan a ser el mismo color y solo queda la silueta del escudo. **Lo que si serviria**: un logo donde el caballo sea un agujero transparente, o uno de solo el caballo sin escudo — en una busqueda, «Ferrari prancing horse silhouette SVG» o «Ferrari logo one color». Mientras tanto sale con su nombre escrito y no se rompe nada. Los detalles historicos de antes: Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
 5. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
 6. 🔴 **Pulsar *Deploy* del servicio**: el agrupado de `/fastest` por piloto y la huella de arranque **ya están en el repo** (2026-08-24, bitácora 29), pero el servicio no se despliega solo. Comprobado ese día a las 09:40 hora de Lima: producción seguía devolviendo pilotos repetidos con `limit=7` y `limit=9` —claves de caché nuevas, así que no era caché—, señal de que el contenedor aún corría el código anterior. **Cómo confirmarlo**: en la consola del servicio, la primera línea al arrancar debe decir `ApexData Telemetry v1.0.0 desplegado y arrancado: … UTC (… hora de Lima)`. Si esa línea no aparece, el Deploy no entró. Mientras tanto no se rompe nada: la web sigue agrupando en el navegador.
 
 ---
 
 ## Bitácora
+
+### 2026-08-25 (43) — Aston Martin entra; Ferrari, explicado con una imagen ✅
+
+El usuario aporto Aston Martin y cambio el archivo de Ferrari. Los dos revisados como siempre —sin contenido ejecutable— y, sobre todo, **mirados como los pinta la app** antes de instalarlos.
+
+**Aston Martin funciona perfecto** y entra: son ya **diez logos de once** en la parrilla de 2026.
+
+**Ferrari sigue sin poder ser una silueta**, con el tercer archivo distinto. La causa, dicha de una vez y en claro: **el caballo esta pintado de negro SOBRE el escudo amarillo**, no recortado de el. La app tine todos los logos de un solo color para que sean legibles en los dos temas, y al hacerlo caballo y escudo pasan a ser el mismo color: el caballo desaparece dentro del escudo.
+
+Se le enseno al usuario en una imagen —el archivo a la izquierda, el resultado a la derecha— porque explicarlo con palabras no habia funcionado dos veces. Y con lo que si serviria al lado: un escudo con el caballo **recortado en transparente**, o un logo de solo el caballo. En una busqueda, «Ferrari prancing horse silhouette SVG» o «Ferrari logo one color».
+
+**Verificacion**: lint 0 · 230 unitarias · 76 de navegador · comprobado en la pantalla de equipos: **10 logos pintados y 1 equipo con iniciales**.
 
 ### 2026-08-25 (42) — El trazado del circuito, a pantalla completa ✅
 
