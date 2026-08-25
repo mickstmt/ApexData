@@ -1118,26 +1118,40 @@ test.describe('márgenes en móvil', () => {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto(ruta);
 
-      // Se espera al contenido Y a que la página asiente antes de medir.
-      //
-      // Un documento a medio pintar es otro documento: con solo esperar al
-      // contenido, `/drivers` dio 400 px una vez y 390 las tres siguientes —una
-      // imagen aún sin dimensionar ocupa lo que quiera durante un instante—. La
-      // prueba vigila el ancho final, no el de un fotograma intermedio.
       await expect(page.locator('main, [role="main"], #contenido').first()).toBeVisible({
         timeout: 30_000,
       });
-      await page.waitForLoadState('networkidle');
 
-      const ancho = await page.evaluate(() => ({
-        documento: document.documentElement.scrollWidth,
-        ventana: document.documentElement.clientWidth,
-      }));
+      /**
+       * Se mide hasta que el ancho ASIENTA, no una sola vez.
+       *
+       * Un documento a medio pintar es otro documento: `/drivers` dio 400 px
+       * una vez y 390 las tres siguientes —una imagen aún sin dimensionar ocupa
+       * lo que quiera durante un instante—. Lo que esta prueba vigila es el
+       * ancho final, no el de un fotograma intermedio.
+       *
+       * Y se sondea en vez de esperar a `networkidle`: esa espera **no se
+       * cumple nunca** en esta página dentro del CI —lo intentó y agotó los
+       * cuarenta y cinco segundos—, porque con las fotos de los pilotos la red
+       * no llega a quedarse quieta. Sondear mide justo lo que importa y termina
+       * en cuanto el número se estabiliza.
+       */
+      await expect
+        .poll(
+          async () => {
+            const { documento, ventana } = await page.evaluate(() => ({
+              documento: document.documentElement.scrollWidth,
+              ventana: document.documentElement.clientWidth,
+            }));
 
-      expect(
-        ancho.documento,
-        `${nombre} (${ruta}) empuja el documento a ${ancho.documento} px`
-      ).toBeLessThanOrEqual(ancho.ventana + 1);
+            return documento - ventana;
+          },
+          {
+            timeout: 20_000,
+            message: `${nombre} (${ruta}) sigue empujando el documento a lo ancho`,
+          }
+        )
+        .toBeLessThanOrEqual(1);
     });
   }
 

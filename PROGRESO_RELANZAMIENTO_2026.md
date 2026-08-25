@@ -78,6 +78,18 @@
 
 ## Bitácora
 
+### 2026-08-25 (39) — Esperar a que la red se calme no era la espera correcta ✅
+
+El CI quedó en rojo por una sola prueba, y no por un defecto: la de márgenes esperaba a `networkidle` antes de medir y **esa espera no llega a cumplirse nunca** en la lista de pilotos dentro del CI —agotó los cuarenta y cinco segundos—, porque con las fotos la red no se queda quieta.
+
+La espera correcta no es «que pare la red» sino **«que el ancho deje de cambiar»**. Ahora se sondea hasta que el número se estabiliza, que es exactamente lo que la prueba vigila: el ancho final, no el de un fotograma intermedio. Termina en cuanto asienta, así que además es más rápida.
+
+**De dónde venía todo esto**: la prueba dio 400 px una vez y 390 las tres siguientes. Una imagen aún sin dimensionar ocupa lo que quiera durante un instante, y medir en ese momento es medir otro documento. Comprobado que la portada mide 390 sobre 390: no había desbordamiento ninguno.
+
+**Y una lección de método que costó media hora**: el límite de navegación estaba en 20 s en local y 45 s en CI. Con seis procesos a la vez, la portada tampoco dispara `load` en veinte segundos, así que el listón bajo **inventaba fallos que no existían donde importa** — y los presentaba como si la página se desbordara. Mismo límite en los dos sitios.
+
+**Verificación**: lint 0 · 71 de navegador en local y **71 de 71 bajo la restricción del CI** (una sola conexión a la base), cero inestables.
+
 ### 2026-08-24 (38) — El CI rojo del domingo, y el aviso push que no llego a nadie ✅
 
 El usuario reporto un aviso de fallo de CI un domingo, sin estar trabajando. No era CI: era **«Refresh after each session»**, el tic horario, y falla solo una vez en todo el dia — **el de las 16:24 UTC, el primero tras la bandera a cuadros**. El de las 17:19 sembro la carrera sin novedad.

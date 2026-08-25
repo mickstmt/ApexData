@@ -67,8 +67,14 @@ export default defineConfig({
      * conexión a la base— eso se pasaba de los sesenta segundos del límite de
      * la prueba entera: el fallo salía como «test timeout» y no como lo que
      * era, una navegación lenta.
+     *
+     * El mismo límite en local que en CI, y no uno más corto: con seis procesos
+     * a la vez, la portada —llena de banderas y fotos— tampoco dispara `load`
+     * en veinte segundos. Un listón más bajo aquí solo inventa fallos que no
+     * existen donde importa; pasó, y costó media hora perseguir un
+     * desbordamiento que no era tal.
      */
-    navigationTimeout: process.env.CI ? 45_000 : 20_000,
+    navigationTimeout: 45_000,
   },
   projects: [
     {
