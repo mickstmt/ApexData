@@ -5,6 +5,7 @@ import { ArrowLeft, Flag, Trophy, Medal, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TeamLogo } from '@/components/ui/OptimizedImage';
 import { teamColor } from '@/lib/team-colors';
+import { CocheDelEquipo } from '@/components/constructors/CocheDelEquipo';
 
 // Los datos de esta página cambian como mucho una vez por carrera, así que
 // una hora de caché evita ir a Virginia en cada visita sin que nadie note
@@ -149,29 +150,39 @@ export default async function ConstructorDetailPage({ params }: ConstructorDetai
         </Button>
       </Link>
 
-      {/* Cabecera */}
-      <div className="mb-12 grid gap-8 md:grid-cols-[200px_1fr]">
-        <div className="flex items-center justify-center md:items-start">
-          {/* `relative` y `overflow-hidden` por la barra de color de la
-              izquierda: la identidad del equipo tiene que estar presente aqui,
-              no solo en el logo. Hasta hoy esta pantalla no tenia ninguna. */}
-          <div className="relative flex h-48 w-48 items-center justify-center overflow-hidden rounded-lg border border-border bg-card p-6">
-            <span
-              aria-hidden
-              className="absolute inset-y-0 left-0 w-1.5"
-              style={{ backgroundColor: teamColor(constructor!.constructorId).color }}
-            />
-            <TeamLogo
-              src={constructor!.logoUrl}
-              name={constructor!.name}
-              constructorId={constructor!.constructorId}
-              size="lg"
-            />
-          </div>
+      {/* El coche, a todo el ancho y por encima de todo.
+          NO dentro de la columna de 200 px de abajo: a 3,47:1, esa anchura lo
+          dejaria en 58 px de alto e ilegible. Aqui es ademas el elemento que
+          primero se ve, de ahi `prioritario`. */}
+      <div className="mb-6 overflow-hidden rounded-xl border border-border bg-card">
+        <span
+          aria-hidden
+          className="block h-1 w-full"
+          style={{ backgroundColor: teamColor(constructor!.constructorId).color }}
+        />
+        <div className="px-2 py-1">
+          <CocheDelEquipo constructorId={constructor!.constructorId} prioritario />
         </div>
+      </div>
 
+      {/* Cabecera */}
+      <div className="mb-12">
         <div className="space-y-6">
           <div>
+            {/* El logo, en linea y junto al nombre.
+                Estaba en una caja cuadrada de 192 px que era el ancla visual de
+                la pagina; con el coche arriba, esa caja se convertia en un
+                segundo bloque enorme diciendo lo mismo y empujaba las cifras
+                fuera de la pantalla. Aqui acompana al nombre, que es su papel:
+                acelerar el reconocimiento, no identificar. */}
+            <div className="mb-3 flex items-center gap-3">
+              <TeamLogo
+                src={constructor!.logoUrl}
+                name={constructor!.name}
+                constructorId={constructor!.constructorId}
+                size="md"
+              />
+            </div>
             <h1 className="mb-2 text-4xl font-bold md:text-5xl">{constructor!.name}</h1>
             <div className="inline-flex items-center gap-2 rounded-md bg-primary/10 px-3 py-1 text-sm font-bold text-primary">
               <Flag className="h-4 w-4" />

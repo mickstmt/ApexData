@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { TeamLogo } from '@/components/ui/OptimizedImage';
 import { teamColor } from '@/lib/team-colors';
+import { CocheDelEquipo } from '@/components/constructors/CocheDelEquipo';
 
 interface ConstructorCardProps {
   team: {
@@ -53,6 +54,15 @@ export function ConstructorCard({ team, index = 0 }: ConstructorCardProps) {
       >
         <span className="sr-only">Ver la ficha de {team.name}</span>
       </Link>
+
+        {/* El coche, arriba y a sangre.
+            El lienzo ya trae su propio aire —un 4 % por lado tras normalizarlo—,
+            así que meterlo dentro del `p-6` sumaria los dos y el coche se
+            dibujaria diminuto. Sangrando, se gana en torno a un 15 % de coche
+            sin cambiar la tarjeta. */}
+        <div className="-mx-6 -mt-6 mb-3">
+          <CocheDelEquipo constructorId={team.constructorId} />
+        </div>
 
         {/* Logo */}
         <div className="mb-4">

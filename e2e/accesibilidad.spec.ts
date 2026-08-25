@@ -1110,6 +1110,66 @@ test.describe('política de contenido', () => {
   });
 });
 
+test.describe('los coches de las escuderías', () => {
+  test('las once tarjetas llevan su coche, en AVIF y sin recortar', async ({ page }) => {
+    await page.goto('/constructors');
+    const coches = page.locator('picture img');
+    await expect(coches.first()).toBeVisible({ timeout: 30_000 });
+    expect(await coches.count()).toBeGreaterThanOrEqual(11);
+
+    // AVIF primero y WebP de respaldo: AVIF con transparencia no está en todos
+    // los navegadores, y la transparencia es lo que hace que el coche se apoye
+    // sobre la tarjeta sin traer su propio fondo.
+    const formatos = await page
+      .locator('picture source')
+      .evaluateAll((els) => els.map((e) => e.getAttribute('type')));
+    expect(formatos).toContain('image/avif');
+    expect(formatos).toContain('image/webp');
+
+    // `object-contain`: un coche de F1 se distingue por el morro y el alerón
+    // trasero. Recortarlo lo convierte en un trozo de librea igual al de todos.
+    const ajuste = await coches.first().evaluate((e) => getComputedStyle(e).objectFit);
+    expect(ajuste).toBe('contain');
+  });
+
+  test('el hueco se reserva antes de cargar, para que nada salte', async ({ page }) => {
+    await page.goto('/constructors');
+    await expect(page.locator('picture img').first()).toBeVisible({ timeout: 30_000 });
+
+    // Once bandas cargando en diferido sin hueco reservado son once saltos de
+    // maquetación mientras se baja por la rejilla.
+    const proporcion = await page
+      .locator('picture')
+      .first()
+      .evaluate((e) => getComputedStyle(e.parentElement!).aspectRatio);
+    expect(proporcion).toMatch(/1034\s*\/\s*298/);
+  });
+
+  test('en la ficha el coche va a todo el ancho y carga sin esperar', async ({ page }) => {
+    await page.setViewportSize({ width: 430, height: 900 });
+    await page.goto('/constructors/ferrari');
+
+    const coche = page.locator('picture img').first();
+    await expect(coche).toBeVisible({ timeout: 30_000 });
+
+    // A 3,47:1, meterlo en la columna estrecha de la cabecera lo dejaría en
+    // 58 px de alto e ilegible: tiene que ir por encima, a todo el ancho.
+    const caja = (await coche.boundingBox())!;
+    expect(caja.width).toBeGreaterThan(300);
+
+    // Es lo primero que se ve: no se difiere.
+    await expect(coche).toHaveAttribute('loading', 'eager');
+  });
+
+  test('el coche no se anuncia al lector de pantalla', async ({ page }) => {
+    await page.goto('/constructors');
+    await expect(page.locator('picture img').first()).toBeVisible({ timeout: 30_000 });
+
+    // Con el nombre del equipo escrito justo al lado, es decoración.
+    expect(await page.locator('picture img[alt=""]').count()).toBeGreaterThanOrEqual(11);
+  });
+});
+
 test.describe('logos de equipo', () => {
   test('los once equipos de 2026 tienen logo, ninguno cae a iniciales', async ({ page }) => {
     await page.goto('/constructors');

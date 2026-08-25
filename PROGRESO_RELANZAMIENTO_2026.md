@@ -78,6 +78,29 @@
 
 ## Bitácora
 
+### 2026-08-25 (45) — Los coches de las escuderias ✅
+
+El usuario aporto los once coches de 2026 y pidio integrarlos. Primera decision tomada con la norma nueva: **consultar la skill de UI/UX y varios agentes antes de proponer nada**.
+
+**Dos cosas se hicieron antes de ensenar nada, porque no eran decision:**
+
+1. **Normalizar el encuadre.** Los archivos venian con el mismo lienzo pero con **entre un 21 % y un 32 % de aire** alrededor del coche. Puestos en fila, unos se dibujaban visiblemente mas pequenos que otros — y eso no se lee como variedad sino como error. `scripts/images/cars.ts` recorta cada uno a su caja real y lo remonta sobre un lienzo identico, con **las ruedas apoyadas siempre en la misma linea**.
+2. **Convertir.** De **3.162 KB de PNG a 966 KB** servibles, en dos anchos y dos formatos. Cada coche pasa de 284 KB a **21 KB**.
+
+**Y una decision tecnica que el agente de rendimiento fundamento midiendo: no usar `next/image`.** Su cache vive dentro de la imagen de Docker y EasyPanel la reconstruye en cada despliegue, asi que el primer visitante tras cada subida pagaria las once conversiones en la CPU del VPS. Ademas Next codifica AVIF con esfuerzo 3 — mas peso por mas trabajo del servidor. Se convierten una vez, a mano, cuando cambie la parrilla: la misma decision que ya se tomo con los trazados y los logos.
+
+**Donde van, y por que ahi:**
+
+- **Ficha del equipo**: banda a todo el ancho, por encima de la cabecera. Los tres agentes coincidieron en que es la unica pantalla donde alguien se pregunta como es el coche de un equipo. Y aviso util: la columna de 200 px de la cabecera habria dejado el coche en **58 px de alto** — a 3,47:1 no cabe ahi. Medido despues del cambio: las estadisticas pasan de estar a mas de 900 px a estar a **502 px**, dentro de la primera pantalla.
+- **Rejilla de equipos**: banda a sangre arriba, con el logo debajo. Elegido por el usuario entre tres formas. A sangre y no dentro del `p-6`, porque el lienzo ya trae su propio aire y sumar los dos dibujaria el coche diminuto.
+- **En ningun otro sitio.** Los tres coincidieron: la fila de la clasificacion no admite una banda de 3,47:1 sin recortar, y **recortar un coche de F1 lo destruye** — se distingue de otro por el morro y el aleron trasero, la zona central es casi identica en los once. Recortado deja de informar y pasa a ser textura.
+
+**Detalles que vinieron de los informes**: `<picture>` con AVIF y respaldo WebP porque AVIF con transparencia no esta en todos los navegadores; hueco reservado con `aspect-ratio` para que once bandas en diferido no sean once saltos de maquetacion; `alt=""` porque el nombre esta escrito al lado; `eager` solo en la ficha, donde el coche es lo primero que se ve; y cache **inmutable** para `/images/cars/` —el ano va en el nombre, asi que un archivo nunca cambia— con rama propia en el service worker, que evitaba once peticiones condicionales por visita.
+
+**Y una consecuencia**: la caja cuadrada de 192 px del logo en la ficha se convertia en un segundo bloque enorme diciendo lo mismo. El logo baja a tamano en linea junto al nombre, que es su papel — acelerar el reconocimiento, no identificar.
+
+**Verificacion**: lint 0 · 240 unitarias · 83 de navegador · comprobado en los dos temas: 11 coches en la rejilla y la ficha con el coche a 380 px de ancho.
+
 ### 2026-08-25 (44) — Ferrari entra con su escudo, y el sistema se hace verdadero ✅
 
 Los once equipos de 2026 tienen ya su logo. Y la forma de llegar merece quedar escrita, porque la decision se tomo mal dos veces antes de tomarse bien.

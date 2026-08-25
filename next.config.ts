@@ -86,6 +86,22 @@ const nextConfig: NextConfig = {
       },
       {
         /**
+         * Los coches, inmutables.
+         *
+         * El nombre lleva la temporada (`ferrari-2026.avif`), así que un
+         * archivo nunca cambia de contenido: una parrilla nueva estrena
+         * nombres. Se pueden cachear para siempre sin revalidar, que es lo que
+         * evita once peticiones condicionales por cada visita a la rejilla.
+         */
+        source: '/images/cars/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Content-Security-Policy', value: "default-src 'none'; sandbox" },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+        ],
+      },
+      {
+        /**
          * Las imágenes, servidas sin poder ejecutar nada.
          *
          * `dangerouslyAllowSVG` va acompañado de una CSP estricta, pero esa CSP

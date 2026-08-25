@@ -8,8 +8,8 @@
 //
 // Bump the cache version on any release that changes page HTML or chunk URLs,
 // otherwise an installed app can keep serving HTML that references deleted JS.
-const CACHE_STATIC = 'apexdata-static-v2';
-const CACHE_PAGES = 'apexdata-pages-v2';
+const CACHE_STATIC = 'apexdata-static-v3';
+const CACHE_PAGES = 'apexdata-pages-v3';
 
 const OFFLINE_URL = '/offline';
 const INICIO_URL = '/';
@@ -61,6 +61,15 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/')) return;
 
   if (url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(cacheFirst(request, CACHE_STATIC));
+    return;
+  }
+
+  // Los coches llevan el año en el nombre, así que un archivo nunca cambia:
+  // pedirlos otra vez para que el servidor conteste «no ha cambiado» son once
+  // idas y vueltas de latencia móvil por cada visita a la rejilla, gastadas en
+  // algo que por definición es el mismo. Van a caché primero y no se revalidan.
+  if (url.pathname.startsWith('/images/cars/')) {
     event.respondWith(cacheFirst(request, CACHE_STATIC));
     return;
   }
