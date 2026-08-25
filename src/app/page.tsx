@@ -1,6 +1,6 @@
+import { TrazadoAmpliable } from '@/components/home/TrazadoAmpliable';
 import { Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowRight, CalendarDays, Flag } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -126,12 +126,11 @@ export default async function Home() {
 
               {nextRace.circuit.imageUrl && (
                 <div className="justify-self-center md:justify-self-end">
-                  <Image
+                  {/* A noventa píxeles se reconoce el circuito pero no se
+                      distingue una curva de otra. Tocarlo lo abre entero. */}
+                  <TrazadoAmpliable
                     src={nextRace.circuit.imageUrl}
-                    alt={`Trazado de ${nextRace.circuit.name}`}
-                    width={220}
-                    height={140}
-                    className="h-28 w-auto opacity-90 brightness-0 dark:brightness-0 dark:invert"
+                    circuito={nextRace.circuit.name}
                   />
                 </div>
               )}

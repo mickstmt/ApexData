@@ -78,6 +78,21 @@
 
 ## Bitácora
 
+### 2026-08-25 (42) — El trazado del circuito, a pantalla completa ✅
+
+Lo pidio el usuario como «zoom al pasar el cursor» y se eligio sobre mockup entre tres formas. Gano la de pantalla completa, y la razon de peso no fue estetica: **en un telefono no existe pasar el cursor**, y el telefono es donde mas se mira esta app. Una respuesta atada al hover no habria ocurrido nunca ahi. El mockup lo decia arriba del todo y las tres opciones respondian tambien al toque, para poder compararlas con el dedo.
+
+Va sobre `<dialog>` con `showModal()`, como la hoja inferior y por lo mismo: trae de fabrica el foco atrapado dentro, `Escape`, el foco devuelto al boton que lo abrio y lo de detras inerte. Escribir eso a mano es escribirlo mal. Y el trazado es un **boton**, no una imagen suelta, asi que se llega con el teclado y se abre con Enter.
+
+**Dos veces hubo que medir para no dar por bueno un a medias:**
+
+1. La primera version ampliaba de 112 a **234 px** — el doble escaso, que no justifica abrir nada. La causa era `next/image`: obliga a declarar una proporcion fija y no deja escalar. Estos SVG son vectoriales y el optimizador ni los procesa, asi que una etiqueta normal —igual que los logos de equipo, y por el mismo motivo— deja que cada circuito traiga la suya.
+2. Aun asi se quedaba en **300 px con 1.280 de pantalla**: un `<dialog>` se encoge hasta su contenido, asi que el `w-full` de la imagen se mordia la cola. Con un ancho explicito, el resultado final es **3,1x en el telefono y 5x en escritorio**.
+
+Entra creciendo desde su tamano de la tarjeta, no apareciendo de golpe, para que se entienda que es la misma cosa vista de cerca. Solo al entrar, como la hoja: animar el cierre obliga a esperar y una capa que tarda en irse se siente rota. Con «reducir movimiento», nada.
+
+**Verificacion**: lint 0 · 230 unitarias · 76 de navegador · medido en los dos temas y en las dos anchuras.
+
 ### 2026-08-25 (41) — El calendario lleva a los resultados ✅
 
 Lo pidio el usuario y tenia razon: teniendo los resultados guardados, mirar el calendario y no poder ir a ellos era pedirle a la gente que volviera a buscar el mismo Gran Premio en otra pantalla.

@@ -1110,6 +1110,60 @@ test.describe('política de contenido', () => {
   });
 });
 
+test.describe('trazado a pantalla completa', () => {
+  test('se abre con el dedo y se agranda de verdad', async ({ page }) => {
+    await page.setViewportSize({ width: 430, height: 900 });
+    await page.goto('/');
+
+    const boton = page.getByRole('button', { name: /Ver el trazado de .+ a pantalla completa/ });
+    if ((await boton.count()) === 0) test.skip(true, 'No hay carrera próxima con trazado');
+    await expect(boton).toBeVisible({ timeout: 30_000 });
+
+    const pequeno = (await boton.locator('img').boundingBox())!;
+    await boton.click();
+
+    const dialogo = page.locator('dialog[data-trazado]');
+    await expect(dialogo).toHaveAttribute('open', '');
+
+    // Que se abra no basta: si apenas crece, no sirve de nada. Medido, pasa de
+    // 112 px a 348 en un teléfono.
+    const grande = (await dialogo.locator('img').first().boundingBox())!;
+    expect(grande.height).toBeGreaterThan(pequeno.height * 2);
+  });
+
+  test('se cierra con Escape y devuelve el foco', async ({ page }) => {
+    await page.goto('/');
+
+    const boton = page.getByRole('button', { name: /Ver el trazado de .+ a pantalla completa/ });
+    if ((await boton.count()) === 0) test.skip(true, 'No hay carrera próxima con trazado');
+    await boton.click();
+
+    const dialogo = page.locator('dialog[data-trazado]');
+    await expect(dialogo).toHaveAttribute('open', '');
+
+    // Lo que da `showModal()` de fábrica y a mano se escribe mal: Escape cierra
+    // y el foco vuelve al botón que lo abrió, no al principio de la página.
+    await page.keyboard.press('Escape');
+    await expect(dialogo).not.toHaveAttribute('open', '');
+
+    const vuelto = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));
+    expect(vuelto).toMatch(/Ver el trazado de/);
+  });
+
+  test('el trazado es un control, no una imagen suelta', async ({ page }) => {
+    await page.goto('/');
+
+    const boton = page.getByRole('button', { name: /Ver el trazado de .+ a pantalla completa/ });
+    if ((await boton.count()) === 0) test.skip(true, 'No hay carrera próxima con trazado');
+
+    // Se puede llegar con el teclado y abrir con Enter: sin esto seria una
+    // funcion que solo existe para quien usa raton o dedo.
+    await boton.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('dialog[data-trazado]')).toHaveAttribute('open', '');
+  });
+});
+
 test.describe('márgenes en móvil', () => {
   test('la portada no se sale de la pantalla a lo ancho', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
