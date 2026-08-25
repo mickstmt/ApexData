@@ -8,8 +8,17 @@
 //
 // Bump the cache version on any release that changes page HTML or chunk URLs,
 // otherwise an installed app can keep serving HTML that references deleted JS.
-const CACHE_STATIC = 'apexdata-static-v3';
-const CACHE_PAGES = 'apexdata-pages-v3';
+//
+// v4: el podio pasó a ir antes de la tabla y las filas ganaron bandera, así que
+// el HTML de la ficha de carrera cambió entero. Sin subir esto, un móvil con la
+// app instalada servía la página guardada y la hidrataba con el JavaScript
+// nuevo: React descartaba el HTML del servidor y volvía a pintar en el cliente
+// —error #418—, comprobado en producción contra este mismo despliegue.
+//
+// Que sea manual es una trampa que ya se ha activado una vez. Automatizarlo
+// —sellar aquí el BUILD_ID en la compilación— está pendiente.
+const CACHE_STATIC = 'apexdata-static-v4';
+const CACHE_PAGES = 'apexdata-pages-v4';
 
 const OFFLINE_URL = '/offline';
 const INICIO_URL = '/';
