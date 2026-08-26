@@ -39,16 +39,30 @@ describe('ninguna fecha se formatea sin zona horaria', () => {
    * Esta es la prueba que de verdad importa: el fallo no fue escribir mal una
    * función, fue olvidar `timeZone` en tres sitios sueltos durante meses.
    *
-   * Se permite una excepción, y sólo una: `RaceCountdown` **recibe** la zona
-   * como parámetro, porque ahí sí se quiere la del navegador —la pregunta es
-   * «¿a qué hora la veo?»— y lo hace en el único orden que no desajusta la
-   * hidratación: pinta en UTC como el servidor y cambia en un efecto.
+   * Las excepciones son componentes que **reciben** la zona como parámetro,
+   * porque ahí sí se quiere la del navegador —la pregunta es «¿a qué hora la
+   * veo?»— y lo hacen en el único orden que no desajusta la hidratación:
+   * pintan en UTC como el servidor y cambian al montar.
    */
-  const PERMITIDOS = new Set(['src/components/home/RaceCountdown.tsx']);
+  const PERMITIDOS = new Set([
+    'src/components/home/RaceCountdown.tsx',
+    'src/components/results/HoraDeSalida.tsx',
+    'src/components/results/HorarioDelFinDeSemana.tsx',
+  ]);
 
-  const archivos = execSync('git ls-files "src/**/*.ts" "src/**/*.tsx"', { encoding: 'utf8' })
+  /**
+   * `--others --exclude-standard` incluye los archivos aún sin añadir.
+   *
+   * Sin eso, un componente recién creado no se revisaba hasta comprometerlo, y
+   * la prueba pasaba en local para fallar en el CI. Pasó exactamente así.
+   */
+  const archivos = execSync(
+    'git ls-files --cached --others --exclude-standard "src/**/*.ts" "src/**/*.tsx"',
+    { encoding: 'utf8' }
+  )
     .trim()
-    .split('\n');
+    .split('\n')
+    .filter(Boolean);
 
   it('encuentra archivos que revisar', () => {
     // Sin esto, un `git ls-files` que fallara haría pasar la prueba sin mirar
