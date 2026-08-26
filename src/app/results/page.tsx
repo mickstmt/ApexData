@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { SeasonSelector } from '@/components/ui/SeasonSelector';
 import { SeasonResultRows } from './SeasonResultRows';
 import { temporadaPorDefecto } from '@/lib/temporada';
+import { fechaDeCarreraCorta } from '@/lib/fechas';
 
 export const metadata = {
   title: 'Resultados | ApexData',
@@ -78,11 +79,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
                   raceName: race.raceName,
                   country: race.circuit.country,
                   flag: getFlagEmoji(race.circuit.country),
-                  fecha: new Date(race.date).toLocaleDateString('es-ES', {
-                    day: '2-digit',
-                    month: 'short',
-                    timeZone: 'UTC',
-                  }),
+                  fecha: fechaDeCarreraCorta(race.date),
                   winnerName: `${winner.driver.givenName} ${winner.driver.familyName}`,
                   winnerId: winner.driver.driverId,
                   winnerCode:
@@ -148,15 +145,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
                         </Link>
                       </td>
                       <td className="p-4 text-sm text-muted-foreground">
-                        {/* `timeZone: 'UTC'` como en la versión móvil: la fecha
-                            se guarda a medianoche UTC y sin fijar la zona el
-                            mismo gran premio salía con un día distinto en
-                            escritorio y en móvil. */}
-                        {new Date(race.date).toLocaleDateString('es-ES', {
-                          day: '2-digit',
-                          month: 'short',
-                          timeZone: 'UTC',
-                        })}
+                        {fechaDeCarreraCorta(race.date)}
                       </td>
                       <td className="p-4">
                         <Link

@@ -12,6 +12,7 @@ import { PoleDelSabado } from '@/components/results/PoleDelSabado';
 import { clasesDeDorsal } from '@/lib/medallas';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { estadoEnPalabras, resumirEstado } from '@/lib/estado-resultado';
+import { fechaDeCarrera } from '@/lib/fechas';
 import { SprintResults } from './SprintResults';
 import { SesionPendiente } from './SesionPendiente';
 import { ClasificacionSprint, VueltasDePractica } from './TiemposDeSesion';
@@ -327,11 +328,7 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span>
-                  {new Date(race.date).toLocaleDateString('es-ES', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
+                  {fechaDeCarrera(race.date)}
                 </span>
               </div>
             </div>
@@ -655,11 +652,7 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Fecha:</span>
                   <span className="font-semibold">
-                    {new Date(race.date).toLocaleDateString('es-ES', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
+                    {fechaDeCarrera(race.date)}
                   </span>
                 </div>
               </div>

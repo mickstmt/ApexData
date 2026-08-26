@@ -78,6 +78,31 @@
 
 ## Bitácora
 
+### 2026-08-26 (47) — La carrera se fechaba un dia antes en Lima ✅
+
+Salio persiguiendo un error de consola en produccion (React #418, hidratacion) tras el despliegue del podio. El sintoma llevaba a un fallo mayor: **la ficha de carrera enseñaba una fecha distinta segun la zona horaria de quien mirara**.
+
+**El dato explica todo.** `Race.date` **no es un instante, es una fecha de calendario**: las **352** carreras de la base lo guardan a medianoche UTC, y la hora real de salida va aparte en `Race.time`. Es lo que manda Jolpica —`date` y `time` por separado— y Prisma lo materializa como un `DateTime` a las 00:00Z.
+
+Formatearlo sin fijar la zona lo reinterpreta como un momento del tiempo. En Lima, cinco horas por detras, medianoche UTC del dia 8 son las siete de la tarde del 7: **el Gran Premio de Australia salia fechado el 7 de marzo**. Y de paso rompia la hidratacion, porque el servidor va en UTC y el navegador no — React descartaba el HTML del servidor y volvia a pintar en el cliente.
+
+**Se descartaron las otras dos salidas con motivo.** «Hora del circuito» da el mismo resultado que UTC en este dato pero exigiria guardar la zona de 77 circuitos, que la base no tiene. «La zona de quien mira» es lo que habia, y es el fallo.
+
+**Fecha y hora son cosas distintas y se tratan distinto**, que era el matiz que faltaba:
+
+| | Como | Por que |
+|---|---|---|
+| **Fecha** de la carrera | UTC | Es un dia de calendario, no un instante |
+| **Hora** de salida | Zona del navegador | «¿A que hora la veo?» solo tiene sentido en tu reloj |
+
+El caso dificil ya estaba resuelto en el proyecto: `RaceCountdown` pinta primero en UTC —igual que el servidor— y cambia a la zona del navegador en un efecto, que es el unico orden que no desajusta la hidratacion. Y `formatBirthDate` ya fijaba UTC con un comentario explicando esto mismo. La regla existia; no se habia aplicado a las fechas de carrera.
+
+**Correccion de una cifra propia**: dije cinco sitios y eran **tres**. El primer recuento miraba linea a linea y `results/page.tsx` ya llevaba `timeZone: 'UTC'`, solo que en otra linea. Los tres reales: calendario y las dos fechas de la ficha de carrera. Los de `results` se unificaron igualmente para que el formato viva en un sitio.
+
+**Piezas**: `src/lib/fechas.ts` con `fechaDeCarrera` y `fechaDeCarreraCorta`, y `tests/fechas.test.ts`. La prueba que importa no comprueba la funcion sino **el repositorio entero**: recorre `src/**` buscando cualquier formateo de fecha sin `timeZone`, con una sola excepcion declarada —`RaceCountdown`, que la recibe como parametro a proposito—. Comprobado que sabe fallar reintroduciendo el defecto: senala archivo y linea.
+
+**Verificacion**: lint 0 · tipos 0 · **258 unitarias** · **85 de navegador** · misma fecha en UTC, Lima, Melbourne y Tokio, y **cero errores de hidratacion** con el service worker al mando, que era donde saltaba.
+
 ### 2026-08-25 (46) — El podio sube arriba, y la parrilla gana cara y bandera ✅
 
 Empezo con una pregunta del usuario: por que en clasificacion y resultados se ven las iniciales y no las fotos ni las banderas. Medido: **clasificacion y pilotos ya las tenian** —23 fotos y 16 banderas— y lo que se veia con iniciales eran las temporadas historicas, porque de 84 pilotos en la base solo 29 tienen foto. **El hueco real estaba en la ficha de carrera: cero imagenes en las cuatro tablas.**

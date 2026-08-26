@@ -6,6 +6,7 @@ import { SeasonSelector } from '@/components/ui/SeasonSelector';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { Chip } from '@/components/ui/Chip';
 import { IrALaProximaCarrera } from './IrALaProximaCarrera';
+import { fechaDeCarrera } from '@/lib/fechas';
 
 export const metadata = {
   title: 'Calendario F1 | ApexData',
@@ -219,11 +220,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
                         <span>
-                          {raceDate.toLocaleDateString('es-ES', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                          })}
+                          {fechaDeCarrera(raceDate)}
                         </span>
                       </div>
                     </div>
