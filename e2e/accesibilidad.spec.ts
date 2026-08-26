@@ -332,6 +332,31 @@ test.describe('telemetría', () => {
 });
 
 test.describe('sesiones enlazadas', () => {
+  test('la portada trae datos de verdad, también en visitas repetidas', async ({ page }) => {
+    // El defecto que esto vigila: al cachear las consultas de la portada, las
+    // fechas volvían de la caché como cadenas —`unstable_cache` guarda en
+    // JSON— y `raceStart` reventaba con «date.toISOString is not a function».
+    // La página caía en su pantalla de «no se pudo conectar»… y seguía
+    // respondiendo **200 en 14 ms**. Medir solo el tiempo daba por bueno el
+    // error, así que hay que comprobar el contenido.
+    //
+    // Se visita dos veces a propósito: la primera llena la caché y la segunda
+    // la lee, que es donde estaba el fallo.
+    for (const visita of [1, 2]) {
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+      await expect(
+        page.getByText('No se pudo conectar con la base de datos'),
+        `visita ${visita}: la portada cayó en su pantalla de error`
+      ).toHaveCount(0);
+
+      await expect(page.getByText(/Próxima carrera|Último/i).first()).toBeVisible({
+        timeout: 30_000,
+      });
+      expect(await page.locator('img').count()).toBeGreaterThan(0);
+    }
+  });
+
   test('cada sesión de la portada lleva a su pestaña de la ficha', async ({ page }) => {
     await page.goto('/');
 

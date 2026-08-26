@@ -2,6 +2,7 @@ import { TrazadoAmpliable } from '@/components/home/TrazadoAmpliable';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { ArrowRight, CalendarDays, Flag } from 'lucide-react';
+import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,35 +27,143 @@ export const metadata = {
  * Race hub: what a fan wants on a race weekend — what is next, what just
  * happened, and where the championship stands.
  */
-async function getHubData() {
-  const now = new Date();
-
-  try {
+/**
+ * Lo que la portada necesita de la base, cacheado.
+ *
+ * ## Por qué hacía falta
+ *
+ * Era la única página con datos que no cacheaba nada. Medido en producción:
+ * **584 ms hasta el primer byte, frente a 65 ms** en clasificación o
+ * resultados. No es culpa de las consultas ni de un índice que falte —los hay
+ * en `Race.date` y `Result.raceId`—: es que el VPS está a unos 101 ms de red de
+ * Supabase, y `include` hace un viaje por relación. Cinco o seis viajes son
+ * medio segundo antes de mandar un solo byte.
+ *
+ * El patrón ya estaba en el proyecto —`force-dynamic` en la página más
+ * `unstable_cache` en la consulta, como en `/circuits`—; a la portada le
+ * faltaba la segunda mitad.
+ *
+ * ## Por qué `select` y no `include`
+ *
+ * La misma trampa que costó una tarde en la ficha de piloto: la caché de Next
+ * guarda serializando a JSON y `Result.milliseconds` es un `BigInt`, que
+ * `JSON.stringify` no sabe convertir. Con `include` esto **no se cachearía en
+ * absoluto** y el fallo moriría como rechazo no capturado, sin romper la
+ * página y sin verse. Enumerar los campos deja fuera el `BigInt` y de paso no
+ * trae columnas que la portada no pinta.
+ *
+ * ## Por qué cinco minutos
+ *
+ * Lo que se cachea es **qué** carrera es la próxima y cuál la última, no cuánto
+ * falta: la cuenta atrás vive en el navegador y sigue al segundo. Esas dos
+ * identidades cambian como mucho una vez por fin de semana, así que cinco
+ * minutos es holgado para el peor momento —el rato justo después de una
+ * carrera, cuando la última debe cambiar— y suficiente para que casi ninguna
+ * visita pague el viaje a la base.
+ */
+const getHubDataCacheada = unstable_cache(
+  async () => {
+    const now = new Date();
     // Race.date is midnight UTC and the start time lives in Race.time, so the
     // window is widened by a day and the exact start is resolved in code.
     const yesterday = new Date(now.getTime() - 86_400_000);
+
+    const circuito = {
+      select: { name: true, location: true, country: true, imageUrl: true },
+    } as const;
 
     const [upcoming, lastRace] = await Promise.all([
       prisma.race.findMany({
         where: { date: { gte: yesterday } },
         orderBy: { date: 'asc' },
         take: 3,
-        include: { circuit: true },
+        select: {
+          id: true,
+          year: true,
+          round: true,
+          raceName: true,
+          date: true,
+          time: true,
+          fp1Date: true,
+          fp2Date: true,
+          fp3Date: true,
+          qualiDate: true,
+          sprintDate: true,
+          sprintQualiDate: true,
+          circuit: circuito,
+        },
       }),
       prisma.race.findFirst({
         where: { date: { lte: now }, results: { some: {} } },
         orderBy: { date: 'desc' },
-        include: {
-          circuit: true,
+        select: {
+          year: true,
+          round: true,
+          raceName: true,
+          circuit: circuito,
           results: {
             where: { position: { lte: 3 } },
             orderBy: { position: 'asc' },
-            include: { driver: true, team: true },
+            select: {
+              id: true,
+              position: true,
+              points: true,
+              driver: {
+                select: { driverId: true, givenName: true, familyName: true, imageUrl: true },
+              },
+              team: { select: { constructorId: true, name: true } },
+            },
           },
         },
       }),
     ]);
 
+    return { upcoming, lastRace };
+  },
+  ['portada-carreras'],
+  { revalidate: 300, tags: ['portada'] }
+);
+
+/** Los campos de `Race` que son fechas y que la portada usa como tales. */
+const FECHAS = [
+  'date',
+  'fp1Date',
+  'fp2Date',
+  'fp3Date',
+  'qualiDate',
+  'sprintDate',
+  'sprintQualiDate',
+] as const;
+
+/**
+ * Devuelve las fechas a ser fechas al salir de la caché.
+ *
+ * `unstable_cache` guarda serializando a JSON, así que un `Date` vuelve como
+ * cadena. Sin esto, `raceStart` reventaba con «date.toISOString is not a
+ * function», la portada caía en su pantalla de «no se pudo conectar» y —lo
+ * peor— **seguía respondiendo 200 en 14 ms**: el atajo de medir solo el tiempo
+ * daba por bueno un error.
+ */
+function conFechasDeVerdad<T extends Record<string, unknown>>(fila: T): T {
+  const copia = { ...fila } as Record<string, unknown>;
+  for (const campo of FECHAS) {
+    const valor = copia[campo];
+    if (typeof valor === 'string') copia[campo] = new Date(valor);
+  }
+  return copia as T;
+}
+
+async function getHubData() {
+  const now = new Date();
+
+  try {
+    const cacheada = await getHubDataCacheada();
+    const upcoming = cacheada.upcoming.map(conFechasDeVerdad);
+    const lastRace = cacheada.lastRace;
+
+    // Se resuelve fuera de la caché: depende de la hora actual, y meterlo
+    // dentro congelaría durante cinco minutos cuál es la próxima carrera justo
+    // en el momento en que deja de serlo.
     const nextRace = upcoming.find((race) => raceStart(race).getTime() >= now.getTime()) ?? null;
 
     const year = lastRace?.year ?? nextRace?.year ?? now.getFullYear();

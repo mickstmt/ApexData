@@ -69,14 +69,44 @@
 
 1. ~~**Desplegar la web y el servicio de telemetría en EasyPanel**~~ → ambos hechos: la web el 2026-08-17 y la telemetría el 2026-08-18, con el volumen en `/app/cache` y `FASTF1_SERVICE_URL` ya configurada. ~~Comprobación de cutover del CI~~ → resuelta.
 2. ~~**Pulsar *Deploy* en el servicio de telemetría** por el endpoint `/classification`~~ → hecho el 2026-08-22, comprobado en producción: `/api/clasificacion/2026/12/SQ` devuelve los 22 puestos y la pestaña del sprint enseña la parrilla. Recordatorio permanente: **el servicio de telemetría no se despliega solo**; cualquier cambio bajo `python-service/` necesita pulsar *Deploy* a mano en panel.dittochatbot.com.
-3. 🔔 **Activar los avisos push**: abrir la app instalada en la pantalla de inicio, entrar a **Favoritos** y pulsar el boton de avisos. Comprobado el 2026-08-24: la base tiene **cero suscripciones**, asi que el aviso del GP de Paises Bajos se envio a nadie aunque la carrera quedara marcada como avisada. La cadena entera esta probada salvo este ultimo paso, que solo se puede dar desde un telefono.
+3. ~~**Activar los avisos push**~~ → **hecho**, comprobado el 2026-08-26: la base tiene **1 suscripcion**, creada el 2026-08-24. La cadena entera funciona. Lo de abajo queda como historico: abrir la app instalada en la pantalla de inicio, entrar a **Favoritos** y pulsar el boton de avisos. Comprobado el 2026-08-24: la base tiene **cero suscripciones**, asi que el aviso del GP de Paises Bajos se envio a nadie aunque la carrera quedara marcada como avisada. La cadena entera esta probada salvo este ultimo paso, que solo se puede dar desde un telefono.
 4. ~~**6 logos de equipo**~~ → **cerrado el 2026-08-25**: los once equipos de 2026 tienen su logo, Ferrari incluido, con cero equipos cayendo al respaldo de iniciales. Ver la bitacora del dia para como se resolvio lo del escudo. Los detalles historicos de antes: Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
 5. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
-6. 🔴 **Pulsar *Deploy* del servicio**: el agrupado de `/fastest` por piloto y la huella de arranque **ya están en el repo** (2026-08-24, bitácora 29), pero el servicio no se despliega solo. Comprobado ese día a las 09:40 hora de Lima: producción seguía devolviendo pilotos repetidos con `limit=7` y `limit=9` —claves de caché nuevas, así que no era caché—, señal de que el contenedor aún corría el código anterior. **Cómo confirmarlo**: en la consola del servicio, la primera línea al arrancar debe decir `ApexData Telemetry v1.0.0 desplegado y arrancado: … UTC (… hora de Lima)`. Si esa línea no aparece, el Deploy no entró. Mientras tanto no se rompe nada: la web sigue agrupando en el navegador.
+6. ~~**Pulsar *Deploy* del servicio**~~ → **hecho**, comprobado el 2026-08-26: `/api/laps/2026/12/R/fastest?limit=7` devuelve 7 pilotos distintos, o sea que el agrupado esta desplegado. Lo de abajo queda como historico: el agrupado de `/fastest` por piloto y la huella de arranque **ya están en el repo** (2026-08-24, bitácora 29), pero el servicio no se despliega solo. Comprobado ese día a las 09:40 hora de Lima: producción seguía devolviendo pilotos repetidos con `limit=7` y `limit=9` —claves de caché nuevas, así que no era caché—, señal de que el contenedor aún corría el código anterior. **Cómo confirmarlo**: en la consola del servicio, la primera línea al arrancar debe decir `ApexData Telemetry v1.0.0 desplegado y arrancado: … UTC (… hora de Lima)`. Si esa línea no aparece, el Deploy no entró. Mientras tanto no se rompe nada: la web sigue agrupando en el navegador.
 
 ---
 
 ## Bitácora
+
+### 2026-08-26 (49) — La portada no cacheaba nada, y casi se celebra un error como si fuera velocidad ✅
+
+Medido en produccion: **584 ms hasta el primer byte** frente a **65 ms** en clasificacion o resultados. No era un indice que faltara —`Race.date` y `Result.raceId` los tienen— sino que **la portada era la unica pagina con datos que no cacheaba**. El VPS esta a ~101 ms de red de Supabase y `include` hace un viaje por relacion: cinco o seis viajes son medio segundo antes de mandar un byte.
+
+El patron ya estaba en el proyecto —`force-dynamic` en la pagina mas `unstable_cache` en la consulta, con el porque escrito en `circuits/page.tsx`—; a la portada le faltaba la segunda mitad.
+
+**Dos trampas, y la segunda es la leccion del dia.**
+
+La primera se vio venir porque ya habia mordido antes: `Result.milliseconds` es un `BigInt` y la cache de Next guarda serializando a JSON, asi que con `include` **no se habria cacheado nada** y el fallo habria muerto como rechazo no capturado. Se enumera con `select`, que ademas deja fuera columnas que la portada no pinta.
+
+La segunda no se vio venir. `unstable_cache` devuelve JSON, asi que **un `Date` vuelve como cadena**, y `raceStart` reventaba con «date.toISOString is not a function». La portada caia en su pantalla de «no se pudo conectar»… **y seguia respondiendo 200 en 14 ms**. Se llego a medir eso y a darlo por bueno: el atajo de mirar solo el tiempo convirtio un error en un exito aparente de 200x. Solo se descubrio al abrir la pagina en un navegador y leer lo que ponia. Se rehidratan las siete fechas al salir de la cache.
+
+**Y un tropiezo de metodo que ya iba dos veces**: `playwright.config.ts` tiene `reuseExistingServer: true`, asi que comprobar que una prueba «sabe fallar» sin matar antes el servidor la ejecuta contra el binario viejo — con el arreglo todavia dentro. La primera comprobacion dio un falso verde por eso.
+
+**Resultado**, con el contenido verificado y no solo el reloj: primer byte **584 → 18-27 ms** en visitas repetidas, 171 ms con la cache fria. Cinco minutos de vigencia: lo que se cachea es **que** carrera es la proxima y cual la ultima, no cuanto falta — la cuenta atras vive en el navegador y sigue al segundo.
+
+**Verificacion**: lint 0 · tipos 0 · **262 unitarias** · **88 de navegador**, una nueva que visita la portada **dos veces** —la primera llena la cache y la segunda la lee, que es donde estaba el fallo— y comprueba que no aparece la pantalla de error. Comprobado que sabe fallar quitando la rehidratacion, con el servidor matado antes.
+
+### 2026-08-26 (48b) — Dos pendientes que ya estaban hechos, y Ferrari sin diseñador ✅
+
+Repasando la lista de pendientes salieron tres cosas.
+
+**Los avisos push funcionan.** La bitacora decia «cero suscripciones»; la base tiene **1**, creada el 2026-08-24 desde el iPhone del usuario. La cadena esta probada de punta a punta.
+
+**El despliegue del servicio de telemetria entro.** Estaba marcado en rojo; comprobado en produccion, `/api/laps/2026/12/R/fastest?limit=7` devuelve **7 pilotos distintos en 7 vueltas**, o sea que el agrupado por piloto esta vivo.
+
+**Ferrari no necesita diseñador.** El usuario pregunto que indicaciones darle a uno para que el escudo funcione en el sistema monocromo. Al abrir el archivo para redactar el encargo resulto que **la version ya esta dentro**: de sus nueve trazados, cinco llevan color propio —dos blancos, verde, rojo y el amarillo del escudo— y cuatro heredan el negro, que son el caballo, las letras «S F» y el contorno. El problema es que el escudo es una superficie rellena y no un hueco: al teñir todo de un color se traga al caballo, y queda el **79 % del lienzo** como tinta solida. Quitando las cinco rutas de color queda una silueta legible, comprobada a los tres tamaños reales de la app (24, 36 y 48 px) y junto a Mercedes.
+
+**Decision: no se cambia.** El usuario eligio Ferrari en color despues de ver los prototipos y no hay defecto que arreglar. Queda anotado que la puerta esta abierta y no cuesta nada, por si algun dia se prefiere que los once vayan en silueta.
 
 ### 2026-08-26 (48) — La hora que faltaba, y el sabado mudo ✅
 
