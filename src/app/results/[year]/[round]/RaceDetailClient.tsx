@@ -9,6 +9,8 @@ import { PriorityRows } from '@/components/ui/PriorityRows';
 import { PodioDeCarrera, type PuestoDelPodio } from '@/components/results/PodioDeCarrera';
 import { FichaDePiloto } from '@/components/results/FichaDePiloto';
 import { PoleDelSabado } from '@/components/results/PoleDelSabado';
+import { HoraDeSalida } from '@/components/results/HoraDeSalida';
+import { HorarioDelFinDeSemana } from '@/components/results/HorarioDelFinDeSemana';
 import { clasesDeDorsal } from '@/lib/medallas';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { estadoEnPalabras, resumirEstado } from '@/lib/estado-resultado';
@@ -121,6 +123,24 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
       : queEnseñar({
           nombre: 'Sprint',
           cuando: race.sprintDate,
+          tieneResultados: false,
+          ahora,
+        });
+
+  /**
+   * La clasificación se había quedado fuera del patrón.
+   *
+   * Carrera, sprint y las sesiones cronometradas enseñaban hora y cuenta atrás
+   * mientras la sesión estaba pendiente; la clasificación pintaba un «Sin Datos
+   * de Clasificación» que no decía ni a qué hora era. O sea que el sábado por
+   * la tarde, que es justo cuando se entra a mirarlo, la pestaña estaba muda.
+   */
+  const estadoClasificacion =
+    ahora === null
+      ? null
+      : queEnseñar({
+          nombre: 'Clasificación',
+          cuando: race.qualiDate,
           tieneResultados: false,
           ahora,
         });
@@ -327,10 +347,18 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                <span>
-                  {fechaDeCarrera(race.date)}
-                </span>
+                <span>{fechaDeCarrera(race.date)}</span>
               </div>
+              {/* La hora va en su propio elemento y no pegada a la fecha: son
+                  dos zonas distintas —la fecha en UTC porque es un día de
+                  calendario, la hora en el reloj de quien mira— y separarlas
+                  evita leerlas como una sola cosa. */}
+              {race.time && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <HoraDeSalida fecha={race.date} hora={race.time} />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -395,12 +423,23 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
         // de la tabla sin una sola fila, un «VUELTAS: 0» y un «Podio» vacío:
         // el mismo aspecto que tiene un fallo, sin serlo. Y ahora, además, dice
         // qué falta exactamente y enseña la parrilla si ya se conoce.
-        <SesionPendiente
-          nombre="La carrera"
-          estado={estadoCarrera}
-          parrilla={race.qualifyings}
-          reconstruir={parrillaDeLaCarrera}
-        />
+        <>
+          <SesionPendiente
+            nombre="La carrera"
+            estado={estadoCarrera}
+            parrilla={race.qualifyings}
+            reconstruir={parrillaDeLaCarrera}
+          />
+          {/* Aquí el horario sí merece el sitio caro: no hay podio ni tabla con
+              los que competir, y «¿a qué hora es?» es el motivo de la visita. */}
+          <div className="mt-8">
+            <HorarioDelFinDeSemana
+              carrera={race}
+              comienzoDeLaCarrera={comienzoDeLaCarrera}
+              ahora={ahora}
+            />
+          </div>
+        </>
       ) : activeTab === 'race' ? (
         <>
           {/* El podio, arriba: sustituye a la tarjeta de GANADOR y al bloque
@@ -629,7 +668,16 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
           {/* El bloque «Podio» que había aquí se ha quitado: repetía las tres
               primeras filas de la tabla por la que acabas de pasar, a 2.042 px
               del principio. El podio vive ahora arriba, antes de la tabla. */}
-          <div className="mt-8 grid grid-cols-1 gap-6">
+          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* El horario, aquí abajo y no arriba: en una carrera ya corrida es
+                archivo, no consulta. Medido, arriba empujaba el podio fuera de
+                la primera pantalla del iPhone; aquí cuesta 0 px sobre la tabla. */}
+            <HorarioDelFinDeSemana
+              carrera={race}
+              comienzoDeLaCarrera={comienzoDeLaCarrera}
+              ahora={ahora}
+            />
+
             {/* Circuit Info */}
             <div className="rounded-lg border border-border bg-card p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -649,12 +697,10 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                   <span className="text-muted-foreground">País:</span>
                   <span className="font-semibold">{race.circuit.country}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fecha:</span>
-                  <span className="font-semibold">
-                    {fechaDeCarrera(race.date)}
-                  </span>
-                </div>
+                {/* La fila «Fecha» que había aquí se ha quitado: repetía la
+                    misma fecha que ya está en la cabecera, mil píxeles más
+                    arriba, y bajo un encabezado que dice «circuito», donde no
+                    es información del circuito. */}
               </div>
             </div>
           </div>
@@ -907,14 +953,18 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                 </div>
               </div>
             </>
+          ) : estadoClasificacion ? (
+            // El mismo trato que el sprint: hora y cuenta atrás mientras la
+            // sesión está pendiente, en vez del cartel mudo que había aquí.
+            <SesionPendiente
+              nombre="La clasificación"
+              estado={estadoClasificacion}
+              reconstruir={parrillaDeLaCarrera}
+            />
           ) : (
-            <div className="rounded-lg border border-border bg-card p-12 text-center">
-              <Clock className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-              <h3 className="mb-2 text-2xl font-bold">Sin Datos de Clasificación</h3>
-              <p className="text-lg text-muted-foreground">
-                No hay datos de clasificación disponibles para esta carrera.
-              </p>
-            </div>
+            // Antes de hidratar no se sabe qué hora es, y de eso depende el
+            // mensaje. Se pinta nada, como en el resto de las pestañas.
+            null
           )}
         </>
       ) : activeTab === 'sprint' ? (

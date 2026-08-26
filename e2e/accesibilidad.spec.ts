@@ -855,6 +855,38 @@ test.describe('pestañas de una carrera', () => {
     expect(yPodio).toBeLessThan(yTabla);
   });
 
+  test('una clasificación pendiente dice a qué hora es, no que no hay datos', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    // Una carrera de 2026 cuya clasificación aún no se ha corrido.
+    await page.goto('/results/2026/13?sesion=qualifying');
+
+    // El defecto: carrera, sprint y prácticas enseñaban hora y cuenta atrás
+    // mientras la sesión estaba pendiente, pero la clasificación pintaba un
+    // «Sin Datos de Clasificación» que no decía ni cuándo era. O sea que el
+    // sábado por la tarde, justo cuando se mira, la pestaña estaba muda.
+    await expect(page.getByText('Sin Datos de Clasificación')).toHaveCount(0);
+    await expect(page.getByText(/La clasificación aún no/i)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/^en \d+[dhm]/i).first()).toBeVisible();
+  });
+
+  test('el horario del fin de semana sale, y no en las temporadas sin hora', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto('/results/2026/1');
+    const horario = page.locator('[aria-labelledby="horario"]');
+    await expect(horario).toBeVisible({ timeout: 30_000 });
+    expect(await horario.locator('dl > div').count()).toBeGreaterThanOrEqual(4);
+
+    // La fuente publica la hora de las sesiones desde 2022. Antes sólo da el
+    // día, guardado a medianoche: pintar el bloque ahí sería un horario con
+    // «00:00» en todas las filas, que es un dato falso y no un hueco.
+    await page.goto('/results/2018/1');
+    await expect(page.locator('button[aria-controls^="detalle-"]').first()).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.locator('[aria-labelledby="horario"]')).toHaveCount(0);
+  });
+
   test('el estado de quien no termina no sale en inglés', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     // Esta carrera tiene abandonos y alguien que no tomó la salida, así que la

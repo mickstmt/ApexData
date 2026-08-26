@@ -78,6 +78,28 @@
 
 ## Bitácora
 
+### 2026-08-26 (48) — La hora que faltaba, y el sabado mudo ✅
+
+El usuario pidio que la ficha de carrera ensenara la hora de salida. Consultados dos agentes: salieron **cinco cosas distintas**, y la mas valiosa no era la pedida.
+
+**El sabado, la clasificacion no decia nada.** Carrera, sprint y practicas ya ensenaban hora y cuenta atras mientras la sesion estaba pendiente; la clasificacion pintaba un «Sin Datos de Clasificacion» sin hora ni cuenta atras. No existia `estadoQuali` en todo el archivo — cero apariciones. O sea que el sabado por la tarde, justo cuando se mira, la pestana estaba muda. Se tapa copiando el patron del sprint.
+
+**La hora en la cabecera, con una trampa medida.** La fecha va en UTC porque es un dia de calendario; la hora va en el reloj de quien mira porque la pregunta es «¿a que hora la veo?». Las dos se contradicen cuando el instante local cae en otro dia: **Australia sale a las 04:00Z del domingo, que en Lima son las 23:00 del sabado**. Escribir «8 de marzo · 23:00» haria llegar un dia tarde. Por eso la hora lleva el dia delante **solo cuando no coincide** — pasa en **5 de 352** carreras, y una es Australia todos los anos.
+
+**La fecha salia dos veces**, en la cabecera y otra vez mil pixeles mas abajo bajo un encabezado que dice «Informacion del Circuito», donde no es informacion del circuito. Se quita la de abajo.
+
+**El horario del fin de semana**, una fila por sesion con su dia y su hora, la proxima marcada y las pasadas atenuadas. Va **abajo** en una carrera ya corrida —ahi es archivo, no consulta, y arriba empujaba el podio fuera de la primera pantalla— y **arriba y entero** en una que aun no se ha corrido, donde no compite con nada y es el motivo de la visita.
+
+**Una correccion propia, y es la parte importante.** Se dijo que la API tenia los horarios **desde 2010**. Es falso: la comprobacion miraba si existia el campo `FirstPractice`, no si traia hora dentro. Medido temporada por temporada, **la fuente empieza a dar horas en 2022** —antes solo publica el dia—, asi que el techo real es **5 de 17 temporadas**, no 17. El agente de producto lo habia predicho exactamente («la cobertura pasa de 3/17 a 5/17») y se le corrigio sin motivo.
+
+Ese error creaba un peligro real: las doce temporadas viejas **si tienen fechas de sesion**, guardadas a medianoche UTC, asi que el bloque habria pintado un horario con **«00:00» en todas las filas** — que no es un hueco, es un dato falso. Se filtra por hora distinta de medianoche, y la senal esta comprobada: **cero** sesiones de 2022 en adelante caen en 00:00:00Z, y el reparto sale limpio en 237 fines de semana solo con fecha y 115 con horas reales.
+
+**El sembrado, con cambio de metodo a mitad.** `seed:season` re-siembra resultados, clasificaciones y sprints —unas sesenta peticiones por temporada para actualizar un dato que llega en la primera— e iba por seis carreras en un cuarto de hora. Se paro y se escribio `scripts/seed/horarios.ts`, que pide solo el calendario: **14 peticiones en vez de ~900**. Integridad comprobada contra la foto previa: 352 carreras, 7.175 resultados, 7.152 clasificaciones, 550 sprints, 84 pilotos, 25 equipos, 55 circuitos — **identicos**.
+
+**Piezas nuevas**: `src/components/results/HoraDeSalida.tsx`, `HorarioDelFinDeSemana.tsx`, `scripts/seed/horarios.ts`, `tests/horario-fin-de-semana.test.ts`.
+
+**Verificacion**: lint 0 · tipos 0 · **262 unitarias** · **87 de navegador**, tres nuevas —la clasificacion pendiente dice la hora, el horario sale en 2026 y no en 2018, y el filtro de medianoche—, con la del filtro comprobada quitandolo a proposito. Recorrido en el navegador en zona de Lima: cabecera con hora, clasificacion pendiente con cuenta atras, horario de cinco filas con la proxima marcada, y ningun error de hidratacion.
+
 ### 2026-08-26 (47) — La carrera se fechaba un dia antes en Lima ✅
 
 Salio persiguiendo un error de consola en produccion (React #418, hidratacion) tras el despliegue del podio. El sintoma llevaba a un fallo mayor: **la ficha de carrera enseñaba una fecha distinta segun la zona horaria de quien mirara**.
