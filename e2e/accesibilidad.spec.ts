@@ -860,6 +860,26 @@ test.describe('pestañas de una carrera', () => {
     expect(await page.locator('table tbody tr').count()).toBeGreaterThan(15);
   });
 
+  test('la primera posición se ve sin arrastrar', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/results/2026/1');
+
+    const primera = page.locator('button[aria-controls^="detalle-"]').first();
+    await expect(primera).toBeVisible({ timeout: 30_000 });
+
+    // El defecto: dos tarjetas de estadísticas de 134 px entre el podio y la
+    // tabla dejaban la primera posición a 975 px, con 784 útiles —844 menos la
+    // barra inferior fija—. Había que arrastrar una pantalla entera para ver
+    // que existía una tabla.
+    const y = await primera.evaluate((e) => e.getBoundingClientRect().top + window.scrollY);
+    expect(Math.round(y), 'la primera fila debe caber en la primera pantalla').toBeLessThan(784);
+
+    // Y los dos datos de las tarjetas siguen a la vista, en la tira.
+    const tira = page.getByText(/V\. rápida|Vuelta rápida/i).first();
+    await expect(tira).toBeVisible();
+    await expect(page.getByText(/^\d+$/).first()).toBeVisible();
+  });
+
   test('el podio va antes de la tabla y sale una sola vez', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/results/2026/1');

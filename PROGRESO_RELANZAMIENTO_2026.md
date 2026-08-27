@@ -78,6 +78,25 @@
 
 ## Bitácora
 
+### 2026-08-27 (50) — Las tarjetas del domingo, y una discrepancia entre agentes que decidio una medicion ✅
+
+Entre el podio y la tabla habia dos tarjetas de estadisticas de 134 px cada una. Medido en produccion, en un iPhone de 390x844: la primera posicion quedaba a **975 px** con **784 utiles** —844 menos la barra inferior fija—, o sea **190 px por debajo del pliegue**. Habia que arrastrar una pantalla entera para ver que existia una tabla.
+
+**Los dos agentes consultados discreparon de frente.** Uno proponia quitar las tarjetas y marcar con un rayo morado la fila de quien hizo la vuelta rapida; el otro decia explicitamente que eso la escondia dentro de veinte filas y proponia una tira compacta.
+
+**Decidio una medicion que no tenia ninguno de los dos**: el rayo **rompe la fila del ganador**. Con el truncan Verstappen, Hulkenberg y van der Garde; sin el, solo el caso extremo. El hueco del apellido ya se habia repartido con las banderas de la bitacora 48. Y la diferencia de scroll entre las dos salidas eran 32 px: las dos dejaban la primera posicion a la vista, asi que el scroll no decidia nada.
+
+**Lo que se hizo**: una tira de **40 px** soldada al pie del podio —comparten borde, el podio suelta el suyo inferior— con las dos cifras: `58 VUELTAS | V. RAPIDA 1:22.091 VER`. Medido despues: la primera posicion sube de **975 a 690 px**, dentro de los 784 visibles.
+
+**Cuatro cosas que salieron al hacerlo:**
+
+- **El apellido no cabia.** El agente afirmo «cero truncamientos»; en la maqueta real «Verstappen» se cortaba por 7 px. Se resuelve con el **codigo de tres letras** —VER—, que es como lo escribe la cronometria y que **los 84 pilotos de la base tienen**. El nombre completo queda para el lector de pantalla.
+- **La velocidad punta solo en escritorio.** En 358 px hace truncar; a partir de `md` sobra sitio y vuelve.
+- **La vuelta rapida de cada piloto, a su detalle.** La base la guarda para los veinte, no solo para el mejor, y ahi no cuesta un pixel de los que se ven sin arrastrar. La de la carrera va en `text-fastest`, el token que el proyecto ya usa con esa convencion.
+- **`fastestLapResult` ordenaba cadenas.** Ahora usa `rank === 1`, que es la designacion oficial y esta sembrada en las 340 carreras que la tienen. Comprobado que el fallo **no mordia**: 0 de 340 elegian mal, porque las unicas vueltas por debajo del minuto son las de Sakhir 2020 y ahi **todas** lo son. Era una trampa esperando a un trazado corto, no un error visible.
+
+**Verificacion**: lint 0 · tipos 0 · **262 unitarias** · **89 de navegador**, una nueva que comprueba que la primera posicion cae por encima de los 784 px. Comprobada que sabe fallar reintroduciendo un bloque de 280 px, **matando antes el servidor** — `reuseExistingServer` habia dado dos falsos verdes el dia anterior.
+
 ### 2026-08-26 (49) — La portada no cacheaba nada, y casi se celebra un error como si fuera velocidad ✅
 
 Medido en produccion: **584 ms hasta el primer byte** frente a **65 ms** en clasificacion o resultados. No era un indice que faltara —`Race.date` y `Result.raceId` los tienen— sino que **la portada era la unica pagina con datos que no cacheaba**. El VPS esta a ~101 ms de red de Supabase y `include` hace un viaje por relacion: cinco o seis viajes son medio segundo antes de mandar un byte.

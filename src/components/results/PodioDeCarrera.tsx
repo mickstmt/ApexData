@@ -124,15 +124,29 @@ function Columna({ puesto, indice }: { puesto: PuestoDelPodio; indice: number })
 export function PodioDeCarrera({
   puestos,
   titulo = 'Podio',
+  soldado = false,
 }: {
   /** Los tres primeros, en orden de llegada. Con menos de tres no se dibuja. */
   puestos: PuestoDelPodio[];
   titulo?: string;
+  /**
+   * Cierto cuando debajo va `TiraDeCarrera`.
+   *
+   * Suelta el borde y el radio de abajo para que las dos piezas compartan
+   * línea y se lean como una sola: podio sobre plinto, en vez de dos tarjetas
+   * separadas por un hueco.
+   */
+  soldado?: boolean;
 }) {
   if (puestos.length < 3) return null;
 
   return (
-    <section aria-labelledby="podio" className="mb-6 rounded-lg border border-border bg-card p-4">
+    <section
+      aria-labelledby="podio"
+      className={`mb-6 border border-border bg-card p-4 ${
+        soldado ? 'rounded-t-lg border-b-0 pb-2' : 'rounded-lg'
+      }`}
+    >
       <h2
         id="podio"
         className="mb-2 flex items-center gap-2 font-mono text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground"

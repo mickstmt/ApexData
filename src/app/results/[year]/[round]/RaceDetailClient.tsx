@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Calendar, MapPin, Flag, Zap, Construction, Clock } from 'lucide-react';
+import { Calendar, MapPin, Flag, Construction, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { teamColor } from '@/lib/team-colors';
 import { intervalosAlAnterior } from '@/lib/lap-times';
@@ -11,6 +11,7 @@ import { FichaDePiloto } from '@/components/results/FichaDePiloto';
 import { PoleDelSabado } from '@/components/results/PoleDelSabado';
 import { HoraDeSalida } from '@/components/results/HoraDeSalida';
 import { HorarioDelFinDeSemana } from '@/components/results/HorarioDelFinDeSemana';
+import { TiraDeCarrera } from '@/components/results/TiraDeCarrera';
 import { clasesDeDorsal } from '@/lib/medallas';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { estadoEnPalabras, resumirEstado } from '@/lib/estado-resultado';
@@ -294,12 +295,21 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
     race.qualifyings.forEach((entry, indice) => intervaloDeQualy.set(entry.id, calculados[indice]));
   }
 
-  const fastestLapResult = race.results
-    .filter((r) => r.fastestLapTime)
-    .sort((a, b) => {
-      if (!a.fastestLapTime || !b.fastestLapTime) return 0;
-      return a.fastestLapTime.localeCompare(b.fastestLapTime);
-    })[0];
+  /**
+   * Quién hizo la vuelta rápida.
+   *
+   * Sale de `rank`, que es la designación oficial y viene sembrada desde
+   * Jolpica en las 340 carreras que la tienen. Antes se ordenaban las cadenas
+   * de tiempo con `localeCompare`, y eso es una trampa: «59.123» se ordena
+   * después de «1:22.091», así que en una carrera con vueltas por debajo del
+   * minuto habría elegido la más lenta. Comprobado que hoy no muerde —las
+   * únicas sub-minuto son las de Sakhir 2020, donde **todas** lo son y el
+   * orden sale coherente—, pero era un fallo esperando a un trazado corto.
+   */
+  const fastestLapResult =
+    race.results.find((r) => r.rank === 1 && r.fastestLapTime) ??
+    // Respaldo para las carreras antiguas sin `rank` sembrado.
+    race.results.filter((r) => r.fastestLapTime)[0];
 
   /**
    * Los tres del podio, en orden de llegada.
@@ -446,38 +456,24 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
               «Podio» que había después de la tabla. El ganador salía tres veces
               y el resumen llegaba a 2.042 px del principio, o sea después de
               aquello que resumía. */}
-          <PodioDeCarrera puestos={podioDeLaCarrera} />
-
-          {/* Race Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {/* Laps */}
-            <div className="rounded-lg border border-border bg-card p-6">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Flag className="h-4 w-4" />
-                <span className="font-semibold">VUELTAS</span>
-              </div>
-              <div className="text-2xl font-bold">{race.results[0]?.laps || 0}</div>
-              <div className="text-sm text-muted-foreground mt-1">Vueltas completadas</div>
-            </div>
-
-            {/* Fastest Lap */}
-            {fastestLapResult && (
-              <div className="rounded-lg border border-border bg-card p-6">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  <Zap className="h-4 w-4" />
-                  <span className="font-semibold">VUELTA RÁPIDA</span>
-                </div>
-                <div className="text-2xl font-bold font-mono">
-                  {fastestLapResult.fastestLapTime}
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  {fastestLapResult.driver.familyName}
-                  {fastestLapResult.fastestLapSpeed &&
-                    ` - ${fastestLapResult.fastestLapSpeed} km/h`}
-                </div>
-              </div>
-            )}
-          </div>
+          {/* El podio y la tira comparten borde: `soldado` le quita a éste el
+              de abajo. Las dos tarjetas de 134 px que había aquí dejaban la
+              primera posición 190 px por debajo de lo que se ve sin arrastrar
+              en un iPhone; la tira ocupa 37. */}
+          <PodioDeCarrera puestos={podioDeLaCarrera} soldado />
+          <TiraDeCarrera
+            vueltas={race.results[0]?.laps}
+            vueltaRapida={
+              fastestLapResult?.fastestLapTime
+                ? {
+                    tiempo: fastestLapResult.fastestLapTime,
+                    codigo: fastestLapResult.driver.code,
+                    apellido: fastestLapResult.driver.familyName,
+                    velocidad: fastestLapResult.fastestLapSpeed,
+                  }
+                : null
+            }
+          />
 
           {/* Results Table */}
           <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -540,6 +536,26 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                   { label: 'Parrilla', value: result.grid || '—' },
                   { label: 'Vueltas', value: result.laps },
                   { label: 'Puntos', value: result.points },
+                  // La mejor vuelta de este piloto, no la de la carrera: la
+                  // base la guarda para todos y aquí no cuesta un píxel de los
+                  // que se ven sin arrastrar. La de la carrera está en la tira.
+                  ...(result.fastestLapTime
+                    ? [
+                        {
+                          label: 'Mejor vuelta',
+                          value: (
+                            <span
+                              className={`font-mono ${result.rank === 1 ? 'font-bold text-fastest' : ''}`}
+                            >
+                              {result.fastestLapTime}
+                              {result.rank === 1 && (
+                                <span className="sr-only"> — vuelta rápida de la carrera</span>
+                              )}
+                            </span>
+                          ),
+                        },
+                      ]
+                    : []),
                   ...(estado.motivo ? [{ label: 'Motivo', value: estado.motivo }] : []),
                 ];
               }}
