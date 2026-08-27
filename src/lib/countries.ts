@@ -141,3 +141,55 @@ export function gentilicio(nacionalidad: string | null | undefined): string {
   if (!nacionalidad) return '';
   return GENTILICIOS[nacionalidad] ?? nacionalidad;
 }
+
+/**
+ * El nombre del país en español.
+ *
+ * La base guarda los países como los manda Jolpica —`Italy`, `UK`, `USA`— y en
+ * una app en español eso sale a la cara en cuanto se puede **buscar** por país:
+ * quien escribe «Italia» o «Reino Unido» no encontraría nada.
+ *
+ * Están los 34 que usan los circuitos. Uno que no esté se devuelve como llegó,
+ * igual que con los gentilicios: mejor una palabra en inglés que un hueco.
+ */
+const PAISES: Record<string, string> = {
+  Argentina: 'Argentina',
+  Australia: 'Australia',
+  Austria: 'Austria',
+  Azerbaijan: 'Azerbaiyán',
+  Bahrain: 'Baréin',
+  Belgium: 'Bélgica',
+  Brazil: 'Brasil',
+  Canada: 'Canadá',
+  China: 'China',
+  France: 'Francia',
+  Germany: 'Alemania',
+  Hungary: 'Hungría',
+  India: 'India',
+  Italy: 'Italia',
+  Japan: 'Japón',
+  Korea: 'Corea',
+  Malaysia: 'Malasia',
+  Mexico: 'México',
+  Monaco: 'Mónaco',
+  Morocco: 'Marruecos',
+  Netherlands: 'Países Bajos',
+  Portugal: 'Portugal',
+  Qatar: 'Catar',
+  Russia: 'Rusia',
+  'Saudi Arabia': 'Arabia Saudí',
+  Singapore: 'Singapur',
+  'South Africa': 'Sudáfrica',
+  Spain: 'España',
+  Sweden: 'Suecia',
+  Switzerland: 'Suiza',
+  Turkey: 'Turquía',
+  UAE: 'Emiratos Árabes Unidos',
+  UK: 'Reino Unido',
+  USA: 'Estados Unidos',
+};
+
+export function paisEnEspañol(pais: string | null | undefined): string {
+  if (!pais) return '';
+  return PAISES[pais] ?? pais;
+}

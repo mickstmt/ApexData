@@ -28,7 +28,7 @@
 
 **Próximo paso**: lo que queda de la deuda del Sprint 5 —aviso push tras cada GP, pantalla de administración, y el límite de peticiones con `slowapi`, que es el único que pide Deploy manual del servicio—, . El respaldo con `pg_dump` y el escaneo de secretos ya salen de esa lista: el primero hecho el 2026-08-20 y comprobado restaurándose, el segundo activado ese mismo día junto con la protección de subida. Queda además el mantenimiento: los 6 logos que faltan, Prisma 6→7 y los 14 avisos de lint.
 
-**Tests**: 162 unitarios (TypeScript) + 28 (Python) + **48 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: **266 unitarios** (TypeScript) + 28 (Python) + **91 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -77,6 +77,29 @@
 ---
 
 ## Bitácora
+
+### 2026-08-27 (54) — Los circuitos: 19 tarjetas decian «0 carreras», y dos pruebas que no podian fallar ✅
+
+Opcion **C** de las tres del mockup, **elegida por el usuario** sobre la A que se recomendaba —y sin conflicto, porque C contiene A—: copia honesta y enlaces fuera, mas tarjeta en fila, buscador y filtros.
+
+**Tres defectos en la misma pantalla:**
+
+1. **«0 carreras» en 19 de 55 tarjetas.** Son trazados de 1955 a 1985 y los resultados de la base arrancan en 2010, asi que no las tendran nunca por esta via. Un «0» no se lee como historia, se lee como fallo de la app. Ahora dicen **«Solo el trazado»** y se agrupan al final bajo «Ya no se corre aqui».
+2. **El año era un enlace de 84x20 px.** Cada tarjeta llevaba un «ultima: 2026» al calendario con `z-index: 10` **por encima** de la capa que cubre la tarjeta entera: un toque impreciso te sacaba de los circuitos. Eran **36**, todos por debajo del minimo de 44 px del proyecto. Ahora el año es texto y la tarjeta tiene un solo destino.
+3. **La lista media 18,7 pantallas de movil.** La tarjeta ocupaba 250 px con el trazado en una banda de 144.
+
+**Medido en build de produccion, iPhone de 390 px, identico en los dos temas:** pagina **18,7 → 8,1 pantallas** · tarjeta **250 → 98 px** (358 de ancho, **0 de desbordamiento**; hubo que poner `min-w-0` en el `li`, porque un elemento de rejilla no encoge por debajo de su contenido y la lista se salia 27 px) · «0 carreras» **19 → 0** · enlaces al calendario dentro de tarjetas **36 → 0**. Con el filtro **«Actuales» quedan 26 circuitos en 4,4 pantallas**. La cabecera deja de decir «55 trazados registrados» y dice **«36 con resultados · 19 solo el trazado»**.
+
+**Sin selector de pais**, que es el filtro de `/drivers` y `/constructors`: hay **34 paises para 55 circuitos**, 1,6 por pais, asi que casi toda opcion deja una lista de una tarjeta. El buscador cubre lo mismo y busca por nombre, ciudad y pais **en los dos idiomas** (`paisEnEspañol`, 34 paises), porque los nombres de la base son formales y nadie escribe «Autodromo Nazionale di Monza». Y el esqueleto de `loading.tsx` se rehizo a la medida nueva: seguia prometiendo 250 px, o sea **~150 px de salto por tarjeta** al llegar los datos.
+
+**Las dos pruebas nuevas no podian fallar, y se descubrio comprobandolo.** Reintroducido el defecto a proposito, seguian en verde por dos razones distintas:
+
+- El `` de la expresion se habia escrito como **byte de retroceso literal** (`0x08`), asi que buscaba ` 0 carreras ` y no coincidia nunca: la asercion era cierta por vacio. Repasado todo `e2e/`, `tests/`, `src/` y `scripts/` en busca de bytes de control: limpio.
+- La segunda la satisfacia **la cabecera de la propia pagina**: `getByText` con cadena es **insensible a mayusculas**, y la cabecera dice «… · 19 **solo el trazado**». Contaba 1 sin que hubiera ni una tarjeta.
+
+Las dos con `{ exact: true }`, y **comprobado que ahora fallan** con el defecto puesto —cada una por separado, neutralizando la otra—. Es la cuarta vez esta semana que una prueba pasa sin vigilar nada, asi que queda escrito el metodo: **una prueba nueva no cuenta hasta verla fallar con el defecto puesto**.
+
+**Verificacion**: lint 0 · tipos 0 · **266 unitarias** · **91 de navegador con `CI=1`**, ninguna inestable.
 
 ### 2026-08-27 (53) — Revision de codigo de los dos dias: tres fallos, uno grave ✅
 

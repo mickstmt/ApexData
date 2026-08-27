@@ -860,6 +860,53 @@ test.describe('pestañas de una carrera', () => {
     expect(await page.locator('table tbody tr').count()).toBeGreaterThan(15);
   });
 
+  test('los circuitos sin datos lo dicen, y el año deja de ser una trampa', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/circuits');
+
+    const buscador = page.getByRole('searchbox', { name: /Buscar circuito/i });
+    await expect(buscador).toBeVisible({ timeout: 30_000 });
+
+    // El defecto: 19 de los 55 circuitos mostraban «0 carreras». Son trazados
+    // de 1955 a 1985 y los resultados de la base arrancan en 2010, así que no
+    // los tendrán nunca por esta vía — y un «0» no se lee como historia, se
+    // lee como fallo de la app.
+    await expect(page.getByText('0 carreras', { exact: true })).toHaveCount(0);
+    expect(await page.getByText('Solo el trazado', { exact: true }).count()).toBeGreaterThan(0);
+
+    // Y cada tarjeta llevaba un «última: 2026» de 84x20 px enlazando al
+    // calendario, con `z-index` por encima de la capa que cubre la tarjeta:
+    // fallar el toque te sacaba de los circuitos. Eran 36.
+    const tarjetas = page.locator('li.relative');
+    await expect(tarjetas.first()).toBeVisible();
+    expect(await tarjetas.locator('a[href*="/calendar"]').count()).toBe(0);
+  });
+
+  test('el buscador de circuitos entiende ciudad y país en español', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/circuits');
+
+    const buscador = page.getByRole('searchbox', { name: /Buscar circuito/i });
+    await expect(buscador).toBeVisible({ timeout: 30_000 });
+    const tarjetas = page.locator('li.relative');
+    const todos = await tarjetas.count();
+
+    // Los nombres de la base son formales —«Autodromo Nazionale di Monza»— y
+    // los países vienen en inglés. Buscar debe funcionar igual escribiendo la
+    // ciudad o el país en español, que es como lo escribiría cualquiera.
+    for (const consulta of ['monza', 'melbourne', 'italia']) {
+      await buscador.fill(consulta);
+      await expect
+        .poll(async () => tarjetas.count(), { message: `«${consulta}» no encontró nada` })
+        .toBeGreaterThan(0);
+      expect(await tarjetas.count(), `«${consulta}» no filtró`).toBeLessThan(todos);
+    }
+
+    await buscador.fill('circuito que no existe');
+    await expect(tarjetas).toHaveCount(0);
+    await expect(page.getByText(/Ningún circuito coincide/)).toBeVisible();
+  });
+
   test('la primera posición se ve sin arrastrar', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/results/2026/1');

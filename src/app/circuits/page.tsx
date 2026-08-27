@@ -1,10 +1,9 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import { MapPin } from 'lucide-react';
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { Card } from '@/components/ui/card';
-import { CountryFlag } from '@/components/ui/CountryFlag';
+import {
+  BuscadorDeCircuitos,
+  type CircuitoDeLaLista,
+} from '@/components/circuits/BuscadorDeCircuitos';
 
 export const metadata = {
   title: 'Circuitos | ApexData',
@@ -35,16 +34,7 @@ const getCircuits = unstable_cache(
 );
 
 export default async function CircuitsPage() {
-  let circuits: Array<{
-    id: string;
-    circuitId: string;
-    name: string;
-    location: string;
-    country: string;
-    imageUrl: string | null;
-    races: number;
-    lastYear: number | null;
-  }> = [];
+  let circuits: CircuitoDeLaLista[] = [];
   let hasError = false;
 
   try {
@@ -65,82 +55,30 @@ export default async function CircuitsPage() {
     hasError = true;
   }
 
-  // Venues with a layout and recent use lead; the rest still appear below.
+  // Los que se corren hoy primero; el resto detrás. El orden se decide aquí y
+  // no en la consulta —que pide por nombre— porque lo que interesa arriba es
+  // la actualidad, no el alfabeto.
   const sorted = [...circuits].sort((a, b) => (b.lastYear ?? 0) - (a.lastYear ?? 0));
+  const conDatos = sorted.filter((c) => c.races > 0).length;
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="mb-2 font-display text-3xl font-bold tracking-tight md:text-4xl">
           Circuitos
         </h1>
         <p className="text-muted-foreground">
           {hasError
             ? 'No se pudo cargar la lista de circuitos.'
-            : `${circuits.length} trazados registrados en el Mundial.`}
+            : /* Se dice el reparto y no un total redondo: de los 55, 19 no
+                 tienen ni una carrera en la base porque los resultados
+                 arrancan en 2010. Fingir 55 «registrados» era la misma
+                 promesa rota que el «0 carreras» de cada tarjeta. */
+              `${conDatos} con resultados · ${sorted.length - conDatos} solo el trazado`}
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {sorted.map((circuit) => (
-          <Card
-            key={circuit.id}
-            className="relative flex flex-col overflow-hidden transition-colors focus-within:border-primary hover:border-primary"
-          >
-            <div className="flex h-36 items-center justify-center bg-muted/40 p-4">
-              {circuit.imageUrl ? (
-                <Image
-                  src={circuit.imageUrl}
-                  alt={`Trazado de ${circuit.name}`}
-                  width={260}
-                  height={130}
-                  // 23 de los 36 archivos vienen con `stroke="white"` y el resto
-                  // en negro: el comentario anterior daba por hecho que todos
-                  // eran oscuros, y los blancos desaparecían en tema claro. Como
-                  // con los logos, se fuerzan a silueta monocroma.
-                  className="h-full w-auto object-contain opacity-90 brightness-0 dark:brightness-0 dark:invert"
-                />
-              ) : (
-                <MapPin className="h-10 w-10 text-muted-foreground/40" aria-hidden />
-              )}
-            </div>
-
-            <div className="flex flex-1 flex-col gap-1 p-4">
-              <div className="flex items-center gap-2">
-                <CountryFlag country={circuit.country} size={18} />
-                <span className="truncate text-sm text-muted-foreground">{circuit.location}</span>
-              </div>
-
-              {/* Un solo enlace que se estira sobre la tarjeta entera: así el
-                  objetivo táctil es la tarjeta —no un renglón de texto— sin
-                  anidar controles, que es el defecto que la auditoría señaló.
-                  El de calendario se queda por encima con su propia capa. */}
-              <h2 className="font-display text-lg font-semibold leading-tight">
-                <Link
-                  href={`/circuits/${circuit.circuitId}`}
-                  className="after:absolute after:inset-0 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  {circuit.name}
-                </Link>
-              </h2>
-
-              <div className="mt-auto flex items-center justify-between pt-2 text-sm text-muted-foreground">
-                <span className="tabular-nums">
-                  {circuit.races} {circuit.races === 1 ? 'carrera' : 'carreras'}
-                </span>
-                {circuit.lastYear && (
-                  <Link
-                    href={`/calendar?season=${circuit.lastYear}`}
-                    className="relative z-10 tabular-nums hover:text-foreground"
-                  >
-                    última: {circuit.lastYear}
-                  </Link>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      {sorted.length > 0 && <BuscadorDeCircuitos circuitos={sorted} />}
     </div>
   );
 }
