@@ -887,7 +887,12 @@ test.describe('pestañas de una carrera', () => {
     // El defecto: había una tarjeta de GANADOR arriba y, después de las
     // veintidós filas, un bloque «Podio» que repetía a los tres primeros. El
     // ganador salía tres veces y el resumen llegaba después de lo resumido.
-    const podio = page.locator('[aria-labelledby="podio"]');
+    // Se espera a que la transición termine: mientras dura, la página que sale
+    // y la que entra conviven en el DOM y hay dos de todo. Contar antes daba
+    // dos podios sin que nada estuviera roto.
+    await expect(page.locator('[data-pagina]')).toHaveCount(1);
+
+    const podio = page.getByRole('region', { name: /^Podio$/i });
     await expect(podio).toHaveCount(1);
 
     const primeraFila = page.locator('button[aria-controls^="detalle-"]').first();
@@ -918,7 +923,9 @@ test.describe('pestañas de una carrera', () => {
     await page.setViewportSize({ width: 390, height: 844 });
 
     await page.goto('/results/2026/1');
-    const horario = page.locator('[aria-labelledby="horario"]');
+    await expect(page.locator('[data-pagina]')).toHaveCount(1);
+
+    const horario = page.getByRole('region', { name: /Horario del fin de semana/i });
     await expect(horario).toBeVisible({ timeout: 30_000 });
     expect(await horario.locator('dl > div').count()).toBeGreaterThanOrEqual(4);
 
@@ -929,7 +936,7 @@ test.describe('pestañas de una carrera', () => {
     await expect(page.locator('button[aria-controls^="detalle-"]').first()).toBeVisible({
       timeout: 30_000,
     });
-    await expect(page.locator('[aria-labelledby="horario"]')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: /Horario del fin de semana/i })).toHaveCount(0);
   });
 
   test('el estado de quien no termina no sale en inglés', async ({ page }) => {

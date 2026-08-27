@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useId } from 'react';
 import { Trophy } from 'lucide-react';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { DriverAvatar } from '@/components/ui/OptimizedImage';
@@ -138,17 +139,25 @@ export function PodioDeCarrera({
    */
   soldado?: boolean;
 }) {
+  // El identificador se genera y no se escribe a mano: durante una transición
+  // de página conviven en el DOM la que sale y la que entra, así que dos
+  // instancias de esto coexisten un instante. Con un `id` fijo eso son dos
+  // elementos con el mismo identificador — HTML inválido, un lector que no
+  // sabe cuál nombra a cuál, y pruebas que fallan sin estar roto lo que
+  // vigilan. Pasó en el CI.
+  const rotulo = useId();
+
   if (puestos.length < 3) return null;
 
   return (
     <section
-      aria-labelledby="podio"
+      aria-labelledby={rotulo}
       className={`mb-6 border border-border bg-card p-4 ${
         soldado ? 'rounded-t-lg border-b-0 pb-2' : 'rounded-lg'
       }`}
     >
       <h2
-        id="podio"
+        id={rotulo}
         className="mb-2 flex items-center gap-2 font-mono text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground"
       >
         <Trophy aria-hidden className="h-3.5 w-3.5 text-podium-gold" />

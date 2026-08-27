@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useId } from 'react';
 import { Trophy } from 'lucide-react';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { DriverAvatar } from '@/components/ui/OptimizedImage';
@@ -44,15 +45,23 @@ export function PoleDelSabado({
   /** El mejor tiempo de la sesión. Nulo si no quedó registrado. */
   tiempo: string | null;
 }) {
+  // El identificador se genera y no se escribe a mano: durante una transición
+  // de página conviven en el DOM la que sale y la que entra, así que dos
+  // instancias de esto coexisten un instante. Con un `id` fijo eso son dos
+  // elementos con el mismo identificador — HTML inválido, un lector que no
+  // sabe cuál nombra a cuál, y pruebas que fallan sin estar roto lo que
+  // vigilan. Pasó en el CI.
+  const rotulo = useId();
+
   const color = teamColor(constructorId);
 
   return (
     <section
-      aria-labelledby="pole"
+      aria-labelledby={rotulo}
       className="mb-8 rounded-lg border border-podium-gold/40 bg-podium-gold/5 p-5"
     >
       <h2
-        id="pole"
+        id={rotulo}
         className="mb-3 flex items-center gap-2 font-mono text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-podium-gold"
       >
         <Trophy aria-hidden className="h-3.5 w-3.5" />

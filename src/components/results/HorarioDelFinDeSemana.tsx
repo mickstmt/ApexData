@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { CalendarClock } from 'lucide-react';
 import { estadoDeSesion, sesionesOrdenadas, type FinDeSemana } from '@/lib/sesiones';
 
@@ -72,6 +73,14 @@ export function HorarioDelFinDeSemana({
   comienzoDeLaCarrera: Date;
   ahora: number | null;
 }) {
+  // El identificador se genera y no se escribe a mano: durante una transición
+  // de página conviven en el DOM la que sale y la que entra, así que dos
+  // instancias de esto coexisten un instante. Con un `id` fijo eso son dos
+  // elementos con el mismo identificador — HTML inválido, un lector que no
+  // sabe cuál nombra a cuál, y pruebas que fallan sin estar roto lo que
+  // vigilan. Pasó en el CI.
+  const rotulo = useId();
+
   const sesiones = sesionesOrdenadas(carrera, comienzoDeLaCarrera).filter((sesion) =>
     traeHora(sesion.cuando)
   );
@@ -100,10 +109,10 @@ export function HorarioDelFinDeSemana({
 
   return (
     <section
-      aria-labelledby="horario"
+      aria-labelledby={rotulo}
       className="rounded-lg border border-border bg-card p-6"
     >
-      <h2 id="horario" className="mb-3 flex items-center gap-2 text-xl font-bold">
+      <h2 id={rotulo} className="mb-3 flex items-center gap-2 text-xl font-bold">
         <CalendarClock aria-hidden className="h-5 w-5 text-primary" />
         Horario del fin de semana
       </h2>
