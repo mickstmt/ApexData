@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Calendar, MapPin, Flag, Construction, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { teamColor } from '@/lib/team-colors';
-import { intervalosAlAnterior } from '@/lib/lap-times';
+import { intervalosAlAnterior, lapTimeToMs } from '@/lib/lap-times';
 import { PriorityRows } from '@/components/ui/PriorityRows';
 import { PodioDeCarrera, type PuestoDelPodio } from '@/components/results/PodioDeCarrera';
 import { FichaDePiloto } from '@/components/results/FichaDePiloto';
@@ -308,8 +308,14 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
    */
   const fastestLapResult =
     race.results.find((r) => r.rank === 1 && r.fastestLapTime) ??
-    // Respaldo para las carreras antiguas sin `rank` sembrado.
-    race.results.filter((r) => r.fastestLapTime)[0];
+    // Respaldo para una carrera sin `rank` sembrado. Se compara en
+    // milisegundos con `lapTimeToMs`, que ya existe justo para esto: en cadena,
+    // «1:22.091» se ordena antes que «59.900» aunque sea más lento. Coger el
+    // primero de la lista sería peor todavía — daría el ganador, que no tiene
+    // por qué haber hecho la vuelta rápida.
+    race.results
+      .filter((r) => lapTimeToMs(r.fastestLapTime) !== null)
+      .sort((a, b) => lapTimeToMs(a.fastestLapTime)! - lapTimeToMs(b.fastestLapTime)!)[0];
 
   /**
    * Los tres del podio, en orden de llegada.

@@ -78,6 +78,20 @@
 
 ## Bitácora
 
+### 2026-08-27 (53) — Revision de codigo de los dos dias: tres fallos, uno grave ✅
+
+Nueve commits, 44 archivos, ~2.500 lineas. La revision saco **tres hallazgos, los tres reales y los tres propios**. Comprobados uno a uno antes de tocar nada.
+
+**1. Una peticion perdida borraba la cache entera.** En `PwaRegister`, si `/api/version` no respondia se registraba `/sw.js` a secas — que es **otra direccion**, o sea otro worker, cuyo `activate` borra las caches de la version buena. El comentario decia «se conserva lo registrado» y el codigo hacia lo contrario. Un fallo de red en el movil costaba la cache completa y un aviso falso de «hay version nueva»; la siguiente comprobacion buena la borraba otra vez. Ahora, sin respuesta no se toca nada. **Comprobado**: tres fallos seguidos de `/api/version` y ni el worker ni la cache se mueven.
+
+**2. Se volvia a descargar todo en cada despliegue.** `CACHE_STATIC` llevaba el identificador de la compilacion, asi que `activate` purgaba chunks, fotos, coches y banderas en cada entrega — y esas direcciones **ya llevan huella de contenido o el año en el nombre**, o sea que nunca cambian. Solo las paginas necesitan version. El precio del nombre estable son entradas muertas que no engañan a nadie y que el navegador descarta cuando necesita sitio.
+
+**3. El respaldo de la vuelta rapida elegia al ganador.** Al cambiar a `rank === 1` se dejo como respaldo `results.filter(...)[0]`, que devuelve el primero de la lista. Medido sobre las 340 carreras con vuelta rapida: **habria elegido mal en 258**, un 76 %. No mordia porque `rank` esta relleno en las 340, pero era una mina. Ahora ordena con `lapTimeToMs`, que **ya existia en el proyecto** y cuyo comentario documenta exactamente esta trampa: en cadena, «1:22.091» se ordena antes que «59.900» aunque sea mas lento. Con el orden correcto: **0 de 340**.
+
+De paso, la prueba `sw-version` exigia que las **dos** caches llevaran version; ahora dice lo que debe decir, que solo la de paginas.
+
+**Verificacion**: lint 0 · tipos 0 · **266 unitarias** · **89 de navegador con `CI=1`**, ninguna inestable.
+
 ### 2026-08-27 (52) — La cache del service worker ya no depende de acordarse ✅
 
 `public/sw.js` llevaba la version de sus caches **escrita a mano**, con un comentario que pedia subirla en cualquier entrega que cambiara el HTML. Se olvido el 2026-08-26 y costo caro: un movil con la app instalada siguio sirviendo la pagina guardada mientras la hidrataba el JavaScript nuevo, y React descartaba el HTML del servidor para volver a pintar en el cliente (error #418, reproducido en produccion).

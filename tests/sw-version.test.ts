@@ -30,9 +30,13 @@ describe('versión del service worker', () => {
     ).toEqual([]);
   });
 
-  it('los dos nombres de caché se construyen con esa versión', () => {
-    expect(sw).toMatch(/CACHE_STATIC\s*=\s*`apexdata-static-\$\{VERSION\}`/);
+  it('la caché de páginas lleva la versión y la de estáticos no', () => {
+    // Solo las páginas la necesitan. `/_next/static/*` lleva la huella del
+    // contenido en el nombre y `/images/cars/*` el año, así que una dirección
+    // nunca cambia de contenido: versionar esa caché obligaba a volver a
+    // descargarlo todo en cada despliegue sin ganar nada.
     expect(sw).toMatch(/CACHE_PAGES\s*=\s*`apexdata-pages-\$\{VERSION\}`/);
+    expect(sw).toMatch(/CACHE_STATIC\s*=\s*'apexdata-static'/);
   });
 
   it('el registrador pide la versión y la pone en la dirección', () => {

@@ -23,7 +23,20 @@
 // Sin `?v=` —si `/api/version` no respondiera— se cae a un nombre fijo: es el
 // comportamiento de siempre, y mejor una caché estable que ninguna.
 const VERSION = new URLSearchParams(self.location.search || '').get('v') || 'sin-version';
-const CACHE_STATIC = `apexdata-static-${VERSION}`;
+
+// Solo las PÁGINAS llevan la versión de la compilación.
+//
+// Los estáticos no la necesitan y les hacía daño: `/_next/static/*` lleva la
+// huella del contenido en el nombre, y `/images/cars/*` el año, así que una
+// dirección nunca cambia de contenido. Versionarlos obligaba a **volver a
+// descargarlo todo en cada despliegue** —chunks, fotos, coches, banderas—
+// aunque no hubiera cambiado un byte.
+//
+// El precio de un nombre estable es que van quedando entradas muertas de
+// compilaciones viejas. No sirven a nadie pero tampoco engañan: al ser
+// direcciones únicas, nunca se devolverán por error. El navegador las descarta
+// cuando necesita sitio.
+const CACHE_STATIC = 'apexdata-static';
 const CACHE_PAGES = `apexdata-pages-${VERSION}`;
 
 const OFFLINE_URL = '/offline';

@@ -76,6 +76,14 @@ export function PwaRegister() {
     const asegurarRegistro = async () => {
       try {
         const version = await pedirVersion();
+
+        // Sin respuesta no se toca lo que ya hay. Registrar `/sw.js` a secas
+        // sería **otro worker distinto** —la dirección cambia—, y su `activate`
+        // borraría las cachés de la versión buena: una petición perdida en el
+        // móvil costaría la caché entera y un aviso falso de «hay versión
+        // nueva». Sólo se cae a la dirección sin versión cuando aún no hay
+        // nada registrado, que es mejor que quedarse sin worker.
+        if (version === null && registration) return;
         if (version !== null && version === versionRegistrada) return;
 
         registration = await navigator.serviceWorker.register(
