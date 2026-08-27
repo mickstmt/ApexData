@@ -6,19 +6,25 @@
 //   /api/*                 network-only (never serve stale F1 data)
 //   navigations            cache-first con revalidación en segundo plano
 //
-// Bump the cache version on any release that changes page HTML or chunk URLs,
-// otherwise an installed app can keep serving HTML that references deleted JS.
+// La versión de las cachés sale del identificador de la compilación, que llega
+// en la dirección con la que se registra este worker: `/sw.js?v=<buildId>`.
 //
-// v4: el podio pasó a ir antes de la tabla y las filas ganaron bandera, así que
-// el HTML de la ficha de carrera cambió entero. Sin subir esto, un móvil con la
-// app instalada servía la página guardada y la hidrataba con el JavaScript
-// nuevo: React descartaba el HTML del servidor y volvía a pintar en el cliente
-// —error #418—, comprobado en producción contra este mismo despliegue.
+// Antes era un número escrito a mano, con un comentario que pedía subirlo en
+// cualquier entrega que cambiara el HTML. Se olvidó una vez y costó caro: un
+// móvil con la app instalada siguió sirviendo la página guardada mientras la
+// hidrataba el JavaScript nuevo, y React descartaba el HTML del servidor para
+// volver a pintar en el cliente —error #418, comprobado en producción—.
 //
-// Que sea manual es una trampa que ya se ha activado una vez. Automatizarlo
-// —sellar aquí el BUILD_ID en la compilación— está pendiente.
-const CACHE_STATIC = 'apexdata-static-v4';
-const CACHE_PAGES = 'apexdata-pages-v4';
+// Y no bastaba con acordarse: **un worker solo se reinstala si cambian sus
+// bytes**. Al llevar la versión en la dirección, cada compilación registra una
+// dirección distinta, el navegador la trata como un worker nuevo, y `activate`
+// borra las cachés que ya no están en uso. Sin pasos manuales.
+//
+// Sin `?v=` —si `/api/version` no respondiera— se cae a un nombre fijo: es el
+// comportamiento de siempre, y mejor una caché estable que ninguna.
+const VERSION = new URLSearchParams(self.location.search || '').get('v') || 'sin-version';
+const CACHE_STATIC = `apexdata-static-${VERSION}`;
+const CACHE_PAGES = `apexdata-pages-${VERSION}`;
 
 const OFFLINE_URL = '/offline';
 const INICIO_URL = '/';

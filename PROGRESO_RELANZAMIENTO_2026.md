@@ -78,6 +78,24 @@
 
 ## Bitácora
 
+### 2026-08-27 (52) — La cache del service worker ya no depende de acordarse ✅
+
+`public/sw.js` llevaba la version de sus caches **escrita a mano**, con un comentario que pedia subirla en cualquier entrega que cambiara el HTML. Se olvido el 2026-08-26 y costo caro: un movil con la app instalada siguio sirviendo la pagina guardada mientras la hidrataba el JavaScript nuevo, y React descartaba el HTML del servidor para volver a pintar en el cliente (error #418, reproducido en produccion).
+
+**Y acordarse no bastaba.** Un service worker **solo se reinstala si cambian sus bytes**, asi que un despliegue que no tocara ese archivo dejaba la app pegada a lo viejo aunque el numero fuera el correcto. El propio `registration.update()` volvia a pedir la misma direccion de siempre y no encontraba nada nuevo.
+
+**La solucion: la version viaja en la direccion.** El worker se registra como `/sw.js?v=<buildId>` y saca de ahi el nombre de sus caches con `new URLSearchParams(self.location.search)`. Cada compilacion es una direccion distinta, el navegador la trata como un worker nuevo, y el `activate` que ya existia borra las que sobran. Sin pasos manuales.
+
+**Piezas**: `src/lib/build-id.ts` —el identificador se leia en dos sitios y ahora en uno, compartido por `/api/health`, `instrumentation.ts` y el endpoint nuevo—; `/api/version`, que devuelve solo el identificador y **no toca la base**, porque se pregunta cada vez que la app vuelve al primer plano y `/api/health` consulta base y telemetria en cada llamada.
+
+**El registrador cambia de estrategia**: en vez de `registration.update()`, pregunta que compilacion hay y vuelve a registrar si no es la que tenia. El oyente de actualizacion se engancha una sola vez, porque `register()` devuelve siempre la misma inscripcion para el mismo ambito.
+
+**Comprobado de verdad, no por deduccion**: con la app abierta en un navegador, se compilo de nuevo, se reinicio el servidor y se disparo el paso a primer plano. El worker paso de `sw.js?v=jPxbfuNmp2iBn3AJaltbY` a `sw.js?v=ByP_h0RRb6Jr7p2Jr9d7K`, la cache vieja se borro y la portada siguio pintandose bien.
+
+**Un efecto secundario que salio al pasar las pruebas**: el simulacro de `self` de los dos bancos de service worker traia `location` con solo `origin`, asi que el worker reventaba con «Invalid URL» — 10 pruebas en rojo. Se cambio a `self.location.search`, que es lo que expone `WorkerLocation`, y el simulacro gano una `location` realista con `href` y `search`.
+
+**Verificacion**: lint 0 · tipos 0 · **266 unitarias** —cuatro nuevas que impiden volver a fijar la version a mano, comprobadas fallando— · **89 de navegador con `CI=1`**, ninguna inestable.
+
 ### 2026-08-27 (50) — Las tarjetas del domingo, y una discrepancia entre agentes que decidio una medicion ✅
 
 Entre el podio y la tabla habia dos tarjetas de estadisticas de 134 px cada una. Medido en produccion, en un iPhone de 390x844: la primera posicion quedaba a **975 px** con **784 utiles** —844 menos la barra inferior fija—, o sea **190 px por debajo del pliegue**. Habia que arrastrar una pantalla entera para ver que existia una tabla.

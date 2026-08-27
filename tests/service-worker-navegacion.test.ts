@@ -29,7 +29,13 @@ function cargarWorker() {
     addEventListener: (evento: string, fn: (evento: unknown) => void) => {
       escuchadores[evento] = fn;
     },
-    location: { origin: 'https://apexdata.meeks.fun' },
+    location: {
+      origin: 'https://apexdata.meeks.fun',
+      // El worker se registra con la version de la compilacion en la
+      // direccion, y de ahi saca el nombre de sus caches.
+      href: 'https://apexdata.meeks.fun/sw.js?v=prueba',
+      search: '?v=prueba',
+    },
     registration: { showNotification: vi.fn() },
     clients: { matchAll: vi.fn().mockResolvedValue([ventana]), claim: vi.fn() },
     skipWaiting: vi.fn(),

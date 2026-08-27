@@ -1,35 +1,16 @@
 import { NextResponse } from 'next/server';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { prisma } from '@/lib/prisma';
+import { BUILD_ID } from '@/lib/build-id';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * Health endpoint, also used by CI to confirm a deploy actually landed.
  *
- * Next writes a unique id per production build to `.next/BUILD_ID`. Reporting
- * it turns "is my code live?" into a string comparison instead of a guess from
- * uptime — a container can restart for reasons that have nothing to do with a
- * deploy, and uptime alone would read that as a successful cutover.
- *
- * Read once at module load: it cannot change while the process lives.
+ * `BUILD_ID` vive en `@/lib/build-id`: lo comparten este endpoint, el rastro de
+ * arranque de `instrumentation.ts` y `/api/version`, que es de donde el service
+ * worker saca el nombre de sus cachés.
  */
-const BUILD_ID = (() => {
-  for (const candidate of [
-    join(process.cwd(), '.next', 'BUILD_ID'),
-    join(process.cwd(), '.next', 'standalone', '.next', 'BUILD_ID'),
-  ]) {
-    try {
-      return readFileSync(candidate, 'utf8').trim();
-    } catch {
-      // Try the next location.
-    }
-  }
-
-  return 'unknown';
-})();
-
 const STARTED_AT = new Date().toISOString();
 
 /** Estados posibles del microservicio de telemetría. */

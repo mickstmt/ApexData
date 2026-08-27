@@ -42,34 +42,81 @@ export function PwaRegister() {
 
     let registration: ServiceWorkerRegistration | undefined;
 
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') void registration?.update();
+    /** La compilación que está sirviendo el servidor ahora mismo. */
+    const pedirVersion = async (): Promise<string | null> => {
+      try {
+        const respuesta = await fetch('/api/version', { cache: 'no-store' });
+        if (!respuesta.ok) return null;
+        const { buildId } = (await respuesta.json()) as { buildId?: string };
+        return buildId ?? null;
+      } catch {
+        // Sin red no se puede saber, y no pasa nada: se conserva lo registrado.
+        return null;
+      }
     };
 
-    const register = async () => {
+    /** La versión con la que se registró el worker que está en pie. */
+    let versionRegistrada: string | null = null;
+    let escuchando = false;
+
+    /**
+     * Registra el worker con la versión del servidor, o lo vuelve a registrar
+     * si esa versión ha cambiado.
+     *
+     * El nombre de las cachés sale de esa versión, así que la dirección tiene
+     * que llevarla: un worker **solo se reinstala si cambian sus bytes**, y con
+     * `/sw.js` a secas un despliegue que no tocara ese archivo dejaba a la app
+     * instalada sirviendo HTML viejo. Con la versión en la dirección, cada
+     * compilación es un worker nuevo.
+     *
+     * Por eso tampoco vale `registration.update()` para buscar novedades:
+     * volvería a pedir la misma dirección de siempre. Hay que preguntar qué
+     * compilación hay y registrar de nuevo si no es la que teníamos.
+     */
+    const asegurarRegistro = async () => {
       try {
-        registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        const version = await pedirVersion();
+        if (version !== null && version === versionRegistrada) return;
 
-        registration.addEventListener('updatefound', () => {
-          const installing = registration?.installing;
-          if (!installing) return;
+        registration = await navigator.serviceWorker.register(
+          version ? `/sw.js?v=${encodeURIComponent(version)}` : '/sw.js',
+          { scope: '/' }
+        );
+        versionRegistrada = version;
 
-          installing.addEventListener('statechange', () => {
-            // Checked at `installed`, before activation: a controller can only
-            // exist at that point if a previous worker was already running, so
-            // this is an update rather than the first install. Waiting for
-            // `activated` would be too late — the worker calls clients.claim(),
-            // which sets the controller and would fire this on every install.
-            if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-              setUpdateReady(true);
-            }
+        // El oyente se engancha una sola vez: `register()` devuelve siempre la
+        // misma inscripción para el mismo ámbito, así que repetirlo dispararía
+        // el aviso de actualización tantas veces como registros.
+        if (!escuchando) {
+          escuchando = true;
+          registration.addEventListener('updatefound', () => {
+            const installing = registration?.installing;
+            if (!installing) return;
+
+            installing.addEventListener('statechange', () => {
+              // Checked at `installed`, before activation: a controller can only
+              // exist at that point if a previous worker was already running, so
+              // this is an update rather than the first install. Waiting for
+              // `activated` would be too late — the worker calls clients.claim(),
+              // which sets the controller and would fire this on every install.
+              if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+                setUpdateReady(true);
+              }
+            });
           });
-        });
-
-        document.addEventListener('visibilitychange', onVisibilityChange);
+        }
       } catch (error) {
         console.error('[PWA] No se pudo registrar el service worker:', error);
       }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void asegurarRegistro();
+    };
+
+    const register = async () => {
+      await asegurarRegistro();
+      document.addEventListener('visibilitychange', onVisibilityChange);
     };
 
     if (document.readyState === 'complete') {
