@@ -26,7 +26,7 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: de la deuda del Sprint 5 queda **una sola cosa**, la **pantalla de administración** para importar temporadas (no existe `src/app/admin`). Todo lo demás está cerrado, y abajo queda escrito el porqué de cada cierre para **no volver a evaluar lo ya decidido**.
+**Próximo paso**: **la deuda del Sprint 5 queda cerrada al completo** el 2026-08-28. Abajo está el porqué de cada cierre, escrito para **no volver a evaluar lo ya decidido**. Lo único vivo es un aviso de mantenimiento: los cinco workflows usan `actions/checkout@v4` y `actions/setup-node@v4`, que apuntan a Node 20 y ya salen marcados como obsoletos.
 
 **Tests**: **266 unitarios** (TypeScript) + 28 (Python) + **91 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
@@ -38,7 +38,7 @@
 - 🟢 **Estados de carga: resueltos.** De 6 páginas con `loading.tsx` se pasa a 12, la home transmite por partes con `<Suspense>` y las páginas históricas tienen caché de una hora. Lo último que quedaba, la ficha de piloto, se cerró el 2026-08-24 en `083d687`: el `<Suspense>` ya estaba desde el 19 y lo que fallaba era la espera, no el arranque. **Comprobado en producción el 2026-08-28**: primer byte 90-100 ms y página completa en 0,11-0,15 s en caliente, con las estadísticas y el cara a cara ya dentro del HTML.
 - **Recortado de S5 el 2026-08-18, decisión del usuario** (se registra en lugar de desaparecer, que era justo el fallo de método diagnosticado):
   - **Push post-GP** (§8.8 del plan): sin `push` ni `notificationclick` en `public/sw.js`.
-  - **Pantalla de administración para importar temporadas**: no existe `src/app/admin`.
+  - **Pantalla de administración para importar temporadas: cerrada el 2026-08-28 cumpliendo el requisito por otra vía.** No se hizo `src/app/admin` —habría exigido un login que la app no tiene, una cola para un proceso de minutos y un endpoint de escritura en un sitio público— sino el workflow `sembrar-temporada.yml`, que se lanza desde el móvil con la autenticación del repositorio. Ejecutado y verde.
   - **Checklist de seguridad de §10: cerrado.** El RLS de Supabase se hizo el mismo día que se listó; el **respaldo mensual con `pg_dump`** quedó hecho y comprobado el 2026-08-20; y ese mismo día el usuario activó en GitHub el **escaneo de secretos** y la **protección de subida**. El *rate limiting* **se decide que NO** para el servicio Python, y no se vuelve a evaluar: el servicio solo es alcanzable en `http://ditto_apexdata-telemetry:8000`, hostname interno de EasyPanel, así que no tiene superficie pública que limitar; y su único cliente es la web, que **ya limita peticiones desde el 2026-08-24** (`src/middleware.ts` y `src/lib/limite-peticiones.ts`). Poner `slowapi` sería limitar tráfico ya limitado aguas arriba y emitido por un cliente propio. **Se reabre solo si el servicio recibe dominio público** — condición, no revisión.
 - 🟢 **Prisma 6→7: se decide que NO, y no se vuelve a evaluar.** El 2026-08-28 `latest` en npm es **8.0.0-rc.12**: la línea estable es 7.10.0 y la 8 ya está en candidata, así que migrar a 7 ahora es hacer el trabajo dos veces en pocos meses. Nos quedamos en **6.19**, que funciona y tiene las suites en verde. **Cuando la 8 sea estable se hace 6→8 de un salto** — condición, no revisión.
 - 🟢 **El repositorio sigue público: decidido el 2026-08-28 por el usuario, y no se vuelve a evaluar.** Se planteó hacerlo privado. El historial se rastreó entero y está **limpio** —ni una cadena de conexión real, ningún host de Supabase, `.env` nunca commiteado—, así que no lo forzaba ninguna fuga. Pesó lo contrario: el **escaneo de secretos y la protección de subida**, que el usuario activó el 2026-08-20, son gratuitos **solo en repos públicos**, y son justo lo que impide repetir el incidente de credenciales de noviembre de 2025. Esconder la bitácora es seguridad por oscuridad; bloquear un secreto al subirlo es seguridad de verdad. El coste de Actions no decidía: **656 min/mes estimados** frente a los 2000 del cupo privado. **Se reabre solo si GitHub deja de reservar esa protección a los repos públicos, o si el repo pasa a alojar algo sensible** — condición, no revisión.
@@ -79,6 +79,18 @@
 ---
 
 ## Bitácora
+
+### 2026-08-28 (55) — Importar una temporada sin abrir el portatil ✅
+
+El ultimo recorte del Sprint 5, la «pantalla de administracion». Empezo comprobando que hueco tapaba de verdad: **las carreras nuevas ya entran solas** desde que `refresco.yml` mira cada hora si acabo una sesion. Lo que seguia exigiendo el portatil —con Node y las credenciales— era el caso raro: añadir un año historico, o resembrar uno que entro mal.
+
+Se resuelve con un **`workflow_dispatch`**, no con `src/app/admin`. La pantalla habria pedido tres cosas que el proyecto no tiene: **un login** (no hay usuarios en toda la app), una **cola o streaming** para un proceso de minutos que no cabe en una peticion HTTP, y un **endpoint que escribe en la base dentro de un sitio publico**, expuesto todo el año para una operacion que se hace dos veces. El workflow reutiliza la autenticacion del repositorio y los secretos que ya estan, se lanza desde el movil, y no añade una sola linea de superficie publica.
+
+**Lo que se escribe en el formulario acaba en una orden de shell**, asi que entra por `env` y **nunca interpolado dentro del `run`** — un `${{ inputs... }}` ahi dentro es inyeccion de comandos de manual. Se valida antes de usarse: años de 1950 a 2099 separados por espacios, o `--todas` / `--current`. **Probado con trece entradas**: las cinco validas pasan —incluida la que trae espacios de sobra— y las ocho hostiles o fuera de rango se rechazan (`2009; rm -rf /`, `$(curl evil.sh)`, `2009 && whoami`, `1949`, `2100`, `20099`, `--borrar`, vacio). Dos siembras a la vez no se pisan: la segunda espera y no se cancela, porque cortar a medias deja la temporada incompleta.
+
+Documentado en `DEPLOY.md`, bajo «Mantener los datos al dia».
+
+**Verificacion**: YAML valido —8 pasos, 2 entradas—, la validacion probada entrada por entrada, y **ejecutado de verdad por el usuario con `--current`: verde en 10m 58s**, con su resumen. Queda un aviso que **afecta a los cinco workflows, no solo a este**: `actions/checkout@v4` y `actions/setup-node@v4` apuntan a Node 20, ya obsoleto en los runners.
 
 ### 2026-08-27 (54) — Los circuitos: 19 tarjetas decian «0 carreras», y dos pruebas que no podian fallar ✅
 
