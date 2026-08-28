@@ -1,0 +1,113 @@
+name: Sembrar una temporada
+
+# Importar una temporada sin abrir el portátil.
+#
+# Las carreras nuevas ya entran solas: `refresco.yml` mira cada hora si acabó
+# una sesión y siembra solo entonces. Esto es para el caso raro —añadir un año
+# histórico, o resembrar uno que entró mal— que hasta ahora exigía una máquina
+# con Node y las credenciales de la base.
+#
+# Se lanza desde la pestaña Actions, también desde el móvil. La autenticación es
+# la del repositorio, que ya existe; no hace falta inventar un login ni exponer
+# en la web pública un endpoint que escriba en la base.
+
+on:
+  workflow_dispatch:
+    inputs:
+      temporadas:
+        description: 'Años separados por espacios (2009 2010), o --todas / --current'
+        required: true
+        type: string
+      standings:
+        description: 'Sembrar también la clasificación oficial'
+        required: false
+        default: true
+        type: boolean
+
+# Dos siembras a la vez escribirían sobre las mismas filas. La segunda espera;
+# no se cancela, porque cancelar a medias deja la temporada incompleta.
+concurrency:
+  group: sembrar-temporada
+  cancel-in-progress: false
+
+jobs:
+  sembrar:
+    name: Sembrar ${{ inputs.temporadas }}
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+    steps:
+      - name: Validar lo que se pidió
+        id: validar
+        env:
+          # Por `env` y nunca interpolado dentro del `run`: lo que se escribe en
+          # el formulario acaba en una orden de shell, así que `${{ inputs... }}`
+          # ahí dentro es inyección de comandos de manual.
+          PEDIDO: ${{ inputs.temporadas }}
+        run: |
+          limpio=$(echo "$PEDIDO" | tr -s '[:space:]' ' ' | sed 's/^ //;s/ $//')
+
+          if ! echo "$limpio" | grep -qE '^(--todas|--current|[0-9]{4}( [0-9]{4})*)$'; then
+            echo "::error::«$PEDIDO» no vale. Se esperan años de cuatro cifras separados por espacios, o --todas / --current."
+            exit 1
+          fi
+
+          for a in $limpio; do
+            case "$a" in --*) continue ;; esac
+            if [ "$a" -lt 1950 ] || [ "$a" -gt 2099 ]; then
+              echo "::error::El año $a está fuera de rango (1950-2099)."
+              exit 1
+            fi
+          done
+
+          echo "anos=$limpio" >> "$GITHUB_OUTPUT"
+          echo "Se sembrará: $limpio"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Sembrar calendario, resultados, clasificación y sprints
+        env:
+          ANOS: ${{ steps.validar.outputs.anos }}
+        # El secreto no se puede leer desde un `if` de job, así que la comprobación
+        # vive aquí: sin base configurada, mejor decir qué falta que un aspa roja
+        # con una traza de Prisma.
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Falta el secreto DATABASE_URL. Ver DEPLOY.md, «Mantener los datos al día»."
+            exit 1
+          fi
+
+          npm run seed:season -- $ANOS
+
+      - name: Sembrar la clasificación oficial
+        if: ${{ inputs.standings }}
+        env:
+          ANOS: ${{ steps.validar.outputs.anos }}
+        # Va aparte y después: los standings se calculan sobre los resultados que
+        # el paso anterior acaba de meter.
+        run: npm run seed:standings -- $ANOS
+
+      - name: Resumen
+        env:
+          ANOS: ${{ steps.validar.outputs.anos }}
+        run: |
+          {
+            echo "### Temporadas sembradas"
+            echo
+            echo "- Años: \`$ANOS\`"
+            echo "- Clasificación oficial: ${{ inputs.standings && 'sí' || 'no' }}"
+            echo
+            echo "Las páginas históricas tienen caché de una hora, así que el cambio"
+            echo "puede tardar hasta ese tiempo en verse en producción."
+          } >> "$GITHUB_STEP_SUMMARY"

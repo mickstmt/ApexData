@@ -262,6 +262,30 @@ Dos detalles de diseño, por si hay que tocarlo:
   rutas proxy. Es explícitamente *best effort*: si esa parte va lenta o falla,
   no invalida el sembrado, que es lo que no se puede perder.
 
+### Importar una temporada concreta
+
+Para el caso raro —añadir un año histórico, o resembrar uno que entró mal— hay
+un workflow propio: **`.github/workflows/sembrar-temporada.yml`**, en la pestaña
+**Actions → Sembrar una temporada → Run workflow**. Se lanza también desde el
+móvil, y la autenticación es la del repositorio: no hace falta un login propio
+ni exponer en la web pública un endpoint que escriba en la base.
+
+Pide dos cosas:
+
+- **Años**: separados por espacios (`2009 2010`), o `--todas` / `--current`.
+- **Clasificación oficial**: marcada por defecto. Va después de los resultados,
+  que es de donde se calcula.
+
+Lo que se escribe se **valida antes de usarse** —solo años de 1950 a 2099, o las
+dos banderas— y entra por `env`, nunca interpolado dentro del `run`: ese texto
+acaba en una orden de shell, y un `${{ inputs... }}` ahí dentro es inyección de
+comandos de manual. Dos ejecuciones a la vez no se pisan: la segunda espera, y
+no se cancela, porque cortar a medias deja la temporada incompleta.
+
+Las carreras nuevas **no necesitan esto**: `refresco.yml` mira cada hora si acabó
+alguna sesión y siembra solo entonces. Y tras sembrar, las páginas históricas
+tienen caché de una hora, así que el cambio puede tardar ese tiempo en verse.
+
 Si hiciera falta hacerlo a mano:
 
 ```bash
