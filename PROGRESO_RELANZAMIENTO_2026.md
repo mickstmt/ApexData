@@ -26,7 +26,7 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: lo que queda de la deuda del Sprint 5 —aviso push tras cada GP, pantalla de administración, y el límite de peticiones con `slowapi`, que es el único que pide Deploy manual del servicio—, . El respaldo con `pg_dump` y el escaneo de secretos ya salen de esa lista: el primero hecho el 2026-08-20 y comprobado restaurándose, el segundo activado ese mismo día junto con la protección de subida. Queda además el mantenimiento: los 6 logos que faltan, Prisma 6→7 y los 14 avisos de lint.
+**Próximo paso**: de la deuda del Sprint 5 quedan dos cosas: la **pantalla de administración** para importar temporadas (no existe `src/app/admin`) y el **límite de peticiones** con `slowapi` en el servicio Python — y conviene decidir antes si aplica, porque el servicio se dejó **sin dominio** el 2026-08-18 y hoy no tiene superficie pública que limitar. El **aviso push tras cada GP sale de la lista**: `public/sw.js` atiende `push` y `notificationclick`, `src/lib/push.ts` envía, y el cron horario `refresco.yml` lo dispara tras sembrar — **111 ejecuciones, todas correctas, la última hoy**. El respaldo con `pg_dump` y el escaneo de secretos salieron ya el 2026-08-20: el primero comprobado restaurándose, el segundo activado junto con la protección de subida. Queda el mantenimiento: los 6 logos que faltan y Prisma 6→7; los **avisos de lint ya son 0**, no 14.
 
 **Tests**: **266 unitarios** (TypeScript) + 28 (Python) + **91 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
@@ -35,7 +35,7 @@
 - ~~El venv local tiene FastF1 3.7.0~~ → resuelto el 2026-08-19: se creó `python-service/.venv` desde `requirements-dev.txt`, con **FastF1 3.8.3**. Está en `.gitignore`, así que es de esta máquina.
 - ~~Pendientes de S4: mapa del circuito por velocidad y estrategia de neumáticos~~ → **hechos el 2026-08-19**, con dos endpoints nuevos en el servicio Python. **Exigen pulsar *Deploy* a mano en el panel**: sin eso, los dos botones nuevos de `/analysis` responden con error en producción.
 - ~~15 warnings de lint~~ → **resuelto**: `npm run lint` sale limpio, 0 avisos, y así se mantiene desde entonces (comprobado el 2026-08-24).
-- 🟡 **Estados de carga: la mayor parte, resuelta el 2026-08-18**. De 6 páginas con `loading.tsx` se pasa a 12, la home transmite por partes con `<Suspense>` y las páginas históricas tienen caché de una hora. Queda pendiente el `<Suspense>` de la ficha de piloto (5 consultas secuenciales), que es la mitad del punto 6 del orden de ataque.
+- 🟢 **Estados de carga: resueltos.** De 6 páginas con `loading.tsx` se pasa a 12, la home transmite por partes con `<Suspense>` y las páginas históricas tienen caché de una hora. Lo último que quedaba, la ficha de piloto, se cerró el 2026-08-24 en `083d687`: el `<Suspense>` ya estaba desde el 19 y lo que fallaba era la espera, no el arranque. **Comprobado en producción el 2026-08-28**: primer byte 90-100 ms y página completa en 0,11-0,15 s en caliente, con las estadísticas y el cara a cara ya dentro del HTML.
 - **Recortado de S5 el 2026-08-18, decisión del usuario** (se registra en lugar de desaparecer, que era justo el fallo de método diagnosticado):
   - **Push post-GP** (§8.8 del plan): sin `push` ni `notificationclick` en `public/sw.js`.
   - **Pantalla de administración para importar temporadas**: no existe `src/app/admin`.
@@ -100,6 +100,8 @@ Opcion **C** de las tres del mockup, **elegida por el usuario** sobre la A que s
 Las dos con `{ exact: true }`, y **comprobado que ahora fallan** con el defecto puesto —cada una por separado, neutralizando la otra—. Es la cuarta vez esta semana que una prueba pasa sin vigilar nada, asi que queda escrito el metodo: **una prueba nueva no cuenta hasta verla fallar con el defecto puesto**.
 
 **Verificacion**: lint 0 · tipos 0 · **266 unitarias** · **91 de navegador con `CI=1`**, ninguna inestable.
+
+Cerrada de paso la ultima deuda de rendimiento: el `<Suspense>` de la ficha de piloto figuraba como pendiente y estaba resuelto desde el 2026-08-24. Se cierra habiendolo medido en produccion —primer byte 90-100 ms, pagina completa en 0,11-0,15 s, con las estadisticas dentro del HTML— y no dando por buena la viñeta. Es la tercera vez esta semana que un pendiente del documento ya estaba hecho.
 
 ### 2026-08-27 (53) — Revision de codigo de los dos dias: tres fallos, uno grave ✅
 
