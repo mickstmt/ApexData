@@ -293,19 +293,44 @@ npm run seed:season -- 2026
 npm run seed:standings -- 2026
 ```
 
-## Avisos de fin de carrera
+## Avisos de las sesiones
 
-Los avisos push los manda **el cron semanal**, no la aplicación: la web no
-necesita ninguna clave nueva y en EasyPanel no hay nada que tocar.
+Desde el 2026-09-07 los avisos los lanza **la propia aplicación**, no el cron.
+Da una vuelta cada cinco minutos, mira en OpenF1 qué sesión acaba de terminar y
+avisa de las que falten. El cron semanal sigue llamando al mismo guion como red
+por si el servidor está caído justo el domingo; la sesión se reserva en
+`notified_sessions` antes de enviar, así que los dos no duplican nada.
 
-Hace falta **un solo secreto**, en GitHub:
+**Por qué se mudó el reloj**: el cron de GitHub pedía «cada hora» y el domingo
+del GP de Italia corrió a las 16:46, 18:51, 21:03 y 23:30 UTC. GitHub estrangula
+los trabajos programados de los repositorios gratuitos, y esas dos horas se
+sumaban a lo que ya tardara la fuente.
 
-1. `Settings` → `Secrets and variables` → `Actions` → `New repository secret`.
-2. Nombre: `VAPID_PRIVATE_KEY`.
-3. Valor: la clave privada del par VAPID.
+La clave VAPID hace falta ahora **en dos sitios**:
 
-Sin ese secreto el paso del cron no falla: avisa de que falta y sigue. El resto
-del sembrado semanal funciona igual.
+| Dónde | Para qué | Si falta |
+|---|---|---|
+| **EasyPanel**, variable `VAPID_PRIVATE_KEY` en la app `apexdata` | El reloj de dentro de la app | El reloj no arranca. Lo dice al arrancar: `[avisos] Falta VAPID_PRIVATE_KEY` |
+| **GitHub**, secreto `VAPID_PRIVATE_KEY` | La red del cron | El paso avisa de que falta y sigue; el resto del sembrado funciona igual |
+
+Es la misma clave privada del par VAPID en los dos.
+
+**Variable opcional**: `AVISOS_AUTOMATICOS=0` apaga el reloj de la app sin tocar
+código, por si alguna vez hay que silenciarlo en caliente.
+
+**Cómo saber si funciona sin esperar a un domingo**: `/api/health` trae
+`lastNotification` con la última sesión avisada, cuándo y a cuántos. Está ahí
+por la lección del GP de Países Bajos: aquella carrera se marcó como avisada sin
+que hubiera ni una suscripción guardada y desde fuera todo se veía en verde. Un
+fallo de avisos no tiene síntoma —no llega nada, y eso es idéntico a un fin de
+semana sin carrera—, así que hay que poder preguntarlo.
+
+Para probar a mano, desde cualquier sitio con acceso a la base:
+
+```bash
+npm run avisar -- --probar   # dice qué haría, sin enviar ni marcar
+npm run avisar               # avisa de verdad
+```
 
 **Por qué solo la privada.** El par identifica al servidor ante el servicio de
 push del navegador. La pública viaja al cliente por definición —va dentro de la
