@@ -26,9 +26,9 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: **sin pendientes.** La deuda del Sprint 5 quedó cerrada al completo el 2026-08-28, y abajo está el porqué de cada cierre, escrito para **no volver a evaluar lo ya decidido**. Ese mismo día se subieron `checkout`, `setup-node` y `setup-python` a **v7** en los cinco workflows —apuntaban a Node 20, ya obsoleto en los runners—: CI verde y **cero avisos de obsolescencia**.
+**Próximo paso**: pendiente de **confirmar en la próxima carrera** que los avisos por sesión salen ~30 min tras la bandera (ver entrada 56). La deuda del Sprint 5 quedó cerrada al completo el 2026-08-28, y abajo está el porqué de cada cierre, escrito para **no volver a evaluar lo ya decidido**. Ese mismo día se subieron `checkout`, `setup-node` y `setup-python` a **v7** en los cinco workflows —apuntaban a Node 20, ya obsoleto en los runners—: CI verde y **cero avisos de obsolescencia**.
 
-**Tests**: **266 unitarios** (TypeScript) + 28 (Python) + **91 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: **295 unitarios** (TypeScript) + 28 (Python) + **91 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -79,6 +79,47 @@
 ---
 
 ## Bitácora
+
+### 2026-09-07 (56) — Avisos de las siete sesiones, y con tu piloto dentro ✅
+
+**El problema, medido.** El aviso del GP de Italia llegó a las 18:45 hora de Lima para una carrera terminada antes de las 11:00. No falló el código: las ejecuciones del cron de aquel domingo —16:46, 18:51, 21:03 y 23:30 UTC— corrieron enteras y no encontraron resultados que contar. **Jolpica tardó entre seis y ocho horas en publicar.** Y encima el cron de GitHub no es un cron: pidiendo «cada hora» corrió con huecos de más de dos.
+
+**El reparto de fuentes, ahora explícito.** No se sustituye nada, se separa lo que cada una hace bien:
+
+| | Jolpica | FastF1 | OpenF1 |
+|---|---|---|---|
+| Llena la base de datos | ✅ 1950→ | | |
+| Telemetría | | ✅ | |
+| **Dispara los avisos** | | | ✅ |
+| Prácticas libres | ❌ nunca las tuvo | ✅ | ✅ |
+| Tras la bandera | 6-8 h | minutos | **~30 min** |
+
+OpenF1 considera «en directo» —y de pago— desde 30 min antes hasta 30 después de una sesión. Fuera de esa ventana es histórico y **gratis**, que es justo lo que necesitamos: no queremos el directo, queremos avisar al terminar.
+
+**Lo que cambia para quien lo usa**: avisos de **las siete sesiones** del fin de semana (prácticas incluidas, que Jolpica no tiene) y **personalizados**: «Antonelli 5.º, a 0.636 del más rápido (Leclerc)» en vez de un dato que vale para cualquiera. Con interruptor por sesión en `/favorites`.
+
+**Piezas nuevas**:
+- `src/services/openf1/` — cliente con reintentos: OpenF1 corta por ritmo con 429 al pedir varias sesiones seguidas.
+- `src/lib/push/redaccion.ts` — la redacción, pura y comprobable.
+- `src/lib/push/avisos-de-sesion.ts` — qué sesión terminó, a quién avisar y con qué texto.
+- `src/instrumentation.ts` — **el reloj ahora es nuestro**: cada 5 minutos, dentro de la app. Es lo que quita las dos horas de GitHub. El workflow queda como red por si el servidor está caído justo el domingo.
+- Migración `20260907180000_avisos_por_sesion`: los favoritos viajan con la suscripción (antes vivían solo en el `localStorage` del teléfono, así que el servidor no podía nombrarlos) y `notified_sessions` sustituye a `races.notifiedAt`, que solo daba para una marca por carrera.
+
+**El presupuesto de 90 caracteres.** Es lo que cabe en la pantalla de bloqueo de iOS. Medido sobre Monza: ganador + podio + tres favoritos son **97**. En vez de elegir de antemano qué recortar, el aviso se arma por importancia y se añade lo que quepa: primero tus pilotos, luego el podio, y los puntos al final porque son lo primero que sobra. **El orden en que se lee no es el orden en que se descarta.**
+
+**Dos fallos que encontró la verificación, no la lectura del código**:
+1. **Los abandonos desaparecían.** Se filtraba a quien no tenía puesto, así que a un aficionado de Ferrari el aviso de Monza le decía «Ganó Antonelli» sin mencionar que Leclerc se había retirado — la única sesión del fin de semana que había que contarle.
+2. **El apellido se cortaba por posición.** «Juan Manuel FANGIO DEL CARRIL» salía como «Manuel Fangio…». En OpenF1 el apellido es lo que va en mayúsculas, no lo que va después del primer hueco.
+
+**Dos decisiones defensivas, con su porqué**:
+- **La sesión se reserva antes de enviar**, no después: si dos procesos coinciden, el segundo choca contra la clave primaria y se va. Un aviso de menos se nota mucho menos que uno repetido.
+- **El estreno no avisa de nada**, solo toma nota. La ventana mira dos días atrás, así que al desplegar encontraría la carrera del domingo pasado y la repetiría a quien ya la recibió.
+
+**Verificación**: 29 pruebas nuevas sobre el fin de semana real de Monza (fijo en `tests/fixtures/monza-2026.json`), **incluidas las 1.540 combinaciones de tres favoritos** — el aviso más largo son 90 caracteres exactos, ninguno se corta. Las pruebas se vieron **fallar con cada defecto reintroducido**: sin el presupuesto salen textos de 123 y 131 caracteres. 295 unitarias en total · lint 0 · type-check limpio · build correcto.
+
+**Maqueta de la decisión** (los tres enfoques, con datos reales): https://claude.ai/code/artifact/8f918226-3bff-4490-9e96-84fa3a782c34
+
+**Queda por confirmar en la próxima carrera**: que los 30 minutos de OpenF1 son reales (es su regla publicada, no una medición nuestra) y si corrige las sanciones posteriores. Por eso la base la sigue llenando Jolpica, que sí publica el resultado ya sancionado.
 
 ### 2026-08-28 (55) — Importar una temporada sin abrir el portatil ✅
 

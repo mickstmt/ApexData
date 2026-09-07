@@ -1,4 +1,21 @@
 /**
+ * RETIRADO. Lo sustituye `scripts/avisar-sesiones.ts`.
+ *
+ * Avisaba solo de la carrera, con datos de Jolpica, que tarda entre seis y ocho
+ * horas en publicarlos. El sistema nuevo usa OpenF1 —media hora— y cubre las
+ * siete sesiones del fin de semana.
+ *
+ * Ya no lo llama nadie: el flujo de trabajo `refresco.yml` apunta al nuevo.
+ * **No lo ejecutes a mano**: lleva su propia marca (`races.notifiedAt`), que el
+ * sistema nuevo no mira, así que mandaría un segundo aviso de una carrera de la
+ * que ya se avisó.
+ *
+ * Se conserva sin borrar mientras el nuevo no lleve un par de fines de semana
+ * funcionando. Cuando los lleve, este archivo y la columna `notifiedAt` se van
+ * juntos.
+ *
+ * ---
+ *
  * Avisa del resultado de la última carrera, si no se ha avisado ya.
  *
  * Lo llama el cron semanal después de sembrar, que es cuando los resultados

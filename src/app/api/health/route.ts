@@ -64,12 +64,27 @@ export async function GET() {
 
   // Las dos comprobaciones a la vez: encadenarlas sumaría la espera del
   // servicio a la de la base sin ganar nada.
-  const [, telemetryService] = await Promise.all([
+  const [, telemetryService, ultimoAviso] = await Promise.all([
     prisma.$queryRaw`SELECT 1`.catch((error) => {
       console.error('[health] Database unreachable:', error);
       database = 'error';
     }),
     estadoDelServicio(),
+    /**
+     * El último aviso que salió.
+     *
+     * Está aquí por la lección del GP de Países Bajos: aquella carrera se marcó
+     * como avisada sin que hubiera ni una suscripción guardada, y desde fuera
+     * todo se veía en verde. Un fallo de avisos no tiene síntoma —no llega
+     * nada, y no llegar nada es indistinguible de un fin de semana sin
+     * carrera—, así que hay que poder preguntarlo.
+     */
+    prisma.notifiedSession
+      .findFirst({
+        orderBy: { notifiedAt: 'desc' },
+        select: { sessionName: true, notifiedAt: true, sent: true },
+      })
+      .catch(() => null),
   ]);
 
   const body = {
@@ -80,6 +95,13 @@ export async function GET() {
     // La telemetría es opcional: la app está sana sin ella, así que su estado
     // se informa pero no decide el código de respuesta.
     telemetryService,
+    lastNotification: ultimoAviso
+      ? {
+          session: ultimoAviso.sessionName,
+          at: ultimoAviso.notifiedAt.toISOString(),
+          sent: ultimoAviso.sent,
+        }
+      : null,
   };
 
   return NextResponse.json(body, {

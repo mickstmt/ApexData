@@ -6,6 +6,7 @@ import {
   claveDePushValida,
   destinoDePushValido,
 } from '@/lib/push-destino';
+import { TODAS_LAS_SESIONES } from '@/lib/push/redaccion';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,60 @@ export const dynamic = 'force-dynamic';
 interface Cuerpo {
   endpoint?: string;
   keys?: { p256dh?: string; auth?: string };
+  favoriteDrivers?: unknown;
+  favoriteConstructors?: unknown;
+  sessions?: unknown;
+}
+
+/** Cuántos favoritos se aceptan. Veintidós pilotos y once equipos, con holgura. */
+const MAXIMO_FAVORITOS = 40;
+
+/**
+ * La forma de un identificador de Jolpica: `hamilton`, `max_verstappen`,
+ * `red_bull`. Nada más entra, porque de aquí sale texto que se guarda y se
+ * vuelve a leer para construir consultas.
+ */
+const ID_VALIDO = /^[a-z0-9_]{1,40}$/i;
+
+/**
+ * Una lista de identificadores lista para guardar, o `undefined` si no vino.
+ *
+ * Devuelve cadena vacía cuando la lista llega vacía a propósito —«no sigo a
+ * nadie»— porque eso es distinto de no haber mandado el campo, que significa
+ * «no toques lo que ya había».
+ */
+function listaDeIds(valor: unknown): string | undefined | null {
+  if (valor === undefined) return undefined;
+  if (!Array.isArray(valor)) return null;
+  if (valor.length > MAXIMO_FAVORITOS) return null;
+
+  const limpios: string[] = [];
+
+  for (const bruto of valor) {
+    if (typeof bruto !== 'string') return null;
+    const id = bruto.trim();
+    if (!ID_VALIDO.test(id)) return null;
+    if (!limpios.includes(id)) limpios.push(id);
+  }
+
+  return limpios.join(',');
+}
+
+/** Los códigos de sesión elegidos, comprobados contra los siete que existen. */
+function listaDeSesiones(valor: unknown): string | undefined | null {
+  if (valor === undefined) return undefined;
+  if (!Array.isArray(valor)) return null;
+
+  const limpios: string[] = [];
+
+  for (const bruto of valor) {
+    if (typeof bruto !== 'string') return null;
+    const codigo = bruto.trim();
+    if (!TODAS_LAS_SESIONES.includes(codigo)) return null;
+    if (!limpios.includes(codigo)) limpios.push(codigo);
+  }
+
+  return limpios.join(',');
 }
 
 export async function POST(request: NextRequest) {
@@ -65,14 +120,35 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Los favoritos viajan con la suscripción porque es el aviso quien los
+  // necesita: sin ellos el servidor no puede escribir «Antonelli 5.º» y solo
+  // sabe decir quién fue el más rápido.
+  const pilotos = listaDeIds(datos.favoriteDrivers);
+  const equipos = listaDeIds(datos.favoriteConstructors);
+  const sesiones = listaDeSesiones(datos.sessions);
+
+  if (pilotos === null || equipos === null || sesiones === null) {
+    return NextResponse.json(
+      { error: 'Los favoritos o las sesiones no tienen la forma esperada.' },
+      { status: 400 }
+    );
+  }
+
+  const preferencias = {
+    ...(pilotos !== undefined ? { favoriteDrivers: pilotos } : {}),
+    ...(equipos !== undefined ? { favoriteConstructors: equipos } : {}),
+    ...(sesiones !== undefined ? { sessions: sesiones } : {}),
+  };
+
   try {
     await prisma.pushSubscription.upsert({
       where: { endpoint },
-      update: { p256dh: keys.p256dh, auth: keys.auth },
+      update: { p256dh: keys.p256dh, auth: keys.auth, ...preferencias },
       create: {
         endpoint,
         p256dh: keys.p256dh,
         auth: keys.auth,
+        ...preferencias,
         // Solo para saber desde qué clase de aparato llegan, sin identificar a
         // nadie: no hay cuentas y esto no se cruza con nada.
         userAgent: request.headers.get('user-agent')?.slice(0, 255) ?? null,

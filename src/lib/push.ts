@@ -45,6 +45,8 @@ export interface ResultadoEnvio {
   enviados: number;
   caducados: number;
   fallidos: number;
+  /** A quienes no les tocaba este aviso. No es un fallo. */
+  saltados: number;
 }
 
 /**
@@ -54,9 +56,39 @@ export interface ResultadoEnvio {
  * puede impedir que lleguen los demás.
  */
 export async function avisarATodos(aviso: Aviso): Promise<ResultadoEnvio> {
+  return avisarACadaUno(() => aviso);
+}
+
+/** Lo que hace falta de una suscripción para escribirle SU aviso. */
+export interface DestinoDeAviso {
+  id: string;
+  endpoint: string;
+  favoriteDrivers: string | null;
+  favoriteConstructors: string | null;
+  sessions: string | null;
+}
+
+/**
+ * Manda a cada suscripción un aviso escrito para ella.
+ *
+ * ## Por qué no vale con `avisarATodos`
+ *
+ * Un aviso que dice «Antonelli 5.º, a 0.636 del más rápido» solo tiene sentido
+ * para quien sigue a Antonelli. Con una sola carga para todos, o el aviso es
+ * genérico o le habla a la persona equivocada, así que la carga tiene que
+ * construirse por destinatario.
+ *
+ * `fabricar` puede devolver `null`, y eso es una respuesta legítima: significa
+ * «a este no le interesa esta sesión». Se cuenta aparte de los fallos, porque
+ * no avisar a quien apagó las prácticas es el comportamiento correcto y no
+ * debería parecerse a un error en los registros.
+ */
+export async function avisarACadaUno(
+  fabricar: (destino: DestinoDeAviso) => Aviso | null
+): Promise<ResultadoEnvio> {
   if (!configurar()) {
     console.error('[push] Falta VAPID_PRIVATE_KEY: no se envía nada.');
-    return { enviados: 0, caducados: 0, fallidos: 0 };
+    return { enviados: 0, caducados: 0, fallidos: 0, saltados: 0 };
   }
 
   const guardadas = await prisma.pushSubscription.findMany();
@@ -77,10 +109,13 @@ export async function avisarATodos(aviso: Aviso): Promise<ResultadoEnvio> {
     return false;
   });
 
-  const carga = JSON.stringify(aviso);
-
   const resultados = await Promise.all(
     suscripciones.map(async (suscripcion) => {
+      const aviso = fabricar(suscripcion);
+      if (!aviso) return 'saltado' as const;
+
+      const carga = JSON.stringify(aviso);
+
       try {
         await webpush.sendNotification(
           {
@@ -116,5 +151,6 @@ export async function avisarATodos(aviso: Aviso): Promise<ResultadoEnvio> {
     enviados: resultados.filter((r) => r === 'enviado').length,
     caducados: resultados.filter((r) => r === 'caducado').length,
     fallidos: resultados.filter((r) => r === 'fallido').length,
+    saltados: resultados.filter((r) => r === 'saltado').length,
   };
 }

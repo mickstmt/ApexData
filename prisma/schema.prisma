@@ -378,8 +378,64 @@ model PushSubscription {
    */
   userAgent String?
 
+  /**
+   * A quién sigue quien recibe estos avisos: `driverId` separados por comas.
+   *
+   * Los favoritos vivían solo en el `localStorage` del teléfono, y por eso el
+   * servidor no podía escribir un aviso que hablara de tu piloto: no sabía
+   * cuál era. Se guardan aquí, junto a la suscripción, porque es el aviso —y no
+   * la pantalla— quien los necesita.
+   *
+   * Se guarda el `driverId` y no el código de tres letras porque el código no
+   * es estable: se reutiliza entre épocas (Michael y Mick Schumacher fueron
+   * los dos «MSC»). La traducción a código se hace al redactar, con la
+   * temporada delante.
+   *
+   * Vacío o nulo es válido: el aviso sale igual, contando lo que pasó.
+   */
+  favoriteDrivers      String?
+  favoriteConstructors String?
+
+  /**
+   * De qué sesiones se avisa, por sus códigos separados por comas.
+   *
+   * Nulo significa todas, que es lo que se pidió: las siete del fin de semana.
+   * Existe para poder apagar las prácticas sin renunciar al resto.
+   */
+  sessions String?
+
   createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt @default(now())
   lastSentAt DateTime?
 
   @@map("push_subscriptions")
+}
+
+/**
+ * De qué sesiones ya se avisó.
+ *
+ * Es lo que hace que el aviso se pueda repetir sin miedo: el disparador corre
+ * cada pocos minutos y la mayoría de las veces no hace nada, pero si se reinicia
+ * el servidor a mitad, o se despliega, o coinciden dos vueltas, nadie recibe el
+ * mismo aviso dos veces.
+ *
+ * La marca vivía en `races.notifiedAt`, y servía mientras solo se avisaba de la
+ * carrera. Con siete sesiones por fin de semana hace falta una marca por sesión,
+ * y la clave natural es la que da OpenF1: `session_key` es único y no cambia.
+ */
+model NotifiedSession {
+  /** El `session_key` de OpenF1. */
+  sessionKey Int @id
+
+  /** Para poder leer la tabla sin cruzarla con nada. */
+  sessionName String
+  year        Int
+
+  /** Cuántas suscripciones recibieron el aviso. Cero también se guarda. */
+  sent Int @default(0)
+
+  notifiedAt DateTime @default(now())
+
+  @@index([year])
+  @@map("notified_sessions")
 }

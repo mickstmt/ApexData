@@ -57,18 +57,30 @@ jobs:
           npm run seed:season -- "${{ steps.decidir.outputs.anio }}"
           npm run seed:standings -- "${{ steps.decidir.outputs.anio }}"
 
-      - name: Avisar del resultado
-        if: steps.decidir.outputs.sembrar == 'true'
+      - name: Avisar de las sesiones terminadas
+        # Sin `if`: a propósito.
+        #
+        # El sembrado solo se dispara con clasificación, sprint y carrera, que
+        # es lo único que publica Jolpica. Los avisos cubren las siete sesiones
+        # del fin de semana, así que una práctica libre tiene que poder avisar
+        # aunque no haya nada que sembrar.
         env:
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
-        # Aquí está la diferencia que se nota: el aviso sale una hora después de
-        # la carrera en vez de dos días después. El sembrado semanal lo sigue
-        # intentando por si este trabajo falla un fin de semana entero; la marca
-        # `notifiedAt` impide que nadie reciba el mismo aviso dos veces.
+        # Esto es la RED, no el disparador.
+        #
+        # El aviso lo lanza la propia aplicación cada cinco minutos (ver
+        # `src/instrumentation.ts`), porque el cron de GitHub llega con hasta dos
+        # horas de retraso: el domingo del GP de Italia pidió «cada hora» y corrió
+        # a las 16:46, 18:51, 21:03 y 23:30 UTC. Esto queda por si el servidor
+        # está caído justo ese domingo.
+        #
+        # Que los dos corran a la vez no duplica nada: la sesión se reserva en
+        # `notified_sessions` antes de enviar, y el segundo en llegar se va sin
+        # mandar nada.
         run: |
           if [ -z "$VAPID_PRIVATE_KEY" ]; then
             echo "Falta el secreto VAPID_PRIVATE_KEY; no se avisa a nadie."
             exit 0
           fi
 
-          npx tsx scripts/notificar-carrera.ts
+          npx tsx scripts/avisar-sesiones.ts

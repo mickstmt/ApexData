@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Bell, BellOff, Loader2, Share } from 'lucide-react';
 import { VAPID_PUBLICA, claveABytes } from '@/lib/push-claves';
+import { SESIONES, TODAS_LAS_SESIONES } from '@/lib/push/redaccion';
+import { useFavorites } from '@/contexts/FavoritesContext';
 
 /**
  * Encender o apagar los avisos de fin de carrera.
@@ -29,8 +31,65 @@ type Estado =
   | 'bloqueado'
   | 'trabajando';
 
+/** Las siete sesiones, en el orden en que se corren. */
+const SESIONES_DEL_FIN_DE_SEMANA = Object.values(SESIONES);
+
+const CLAVE_SESIONES = 'apexdata_sesiones_aviso';
+
+/**
+ * Qué sesiones quiere quien abre esto, con todas encendidas por defecto.
+ *
+ * Se lee al construir el estado y no dentro de un efecto. No hay riesgo de que
+ * el servidor y el navegador pinten cosas distintas: mientras el estado es
+ * «cargando» este componente no dibuja nada, y para cuando dibuja algo ya está
+ * en el navegador.
+ */
+function sesionesGuardadas(): string[] {
+  if (typeof window === 'undefined') return TODAS_LAS_SESIONES;
+
+  try {
+    const crudo = localStorage.getItem(CLAVE_SESIONES);
+    if (!crudo) return TODAS_LAS_SESIONES;
+
+    const leidas = JSON.parse(crudo) as unknown;
+    if (!Array.isArray(leidas)) return TODAS_LAS_SESIONES;
+
+    return leidas.filter((c): c is string => typeof c === 'string' && TODAS_LAS_SESIONES.includes(c));
+  } catch {
+    return TODAS_LAS_SESIONES;
+  }
+}
+
 export function AvisosPush() {
   const [estado, setEstado] = useState<Estado>('cargando');
+  const [sesiones, setSesiones] = useState<string[]>(sesionesGuardadas);
+  const { favoriteDrivers, favoriteConstructors } = useFavorites();
+
+  /**
+   * Manda al servidor la suscripción con las preferencias de esta persona.
+   *
+   * Va todo junto en la misma petición a propósito. Los favoritos no son un
+   * ajuste aparte: son lo que permite que el aviso diga «Antonelli 5.º» en vez
+   * de limitarse a quién fue el más rápido, y sin ellos el servidor no tiene
+   * forma de saberlo — viven en el `localStorage` del teléfono.
+   */
+  const guardar = useCallback(
+    async (suscripcion: PushSubscription, cuales: string[]) => {
+      const respuesta = await fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...suscripcion.toJSON(),
+          favoriteDrivers,
+          favoriteConstructors,
+          sessions: cuales,
+        }),
+      });
+
+      if (!respuesta.ok) throw new Error('El servidor no aceptó la suscripción');
+    },
+    [favoriteDrivers, favoriteConstructors]
+  );
 
   useEffect(() => {
     const mirar = async () => {
@@ -81,13 +140,7 @@ export function AvisosPush() {
         applicationServerKey: claveABytes(VAPID_PUBLICA),
       });
 
-      const respuesta = await fetch('/api/push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(suscripcion.toJSON()),
-      });
-
-      if (!respuesta.ok) throw new Error('El servidor no aceptó la suscripción');
+      await guardar(suscripcion, sesiones);
       setEstado('encendido');
     } catch (error) {
       console.error('[push] No se pudo activar:', error);
@@ -121,17 +174,61 @@ export function AvisosPush() {
     }
   };
 
+  /**
+   * Mantiene al día lo que el servidor sabe de ti.
+   *
+   * Los favoritos se marcan en otra pantalla y en cualquier momento, así que no
+   * basta con mandarlos al activar los avisos: si mañana dejas de seguir a
+   * alguien, el aviso del domingo seguiría hablando de él. El retardo agrupa
+   * las ráfagas —marcar cinco pilotos seguidos es una sola petición, no cinco—.
+   */
+  useEffect(() => {
+    if (estado !== 'encendido') return;
+
+    const espera = setTimeout(() => {
+      void (async () => {
+        try {
+          const registro = await navigator.serviceWorker.ready;
+          const suscripcion = await registro.pushManager.getSubscription();
+          if (suscripcion) await guardar(suscripcion, sesiones);
+        } catch (error) {
+          console.error('[push] No se pudieron guardar las preferencias:', error);
+        }
+      })();
+    }, 800);
+
+    return () => clearTimeout(espera);
+  }, [estado, sesiones, guardar]);
+
+  const alternarSesion = (codigo: string) => {
+    setSesiones((previas) => {
+      const siguientes = previas.includes(codigo)
+        ? previas.filter((c) => c !== codigo)
+        : [...previas, codigo];
+
+      try {
+        localStorage.setItem(CLAVE_SESIONES, JSON.stringify(siguientes));
+      } catch {
+        // Sin almacenamiento el ajuste dura lo que la pestaña. El servidor ya
+        // lo tiene guardado, que es lo que decide qué avisos salen.
+      }
+
+      return siguientes;
+    });
+  };
+
   if (estado === 'cargando' || estado === 'no-soportado') return null;
 
   return (
     <section className="mb-10 rounded-xl border border-border bg-card p-5">
       <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
         <Bell className="h-5 w-5 text-primary" aria-hidden />
-        Avisos de carrera
+        Avisos del fin de semana
       </h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        Un aviso cuando termine cada Gran Premio, con quién ganó. Nada más: ni resúmenes, ni
-        recordatorios, ni promociones.
+        Un aviso cuando termina cada sesión, media hora después de la bandera. Si has marcado
+        pilotos favoritos, el aviso habla de ellos. Nada más: ni resúmenes, ni recordatorios, ni
+        promociones.
       </p>
 
       {estado === 'instalar-primero' && (
@@ -172,6 +269,48 @@ export function AvisosPush() {
           )}
           {estado === 'encendido' ? 'Avisos activados' : 'Activar avisos'}
         </button>
+      )}
+
+      {estado === 'encendido' && (
+        <div className="mt-5 border-t border-border pt-4">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            De qué sesiones
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            {SESIONES_DEL_FIN_DE_SEMANA.map((sesion) => {
+              const elegida = sesiones.includes(sesion.codigo);
+
+              return (
+                <button
+                  key={sesion.codigo}
+                  type="button"
+                  onClick={() => alternarSesion(sesion.codigo)}
+                  aria-pressed={elegida}
+                  className={`min-h-[44px] rounded-full border px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${
+                    elegida
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-input text-muted-foreground hover:border-foreground/40'
+                  }`}
+                >
+                  {sesion.nombre}
+                </button>
+              );
+            })}
+          </div>
+
+          {sesiones.length === 0 && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Con ninguna encendida no llegará ningún aviso.
+            </p>
+          )}
+
+          <p className="mt-3 text-sm text-muted-foreground">
+            {favoriteDrivers.length === 0
+              ? 'Sin pilotos favoritos, los avisos cuentan quién ganó. Marca alguno más abajo y hablarán de él.'
+              : `Los avisos hablarán de tus ${favoriteDrivers.length === 1 ? 'piloto favorito' : `${favoriteDrivers.length} pilotos favoritos`}.`}
+          </p>
+        </div>
       )}
     </section>
   );
