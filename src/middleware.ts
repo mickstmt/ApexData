@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { Limitador, presupuestoDe, quienPide } from '@/lib/limite-peticiones';
 import { llevaPolitica, nuevoNonce, politicaDeContenido } from '@/lib/csp';
+import { esSondeoDeServerAction } from '@/lib/sondeos';
 
 /**
  * El límite de peticiones, aplicado antes que nada.
@@ -28,6 +29,20 @@ const limitador = new Limitador();
 
 export function middleware(peticion: NextRequest) {
   const ruta = peticion.nextUrl.pathname;
+
+  // Sondeos de Server Actions, fuera antes que nada.
+  //
+  // Un escáner recorre la web mandando POST con la cabecera `Next-Action`
+  // rellena a mano —`0`, `1`, `action`, `x`, en bucle— a ver si algo pica. Next
+  // ya los rechazaba solo, pero dejando un error por intento, y el registro del
+  // contenedor se volvió ilegible.
+  //
+  // Se puede cortar sin mirar porque esta aplicación no tiene ninguna Server
+  // Action. Esa premisa la vigila `tests/sondeos.test.ts`.
+  if (esSondeoDeServerAction(peticion.method, peticion.headers)) {
+    return new NextResponse(null, { status: 404, headers: { 'Cache-Control': 'no-store' } });
+  }
+
   const cupo = presupuestoDe(ruta);
 
   if (!cupo) return conPolitica(peticion, ruta);
