@@ -954,8 +954,37 @@ test.describe('pestañas de una carrera', () => {
 
   test('una clasificación pendiente dice a qué hora es, no que no hay datos', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    // Una carrera de 2026 cuya clasificación aún no se ha corrido.
-    await page.goto('/results/2026/13?sesion=qualifying');
+
+    /**
+     * La ronda se busca; antes iba escrita a mano.
+     *
+     * Decía «la 13 de 2026, cuya clasificación aún no se ha corrido», y era
+     * cierto el día que se escribió. El 6 de septiembre de 2026 esa ronda
+     * resultó ser Monza, se corrió, y la prueba empezó a fallar en un commit
+     * que no tocaba nada de esto: el calendario la alcanzó.
+     *
+     * Una prueba con una fecha futura dentro es una bomba de relojería, y
+     * cambiar el número por otro solo la rearma. Así que se pregunta por el
+     * calendario y se coge la primera clasificación que siga por delante.
+     */
+    const anio = new Date().getFullYear();
+    const respuesta = await page.request.get(`/api/seasons/${anio}`);
+    test.skip(!respuesta.ok(), `No hay calendario de ${anio}`);
+
+    const { data } = (await respuesta.json()) as {
+      data?: { races?: { round: number; qualiDate: string | null }[] };
+    };
+
+    const ahora = Date.now();
+    const pendiente = (data?.races ?? []).find(
+      (carrera) => carrera.qualiDate && new Date(carrera.qualiDate).getTime() > ahora
+    );
+
+    // Diciembre, o una temporada ya terminada: no hay nada pendiente que
+    // enseñar, y eso no es un fallo.
+    test.skip(!pendiente, `Ya no queda ninguna clasificación por correr en ${anio}`);
+
+    await page.goto(`/results/${anio}/${pendiente!.round}?sesion=qualifying`);
 
     // El defecto: carrera, sprint y prácticas enseñaban hora y cuenta atrás
     // mientras la sesión estaba pendiente, pero la clasificación pintaba un
