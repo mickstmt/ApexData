@@ -31,14 +31,6 @@ async function main() {
     return;
   }
 
-  if (informe.estrenado) {
-    console.log(
-      `Estreno: ${informe.estrenado} sesiones recientes quedan anotadas sin avisar, ` +
-        'para no repetir lo que ya salió por el sistema anterior.'
-    );
-    return;
-  }
-
   for (const esperando of informe.esperando) {
     console.log(`· ${esperando}: terminada, pero OpenF1 aún no publica su clasificación.`);
   }

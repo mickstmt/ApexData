@@ -3,6 +3,10 @@ import { avisarACadaUno, type DestinoDeAviso } from '@/lib/push';
 import { clasificacionDeSesion, sesionesDeTemporada } from '@/services/openf1/client';
 import type { FilaDeSesion, SesionOpenF1 } from '@/services/openf1/tipos';
 
+import { estaEnPunto } from './ventana';
+
+export { ESPERA_MINUTOS, NADA_ANTES_DE, VENTANA_HORAS, estaEnPunto } from './ventana';
+
 import {
   SESIONES,
   quiereLaSesion,
@@ -32,27 +36,6 @@ import {
  * en mal momento no mandan el mismo aviso dos veces.
  */
 
-/**
- * Cuánto se espera desde que termina una sesión.
- *
- * OpenF1 considera «en directo» —y de pago— desde treinta minutos antes de
- * empezar hasta treinta después de terminar. Fuera de esa ventana los datos son
- * históricos y libres, así que antes de ese momento no hay nada que pedir.
- *
- * Treinta y cinco y no treinta: el margen evita quedarse justo en el borde y
- * gastar una petición que va a volver vacía.
- */
-export const ESPERA_MINUTOS = 35;
-
-/**
- * Hasta cuándo se mira atrás.
- *
- * Dos días. Si el servidor estuvo caído todo un domingo, al arrancar todavía
- * encuentra la carrera. Más allá ya no es un aviso, es un recordatorio de algo
- * que se leyó en otro sitio, y lo recoge el sembrado normal.
- */
-export const VENTANA_HORAS = 48;
-
 export interface SesionAvisada {
   sessionKey: number;
   sesion: string;
@@ -69,18 +52,6 @@ export interface Informe {
   esperando: string[];
   /** Nada que hacer: ni una sesión reciente. */
   tranquilo: boolean;
-  /** Primera vez que esto corre: se puso al día en silencio. Ver abajo. */
-  estrenado?: number;
-}
-
-/** ¿Terminó hace lo bastante como para pedir sus datos, y no hace demasiado? */
-function estaEnPunto(sesion: SesionOpenF1, ahora: Date): boolean {
-  const fin = new Date(sesion.date_end).getTime();
-  if (!Number.isFinite(fin)) return false;
-
-  const minutos = (ahora.getTime() - fin) / 60_000;
-
-  return minutos >= ESPERA_MINUTOS && minutos <= VENTANA_HORAS * 60;
 }
 
 /**
@@ -182,38 +153,6 @@ export async function avisarDeSesionesTerminadas(opciones?: {
 
   const pendientes = candidatas.filter((s) => !yaAvisadas.has(s.session_key));
   if (!pendientes.length) return informe;
-
-  /**
-   * La primera vez no se avisa de nada: solo se toma nota.
-   *
-   * La ventana mira dos días atrás, así que el día que esto se despliega
-   * encuentra las sesiones del fin de semana que acaba de pasar y las daría por
-   * nuevas. Quien ya recibió el aviso del domingo lo recibiría otra vez, y un
-   * aviso repetido de algo que ya sabías es la peor primera impresión posible
-   * para un sistema de avisos.
-   *
-   * Se distingue por la tabla vacía, que solo ocurre una vez en la vida de la
-   * base. El precio es que si el estreno cae en pleno fin de semana, ese fin de
-   * semana se pierde; a partir del siguiente, todo normal.
-   */
-  if (!ensayo && (await prisma.notifiedSession.count()) === 0) {
-    await prisma.notifiedSession.createMany({
-      data: pendientes.map((s) => ({
-        sessionKey: s.session_key,
-        sessionName: s.session_name,
-        year: s.year,
-      })),
-      skipDuplicates: true,
-    });
-
-    console.log(
-      `[avisos] Estreno: ${pendientes.length} sesiones recientes quedan anotadas sin avisar, ` +
-        'para no repetir avisos que ya salieron por el sistema anterior.'
-    );
-
-    informe.estrenado = pendientes.length;
-    return informe;
-  }
 
   const traductor = await traductorDeFavoritos();
 
