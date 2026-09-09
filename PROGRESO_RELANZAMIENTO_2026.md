@@ -28,7 +28,7 @@
 
 **Próximo paso**: pendiente de **confirmar en la próxima carrera** que los avisos por sesión salen ~30 min tras la bandera (ver entrada 56). La deuda del Sprint 5 quedó cerrada al completo el 2026-08-28, y abajo está el porqué de cada cierre, escrito para **no volver a evaluar lo ya decidido**. Ese mismo día se subieron `checkout`, `setup-node` y `setup-python` a **v7** en los cinco workflows —apuntaban a Node 20, ya obsoleto en los runners—: CI verde y **cero avisos de obsolescencia**.
 
-**Tests**: **325 unitarios** (TypeScript) + 28 (Python) + **91 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: **330 unitarios** (TypeScript) + 28 (Python) + **91 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -79,6 +79,23 @@
 ---
 
 ## Bitácora
+
+### 2026-09-09 (59) — Una carrera entre OpenF1 y FastF1 ✅ *(temporal)*
+
+**La pregunta**: se eligió OpenF1 para disparar los avisos porque es una petición JSON y FastF1 obliga a cargar la sesión entera. Eso es comodidad, no velocidad — **entre las dos nunca se comparó el tiempo**. Si una tiene los datos siempre antes por un margen claro, quizá sobre la otra para este trabajo.
+
+**Cómo se responde**: sondeando las dos cada cinco minutos desde que baja la bandera y anotando el primer instante en que cada una contesta con algo. Un fin de semana da entre cinco y siete medidas por fuente.
+
+- Se sondea **desde el minuto cero**, no desde los treinta. Empezar a los treinta daría por buena la afirmación de OpenF1 en vez de medirla, que es justo lo que hay que comprobar.
+- Se deja de sondear en cuanto una fuente contesta, y la ventana entera dura ocho horas.
+- El marcador se mira en **`/api/fuentes`**, desde el móvil, sin abrir la base.
+- Se apaga con `CARRERA_DE_FUENTES=0`.
+
+**Lo que cuesta y cómo se acota**: sondear FastF1 obliga al servicio a cargar la sesión —36 segundos medidos la primera vez— y solo carga una cada vez, así que un sondeo puede hacer esperar a quien mire telemetría. Va **al final de la vuelta y aislado en su propio `try`**: primero salen los avisos, que es lo que alguien está esperando, y si el experimento revienta no se lleva nada por delante. Además el servicio ya recuerda cinco minutos que una sesión no tiene datos, así que insistir más a menudo no aportaría nada — el ritmo del reloj y el de su caché coinciden por casualidad afortunada.
+
+**Esto se borra.** Es un experimento con fecha de caducidad, no una pieza del producto: cuando haya un fin de semana medido y se decida, el módulo, la tabla y la ruta se van juntos. Está escrito en los tres sitios para que nadie lo herede sin saber para qué era.
+
+**Verificación**: 5 pruebas de la ventana, vistas fallar con el defecto puesto (empezar a los 30 minutos). 330 unitarias y 95 de navegador en total.
 
 ### 2026-09-09 (58) — El menú, donde llega el pulgar ✅
 

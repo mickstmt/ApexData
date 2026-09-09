@@ -95,7 +95,11 @@ function arrancarAvisos() {
   const vuelta = async () => {
     try {
       const { darUnaVuelta } = await import('@/lib/push/vuelta');
-      const { resultados: informe, previas } = await darUnaVuelta();
+      const { resultados: informe, previas, fuentes } = await darUnaVuelta();
+
+      for (const linea of fuentes.nuevas) {
+        console.log(`[fuentes] ${linea}`);
+      }
 
       for (const texto of previas.textos) {
         console.log(`[avisos] Previa enviada: ${texto}`);

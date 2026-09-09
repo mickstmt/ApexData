@@ -453,6 +453,46 @@ model NotifiedSession {
 }
 
 /**
+ * La carrera entre las dos fuentes: quién publica antes.
+ *
+ * Un experimento con fecha de caducidad, no una pieza del producto. La pregunta
+ * es concreta: para cada sesión, ¿cuánto tarda cada fuente en tener sus datos?
+ * Se responde sondeando las dos cada cinco minutos desde que baja la bandera y
+ * anotando el primer instante en que cada una contesta con algo.
+ *
+ * Con eso decidido —seguir con las dos, o quedarse con una— esta tabla y su
+ * módulo se borran. Está aquí escrito para que nadie la herede sin saber para
+ * qué era.
+ */
+model SourceProbe {
+  /** El `session_key` de OpenF1, que identifica la sesión en las dos. */
+  sessionKey Int
+  /** `openf1` o `fastf1`. */
+  source     String
+
+  sessionName String
+  year        Int
+
+  /** Cuándo terminó la sesión, que es el momento cero de la cuenta. */
+  endedAt DateTime
+
+  /** El primer sondeo en que esta fuente tuvo datos. Nulo = todavía nada. */
+  firstSeenAt DateTime?
+
+  /** Cuántas veces se le preguntó, para saber si la cuenta es fina o gruesa. */
+  probes Int @default(0)
+
+  /** El último motivo por el que no había datos, tal cual. */
+  lastNote String?
+
+  updatedAt DateTime @updatedAt @default(now())
+
+  @@id([sessionKey, source])
+  @@index([year])
+  @@map("source_probes")
+}
+
+/**
  * Qué previas se han mandado ya, y a quién.
  *
  * Los resultados llevan una marca global —lo que pasó es igual para todos— pero

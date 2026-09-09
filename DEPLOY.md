@@ -318,6 +318,12 @@ Es la misma clave privada del par VAPID en los dos.
 **Variable opcional**: `AVISOS_AUTOMATICOS=0` apaga el reloj de la app sin tocar
 código, por si alguna vez hay que silenciarlo en caliente.
 
+**Experimento temporal**: `CARRERA_DE_FUENTES=0` apaga el sondeo que mide cuál
+de las dos fuentes —OpenF1 o FastF1— publica antes los datos de cada sesión. El
+marcador está en `/api/fuentes`. Cuando se decida, el experimento se borra
+entero; hasta entonces, apagarlo es la salida si el servicio de telemetría va
+justo de recursos.
+
 **Sobre la previa del fin de semana**: sale a las 20:00 de la noche anterior, en
 el huso horario de cada suscripción. Ese huso lo manda el navegador al activar
 los avisos; una suscripción guardada antes de que esto existiera no lo tiene y
