@@ -798,6 +798,14 @@ test.describe('calendario', () => {
       timeout: 30_000,
     });
 
+    // Se espera a que la transición termine antes de tocar el selector.
+    //
+    // Mientras dura, la página que sale y la que entra conviven en el DOM y hay
+    // dos de todo: `getByLabel('Temporada')` encontraba dos desplegables y
+    // Playwright se negaba a elegir por él. Pasó una vez en CI y pasó al
+    // segundo intento, que es la peor clase de fallo — el que se ignora.
+    await expect(page.locator('[data-pagina]')).toHaveCount(1);
+
     const selector = page.getByLabel('Temporada', { exact: true });
     await selector.selectOption('2024');
     await page.waitForURL('**/calendar?season=2024');
@@ -1587,7 +1595,17 @@ test.describe('temporada por defecto', () => {
     // clasificación usaba el del reloj. Tres páginas ancladas al pasado y dos
     // criterios distintos conviviendo sin que nada lo dijera.
     const elegida = async (ruta: string) => {
-      await page.goto(ruta);
+      // `domcontentloaded` y no el `load` por defecto.
+      //
+      // `load` no llega hasta que han cargado TODAS las imágenes, y estas
+      // páginas van llenas de fotos de piloto, banderas y logos. En CI, con una
+      // sola conexión a una base en Virginia, `/constructors` se pasó de los 45
+      // segundos y la prueba murió por lentitud, no por comportamiento.
+      //
+      // Aquí no se mira ni una imagen: se lee el valor de un desplegable. La
+      // espera automática del localizador ya garantiza que esté ahí, así que
+      // esperar a las fotos era esperar por nada.
+      await page.goto(ruta, { waitUntil: 'domcontentloaded' });
       return page
         .locator('select')
         .first()
