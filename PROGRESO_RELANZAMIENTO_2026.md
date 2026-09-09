@@ -80,6 +80,36 @@
 
 ## Bitácora
 
+### 2026-09-09 (58) — El menú, donde llega el pulgar ✅
+
+**La queja**: abrir el menú de secciones era incómodo en el móvil. **La medición**, en un iPhone de 390×844:
+
+| | Desde el borde inferior |
+|---|---|
+| Botón que abría el menú | **812 px** (esquina superior derecha) |
+| Contenido del menú, ya abierto | 42 – 234 px |
+
+El contenido estaba al alcance del pulgar; la puerta, no. La hoja saliendo desde abajo era lo único que ya estaba bien.
+
+**Lo que cambia**:
+
+- **«Más» es la quinta pestaña** de la barra inferior. El disparador baja de 812 px a 40. Le cede el sitio *Telemetría*, que ocupaba barra pese a estar marcada como no principal en `site.ts`.
+- **Rejilla con iconos** en lugar de una lista de nombres sueltos.
+- **El menú enseña lo que NO está en la barra**: cinco de nueve. Un menú llamado «Más» que lo contiene todo no es «más» de nada.
+- **El botón de la cabecera se oculta justo donde aparece la barra.** Entre `md` y `lg` no hay barra ni enlaces en la cabecera, así que ahí sigue siendo la única navegación — y ahí sí enseña las nueve, porque no hay nada visible que repetir.
+- La hoja gana una forma de **panel flotante**: sigue siendo el mismo `<dialog>` modal —foco atrapado, `Escape`, foco devuelto, fondo inerte— pero flota por encima de la barra en vez de taparla, así que se sigue viendo el botón que lo abrió.
+
+**Dos correcciones a mí mismo, por escrito:**
+
+1. **Recomendé enseñar las nueve porque «3×3 queda bonito».** Eso es estética disfrazada de argumento: dejé que la geometría decidiera el contenido. La regla es la contraria — nunca añadas contenido para arreglar un diseño. Con cinco quedan 3+2, que es como se ve cualquier rejilla real.
+2. **Anuncié un bug que no existía.** Dije que `calc(4.5rem+env(...))` era CSS inválido por faltarle los espacios. Tailwind normaliza el valor y genera `calc(4.5rem + env(...))` en los dos casos — comprobado en el CSS del build. Lo único que fallaba era una prueba midiendo a mitad de la animación de entrada, el mismo error que ya se había cometido midiendo esta hoja a mano.
+
+**Verificación**: 6 pruebas de navegador para el menú (foco atrapado, geometría en reposo, qué secciones enseña a cada ancho, que cada una lleve icono, y que el botón de arriba y la barra nunca coexistan). 95 de navegador y 325 unitarias en total, lint y tipos limpios.
+
+**Maqueta de la decisión**: https://claude.ai/code/artifact/5e6f7b54-778c-46b1-a5df-4eec6c030e1c
+
+**Apuntado**: los iconos son los de lucide y cumplen, pero merecen una pasada cuando haya tiempo. Y `middleware.ts` está obsoleto en Next 16.3 — hay codemod oficial a `proxy.ts`.
+
 ### 2026-09-09 (57) — La previa del fin de semana, a tu hora ✅
 
 **Qué se añade**: además del aviso de resultados, una **previa**: la noche antes, a las 20:00, qué se corre mañana y a qué hora.

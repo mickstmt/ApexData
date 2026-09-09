@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Sheet } from '@/components/ui/Sheet';
+import { RejillaDeSecciones } from './Secciones';
 import { ThemeToggle } from './ThemeToggle';
 import { navItems } from '@/config/site';
 import { cn } from '@/lib/utils';
@@ -60,7 +61,14 @@ export function Header() {
           <ThemeToggle />
           <button
             type="button"
-            className="flex h-11 w-11 items-center justify-center rounded-md text-foreground ring-offset-background hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:h-10 md:w-10"
+            // Oculto justo donde aparece la barra de pestañas.
+            //
+            // Debajo de `md` el menú se abre desde «Más», abajo, al alcance del
+            // pulgar; dejar aquí un segundo botón para lo mismo sería dar dos
+            // puertas a la misma habitación. Entre `md` y `lg` no hay barra ni
+            // enlaces en la cabecera, así que este botón es la única
+            // navegación que queda y tiene que estar.
+            className="hidden h-11 w-11 items-center justify-center rounded-md text-foreground ring-offset-background hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:flex md:h-10 md:w-10"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
             aria-expanded={menuOpen}
@@ -71,21 +79,18 @@ export function Header() {
         </div>
       </nav>
 
+      {/* Aquí van TODAS, y no solo las que faltan.
+          
+          Este menú solo existe entre `md` y `lg`, donde no hay barra de
+          pestañas ni enlaces en la cabecera: no hay nada «ya visible» que
+          repetir, así que es toda la navegación de la app. */}
       <Sheet abierta={menuOpen} alCerrar={() => setMenuOpen(false)} titulo="Secciones">
-        <div id="menu-secciones" className="grid grid-cols-2 gap-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMenuOpen(false)}
-              className={cn(
-                'flex min-h-[44px] items-center rounded-md px-3 text-base font-medium hover:bg-accent hover:text-primary',
-                isActive(item.href) ? 'text-foreground' : 'text-foreground/60'
-              )}
-            >
-              {item.title}
-            </Link>
-          ))}
+        <div id="menu-secciones">
+          <RejillaDeSecciones
+            secciones={navItems}
+            alElegir={() => setMenuOpen(false)}
+            rutaActual={pathname}
+          />
         </div>
       </Sheet>
     </header>

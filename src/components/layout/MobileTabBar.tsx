@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useReducedMotion } from 'framer-motion';
-import { CalendarDays, Home, Trophy, Users, Gauge } from 'lucide-react';
+import { CalendarDays, Home, LayoutGrid, Trophy, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Sheet } from '@/components/ui/Sheet';
+import { FUERA_DE_LA_BARRA, RejillaDeSecciones } from './Secciones';
 
 /**
  * Bottom tab bar, the primary navigation on phones.
@@ -20,8 +22,20 @@ const TABS = [
   { href: '/calendar', label: 'Calendario', icon: CalendarDays },
   { href: '/standings', label: 'Clasificación', icon: Trophy },
   { href: '/drivers', label: 'Pilotos', icon: Users },
-  { href: '/analysis', label: 'Telemetría', icon: Gauge },
 ] as const;
+
+/**
+ * La quinta pestaña no es una sección: abre el resto.
+ *
+ * Antes el menú se abría desde la esquina superior derecha, **a 812 píxeles del
+ * borde inferior** —medido en un iPhone de 390×844—, mientras que lo que abría
+ * aterrizaba en los últimos 234. O sea: el contenido estaba al alcance del
+ * pulgar y la puerta no. Aquí baja a 40.
+ *
+ * Le cede el sitio «Telemetría», que estaba en la barra pese a no ser una
+ * sección principal en `site.ts`. Pasa al menú, con las otras cuatro.
+ */
+const ETIQUETA_MAS = 'Más';
 
 /**
  * Rutas que no tienen pestaña propia pero pertenecen a una.
@@ -57,6 +71,7 @@ export function MobileTabBar() {
   // reparte flex, así que no se pueden calcular de antemano.
   const lista = useRef<HTMLUListElement>(null);
   const [pildora, setPildora] = useState<React.CSSProperties>({ opacity: 0 });
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   useEffect(() => {
     const nodo = lista.current;
@@ -87,8 +102,9 @@ export function MobileTabBar() {
   };
 
   return (
-    <nav
-      aria-label="Navegación principal"
+    <>
+      <nav
+        aria-label="Navegación principal"
       className={cn(
         'fixed inset-x-0 bottom-0 z-50 border-t border-border md:hidden',
         'bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/65',
@@ -137,7 +153,43 @@ export function MobileTabBar() {
             </li>
           );
         })}
-      </ul>
-    </nav>
+
+        <li className="flex-1">
+          <button
+            type="button"
+            onClick={() => setMenuAbierto(true)}
+            aria-expanded={menuAbierto}
+            aria-haspopup="dialog"
+            className={cn(
+              'flex min-h-[44px] w-full select-none flex-col items-center justify-center gap-1 px-1 py-1.5',
+              'text-[10px] font-medium transition-colors',
+              'relative rounded-lg active:scale-95 motion-reduce:active:scale-100',
+              'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+              menuAbierto ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <LayoutGrid className="h-5 w-5" aria-hidden />
+            {ETIQUETA_MAS}
+          </button>
+        </li>
+        </ul>
+      </nav>
+
+      {/* El mismo `<dialog>` modal de siempre, en su forma flotante: el panel
+          queda por encima de la barra, así que el botón que lo abrió sigue
+          viéndose debajo y se entiende de dónde salió. */}
+      <Sheet
+        abierta={menuAbierto}
+        alCerrar={() => setMenuAbierto(false)}
+        titulo="Secciones"
+        forma="panel"
+      >
+        <RejillaDeSecciones
+          secciones={FUERA_DE_LA_BARRA}
+          alElegir={() => setMenuAbierto(false)}
+          rutaActual={pathname}
+        />
+      </Sheet>
+    </>
   );
 }

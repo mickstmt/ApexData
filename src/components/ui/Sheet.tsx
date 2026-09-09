@@ -29,11 +29,24 @@ export function Sheet({
   abierta,
   alCerrar,
   titulo,
+  forma = 'hoja',
   children,
 }: {
   abierta: boolean;
   alCerrar: () => void;
   titulo: string;
+  /**
+   * `hoja` sube pegada al borde de abajo y ocupa todo el ancho. `panel` flota
+   * por encima de la barra de pestañas, con aire a los lados.
+   *
+   * La diferencia no es estética. Una hoja pegada abajo tapa la barra, y la
+   * barra es de donde acaba de salir el menú: se pierde de vista el sitio que
+   * se tocó. Flotando, el botón sigue debajo y se entiende de dónde vino.
+   *
+   * Las dos siguen siendo el mismo `<dialog>` modal, así que conservan lo que
+   * costó conseguir: foco atrapado, `Escape`, foco devuelto y fondo inerte.
+   */
+  forma?: 'hoja' | 'panel';
   children: ReactNode;
 }) {
   const dialogo = useRef<HTMLDialogElement>(null);
@@ -70,11 +83,27 @@ export function Sheet({
       onClick={(evento) => {
         if (evento.target === dialogo.current) alCerrar();
       }}
-      className="m-0 mt-auto w-full max-w-none rounded-t-2xl border-t border-border bg-card p-0 text-foreground shadow-2xl backdrop:bg-foreground/40 sm:mx-auto sm:mb-6 sm:max-w-md sm:rounded-2xl sm:border"
+      className={
+        forma === 'panel'
+          ? // El margen de abajo salva la barra de pestañas, cuyo alto crece con
+            // la zona segura del iPhone: por eso se suma el inset en vez de
+            // escribir un número fijo que quedaría corto en pantalla completa.
+            'mx-auto mb-[calc(4.5rem_+_env(safe-area-inset-bottom))] mt-auto w-[calc(100%-1rem)] max-w-none rounded-2xl border border-border bg-card p-0 text-foreground shadow-2xl backdrop:bg-foreground/30 sm:mx-auto sm:mb-6 sm:max-w-md'
+          : 'm-0 mt-auto w-full max-w-none rounded-t-2xl border-t border-border bg-card p-0 text-foreground shadow-2xl backdrop:bg-foreground/40 sm:mx-auto sm:mb-6 sm:max-w-md sm:rounded-2xl sm:border'
+      }
     >
-      <div className="px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
-        {/* El asa no es un control: dice que esto se agarra por abajo. */}
-        <span aria-hidden className="mx-auto mb-3 block h-1 w-9 rounded-full bg-input" />
+      <div
+        className={
+          forma === 'panel'
+            ? 'px-3 pb-4 pt-3'
+            : 'px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3'
+        }
+      >
+        {/* El asa no es un control: dice que esto se agarra por abajo. Un panel
+            flotante no se agarra, así que no la lleva. */}
+        {forma === 'hoja' && (
+          <span aria-hidden className="mx-auto mb-3 block h-1 w-9 rounded-full bg-input" />
+        )}
 
         <div className="mb-3 flex items-center justify-between gap-4">
           <h2 className="font-display text-base font-bold">{titulo}</h2>

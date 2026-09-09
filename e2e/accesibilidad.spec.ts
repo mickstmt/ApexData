@@ -1829,15 +1829,26 @@ test.describe('pantalla de apertura', () => {
   });
 });
 
-test.describe('menú de secciones (hoja inferior)', () => {
+test.describe('menú de secciones', () => {
+  /**
+   * En el móvil el menú se abre desde «Más», la quinta pestaña.
+   *
+   * Antes se abría desde la esquina superior derecha, a 812 píxeles del borde
+   * inferior en un iPhone de 390×844, para enseñar algo que aterrizaba en los
+   * últimos 234: el contenido estaba al alcance del pulgar y la puerta no.
+   */
   test('atrapa el foco, cierra con Escape y lo devuelve al botón', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/standings');
 
-    const abrir = page.getByRole('button', { name: 'Abrir menú' });
+    const abrir = page.getByRole('button', { name: 'Más' });
     await abrir.click();
 
-    const hoja = page.locator('dialog[data-hoja]');
+    // `[open]` y no solo `dialog[data-hoja]`: hay dos en el documento —el de la
+    // cabecera, para anchos sin barra de pestañas, y el de la barra— y solo uno
+    // está abierto. Sin filtrar, el selector encuentra los dos y Playwright se
+    // niega, con razón, a adivinar cuál.
+    const hoja = page.locator('dialog[data-hoja][open]');
     await expect(hoja).toBeVisible();
     // `:modal` es lo que distingue una capa de verdad de un `div` flotante:
     // deja inerte lo de detrás y atrapa el foco sin escribirlo a mano.
@@ -1863,18 +1874,104 @@ test.describe('menú de secciones (hoja inferior)', () => {
     await expect(abrir).toBeFocused();
   });
 
-  test('la hoja respeta la zona segura de abajo', async ({ page }) => {
+  /**
+   * El panel flota POR ENCIMA de la barra, no encima de ella.
+   *
+   * Es la diferencia entre las dos formas: pegado abajo taparía la barra —y con
+   * ella el botón que acaba de tocarse—, así que se pierde de vista de dónde
+   * salió el menú. Esta prueba fija esa geometría, que es lo que se decidió, no
+   * un número de relleno.
+   */
+  test('el panel deja ver la barra de la que sale', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/standings');
+    await page.getByRole('button', { name: 'Más' }).click();
+
+    const panel = page.locator('dialog[data-hoja][open]');
+    await expect(panel).toBeVisible();
+
+    // Se espera a que la animación de entrada termine antes de medir.
+    //
+    // Sin esto la caja se lee a mitad de vuelo —919 px en vez de 772— y la
+    // prueba falla por dónde estaba el panel mientras subía, no por dónde se
+    // queda. Pasó al escribirla, y es el mismo error que ya se cometió midiendo
+    // esta hoja a mano.
+    await panel.evaluate((el) =>
+      Promise.all(el.getAnimations().map((a) => a.finished)).then(() => undefined)
+    );
+
+    const barra = page.getByRole('navigation', { name: 'Navegación principal' });
+    const [cajaPanel, cajaBarra] = await Promise.all([panel.boundingBox(), barra.boundingBox()]);
+
+    expect(cajaPanel!.y + cajaPanel!.height).toBeLessThanOrEqual(cajaBarra!.y);
+  });
+
+  test('enseña las secciones que NO están en la barra, y solo esas', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/standings');
+    await page.getByRole('button', { name: 'Más' }).click();
+
+    const panel = page.locator('dialog[data-hoja][open]');
+    const enlaces = panel.getByRole('link');
+
+    await expect(enlaces).toHaveCount(5);
+
+    // Un menú llamado «Más» que repitiera lo que ya está a un toque abajo no
+    // sería «más» de nada. Cuatro de las nueve viven en la barra.
+    for (const fuera of ['Inicio', 'Calendario', 'Clasificación', 'Pilotos']) {
+      await expect(enlaces.filter({ hasText: fuera })).toHaveCount(0);
+    }
+
+    for (const dentro of ['Equipos', 'Resultados', 'Circuitos', 'Telemetría', 'Favoritos']) {
+      await expect(enlaces.filter({ hasText: dentro })).toHaveCount(1);
+    }
+  });
+
+  /**
+   * Nunca dos puertas a la misma habitación.
+   *
+   * El botón de la cabecera y la barra de pestañas se reparten los anchos y no
+   * deben solaparse: debajo de `md` manda «Más», y entre `md` y `lg` —donde no
+   * hay barra ni enlaces en la cabecera— manda el botón, que ahí es la única
+   * navegación que existe. Las dos clases que lo consiguen son complementarias
+   * y un despiste en cualquiera deja la app sin menú o con dos.
+   */
+  test('el botón de la cabecera y la barra nunca están a la vez', async ({ page }) => {
+    const boton = page.getByRole('button', { name: 'Abrir menú' });
+    const barra = page.getByRole('navigation', { name: 'Navegación principal' });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/standings');
+    await expect(barra).toBeVisible();
+    await expect(boton).toBeHidden();
+
+    // Una tableta: sin barra abajo y sin enlaces en la cabecera.
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await expect(barra).toBeHidden();
+    await expect(boton).toBeVisible();
+  });
+
+  test('en una tableta el menú enseña las nueve', async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 1180 });
     await page.goto('/standings');
     await page.getByRole('button', { name: 'Abrir menú' }).click();
 
-    // En el navegador el inset vale 0 y queda el mínimo de 1,25rem; en el
-    // iPhone instalado crece solo. Sin esto, la última sección cae bajo la
-    // barra de gestos.
-    const relleno = await page
-      .locator('dialog[data-hoja] > div')
-      .evaluate((e) => parseFloat(getComputedStyle(e).paddingBottom));
-    expect(relleno).toBeGreaterThanOrEqual(20);
+    // Aquí no hay barra, así que no hay nada «ya visible» que evitar repetir:
+    // este menú es toda la navegación de la app.
+    await expect(page.locator('dialog[data-hoja][open]').getByRole('link')).toHaveCount(9);
+  });
+
+  test('cada sección lleva su icono, no solo el nombre', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/standings');
+    await page.getByRole('button', { name: 'Más' }).click();
+
+    const enlaces = page.locator('dialog[data-hoja][open]').getByRole('link');
+    const conIcono = await enlaces.evaluateAll((els) =>
+      els.filter((el) => el.querySelector('svg') !== null).length
+    );
+
+    expect(conIcono).toBe(await enlaces.count());
   });
 });
 
