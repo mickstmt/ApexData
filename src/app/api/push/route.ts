@@ -29,6 +29,7 @@ interface Cuerpo {
   favoriteDrivers?: unknown;
   favoriteConstructors?: unknown;
   sessions?: unknown;
+  timezone?: unknown;
 }
 
 /** Cuántos favoritos se aceptan. Veintidós pilotos y once equipos, con holgura. */
@@ -63,6 +64,30 @@ function listaDeIds(valor: unknown): string | undefined | null {
   }
 
   return limpios.join(',');
+}
+
+/**
+ * El huso horario, comprobado contra lo que el propio motor reconoce.
+ *
+ * No se valida con una expresión regular sino pidiéndole a `Intl` que lo use:
+ * la lista de husos cambia con el mundo —países que la cambian, zonas que se
+ * renombran— y una expresión escrita a mano envejece mal. Si `Intl` lo acepta,
+ * es un huso que este servidor sabe manejar, que es justo la condición que hace
+ * falta para calcular las 20:00 de alguien.
+ */
+function husoValido(valor: unknown): string | undefined | null {
+  if (valor === undefined) return undefined;
+  if (typeof valor !== 'string') return null;
+
+  const huso = valor.trim();
+  if (!huso || huso.length > 64) return null;
+
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: huso });
+    return huso;
+  } catch {
+    return null;
+  }
 }
 
 /** Los códigos de sesión elegidos, comprobados contra los siete que existen. */
@@ -126,10 +151,13 @@ export async function POST(request: NextRequest) {
   const pilotos = listaDeIds(datos.favoriteDrivers);
   const equipos = listaDeIds(datos.favoriteConstructors);
   const sesiones = listaDeSesiones(datos.sessions);
+  // Sin huso no hay previa: es lo que decide a qué hora son «las 20:00» de esta
+  // persona. Los avisos de resultado le siguen llegando igual.
+  const huso = husoValido(datos.timezone);
 
-  if (pilotos === null || equipos === null || sesiones === null) {
+  if (pilotos === null || equipos === null || sesiones === null || huso === null) {
     return NextResponse.json(
-      { error: 'Los favoritos o las sesiones no tienen la forma esperada.' },
+      { error: 'Los favoritos, las sesiones o el huso horario no tienen la forma esperada.' },
       { status: 400 }
     );
   }
@@ -138,6 +166,7 @@ export async function POST(request: NextRequest) {
     ...(pilotos !== undefined ? { favoriteDrivers: pilotos } : {}),
     ...(equipos !== undefined ? { favoriteConstructors: equipos } : {}),
     ...(sesiones !== undefined ? { sessions: sesiones } : {}),
+    ...(huso !== undefined ? { timezone: huso } : {}),
   };
 
   try {

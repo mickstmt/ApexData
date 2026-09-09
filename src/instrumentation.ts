@@ -94,8 +94,12 @@ function arrancarAvisos() {
 
   const vuelta = async () => {
     try {
-      const { avisarDeSesionesTerminadas } = await import('@/lib/push/avisos-de-sesion');
-      const informe = await avisarDeSesionesTerminadas();
+      const { darUnaVuelta } = await import('@/lib/push/vuelta');
+      const { resultados: informe, previas } = await darUnaVuelta();
+
+      for (const texto of previas.textos) {
+        console.log(`[avisos] Previa enviada: ${texto}`);
+      }
 
       for (const avisada of informe.avisadas) {
         console.log(

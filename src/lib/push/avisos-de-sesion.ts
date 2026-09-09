@@ -3,6 +3,7 @@ import { avisarACadaUno, type DestinoDeAviso } from '@/lib/push';
 import { clasificacionDeSesion, sesionesDeTemporada } from '@/services/openf1/client';
 import type { FilaDeSesion, SesionOpenF1 } from '@/services/openf1/tipos';
 
+import { granPremioDe } from './gran-premio';
 import { estaEnPunto } from './ventana';
 
 export { ESPERA_MINUTOS, NADA_ANTES_DE, VENTANA_HORAS, estaEnPunto } from './ventana';
@@ -55,40 +56,6 @@ export interface Informe {
 }
 
 /**
- * El Gran Premio al que pertenece una sesión, en la base de datos.
- *
- * Se busca por cercanía de fechas y no por identificador: OpenF1 numera sus
- * reuniones con una clave propia (`meeting_key`) que no existe en nuestra base,
- * y añadirla obligaría a resembrar diecisiete temporadas para ganar nada. Un
- * fin de semana cabe en cuatro días, así que la carrera más cercana a la sesión
- * es la suya sin ambigüedad posible.
- */
-async function granPremioDe(sesion: SesionOpenF1) {
-  const inicio = new Date(sesion.date_start);
-  const margen = 5 * 24 * 60 * 60 * 1000;
-
-  const candidatas = await prisma.race.findMany({
-    where: {
-      year: sesion.year,
-      date: {
-        gte: new Date(inicio.getTime() - margen),
-        lte: new Date(inicio.getTime() + margen),
-      },
-    },
-    select: { year: true, round: true, raceName: true, date: true },
-  });
-
-  if (!candidatas.length) return null;
-
-  return candidatas.reduce((mejor, actual) =>
-    Math.abs(actual.date.getTime() - inicio.getTime()) <
-    Math.abs(mejor.date.getTime() - inicio.getTime())
-      ? actual
-      : mejor
-  );
-}
-
-/**
  * Traduce los favoritos guardados a lo que entiende la redacción.
  *
  * En la base se guarda el `driverId` —«antonelli»— porque es lo único estable;
@@ -126,13 +93,15 @@ function favoritosDe(destino: DestinoDeAviso, traductor: Map<string, Favorito>):
 export async function avisarDeSesionesTerminadas(opciones?: {
   ahora?: Date;
   ensayo?: boolean;
+  /** El calendario ya traído, para no pedirlo dos veces en la misma vuelta. */
+  sesiones?: SesionOpenF1[];
 }): Promise<Informe> {
   const ahora = opciones?.ahora ?? new Date();
   const ensayo = opciones?.ensayo ?? false;
 
   const informe: Informe = { avisadas: [], esperando: [], tranquilo: true };
 
-  const todas = await sesionesDeTemporada(ahora.getFullYear());
+  const todas = opciones?.sesiones ?? (await sesionesDeTemporada(ahora.getFullYear()));
 
   const candidatas = todas.filter(
     (s) => SESIONES[s.session_name] !== undefined && estaEnPunto(s, ahora)

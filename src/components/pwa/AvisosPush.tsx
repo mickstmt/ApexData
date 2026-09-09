@@ -83,6 +83,11 @@ export function AvisosPush() {
           favoriteDrivers,
           favoriteConstructors,
           sessions: cuales,
+          // El huso horario lo sabe el navegador y el servidor no: es lo que
+          // decide a qué hora son «las 20:00» de esta persona para la previa
+          // del fin de semana. Va aquí y no en una pregunta en pantalla porque
+          // nadie debería tener que elegir su propio huso a mano.
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       });
 
@@ -226,9 +231,9 @@ export function AvisosPush() {
         Avisos del fin de semana
       </h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        Un aviso cuando termina cada sesión, media hora después de la bandera. Si has marcado
-        pilotos favoritos, el aviso habla de ellos. Nada más: ni resúmenes, ni recordatorios, ni
-        promociones.
+        La noche antes, a las 20:00, qué se corre mañana. Y un aviso cuando termina cada sesión,
+        media hora después de la bandera. Si has marcado pilotos favoritos, los avisos hablan de
+        ellos. Nada más: ni resúmenes, ni promociones.
       </p>
 
       {estado === 'instalar-primero' && (

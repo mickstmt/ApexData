@@ -17,17 +17,25 @@
 
 import 'dotenv/config';
 
-import { avisarDeSesionesTerminadas } from '../src/lib/push/avisos-de-sesion';
+import { darUnaVuelta } from '../src/lib/push/vuelta';
 import { prisma } from '../src/lib/prisma';
 
 async function main() {
   const ensayo = process.argv.includes('--probar');
 
   const suscritos = await prisma.pushSubscription.count();
-  const informe = await avisarDeSesionesTerminadas({ ensayo });
+  const { resultados: informe, previas } = await darUnaVuelta({ ensayo });
 
-  if (informe.tranquilo) {
-    console.log('No ha terminado ninguna sesión hace poco. Nada que hacer.');
+  if (previas.sinZona) {
+    console.log(`· ${previas.sinZona} suscripciones sin huso horario: se quedan sin previa.`);
+  }
+
+  for (const texto of previas.textos) {
+    console.log(`Previa: ${texto}`);
+  }
+
+  if (informe.tranquilo && !previas.textos.length) {
+    console.log('Ni sesiones recién terminadas ni previas que mandar. Nada que hacer.');
     return;
   }
 

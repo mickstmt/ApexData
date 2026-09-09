@@ -404,6 +404,18 @@ model PushSubscription {
    */
   sessions String?
 
+  /**
+   * El huso horario de quien recibe los avisos: `America/Lima`.
+   *
+   * Hace falta para la previa, que no sale «N horas antes» sino a las 20:00 de
+   * la noche anterior — y esas 20:00 son las del reloj de esta persona, no las
+   * del circuito. Lo manda el navegador solo al activar los avisos; sin él, esa
+   * suscripción se queda sin previa pero sigue recibiendo los resultados.
+   */
+  timezone String?
+
+  previas SentPreview[]
+
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt @default(now())
   lastSentAt DateTime?
@@ -438,4 +450,27 @@ model NotifiedSession {
 
   @@index([year])
   @@map("notified_sessions")
+}
+
+/**
+ * Qué previas se han mandado ya, y a quién.
+ *
+ * Los resultados llevan una marca global —lo que pasó es igual para todos— pero
+ * la previa no: sale a las 20:00 de cada cual, así que dos personas en husos
+ * distintos la reciben en instantes distintos. Con una marca compartida, la
+ * primera en recibirla dejaría a la segunda sin la suya.
+ *
+ * Se identifica por la primera sesión del día, que es lo que define al grupo.
+ */
+model SentPreview {
+  subscriptionId String
+  /** El `session_key` de OpenF1 de la primera sesión de ese día. */
+  sessionKey     Int
+
+  sentAt DateTime @default(now())
+
+  subscription PushSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@id([subscriptionId, sessionKey])
+  @@map("sent_previews")
 }

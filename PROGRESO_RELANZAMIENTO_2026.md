@@ -28,7 +28,7 @@
 
 **Próximo paso**: pendiente de **confirmar en la próxima carrera** que los avisos por sesión salen ~30 min tras la bandera (ver entrada 56). La deuda del Sprint 5 quedó cerrada al completo el 2026-08-28, y abajo está el porqué de cada cierre, escrito para **no volver a evaluar lo ya decidido**. Ese mismo día se subieron `checkout`, `setup-node` y `setup-python` a **v7** en los cinco workflows —apuntaban a Node 20, ya obsoleto en los runners—: CI verde y **cero avisos de obsolescencia**.
 
-**Tests**: **295 unitarios** (TypeScript) + 28 (Python) + **91 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: **325 unitarios** (TypeScript) + 28 (Python) + **91 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -79,6 +79,39 @@
 ---
 
 ## Bitácora
+
+### 2026-09-09 (57) — La previa del fin de semana, a tu hora ✅
+
+**Qué se añade**: además del aviso de resultados, una **previa**: la noche antes, a las 20:00, qué se corre mañana y a qué hora.
+
+```
+Spanish Grand Prix · mañana
+Mañana empieza: Práctica 1 06:30 y Práctica 2 10:00.
+```
+
+**Dos decisiones que salieron de medir, no de opinar.**
+
+*Una previa por día, no por sesión.* Con una por sesión, el jueves llegan dos avisos diciendo «mañana» —la P1 y la P2 son el mismo día— y el viernes otros dos. No sobran por ser muchos: sobran porque repiten. Agrupadas por día se anuncian todas igual y el fin de semana pasa de diez avisos a ocho sin perder nada. *(El usuario tenía razón en lo de la densidad: diez avisos en cuatro días, en una app instalada para esto, no es invasivo. Mi objeción inicial era un prejuicio, no un análisis; lo que sí sobraba era la repetición.)*
+
+*A las 20:00, no «N horas antes».* Una antelación fija hereda el huso del circuito. Medido sobre las 72 previas de 2026 en hora de Lima:
+
+| Cadencia | De madrugada (23:00–08:00) | «Mañana» siendo mentira |
+|---|---|---|
+| 24 horas | **39** de 72 | 0 |
+| 12 horas | **16** de 72 | **16** |
+| 20:00 de la noche antes | **0** | 0 |
+
+Con 24 horas exactas la previa cae *a la misma hora que la sesión*: en Shanghái, a las 2:30 de la madrugada. Las 20:00 no fallan porque no son una antelación: son una hora del día, la de quien la recibe.
+
+**Lo que cuesta**: el servidor necesita el huso horario de cada suscripción. Lo manda el navegador solo al activar los avisos, sin preguntar nada. Y la marca de «ya enviada» no puede ser global como la de los resultados —lo que pasó es igual para todos, las 20:00 no—, así que `sent_previews` lleva la suscripción en la clave.
+
+**Piezas nuevas**: `src/lib/push/zona.ts` (aritmética de husos sin librerías: `Intl` sabe de horarios de verano pero no tiene la operación inversa, de hora local a instante), `previa.ts` (agrupar por día y redactar) y `vuelta.ts`, que junta las dos comprobaciones para **pedir el calendario una sola vez** en lugar de dos.
+
+**Verificación**: 17 pruebas nuevas (325 en total). Vistas fallando con su defecto puesto — y una de ellas **no cazaba nada**: la del cambio de hora pasaba igual sin la corrección, porque las fechas elegidas no la ejercitaban. Se cambió por la hora del salto (Madrid, 29 de marzo, 01:00), que sí falla sin ella y por exactamente una hora.
+
+**Maqueta de la decisión** (calcula en tu propio huso, sobre el calendario real): https://claude.ai/code/artifact/eafc69a6-f376-4cb0-a8cf-fb5619295960
+
+**Apuntado, no hecho**: el título del aviso usa `raceName`, en inglés («Spanish Grand Prix»), igual que el calendario y las fichas de la web. Traducir los nombres de Gran Premio sería un cambio de toda la app, no solo de los avisos.
 
 ### 2026-09-07 (56) — Avisos de las siete sesiones, y con tu piloto dentro ✅
 

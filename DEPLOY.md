@@ -318,6 +318,12 @@ Es la misma clave privada del par VAPID en los dos.
 **Variable opcional**: `AVISOS_AUTOMATICOS=0` apaga el reloj de la app sin tocar
 código, por si alguna vez hay que silenciarlo en caliente.
 
+**Sobre la previa del fin de semana**: sale a las 20:00 de la noche anterior, en
+el huso horario de cada suscripción. Ese huso lo manda el navegador al activar
+los avisos; una suscripción guardada antes de que esto existiera no lo tiene y
+**se queda sin previa** —los resultados le siguen llegando— hasta que esa persona
+vuelva a entrar en `/favorites`, que lo reenvía solo.
+
 **Cómo saber si funciona sin esperar a un domingo**: `/api/health` trae
 `lastNotification` con la última sesión avisada, cuándo y a cuántos. Está ahí
 por la lección del GP de Países Bajos: aquella carrera se marcó como avisada sin
