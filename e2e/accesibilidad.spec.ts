@@ -616,7 +616,13 @@ test.describe('retroceder', () => {
   test('navegar no deja ni un fotograma sin página, en ningún ancho', async ({ page }) => {
     for (const ancho of [360, 390, 1280]) {
       await page.setViewportSize({ width: ancho, height: ancho > 1000 ? 900 : 800 });
-      await page.goto('/drivers');
+
+      // `domcontentloaded`, no el `load` por defecto: `load` espera a TODAS las
+      // imágenes, y esta página va llena de fotos de piloto. En CI eso se pasa
+      // de los 45 segundos y la prueba muere por lentitud, no por lo que
+      // vigila. Ya había pasado esta misma mañana en otra prueba, y aquí lo
+      // repetí.
+      await page.goto('/drivers', { waitUntil: 'domcontentloaded' });
       await expect(page.locator('[data-pagina]')).toHaveCount(1);
 
       await page.evaluate(() => {
@@ -633,7 +639,9 @@ test.describe('retroceder', () => {
       });
 
       await page.locator('a[href^="/drivers/"]').filter({ visible: true }).first().click();
-      await page.waitForURL('**/drivers/**');
+      // `commit` basta: lo que se cuenta son fotogramas durante la transición,
+      // no el final de la carga.
+      await page.waitForURL('**/drivers/**', { waitUntil: 'commit' });
       await page.waitForTimeout(900);
 
       const huecos = await page.evaluate(
