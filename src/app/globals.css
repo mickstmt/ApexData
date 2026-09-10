@@ -99,9 +99,28 @@
   }
 
   html {
-    /* Stops the whole page rubber-banding behind the installed app, which is
-       the clearest giveaway that a home-screen app is really a web page. */
-    overscroll-behavior-y: none;
+    /**
+     * `contain` y no `none`: el rebote vuelve, el «tirar para recargar» no.
+     *
+     * Aquí ponía `none` con este argumento: que la página rebotando delata que
+     * una app de pantalla de inicio es en realidad una web. El usuario notó lo
+     * contrario —que las apps de verdad SÍ estiran el contenido al llegar al
+     * tope, y que aquí no pasaba nada— y tiene razón: el rebote es lo normal,
+     * lo raro era su ausencia.
+     *
+     * Los dos argumentos eran ciertos sobre cosas distintas. Lo que delata no
+     * es el rebote: es que arrastre consigo la cabecera y la barra de pestañas,
+     * que están fijas. Eso sigue pasando con `contain` y es lo que hay que
+     * mirar en el teléfono; si molesta, la salida es un contenedor de scroll
+     * propio, que es un cambio bastante mayor y tocaría la restauración de la
+     * posición al retroceder, recién arreglada.
+     *
+     * `none` apagaba de paso el «tirar para recargar» de Chrome en Android, que
+     * en una PWA recarga la app entera sin querer. `contain` lo sigue apagando
+     * —comprobado en la documentación de Chrome, no supuesto— pero conserva el
+     * efecto local: rebote en iOS, estiramiento con brillo en Android.
+     */
+    overscroll-behavior-y: contain;
   }
 
   body {
