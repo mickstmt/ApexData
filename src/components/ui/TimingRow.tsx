@@ -65,7 +65,10 @@ export function TimingRow({
 
   if (href) {
     return (
-      <Link href={href} className={classes}>
+      // Una fila con enlace siempre lleva a una ficha, o sea un nivel mas
+      // adentro: la transicion lo dice deslizando desde la derecha. Va aqui y
+      // no en cada sitio que use esta fila, que son varios.
+      <Link href={href} transitionTypes={['nav-forward']} className={classes}>
         {content}
       </Link>
     );

@@ -598,70 +598,50 @@ test.describe('tiempos de FastF1 en la ficha de la carrera', () => {
 });
 
 test.describe('retroceder', () => {
-  test('hacia delante se funde; hacia atrás no, que el navegador ya anima eso', async ({ page }) => {
-    // El síntoma que reportó el usuario: con el gesto de deslizar desde el
-    // borde, la pantalla anterior «se refresca o parpadea», y con los botones
-    // de la app no. La causa que quedaba: iOS arrastra la pantalla anterior con
-    // su animación nativa y, encima, `PageTransition` hacía su fundido — el
-    // contenido ya puesto se iba a opacidad cero y volvía.
-    //
-    // El gesto no se puede emular, pero dispara `popstate` igual que el
-    // retroceso del navegador, que es lo que aquí se mide.
-    //
-    // Y hay que llegar **por un enlace**, no con un segundo `goto`: dos `goto`
-    // son dos cargas de documento, así que volver atrás recarga la página
-    // entera y no hay `popstate` que valga. Dentro de la app instalada la
-    // navegación es siempre de este tipo, que es el caso que se quiere medir.
-    // Este matiz costó un falso negativo al construir la prueba.
-    await page.goto('/');
+  /**
+   * Navegar no deja nunca la pantalla vacía.
+   *
+   * La transición anterior desmontaba la página vieja **antes** de montar la
+   * nueva, así que entre las dos no había ninguna: medido, entre 300 y 1130 ms
+   * de pantalla en blanco según la ruta —22 fotogramas seguidos a opacidad cero
+   * en la ficha de piloto—. Y durante ese hueco tampoco podía salir el
+   * esqueleto de carga, porque no había página que lo contuviera.
+   *
+   * Ahora la anima el navegador contra una foto de lo anterior, así que no hay
+   * momento sin nada. Esta prueba cuenta fotogramas: cero es la respuesta.
+   *
+   * Se mide en tres anchos porque la app se usa en iPhone, en Android y en
+   * escritorio, y una transición que solo se comporta en uno no vale.
+   */
+  test('navegar no deja ni un fotograma sin página, en ningún ancho', async ({ page }) => {
+    for (const ancho of [360, 390, 1280]) {
+      await page.setViewportSize({ width: ancho, height: ancho > 1000 ? 900 : 800 });
+      await page.goto('/drivers');
+      await expect(page.locator('[data-pagina]')).toHaveCount(1);
 
-    // Se vigila la opacidad **durante** cada navegación, no en un instante
-    // suelto: un fundido de 300 ms se escapa de un muestreo único.
-    //
-    // Se miden las dos direcciones con la misma sonda a propósito, y no se
-    // compara contra un número elegido a dedo: la navegación hacia delante es
-    // la referencia de «esto sí se funde», así que la prueba se calibra sola y
-    // sigue valiendo si mañana cambia la duración.
-    await page.evaluate(() => {
-      const w = window as unknown as { __minima: number };
-      w.__minima = 1;
-      const mirar = () => {
-        const capa = document.querySelector('[data-pagina]');
-        if (capa) {
-          const o = parseFloat(getComputedStyle(capa).opacity);
-          if (!Number.isNaN(o)) w.__minima = Math.min(w.__minima, o);
-        }
+      await page.evaluate(() => {
+        const w = window as unknown as { __huecos: number };
+        w.__huecos = 0;
+        const mirar = () => {
+          const capas = [...document.querySelectorAll('[data-pagina]')] as HTMLElement[];
+          const hayAlgo =
+            capas.length > 0 && capas.some((c) => parseFloat(getComputedStyle(c).opacity) > 0.5);
+          if (!hayAlgo) w.__huecos += 1;
+          requestAnimationFrame(mirar);
+        };
         requestAnimationFrame(mirar);
-      };
-      requestAnimationFrame(mirar);
-    });
-
-    const reiniciar = () =>
-      page.evaluate(() => {
-        (window as unknown as { __minima: number }).__minima = 1;
       });
-    const leer = () => page.evaluate(() => (window as unknown as { __minima: number }).__minima);
 
-    // Hacia delante: el fundido de siempre, que es el que se diseñó y con el
-    // que el usuario dice que todo va bien.
-    await reiniciar();
-    await page.getByRole('link', { name: 'Calendario', exact: true }).first().click();
-    await page.waitForURL('**/calendar');
-    await expect(page.locator('[data-pagina]')).toHaveAttribute('data-pagina', 'con-transicion');
-    await page.waitForTimeout(700);
-    const haciaDelante = await leer();
+      await page.locator('a[href^="/drivers/"]').filter({ visible: true }).first().click();
+      await page.waitForURL('**/drivers/**');
+      await page.waitForTimeout(900);
 
-    // Hacia atrás: nada. Y aquí sí es un `popstate` de verdad, dentro del mismo
-    // documento, que es lo que hace el gesto de iOS.
-    await reiniciar();
-    await page.goBack();
-    await page.waitForURL((url) => url.pathname === '/');
-    await expect(page.locator('[data-pagina]')).toHaveAttribute('data-pagina', 'sin-transicion');
-    await page.waitForTimeout(700);
-    const haciaAtras = await leer();
+      const huecos = await page.evaluate(
+        () => (window as unknown as { __huecos: number }).__huecos
+      );
 
-    expect(haciaDelante, 'la transición de siempre debería seguir viéndose').toBeLessThan(0.5);
-    expect(haciaAtras, 'al retroceder la página no debería atenuarse').toBeGreaterThan(0.9);
+      expect(huecos, `a ${ancho} px la pantalla se quedó vacía en algún momento`).toBe(0);
+    }
   });
 });
 

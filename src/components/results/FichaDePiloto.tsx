@@ -55,6 +55,7 @@ export function FichaDePiloto({
           </span>
           <Link
             href={`/constructors/${constructorId}`}
+            transitionTypes={['nav-forward']}
             className="flex items-center gap-1.5 hover:text-primary"
           >
             <span

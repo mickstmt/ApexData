@@ -49,6 +49,9 @@ export function DriverCard({ driver, index = 0 }: DriverCardProps) {
           HTML inválido— y la zona pulsable no depende del apilamiento interno. */}
       <Link
         href={`/drivers/${driver.driverId}`}
+        // Entrar a una ficha es bajar un nivel, y la transición lo dice
+        // deslizando desde la derecha. Sin este tipo, la navegación no anima.
+        transitionTypes={['nav-forward']}
         className="absolute inset-0 z-10 rounded-lg ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <span className="sr-only">

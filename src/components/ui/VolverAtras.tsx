@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { addTransitionType, startTransition, type ReactNode } from 'react';
 
 import { sePuedeRetroceder } from '@/lib/navegacion';
 
@@ -47,6 +47,9 @@ export function VolverAtras({
   return (
     <Link
       href={href}
+      // Para cuando no hay historia dentro de la app y el enlace navega de
+      // verdad: sigue siendo una vuelta, así que se anima igual.
+      transitionTypes={['nav-back']}
       className={className}
       onClick={(evento) => {
         // Un clic con Cmd/Ctrl, o con el botón central, quiere otra pestaña: no
@@ -55,7 +58,16 @@ export function VolverAtras({
         if (!sePuedeRetroceder()) return;
 
         evento.preventDefault();
-        router.back();
+
+        // Retroceder de verdad **y** decir que se retrocede.
+        //
+        // El historial no lleva etiqueta, así que sin esto la transición no
+        // sabría hacia dónde animar y se quedaría quieta. Con `nav-back`, la
+        // pantalla sale hacia la derecha, que es lo contrario de como entró.
+        startTransition(() => {
+          addTransitionType('nav-back');
+          router.back();
+        });
       }}
     >
       {children}

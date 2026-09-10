@@ -321,6 +321,7 @@ export default async function CircuitDetailPage({ params }: CircuitPageProps) {
                       <th scope="row" className="p-4 text-left font-semibold">
                         <Link
                           href={`/results/${v.year}/${v.round}`}
+                          transitionTypes={['nav-forward']}
                           className="font-mono tabular-nums hover:text-primary"
                         >
                           {v.year}
@@ -342,6 +343,7 @@ export default async function CircuitDetailPage({ params }: CircuitPageProps) {
                       <td className="p-4">
                         <Link
                           href={`/constructors/${v.teamId}`}
+                          transitionTypes={['nav-forward']}
                           className="team-ink hover:underline"
                           style={teamInk(v.teamId)}
                         >

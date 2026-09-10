@@ -50,6 +50,7 @@ export function ConstructorCard({ team, index = 0 }: ConstructorCardProps) {
           igual: el enlace cubre la tarjeta y el favorito queda por encima. */}
       <Link
         href={`/constructors/${team.constructorId}`}
+        transitionTypes={['nav-forward']}
         className="absolute inset-0 z-10 rounded-lg ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <span className="sr-only">Ver la ficha de {team.name}</span>

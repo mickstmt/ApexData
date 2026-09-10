@@ -353,3 +353,71 @@ html[data-reapertura] [data-splash='auto'] {
   animation: splash-letra 240ms ease-out forwards;
   /* El retraso de cada letra va en su propio `style`, para escalonarlas. */
 }
+
+/* ---------------------------------------------------------------------------
+   Transición direccional entre pantallas.
+
+   Lo nuevo entra desde la derecha porque está más adentro; al volver, sale
+   hacia la derecha. La dirección es la información: dice si bajas un nivel o
+   subes. Ver `src/components/providers/Transicion.tsx`.
+
+   Sesenta píxeles y no la pantalla entera. Un deslizamiento completo obliga a
+   seguir con la vista algo que cruza rápido, y en escritorio —donde la ventana
+   es mucho más ancha— se convierte en un viaje absurdo. Sesenta bastan para
+   leer la dirección en cualquier ancho, que es lo único que hace falta.
+   --------------------------------------------------------------------------- */
+
+::view-transition-old(.nav-forward) {
+  --deslizamiento: -60px;
+  animation:
+    150ms ease-in both apagar reverse,
+    400ms ease-in-out both deslizar reverse;
+}
+
+::view-transition-new(.nav-forward) {
+  --deslizamiento: 60px;
+  animation:
+    210ms ease-out 150ms both apagar,
+    400ms ease-in-out both deslizar;
+}
+
+::view-transition-old(.nav-back) {
+  --deslizamiento: 60px;
+  animation:
+    150ms ease-in both apagar reverse,
+    400ms ease-in-out both deslizar reverse;
+}
+
+::view-transition-new(.nav-back) {
+  --deslizamiento: -60px;
+  animation:
+    210ms ease-out 150ms both apagar,
+    400ms ease-in-out both deslizar;
+}
+
+@keyframes deslizar {
+  from {
+    translate: var(--deslizamiento);
+  }
+  to {
+    translate: 0;
+  }
+}
+
+@keyframes apagar {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Quien pide menos movimiento no debe recibir ninguno: la dirección se pierde,
+   pero la app sigue siendo perfectamente usable sin ella. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

@@ -46,7 +46,8 @@ export function CircuitWinnerRows({ victorias }: { victorias: VictoriaEnCircuito
         {
           label: 'Carrera',
           value: (
-            <Link href={`/results/${v.year}/${v.round}`} className="hover:text-primary">
+            <Link href={`/results/${v.year}/${v.round}`}
+ transitionTypes={['nav-forward']} className="hover:text-primary">
               {v.raceName}
             </Link>
           ),
@@ -62,7 +63,8 @@ export function CircuitWinnerRows({ victorias }: { victorias: VictoriaEnCircuito
         {
           label: 'Equipo',
           value: (
-            <Link href={`/constructors/${v.teamId}`} className="hover:text-primary">
+            <Link href={`/constructors/${v.teamId}`}
+ transitionTypes={['nav-forward']} className="hover:text-primary">
               {v.team}
             </Link>
           ),

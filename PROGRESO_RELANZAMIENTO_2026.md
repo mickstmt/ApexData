@@ -11,6 +11,13 @@
 2. **Acciones del usuario**: cuando algo requiera acción manual suya, se indica con máximo detalle, sin asumir conocimientos ni pasos previos. Si son varios pasos: primero un resumen corto de qué se va a hacer, y después SIEMPRE paso a paso, uno por uno, esperando confirmación antes de seguir, para evitar errores y estancamientos.
 3. **Herramientas**: se usan agentes especializados por ámbito, skills de Claude Code (dataviz, code-review, security-review), e investigación en internet cuando haga falta. **Esta regla se incumplió durante toda la sesión del 2026-08-19 y salió cara** (ver bitácora): desde entonces el repo tiene sus propias skills en `.claude/skills/` — `verificar`, `desplegar` y `cerrar-sesion` — que recogen el método para que no dependa de acordarse.
 4. **Cada sprint cierra con la app corriendo y verificada**, no con promesas.
+5. **Prioridad iPhone no significa solo iPhone.** El usuario tiene un iPhone 17 y es donde más usa la app, pero **consulta la web con frecuencia** y Android también cuenta. Dar prioridad a un entorno no es cumplir por cumplir con los demás: en todos tiene que verse bien. En sus palabras: *«me gusta mucho la perfección y la adaptabilidad a todos los entornos sin olvidar el motivo principal»*.
+
+   **Qué implica en la práctica**: toda pantalla nueva y toda maqueta se comprueba en **tres anchos como mínimo** — iPhone (390), Android estrecho (360) y escritorio (≥1100) — y las reglas de medir en el navegador se aplican a los tres. Al proponer una decisión de interfaz hay que decir qué pasa en cada uno, aunque la respuesta sea «ahí no aplica»; dejarlo implícito es justo lo que se lee como cumplir por cumplir.
+
+   *Esta regla hubo que decirla dos veces el mismo día, el 2026-09-10, a dos sesiones distintas: una enseñó una maqueta solo a 390 px y la otra diagnosticó la navegación entera midiendo solo a 390×844. El ancho de la medición se decide **al empezar**, no al presentar.*
+
+   **Pendiente que abre**: el usuario ha notado «ligeras diferencias y mal formateados» en la web frente al teléfono. Es una auditoría sin hacer.
 
 ---
 
@@ -79,6 +86,28 @@
 ---
 
 ## Bitácora
+
+### 2026-09-10 (61) — Lo nuevo entra desde la derecha ✅
+
+**Lo que faltaba del diagnóstico de navegación**: el hueco en negro, que era el más grande de los cuatro — entre **300 y 1130 ms** de pantalla vacía en cada navegación, según la ruta.
+
+**La causa**: `AnimatePresence mode="wait"` desmontaba la página vieja **antes** de montar la nueva. En medio no había ninguna página, y por eso tampoco podía salir el esqueleto de `loading.tsx`: la app tenía preparada una pantalla de espera y enseñaba un vacío en su lugar. De ahí que Telemetría llegara a 1130 ms — los 300 de la animación más lo que tardara la página, todo en blanco.
+
+**La solución la propuso el usuario**, y era la que faltaba en mi lista. Yo ofrecí tres opciones —el fundido actual, uno cruzado corto, o ninguna— y **las tres incumplían mi propio argumento**: dije que el movimiento debe explicar de dónde viene algo y luego propuse tres formas de no explicar nada. El deslizamiento direccional sí lo hace: entrar desde la derecha dice «esto está más adentro», salir hacia la derecha dice «estás volviendo».
+
+**Cómo está hecho**: `<ViewTransition>` de React con la API de transiciones de vista del navegador, que es la respuesta del propio framework. Tres hallazgos por el camino:
+
+- El `react` de la raíz es **19.2.0 y no exporta `ViewTransition`**; el que usa el App Router es el `19.3.0-canary` que Next trae dentro, y ese sí. Los tipos se resuelven contra el primero, así que hace falta una declaración — documentada en `src/types/react-view-transition.d.ts`, con su condición de borrado.
+- La guía dice que el envoltorio va en cada `page.tsx` porque un layout persiste y sus animaciones no se disparan. **Pero `template.tsx` sí se vuelve a montar**: ocho páginas envueltas a mano se convierten en un archivo, y una página nueva entra con la transición puesta sin que nadie se acuerde de envolverla.
+- **60 px, no la pantalla entera.** Un deslizamiento completo obliga a seguir con la vista algo que cruza rápido, y en escritorio sería un viaje absurdo. Sesenta bastan para leer la dirección en cualquier ancho.
+
+**Qué NO desliza, a propósito**: el retroceso del sistema —iOS ya trae el suyo, y superponer el nuestro parecía una recarga, arreglado en agosto— y el cambio de pestaña, porque las secciones son hermanas y deslizar entre ellas afirmaría una jerarquía que no existe.
+
+**Verificación**: **cero fotogramas sin página** en Pilotos, Equipos y Circuitos, a **360, 390 y 1280 px**. La prueba de navegador que vigilaba el fundido viejo se sustituye por una que cuenta esos fotogramas en los tres anchos. 337 unitarias y 95 de navegador.
+
+**Maqueta de la decisión**: https://claude.ai/code/artifact/27af64bd-0429-47c4-ac3e-e4f7cbd5b863
+
+**Sigue pendiente**: el pulso de la lista de pilotos al volver (1700 ms), que no he averiguado.
 
 ### 2026-09-09 (59) — Una carrera entre OpenF1 y FastF1 ✅ *(temporal)*
 

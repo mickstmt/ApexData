@@ -197,6 +197,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                       <h3 className="text-xl font-bold">
                         <Link
                           href={`/results/${displayYear}/${race.round}`}
+                          transitionTypes={['nav-forward']}
                           className="after:absolute after:inset-0 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                           {race.raceName}
