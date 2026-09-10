@@ -71,6 +71,23 @@ const nextConfig: NextConfig = {
   experimental: {
     // Optimizaciones para production
     optimizePackageImports: ['lucide-react'],
+
+    /**
+     * La caché de cliente, que estaba apagada sin que nadie lo decidiera.
+     *
+     * Next 15 cambió el valor por defecto de `dynamic` de 30 segundos a **0**
+     * —«not cached», dice su documentación— y todas nuestras páginas son
+     * dinámicas, porque el middleware les pone un nonce distinto en cada
+     * petición. Resultado: volver a una lista pedía la página otra vez al
+     * servidor y se veía rearmarse con sus esqueletos.
+     *
+     * Medido antes y después: volver a `/drivers` pasaba de 1 petición a 0, y
+     * en `/circuits` de 14 a 0.
+     *
+     * Treinta segundos de posible desfase no molestan aquí: lo que cambia en
+     * una carrera lo cuenta el aviso push, no una lista que se está mirando.
+     */
+    staleTimes: { dynamic: 30, static: 180 },
   },
   async headers() {
     return [

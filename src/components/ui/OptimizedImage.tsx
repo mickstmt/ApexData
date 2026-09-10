@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Skeleton } from './Skeleton';
 import { logoVaEnColor, teamInk } from '@/lib/team-colors';
 
@@ -31,6 +31,36 @@ export function OptimizedImage({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
+  /**
+   * El esqueleto solo aparece si la imagen tarda de verdad.
+   *
+   * Antes se enseñaba siempre: el estado arrancaba en «cargando» y solo se
+   * apagaba con `onLoad`. Para una foto ya cacheada eso significa un esqueleto
+   * pulsando y 300 ms de fundido sobre algo que el navegador podía pintar de
+   * inmediato — cada vez que se volvía a una lista, en las diez pantallas que
+   * usan esto. Es la «foto en negro» que se veía por toda la app.
+   *
+   * **Primero se intentó preguntar `img.complete` al montar y no sirve**:
+   * incluso con la imagen en caché, en ese instante todavía vale `false`.
+   * Medido: el pulso seguía durando 1550 ms.
+   *
+   * Lo que sí funciona es no preguntarlo: se espera 150 ms antes de enseñar
+   * nada. Una imagen en caché llega mucho antes, así que no se ve esqueleto
+   * ninguno; una lenta lo enseña, que es para lo que existe. El umbral es el de
+   * siempre en interfaces: por debajo, un indicador molesta más de lo que
+   * informa.
+   */
+  const [tarda, setTarda] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) return;
+
+    const reloj = setTimeout(() => setTarda(true), 150);
+    return () => clearTimeout(reloj);
+  }, [isLoading]);
+
+  const conEsqueleto = isLoading && tarda;
+
   if (hasError) {
     return (
       <div
@@ -44,7 +74,7 @@ export function OptimizedImage({
 
   return (
     <div className={`relative ${className}`} style={fill ? {} : { width, height }}>
-      {isLoading && (
+      {conEsqueleto && (
         <div className="absolute inset-0">
           <Skeleton className="h-full w-full" />
         </div>
@@ -57,7 +87,10 @@ export function OptimizedImage({
         fill={fill}
         sizes={sizes}
         priority={priority}
-        className={`transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'} ${
+        // La opacidad se ata al esqueleto, no a «cargando»: si nunca hubo
+        // esqueleto tampoco debe haber fundido, porque no hay nada de lo que
+        // aparecer.
+        className={`transition-opacity duration-300 ${conEsqueleto ? 'opacity-0' : 'opacity-100'} ${
           objectFit === 'cover' ? 'object-cover' :
           objectFit === 'contain' ? 'object-contain' :
           objectFit === 'fill' ? 'object-fill' :

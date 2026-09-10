@@ -20,6 +20,7 @@ import { SprintResults } from './SprintResults';
 import { SesionPendiente } from './SesionPendiente';
 import { ClasificacionSprint, VueltasDePractica } from './TiemposDeSesion';
 import { comienzoDeCarrera, estadoDeSesion, queEnseñar } from '@/lib/sesiones';
+import { VolverAtras } from '@/components/ui/VolverAtras';
 import type {
   Race,
   Circuit,
@@ -341,12 +342,12 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
       <div className="mb-8">
-        <Link
+        <VolverAtras
           href={`/results?season=${year}`}
           className="text-sm text-muted-foreground hover:text-primary transition-colors mb-4 inline-block"
         >
           ← Volver a Resultados
-        </Link>
+        </VolverAtras>
 
         <div className="flex items-start justify-between">
           <div>

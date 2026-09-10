@@ -8,6 +8,7 @@ import { getCircuitHistory } from '@/lib/circuit-history';
 import { añosRepetidos, contarSalida, resumirVictorias } from '@/lib/circuit-stats';
 import { teamInk } from '@/lib/team-colors';
 import { CircuitWinnerRows } from './CircuitWinnerRows';
+import { VolverAtras } from '@/components/ui/VolverAtras';
 
 // Una hora de caché, como el resto de fichas: esto cambia como mucho una vez
 // por carrera.
@@ -139,13 +140,13 @@ export default async function CircuitDetailPage({ params }: CircuitPageProps) {
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
-      <Link
+      <VolverAtras
         href="/circuits"
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />
         Todos los circuitos
-      </Link>
+      </VolverAtras>
 
       {/* Cabecera */}
       <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-center">

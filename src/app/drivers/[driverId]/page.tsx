@@ -10,6 +10,7 @@ import { TimingRow } from '@/components/ui/TimingRow';
 import { getDriverFicha, getDriverPerformance } from '@/lib/driver-stats';
 import { teamColor } from '@/lib/team-colors';
 import { driverAge, formatBirthDate } from '@/lib/driver-age';
+import { VolverAtras } from '@/components/ui/VolverAtras';
 
 // Los datos de esta página cambian como mucho una vez por carrera, así que
 // una hora de caché evita ir a Virginia en cada visita sin que nadie note
@@ -260,12 +261,12 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
   if (hasError || !driver) {
     return (
       <div className="container mx-auto px-4 py-12">
-        <Link href="/drivers" className="mb-8 inline-block">
+        <VolverAtras href="/drivers" className="mb-8 inline-block">
           <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver a pilotos
           </Button>
-        </Link>
+        </VolverAtras>
         <div className="mt-12 rounded-xl border border-border bg-card p-12 text-center">
           <h2 className="mb-3 text-2xl font-bold">Base de datos no disponible</h2>
           <p className="text-muted-foreground">
@@ -287,12 +288,12 @@ export default async function DriverDetailPage({ params }: DriverDetailPageProps
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
-      <Link href="/drivers" className="mb-6 inline-block">
+      <VolverAtras href="/drivers" className="mb-6 inline-block">
         <Button variant="outline" size="sm">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Volver a pilotos
         </Button>
-      </Link>
+      </VolverAtras>
 
       {/* Cabecera */}
       <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center">

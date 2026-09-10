@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { TeamLogo } from '@/components/ui/OptimizedImage';
 import { teamColor } from '@/lib/team-colors';
 import { CocheDelEquipo } from '@/components/constructors/CocheDelEquipo';
+import { VolverAtras } from '@/components/ui/VolverAtras';
 
 // Los datos de esta página cambian como mucho una vez por carrera, así que
 // una hora de caché evita ir a Virginia en cada visita sin que nadie note
@@ -113,12 +114,12 @@ export default async function ConstructorDetailPage({ params }: ConstructorDetai
   if (hasError) {
     return (
       <div className="container mx-auto px-4 py-12">
-        <Link href="/constructors" className="mb-8 inline-block">
+        <VolverAtras href="/constructors" className="mb-8 inline-block">
           <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver a equipos
           </Button>
-        </Link>
+        </VolverAtras>
 
         <div className="mt-12 flex flex-col items-center justify-center rounded-lg border border-red-500/20 bg-red-500/5 p-12">
           <div className="mb-4 text-6xl">⚠️</div>
@@ -143,12 +144,12 @@ export default async function ConstructorDetailPage({ params }: ConstructorDetai
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <Link href="/constructors" className="mb-8 inline-block">
+      <VolverAtras href="/constructors" className="mb-8 inline-block">
         <Button variant="outline" size="sm">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Volver a equipos
         </Button>
-      </Link>
+      </VolverAtras>
 
       {/* El coche, a todo el ancho y por encima de todo.
           NO dentro de la columna de 200 px de abajo: a 3,47:1, esa anchura lo

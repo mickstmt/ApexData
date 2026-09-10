@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
+
+import { anotarNavegacion } from '@/lib/navegacion';
 
 interface PageTransitionProps {
   children: React.ReactNode;
@@ -41,6 +43,28 @@ export function PageTransition({ children }: PageTransitionProps) {
     window.addEventListener('popstate', alVolver);
     return () => window.removeEventListener('popstate', alVolver);
   }, []);
+
+  /**
+   * Llevar la cuenta de por dónde se ha pasado dentro de la app.
+   *
+   * Es lo que permite que el botón «volver» de una ficha retroceda de verdad en
+   * vez de navegar al listado por arriba. Se cuenta aquí porque este componente
+   * ya se vuelve a montar con cada dirección, así que no hace falta ningún
+   * vigilante nuevo.
+   *
+   * La primera no cuenta: es la página con la que se abrió la app, y detrás de
+   * ella no hay ninguna pantalla nuestra.
+   */
+  const primeraPantalla = useRef(true);
+
+  useEffect(() => {
+    if (primeraPantalla.current) {
+      primeraPantalla.current = false;
+      return;
+    }
+
+    anotarNavegacion();
+  }, [pathname]);
 
   const volviendo = destinoDeVuelta === pathname;
 
