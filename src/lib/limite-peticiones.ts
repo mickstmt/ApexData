@@ -74,7 +74,8 @@ export function presupuestoDe(ruta: string): { clase: string; presupuesto: Presu
     ruta.startsWith('/api/telemetry/') ||
     ruta.startsWith('/api/telemetry-compare/') ||
     ruta.startsWith('/api/weather/') ||
-    ruta.startsWith('/api/clasificacion/')
+    ruta.startsWith('/api/clasificacion/') ||
+    ruta.startsWith('/api/positions/')
   ) {
     return { clase: 'telemetria', presupuesto: PRESUPUESTOS.telemetria };
   }

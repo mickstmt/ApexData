@@ -318,3 +318,62 @@ export interface StintsResponse {
   /** En el orden en que terminaron, no alfabético. */
   drivers: DriverStints[];
 }
+
+// ============================================================================
+// REPLAY: POSICIONES DE TODA LA CARRERA
+// ============================================================================
+
+/** Un coche en el replay, con lo que hace falta para pintarlo y contarle las vueltas. */
+export interface PositionsDriver {
+  /** El dorsal, que es la clave de FastF1. */
+  number: string;
+  code: string;
+  name: string;
+  team: string | null;
+  /** El color que manda la F1 para el equipo, con `#`. */
+  color: string | null;
+  /**
+   * Cuándo cruzó la meta cada vuelta, en segundos desde el inicio.
+   *
+   * Contar cuántos quedan atrás dice en qué vuelta va; el último es donde
+   * termina su carrera, que para un retirado llega antes que para el resto.
+   */
+  laps: number[];
+}
+
+/** Un tramo de estado de pista: 1 verde, 2 amarilla, 4 SC, 5 roja, 6/7 VSC. */
+export interface PositionsTrackStatus {
+  status: string;
+  start: number;
+  end: number;
+}
+
+/**
+ * El JSON pequeño del replay. Describe el bloque binario que viaja aparte:
+ * cuántos instantes tiene, a qué ritmo, en qué orden van los pilotos.
+ */
+export interface PositionsMeta {
+  session: {
+    year: number;
+    event: string;
+    type: string;
+    name: string;
+  };
+  timeline: {
+    /** Segundos de sesión del primer instante. */
+    start: number;
+    /** Segundos entre instantes: 0,25. */
+    step: number;
+    count: number;
+  };
+  /** El valor que marca «este coche no tiene posición en este instante». */
+  sinDato: number;
+  totalLaps: number;
+  /** Grados que hay que girar el trazado para verlo como en televisión. */
+  rotation: number;
+  /** En el orden en que van en el bloque binario. */
+  drivers: PositionsDriver[];
+  trackStatus: PositionsTrackStatus[];
+  /** El trazado de referencia, sobre el que se proyecta cada coche. */
+  track: TrackPoint[];
+}

@@ -17,6 +17,7 @@ import type {
   SessionType,
   TrackMapResponse,
   StintsResponse,
+  PositionsMeta,
 } from '@/types';
 import {
   numeroAcotado,
@@ -88,9 +89,13 @@ class FastF1Client {
   }
 
   /**
-   * Generic fetch method with error handling
+   * La petición al servicio, con su tiempo límite y sus errores traducidos.
+   *
+   * Devuelve la respuesta sin leer el cuerpo: casi todo es JSON, pero el bloque
+   * de posiciones del replay es binario, y leerlo como texto lo destrozaría.
+   * Quien llama decide cómo leerlo.
    */
-  private async fetch<T>(endpoint: string, timeout?: number): Promise<T> {
+  private async request(endpoint: string, accept: string, timeout?: number): Promise<Response> {
     this.assertConfigured();
 
     const controller = new AbortController();
@@ -103,7 +108,7 @@ class FastF1Client {
       const response = await fetch(`${this.baseURL}${endpoint}`, {
         signal: controller.signal,
         headers: {
-          Accept: 'application/json',
+          Accept: accept,
         },
       });
 
@@ -122,7 +127,7 @@ class FastF1Client {
         throw new Error(mensaje);
       }
 
-      return await response.json();
+      return response;
     } catch (error) {
       clearTimeout(timeoutId);
 
@@ -135,6 +140,20 @@ class FastF1Client {
 
       throw new Error('Unknown error occurred');
     }
+  }
+
+  /**
+   * Generic fetch method with error handling
+   */
+  private async fetch<T>(endpoint: string, timeout?: number): Promise<T> {
+    const response = await this.request(endpoint, 'application/json', timeout);
+    return await response.json();
+  }
+
+  /** Lo mismo, para lo que no es JSON. */
+  private async fetchBinary(endpoint: string, timeout?: number): Promise<ArrayBuffer> {
+    const response = await this.request(endpoint, 'application/octet-stream', timeout);
+    return await response.arrayBuffer();
   }
 
   // ============================================================================
@@ -248,6 +267,40 @@ class FastF1Client {
   ): Promise<StintsResponse> {
     const endpoint = `/api/laps/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/stints`;
     return this.fetch<StintsResponse>(endpoint, 60000);
+  }
+
+  // ============================================================================
+  // REPLAY
+  // ============================================================================
+
+  /**
+   * El JSON pequeño del replay: pilotos, línea de tiempo, cruces de vuelta,
+   * estados de pista y trazado. Describe el bloque de `getPositions`.
+   */
+  async getPositionsMeta(
+    year: number,
+    event: string | number,
+    sessionType: SessionType
+  ): Promise<PositionsMeta> {
+    const endpoint = `/api/positions/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/meta`;
+    return this.fetch<PositionsMeta>(endpoint, 60000);
+  }
+
+  /**
+   * Las posiciones de todos los coches durante toda la carrera, en binario.
+   *
+   * Enteros de 16 bits little-endian: para cada piloto —en el orden del meta—
+   * `count` valores de `x` y después `count` de `y`. Una carrera son ~2,6 MB
+   * antes de comprimir; en JSON serían diez millones de caracteres que el
+   * teléfono tendría que parsear.
+   */
+  async getPositions(
+    year: number,
+    event: string | number,
+    sessionType: SessionType
+  ): Promise<ArrayBuffer> {
+    const endpoint = `/api/positions/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}`;
+    return this.fetchBinary(endpoint, 60000);
   }
 
   async getFastestLaps(

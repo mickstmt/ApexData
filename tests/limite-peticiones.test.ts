@@ -22,6 +22,9 @@ describe('a qué ruta le toca qué', () => {
       '/api/telemetry/2024/Monza/R/VER',
       '/api/clasificacion/2026/12/SQ',
       '/api/weather/2024/Monza/R',
+      // El replay carga la sesión entera y devuelve megabytes: es telemetría.
+      '/api/positions/2026/Dutch%20Grand%20Prix/R',
+      '/api/positions/2026/Dutch%20Grand%20Prix/R/meta',
     ]) {
       expect(presupuestoDe(ruta)?.presupuesto, ruta).toBe(PRESUPUESTOS.telemetria);
     }

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routes import telemetry, laps, weather, sessions
+from app.routes import telemetry, laps, weather, sessions, positions
 import fastf1
 
 # Configure FastF1 cache
@@ -43,7 +43,7 @@ app = FastAPI(
     # La versión sale en la huella de arranque, así que decir siempre «1.0.0»
     # la deja a medias: dice CUÁNDO arrancó pero no QUÉ arrancó. Se sube a mano
     # con cada cambio del servicio, que son pocos y espaciados.
-    version="1.1.0",
+    version="1.2.0",
     docs_url=None if _is_production else "/docs",
     redoc_url=None if _is_production else "/redoc",
     openapi_url=None if _is_production else "/openapi.json",
@@ -66,6 +66,7 @@ app.include_router(telemetry.router, prefix="/api/telemetry", tags=["Telemetry"]
 app.include_router(laps.router, prefix="/api/laps", tags=["Laps"])
 app.include_router(weather.router, prefix="/api/weather", tags=["Weather"])
 app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
+app.include_router(positions.router, prefix="/api/positions", tags=["Positions"])
 
 
 @app.get("/")
