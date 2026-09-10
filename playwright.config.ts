@@ -74,7 +74,24 @@ export default defineConfig({
      * existen donde importa; pasó, y costó media hora perseguir un
      * desbordamiento que no era tal.
      */
-    navigationTimeout: 45_000,
+    /**
+     * Noventa segundos desde el 2026-09-10, y no por comodidad.
+     *
+     * Con 45 s, dos pruebas empezaron a caerse en CI de forma intermitente —dos
+     * tandas rojas de tres— siempre en un `page.goto` que ni siquiera esperaba
+     * a las imágenes: se quedaba esperando `domcontentloaded` de un documento.
+     *
+     * Antes de subir el número se comprobó que no fuera culpa nuestra. Medido
+     * en local contra **la misma base de datos de producción**: primer byte de
+     * 15 a 30 ms en `/drivers`, `/constructors` y `/results`, y 415 ms en
+     * `/standings` en frío. Las páginas no son lentas.
+     *
+     * Lo que varía es el entorno: el runner es compartido y la base está en
+     * Virginia. Subir el margen ataca esa variabilidad, que es la causa real;
+     * dejarlo en 45 s solo garantizaba que la tanda fuera una tirada de dados y
+     * que un fallo de verdad se confundiera con el ruido.
+     */
+    navigationTimeout: 90_000,
   },
   projects: [
     {
