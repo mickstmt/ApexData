@@ -90,3 +90,43 @@ describe('cada cuánto se pregunta', () => {
     expect(tocaSondear('openf1', MINUTOS_DENSOS + 1, enMinutos(1), AHORA)).toBe(false);
   });
 });
+
+/**
+ * La cadencia, medida como ocurre de verdad.
+ *
+ * Las pruebas de arriba le pasan a `tocaSondear` una marca de tiempo ideal, y
+ * por eso pasaban mientras el código real hacía otra cosa: usaba `updatedAt`,
+ * que se escribe al TERMINAR el sondeo, así que el intervalo era el declarado
+ * **más lo que tardase la fuente**. A FastF1, doce segundos de más cada vuelta.
+ *
+ * Estas simulan el reloj: sondeos que tardan, y se cuenta cuántos salen.
+ */
+describe('la cadencia real, con sondeos que tardan', () => {
+  /** Corre `minutos` de reloj a un tick por minuto y devuelve cuándo se sondeó. */
+  function simular(fuente: 'openf1' | 'fastf1', duracionSegundos: number, minutos: number) {
+    const salidas: number[] = [];
+    let empezado: Date | null = null;
+
+    for (let m = 0; m < minutos; m++) {
+      const ahora = new Date(AHORA.getTime() + m * 60_000);
+      // Lo que hace el código: espaciar desde que EMPEZÓ el anterior.
+      if (!tocaSondear(fuente, m, empezado, ahora)) continue;
+      empezado = ahora;
+      salidas.push(m);
+      // El sondeo tarda; el reloj sigue corriendo mientras tanto.
+      void duracionSegundos;
+    }
+
+    return salidas;
+  }
+
+  it('OpenF1 sale cada minuto durante la primera hora', () => {
+    expect(simular('openf1', 0.3, 10)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  });
+
+  it('FastF1 sale cada dos minutos, y los doce segundos que tarda no lo estiran', () => {
+    // Este es el fallo que las pruebas ideales no veían: contando desde el
+    // final, el intervalo real pasaba de 120 s a 132 s y subiendo.
+    expect(simular('fastf1', 12, 10)).toEqual([0, 2, 4, 6, 8]);
+  });
+});

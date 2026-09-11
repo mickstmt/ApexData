@@ -87,6 +87,24 @@
 
 ## Bitácora
 
+### 2026-09-11 (64) — La revisión del cierre encontró que el arreglo de la mañana seguía midiendo con sesgo ✅
+
+**Lo que pasó**: la revisión previa al cierre, sobre el rango de la sesión, devolvió **ocho defectos** en los dos commits de la mañana. Dos de ellos rompían justo lo que el arreglo venía a arreglar.
+
+**El sesgo seguía ahí, con la piedra cambiada de sitio.** Por la mañana se quitó el recuerdo de cinco minutos del servicio, que penalizaba a FastF1. Pero **la hora se sellaba al terminar de preguntar**, y medido esa misma tarde: OpenF1 contesta en **0,3 s** y FastF1 en **11 s** cuando encuentra datos. O sea que a FastF1 se le cargaban once segundos de su propio sondeo como si fueran latencia de la fuente. **El mismo sesgo por construcción, con otro origen.** Ahora la hora se sella antes de preguntar: los datos ya estaban ahí cuando empezamos, y lo que tarda la pregunta es coste nuestro.
+
+**La cadencia declaraba una cosa y hacía otra.** Se espaciaba desde `updatedAt`, escrito también al terminar, así que el intervalo real era el declarado **más lo que tardase la fuente**. Y **las pruebas pasaban mientras el código hacía otra cosa**, porque le entregaban a la función una marca de tiempo ideal. Una prueba que elige lo que le pasa a la función no puede ver este fallo. Se añade `carrera-de-fuentes-camino-real.test.ts`, que llama a la función de verdad con dobles y mide el reloj: con un sondeo que tarda 300 ms, la marca cae a **14 ms** y las dos fuentes quedan a **13 ms** entre sí, no a 300.
+
+**Los otros cinco**: sin guarda de reentrada pese a tener tres llamadores —dos pasadas simultáneas perdían cuentas y podían anotar un «no hay datos» falso justo en el minuto que el experimento existe para cazar—; el interruptor `CARRERA_DE_FUENTES` no mandaba, porque el arranque quedaba detrás de los `return` de las notificaciones; `firstProbeAt` se reescribía en las filas de Madrid, justo las que motivaron la columna, así que el diagnóstico mentía en vez de delatar; el veredicto comparaba medias sobre **conjuntos distintos de sesiones**, de modo que una fuente que solo resolviera las fáciles ganaba por no contestar a las difíciles; y `reloj()` pintaba los negativos como `-1m -45s`.
+
+**El octavo era de configuración, y estaba escrito desde agosto.** La revisión señaló `?sondeo=1` como parámetro sin autenticar en un servicio alcanzable desde internet. Comprobado desde fuera: el puerto 8000 no responde y ninguna ruta de la web reenvía ese parámetro — **pero el servicio tenía un dominio público** que EasyPanel crea por defecto, apuntando al puerto 80 mientras uvicorn escucha en el 8000. **Nunca funcionó**, por eso nadie lo notó, y nada lo usa: la web habla por la red interna. Contradecía una decisión registrada el 2026-08-18 —«sin dominio público… exponerlo únicamente añadiría superficie de ataque»— y su propia condición de reapertura: *«se reabre solo si el servicio recibe dominio público»*. El riesgo no era hoy sino mañana: ese puerto parece una errata, y corregirlo habría puesto en internet un servicio **sin autenticación y con un solo hueco de carga**, que se tumba sin esfuerzo. **Dominio eliminado**, que es terminar lo que el registro ya decía. Se descartó explícitamente «arreglar el puerto»: convertiría un error inofensivo en una exposición real.
+
+**Se trabajó en rama aparte** (`worktree-sondeo-sin-sesgo`, en un worktree), porque otra sesión estaba editando el mismo directorio: una rama a secas no habría servido —al compartir directorio, sus commits habrían caído en esta rama—, que era justo el choque a evitar.
+
+**Verificación**: 379 unitarias (4 nuevas) · lint y tipos limpios · build como el CI · y las pruebas de exposición hechas contra producción, no razonadas.
+
+**Queda anotado**: el octavo hallazgo era falso como vulnerabilidad y verdadero como aviso. La lección es del método, no del código — **se afirmó que el servicio no tenía dominio público y se le dio como contexto al revisor de seguridad en vez de comprobarlo.** Lo que se afirmó sin mirar es exactamente lo que estaba mal.
+
 ### 2026-09-11 (63) — El experimento que empataba por construcción ✅
 
 **Lo que estaba mal**: la carrera entre OpenF1 y FastF1 dio sus dos primeras medidas —P1 y P2 de Madrid— y las dos dijeron lo mismo: OpenF1 31 min, FastF1 32 min. Parecía un resultado. No lo era. La columna que importaba era `probes: 1`: **el primer sondeo ya había encontrado datos en las dos**, así que lo único medido fue «ambas publicaron antes del minuto 31». El minuto de diferencia era el orden de consulta dentro del mismo barrido. El usuario lo vio antes que yo: «si preguntas al mismo tiempo y te responden los dos, no tiene sentido».

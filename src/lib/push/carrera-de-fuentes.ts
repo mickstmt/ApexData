@@ -202,6 +202,29 @@ export interface InformeDeCarrera {
   sondeos: number;
 }
 
+/**
+ * Cuándo empezó el último sondeo de cada `sesión:fuente`.
+ *
+ * En memoria y no en la base a propósito: la fila guarda `updatedAt`, pero se
+ * escribe al TERMINAR, y usarla para espaciar sumaba la duración del sondeo al
+ * intervalo. Esto guarda el instante de empezar. Si el proceso reinicia se
+ * pierde y, como mucho, se hace un sondeo de más — que es el error barato.
+ */
+const ultimoSondeo = new Map<string, Date>();
+
+/**
+ * Una pasada cada vez.
+ *
+ * Hay tres que llaman aquí —el reloj de un minuto, el barrido de cinco y el
+ * script de avisos—, y un sondeo de FastF1 puede tardar más de un minuto si el
+ * servicio está ocupado. Sin esta guarda, dos pasadas a la vez comparten la
+ * misma foto de `yaAnotadas`: `tocaSondear` no puede filtrarlas, los `probes`
+ * pierden cuentas, y las dos peticiones repetidas se encolan en el único hueco
+ * de carga del servicio hasta que una vence por tiempo y **anota un «no hay
+ * datos» falso justo en el minuto que el experimento existe para cazar**.
+ */
+let sondeando = false;
+
 /** Sondea las fuentes de las sesiones que están dentro de la ventana. */
 export async function sondearFuentes(opciones?: {
   ahora?: Date;
@@ -218,6 +241,24 @@ export async function sondearFuentes(opciones?: {
 
   if (!candidatas.length) return informe;
 
+  // Si ya hay una pasada en marcha, esta se va: la siguiente vuelta del reloj
+  // llega en un minuto y no hay nada que recuperar.
+  if (sondeando) return informe;
+  sondeando = true;
+
+  try {
+    return await pasada(candidatas, ahora, informe);
+  } finally {
+    sondeando = false;
+  }
+}
+
+/** Una pasada del sondeo. Separada solo para que la guarda tenga un `finally`. */
+async function pasada(
+  candidatas: SesionOpenF1[],
+  ahora: Date,
+  informe: InformeDeCarrera
+): Promise<InformeDeCarrera> {
   const yaAnotadas = await prisma.sourceProbe.findMany({
     where: { sessionKey: { in: candidatas.map((s) => s.session_key) } },
   });
@@ -234,9 +275,28 @@ export async function sondearFuentes(opciones?: {
       // Resuelta: ya se sabe cuándo tuvo datos y no hay nada más que preguntar.
       if (fila?.firstSeenAt) continue;
 
+      const clave = `${sesion.session_key}:${fuente}`;
+
       // El reloj rápido pasa cada minuto, pero a una fuente que lleva horas sin
       // contestar no se le pregunta sesenta veces por hora.
-      if (!tocaSondear(fuente, minutosDesdeElFin, fila?.updatedAt ?? null, ahora)) continue;
+      //
+      // Se mide desde que EMPEZÓ el sondeo anterior, no desde que acabó. Con
+      // `updatedAt` —que se escribe al terminar— el intervalo real era el
+      // declarado más lo que tardase la fuente: a FastF1, doce segundos de
+      // más cada vuelta. La cadencia decía dos minutos y eran más.
+      if (!tocaSondear(fuente, minutosDesdeElFin, ultimoSondeo.get(clave) ?? null, ahora)) continue;
+
+      // **La hora se sella ANTES de preguntar.**
+      //
+      // Sellarla después le cargaba a cada fuente la duración de su propio
+      // sondeo como si fuera latencia suya: 0,3 s a OpenF1 y once segundos a
+      // FastF1, medidos. Eso es exactamente el sesgo por construcción que este
+      // experimento venía a quitar, con la piedra cambiada de sitio.
+      //
+      // Los datos ya estaban ahí cuando empezamos a preguntar; lo que tarda la
+      // pregunta es coste nuestro, no de la fuente.
+      const empezado = new Date();
+      ultimoSondeo.set(clave, empezado);
 
       const { hayDatos, nota } = await SONDEOS[fuente](sesion);
       informe.sondeos++;
@@ -246,24 +306,24 @@ export async function sondearFuentes(opciones?: {
         year: sesion.year,
         endedAt: fin,
         probes: (fila?.probes ?? 0) + 1,
-        // Se escribe una sola vez, en el primer sondeo: es la prueba de que se
-        // preguntó pronto. Si un día vuelve a salir un número raro, esta
-        // columna dice enseguida si la culpa fue de la fuente o nuestra.
-        ...(fila?.firstProbeAt ? {} : { firstProbeAt: ahora }),
         lastNote: nota,
-        ...(hayDatos ? { firstSeenAt: new Date() } : {}),
+        ...(hayDatos ? { firstSeenAt: empezado } : {}),
       };
 
       await prisma.sourceProbe.upsert({
         where: { sessionKey_source: { sessionKey: sesion.session_key, source: fuente } },
-        create: { sessionKey: sesion.session_key, source: fuente, ...datos },
+        // `firstProbeAt` solo al crear la fila: es «cuándo preguntamos por
+        // primera vez». En el `update` escribiría la hora de hoy sobre filas
+        // viejas —las de Madrid, justo las que motivaron la columna— y el
+        // diagnóstico mentiría en vez de delatar.
+        create: { sessionKey: sesion.session_key, source: fuente, firstProbeAt: empezado, ...datos },
         update: datos,
       });
 
       if (hayDatos) {
         // En segundos: la diferencia entre las dos puede ser de menos de un
         // minuto, y redondear a minutos la borraría.
-        const segundos = Math.round((Date.now() - fin.getTime()) / 1000);
+        const segundos = Math.round((empezado.getTime() - fin.getTime()) / 1000);
         informe.nuevas.push(
           `${fuente} tuvo ${sesion.session_name} de ${sesion.location} a los ` +
             `${Math.floor(segundos / 60)}m ${segundos % 60}s (${nota})`

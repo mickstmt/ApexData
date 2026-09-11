@@ -25,8 +25,16 @@ export async function GET() {
   const segundos = (fin: Date, visto: Date | null) =>
     visto ? Math.round((visto.getTime() - fin.getTime()) / 1000) : null;
 
-  const reloj = (s: number | null) =>
-    s === null ? null : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
+  const reloj = (s: number | null) => {
+    if (s === null) return null;
+    // El signo delante y las cuentas sobre el valor absoluto: sin esto, un
+    // negativo salía como «-1m -45s», porque `padStart` no rellena una cadena
+    // que ya empieza por el guion. Pasa si OpenF1 corrige el `date_end` de una
+    // sesión hacia adelante, que se reescribe en cada sondeo.
+    const signo = s < 0 ? '-' : '';
+    const abs = Math.abs(s);
+    return `${signo}${Math.floor(abs / 60)}m ${String(abs % 60).padStart(2, '0')}s`;
+  };
 
   const sesiones = new Map<number, Record<string, unknown>>();
 
@@ -78,11 +86,30 @@ export async function GET() {
   const RESOLUCION_SEGUNDOS = 120;
 
   const veredicto = () => {
-    const a = media('openf1');
-    const b = media('fastf1');
+    // Solo las sesiones que resolvieron LAS DOS.
+    //
+    // Comparar dos medias sobre conjuntos distintos es comparar cosas
+    // distintas: a una fuente que solo resuelve las sesiones fáciles le sale
+    // mejor media y se la declara ganadora por no haber contestado a las
+    // difíciles. Y contar filas de la tabla en vez de parejas medidas hacía
+    // que «tres sesiones» pudieran ser tres a medias.
+    const pares = lista.filter(
+      (s) =>
+        typeof (s.openf1 as { seconds?: unknown } | undefined)?.seconds === 'number' &&
+        typeof (s.fastf1 as { seconds?: unknown } | undefined)?.seconds === 'number'
+    );
 
-    if (a === null || b === null) return 'faltan medidas de alguna de las dos';
-    if (lista.length < 3) return `solo ${lista.length} sesión(es): pocas para concluir`;
+    const medioDe = (fuente: string) =>
+      pares.length
+        ? pares.reduce((suma, s) => suma + ((s[fuente] as { seconds: number }).seconds ?? 0), 0) /
+          pares.length
+        : null;
+
+    const a = medioDe('openf1');
+    const b = medioDe('fastf1');
+
+    if (a === null || b === null) return 'ninguna sesión medida por las dos todavía';
+    if (pares.length < 3) return `solo ${pares.length} sesión(es) medida(s) por las dos: pocas para concluir`;
     if (Math.abs(a - b) <= RESOLUCION_SEGUNDOS)
       return `empate dentro de la resolución del sondeo (${RESOLUCION_SEGUNDOS} s)`;
 

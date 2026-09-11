@@ -45,6 +45,12 @@ export async function register() {
   );
 
   arrancarAvisos();
+
+  // Fuera de `arrancarAvisos`: ahí dentro quedaba detrás de sus dos `return`
+  // —falta de VAPID, o AVISOS_AUTOMATICOS=0— y el experimento no arrancaba por
+  // motivos que no son suyos, pese a tener su propio interruptor. Un
+  // experimento que mide fuentes no depende de poder firmar notificaciones.
+  arrancarSondeo();
 }
 
 /** Cada cuánto se pregunta si terminó alguna sesión. */
@@ -127,8 +133,6 @@ function arrancarAvisos() {
   // `unref` para que este temporizador no sea motivo para que el proceso siga
   // vivo: si Node no tiene nada más que hacer, que se apague.
   setInterval(vuelta, CADA_MINUTOS * 60 * 1000).unref?.();
-
-  arrancarSondeo();
 
   console.log(`[avisos] Reloj en marcha: se comprueba cada ${CADA_MINUTOS} minutos.`);
 }
