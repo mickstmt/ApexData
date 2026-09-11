@@ -6,6 +6,7 @@ import {
   Flag,
   Gauge,
   Home,
+  Info,
   Route,
   Shield,
   Star,
@@ -71,7 +72,8 @@ export function RejillaDeSecciones({
   rutaActual: string;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-1">
+    <>
+      <div data-rejilla-de-secciones className="grid grid-cols-3 gap-1">
       {secciones.map((item) => {
         const Icono = ICONOS[item.href] ?? Route;
         const activa = item.href === '/' ? rutaActual === '/' : rutaActual.startsWith(item.href);
@@ -105,6 +107,34 @@ export function RejillaDeSecciones({
           </Link>
         );
       })}
-    </div>
+      </div>
+
+      {/* «Acerca de» va DEBAJO y no dentro de la rejilla.
+
+          Dos razones, y ninguna es estética. No es una sección: no lleva a
+          datos, habla de la app. Y las secciones son nueve, que en tres
+          columnas son tres filas exactas; meterla dentro haría diez y dejaría
+          una baldosa sola en la última fila.
+
+          Tiene que estar aquí porque es donde se acredita a Jolpica y a
+          OpenF1, y su licencia —CC BY-NC-SA 4.0— lo exige. Eso vivía solo en
+          el pie, y el pie no se pinta en la app instalada. */}
+      <Link
+        href="/acerca"
+        onClick={alElegir}
+        aria-current={rutaActual.startsWith('/acerca') ? 'page' : undefined}
+        className={cn(
+          'mt-1 flex min-h-[44px] items-center gap-3 rounded-xl border-t border-border px-3 pt-3',
+          'text-sm ring-offset-background transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          rutaActual.startsWith('/acerca')
+            ? 'text-foreground'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <Info className="h-[18px] w-[18px] text-primary" aria-hidden />
+        Acerca de ApexData
+      </Link>
+    </>
   );
 }

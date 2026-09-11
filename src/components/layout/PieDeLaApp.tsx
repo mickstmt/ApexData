@@ -15,9 +15,10 @@ import { Footer } from './Footer';
  * Se decide por ruta y en cliente porque el pie vive en el layout raíz, que es
  * de servidor y no sabe qué página está debajo.
  *
- * Esto NO responde a si la app instalada debe llevar pie en el resto de
- * pantallas, que es una pregunta aparte y sigue abierta. Aquí solo se dice que
- * una pantalla que ocupa la ventana entera no lo lleva.
+ * La otra pregunta —si la app instalada debe llevar pie— ya está contestada, y
+ * no aquí: la respuesta es que no, y la aplica una regla de CSS sobre
+ * `[data-instalada]`. Lo que este componente decide es solo qué pantallas no
+ * lo llevan en ningún caso.
  */
 const PANTALLAS_COMPLETAS = [/^\/results\/[^/]+\/[^/]+\/replay\/?$/];
 
@@ -26,11 +27,18 @@ export function PieDeLaApp() {
 
   if (PANTALLAS_COMPLETAS.some((ruta) => ruta.test(pathname))) return null;
 
-  // El hueco que deja la barra inferior, para que el pie no quede debajo de
-  // ella. Va con el pie y no suelto: sin pie tampoco hace falta el hueco, y
-  // dejarlo añadía un desplazamiento vacío al final de la página.
+  // El hueco que deja la barra inferior, para que lo último de la página no
+  // quede debajo de ella.
+  //
+  // El hueco se queda SIEMPRE y el pie no. En la app instalada el pie sobra
+  // —su navegación ya está en la barra y en «Más»— pero la barra sigue tapando
+  // los últimos píxeles, así que quitar el contenedor entero dejaría el final
+  // de cada página debajo de ella. Quien esconde el pie es una regla de CSS
+  // sobre `[data-instalada]`, y no este componente, porque si se decidiera
+  // aquí React pintaría en el servidor un pie que el navegador tendría que
+  // quitar: un salto a la vista, o una discrepancia de hidratación.
   return (
-    <div className="pb-[var(--barra-inferior)]">
+    <div data-pie-de-la-app className="pb-[var(--barra-inferior)]">
       <Footer />
     </div>
   );

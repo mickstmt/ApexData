@@ -1900,7 +1900,10 @@ test.describe('menú de secciones', () => {
     await page.getByRole('button', { name: 'Más' }).click();
 
     const panel = page.locator('dialog[data-hoja][open]');
-    const enlaces = panel.getByRole('link');
+    // Se cuentan las SECCIONES, no todo lo que hay en el panel: debajo de la
+    // rejilla vive «Acerca de», que no es una sección —habla de la app, no
+    // lleva a datos— y contarla haría de esta cifra un número frágil.
+    const enlaces = panel.locator('[data-rejilla-de-secciones]').getByRole('link');
 
     await expect(enlaces).toHaveCount(5);
 
@@ -1946,7 +1949,13 @@ test.describe('menú de secciones', () => {
 
     // Aquí no hay barra, así que no hay nada «ya visible» que evitar repetir:
     // este menú es toda la navegación de la app.
-    await expect(page.locator('dialog[data-hoja][open]').getByRole('link')).toHaveCount(9);
+    const panel = page.locator('dialog[data-hoja][open]');
+    await expect(panel.locator('[data-rejilla-de-secciones]').getByRole('link')).toHaveCount(9);
+
+    // Y fuera de la rejilla, la fila que acredita las fuentes. Está separada a
+    // propósito: nueve secciones son tres filas exactas de tres columnas, y
+    // una décima baldosa quedaría sola en la última.
+    await expect(panel.getByRole('link', { name: 'Acerca de ApexData' })).toBeVisible();
   });
 
   test('cada sección lleva su icono, no solo el nombre', async ({ page }) => {
@@ -1954,6 +1963,8 @@ test.describe('menú de secciones', () => {
     await page.goto('/standings');
     await page.getByRole('button', { name: 'Más' }).click();
 
+    // Todo el panel, no solo la rejilla: la fila de «Acerca de» también tiene
+    // que reconocerse por su icono.
     const enlaces = page.locator('dialog[data-hoja][open]').getByRole('link');
     const conIcono = await enlaces.evaluateAll((els) =>
       els.filter((el) => el.querySelector('svg') !== null).length

@@ -118,6 +118,27 @@ export default async function RootLayout({
             __html: `try{var v=+localStorage.getItem('apexdata-viva')||0;if(Date.now()-v<10000)document.documentElement.setAttribute('data-reapertura','');}catch(e){}`,
           }}
         />
+        {/* ¿Esto es la app instalada, o el sitio en un navegador?
+            De ello depende si se pinta el pie de página: en la app instalada
+            su navegación ya está en la barra inferior y en «Más», y repetirla
+            solo gasta pantalla. En la web sí tiene sentido, y ahí es donde
+            están los enlaces del proyecto.
+
+            Va como guion en crudo y antes que React por lo mismo que el de
+            arriba: decidirlo desde un componente significaría pintar el pie en
+            el servidor y quitarlo después, que se ve como un salto. Aquí la
+            marca llega antes de la primera pintura y lo esconde una regla de
+            CSS, sin que React se entere.
+
+            Se miran las dos señales porque no todas las versiones de iOS
+            contestan a la misma: `display-mode` es la estándar y
+            `navigator.standalone` la que lleva Safari desde siempre. */}
+        <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: `try{if(matchMedia('(display-mode: standalone)').matches||navigator.standalone)document.documentElement.setAttribute('data-instalada','');}catch(e){}`,
+          }}
+        />
         <ThemeProvider
           nonce={nonce}
           attribute="class"

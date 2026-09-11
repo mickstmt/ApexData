@@ -520,6 +520,22 @@ html[data-reapertura] [data-splash='auto'] {
   }
 }
 
+/* El pie es de la web, no de la app instalada.
+   ============================================================
+   En la PWA su navegación —Pilotos, Equipos, Calendario, Standings— ya está
+   en la barra inferior y en el menú «Más», así que era pantalla gastada en
+   repetirse; y lo único que no vivía en ningún otro sitio, el crédito a
+   Jolpica y a OpenF1, tiene ahora su propia página en «Acerca de». Esa página
+   no es opcional: las dos publican bajo CC BY-NC-SA 4.0 y la «BY» es
+   Atribución.
+
+   Se esconde solo el `<footer>` y no su contenedor. El contenedor lleva el
+   hueco que deja la barra inferior, y ese hace falta igual: sin él, lo último
+   de cada página quedaría debajo de la barra. */
+html[data-instalada] [data-pie-de-la-app] > footer {
+  display: none;
+}
+
 /* El scrubber del replay: el pulgar del `<input type="range">`. La pista la
    pinta el componente —lleva las banderas—, así que aquí solo va el pulgar,
    de 22 px para que se coja con el dedo. */
