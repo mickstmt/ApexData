@@ -75,7 +75,13 @@ export function ControlesDeReplay({
           aria-label="Minuto de la carrera"
           aria-valuetext={formatoReloj(segundos)}
           onChange={(e) => onBuscar(Number(e.target.value))}
-          className="replay-scrubber h-11 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]"
+          // `relative` no es decorativo: el riel y las marcas de vuelta son
+          // `absolute` y el `input` era estático, así que pintaban ENCIMA del
+          // pulgar —lo posicionado va por delante de lo que no lo está— y el
+          // cursor salía partido por una franja. Se veía igual en los dos
+          // temas; con el riel claro se nota más. Posicionarlo lo devuelve
+          // delante sin tocar el orden del DOM ni inventar una capa.
+          className="replay-scrubber relative h-11 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]"
         />
       </div>
 

@@ -256,6 +256,40 @@ test.describe('el replay sigue el tema', () => {
   });
 });
 
+test.describe('el cursor del scrubber', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('se pinta por delante del riel, no por detrás', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(page.locator('canvas[aria-label*="Mapa de la carrera"]').first()).toBeVisible({
+      timeout: 20_000,
+    });
+
+    // El riel de banderas y las marcas de vuelta son `absolute`. Lo posicionado
+    // pinta por delante de lo que no lo está, así que con el `input` estático
+    // el riel cruzaba el cursor por la mitad y salía partido en dos —en los dos
+    // temas; con el riel claro se nota más—. Basta con que el `input` también
+    // esté posicionado: al ir después en el DOM, pasa delante.
+    //
+    // Se comprueba el mecanismo y no el píxel porque lo que se rompe es esto:
+    // el día que alguien quite `relative`, el cursor vuelve a partirse.
+    const posiciones = await page.evaluate(() => {
+      const scrubber = [...document.querySelectorAll<HTMLElement>('input.replay-scrubber')].find(
+        (el) => el.offsetParent !== null
+      )!;
+      const riel = scrubber.parentElement!.querySelector<HTMLElement>('div[aria-hidden]')!;
+      return {
+        scrubber: getComputedStyle(scrubber).position,
+        riel: getComputedStyle(riel).position,
+      };
+    });
+
+    expect(posiciones.riel).toBe('absolute');
+    expect(posiciones.scrubber).not.toBe('static');
+  });
+});
+
 test.describe('la torre en escritorio', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
