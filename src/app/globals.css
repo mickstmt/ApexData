@@ -440,3 +440,30 @@ html[data-reapertura] [data-splash='auto'] {
     animation: none !important;
   }
 }
+
+/* El scrubber del replay: el pulgar del `<input type="range">`. La pista la
+   pinta el componente —lleva las banderas—, así que aquí solo va el pulgar,
+   de 22 px para que se coja con el dedo. */
+.replay-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid #0b0b0f;
+  box-shadow: 0 0 0 1px #6e6e7a;
+  cursor: pointer;
+}
+.replay-scrubber::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid #0b0b0f;
+  box-shadow: 0 0 0 1px #6e6e7a;
+  cursor: pointer;
+}
+.replay-scrubber::-moz-range-track {
+  background: transparent;
+}

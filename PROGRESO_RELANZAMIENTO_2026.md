@@ -33,9 +33,9 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
-**Próximo paso**: pendiente de **confirmar en la próxima carrera** que los avisos por sesión salen ~30 min tras la bandera (ver entrada 56). La deuda del Sprint 5 quedó cerrada al completo el 2026-08-28, y abajo está el porqué de cada cierre, escrito para **no volver a evaluar lo ya decidido**. Ese mismo día se subieron `checkout`, `setup-node` y `setup-python` a **v7** en los cinco workflows —apuntaban a Node 20, ya obsoleto en los runners—: CI verde y **cero avisos de obsolescencia**.
+**Próximo paso**: pendiente de **confirmar en la próxima carrera** que los avisos por sesión salen ~30 min tras la bandera (ver entrada 56). Abiertos desde el 2026-09-10, cada uno con su propia sesión: **comprimir las siete rutas de telemetría** que ya existen —Next no comprime ninguna ruta de API, medido: 690 KB por el cable en `/api/laps`— y la **auditoría de la versión web** que pidió el usuario, por las diferencias de formato frente al teléfono (ver entrada 62). La deuda del Sprint 5 quedó cerrada al completo el 2026-08-28, y abajo está el porqué de cada cierre, escrito para **no volver a evaluar lo ya decidido**. Ese mismo día se subieron `checkout`, `setup-node` y `setup-python` a **v7** en los cinco workflows —apuntaban a Node 20, ya obsoleto en los runners—: CI verde y **cero avisos de obsolescencia**.
 
-**Tests**: **330 unitarios** (TypeScript) + 28 (Python) + **91 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
+**Tests**: **369 unitarios** (TypeScript) + **61 (Python)** + **106 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
 
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
@@ -86,6 +86,51 @@
 ---
 
 ## Bitácora
+
+### 2026-09-10 (62) — El replay: la carrera, coche a coche ✅
+
+**Qué se añade**: una pantalla nueva, `/results/[año]/[ronda]/replay`, donde la carrera se vuelve a ver con los veinte puntos moviéndose sobre el circuito. **No sustituye a nada**: cuelga de la ficha de cada carrera con un botón —«Ver la carrera», «Ver el sprint»— y `/analysis` sigue igual.
+
+**De dónde salió**: del proyecto `f1-race-replay` de Tom Shaw, que el usuario trajo en vídeo. No se copió una línea —es una app de escritorio, Arcade y Qt, que nada de eso corre en un navegador— pero sí tres ideas: proyectar cada coche sobre el trazado para ordenar el leaderboard, pintar la pista del color del estado, y **el fallo que enseñó más que el acierto**. Se midió en su propio vídeo, fotograma a fotograma: allí el índice se trunca a entero al dibujar, y los coches reciben una posición nueva cada **80 ms** con cadencia irregular de 3 a 5 fotogramas. Aquí se interpola entre muestras desde el primer día — medido en el navegador, **62,5 fps** en iPhone.
+
+**Las tres piezas del dato**, medidas sobre Zandvoort 2026 antes de escribir nada: FastF1 graba la posición a **3,77 Hz** (mediana 241 ms, huecos de hasta 2,1 s); una carrera entera son 932 690 muestras crudas. Remuestreadas a 4 Hz y empaquetadas en enteros de 16 bits son **2,66 MB**, que comprimidos viajan en **1,56 MB** — frente a 10,15 MB del mismo dato en JSON. Por eso el bloque es binario y el navegador lo lee como `Int16Array` sin parsear nada.
+
+**Las decisiones, sobre mockup navegable** (https://claude.ai/code/artifact/5d1c4434-edc0-4b85-92bd-b661efc55ef5), con los coches reales moviéndose: **la torre**, frente a una tira horizontal y una columna lateral — descartadas porque un ranking se lee de arriba abajo y porque sus filas de 24 px no son tocables, y anotadas por si algún día hay apaisado. Pista pintada más píldora con palabras; velocidades 1×/2×/4×/8×; ruta propia; y **arranque parado en la parrilla**, porque nadie quiere que 1,6 MB empiecen a correr solos en el teléfono. El usuario pidió además que **tocar un coche en el circuito lo elija** y resalte su fila, con radio de acierto de dedo (22 px).
+
+**Los tres entornos, no uno.** El primer mockup solo enseñaba teléfonos de 390 px y el usuario lo corrigió: *prioridad iPhone no es solo iPhone*. Medido en los tres: filas de **44 px** en móvil y **30** en escritorio, botón de reproducir de 48 px siempre dentro de la pantalla, y documento sin arrastre horizontal en 360, 390 y 1280. En escritorio, mapa y torre lado a lado con la torre entera a la vista.
+
+**Lo que el navegador desmintió y el compilador no podía ver**, en orden de aparición:
+
+1. **El mapa pegado se iba por arriba** al desplazar la torre. `sticky` solo pega dentro de su padre, y mi layout metía el mapa en una columna propia cuyo alto era el del mapa. Rehecho como una sola rejilla.
+2. **La fila 18 no se podía tocar**: quedaba tapada bajo los mandos fijos. Resuelto con `scroll-margin` **medido**, no supuesto — la cabecera y la barra de pestañas llevan dentro los bordes seguros del teléfono.
+3. **Setenta y dos marcas de vuelta** convertían el scrubber en un peine. Ahora, cada diez.
+
+Y una lección de método que vale más que las tres: la prueba de navegador usaba **4 pilotos**, con los que la torre cabía entera en la pantalla y los dos primeros fallos eran **invisibles**. Ahora usa 22, como una parrilla de verdad.
+
+**La revisión de código encontró siete defectos reales**, todos corregidos:
+
+| Defecto | Qué pasaba |
+|---|---|
+| Buscar se deshacía solo | Arrastrar el scrubber reproduciendo volvía atrás al fotograma siguiente: el bucle recalculaba desde el origen viejo |
+| Lienzo rehecho 4 veces por segundo | `coches` cambia a 4 Hz y entraba en las dependencias: el `ResizeObserver` se reconectaba y el `Path2D` de la pista se rehacía a ese ritmo, en los dos mapas |
+| Hueco sin datos = falso retirado | Si un coche cruzaba la meta durante un hueco de posición, el progreso se quedaba plano una vuelta y `OUT` se encendía sin motivo |
+| Descarga cortada, invisible | El sitio donde se guarda ya medía lo anunciado, así que la guarda de tamaño no podía saltar: los bytes que faltaran se leerían como ceros y los coches se amontonarían en el origen |
+| Fuente del canvas descartada | `var(--font-inter)` no es válido en un canvas: el código del piloto salía en la fuente por defecto de 10 px |
+| Cien anuncios al lector de pantalla | El porcentaje de descarga estaba dentro de la región viva |
+| Hueco caro | Barrido hacia atrás de miles de instantes por piloto y por cuarto de segundo → bisección |
+
+**Y una corrección a mí mismo, por escrito.** Al arreglar el último escribí que la bisección también corregía el hueco disparatado con bandera roja. **Es falso**: abarata el cálculo, no cambia el número. Mis dos pruebas nuevas fallaron y tenían razón. Con la carrera parada el hueco crece porque el reloj sigue mientras el instante en que el líder pasó se queda atrás; no es un fallo de la cuenta sino de la pregunta, porque **con todos quietos no hay distancia en pista que medir**. La solución de verdad es de pantalla: con bandera roja la torre enseña «—». Las pruebas documentan exactamente eso en vez de afirmar lo que yo quería creer.
+
+**La API que lo alimenta ya estaba en producción sin bitácora.** El endpoint `/api/positions` (servicio Python + rutas proxy + `respuesta-comprimida.ts`) se escribió en esta misma línea de trabajo pero entró en `5e054ee`, arrastrado por otra sesión que compartía árbol. Queda registrado aquí para que no sea un endpoint sin origen. De paso trajo un hallazgo que va más allá del replay: **Next no comprime ninguna ruta de API**. Medido en el servidor standalone y contra producción — la portada llega en gzip, y `/api/laps` de una carrera llega en crudo, **690 652 bytes**, con y sin `Accept-Encoding`. El ayudante nuevo lo arregla en una línea por ruta; **aplicarlo a las siete rutas de telemetría que ya existen está pendiente y es su propia sesión**.
+
+**Revisión de seguridad: limpia.** Cero hallazgos. Se trazaron path traversal y SSRF hacia el servicio interno (la puerta única de `segmentos.ts` aguanta: el `event` no puede llevar `/`, `@` ni `%`), inyección (Prisma parametrizado con `Number.isInteger` en ambos operandos), XSS (ni un `dangerouslySetInnerHTML`), deserialización (nada del atacante llega al pickle de `diskcache`: las claves son MD5 de cadenas propias) y las rutas de error (ni hostname ni traza salen al cliente).
+
+**Verificación**: **369 unitarias** (36 nuevas) · **61 de Python** · **106 de navegador** (11 nuevas) · lint y tipos limpios · build reproduciendo el CI **sin base de datos** · y recorrido real contra la carrera de Zandvoort con el servicio levantado, en los tres anchos: 1,1 s de carga en caliente, cero errores de consola, la píldora cambiando a «Bandera amarilla» en el minuto real.
+
+**Detectado y no abordado** (queda anotado, no desaparece):
+- El cálculo del progreso **bloquea el hilo ~1 s** al abrir una carrera de dos horas. Si molesta, va a un worker.
+- `EVENTO` en `segmentos.ts` admite el punto, así que un `..` sobrevive a la validación. La revisión lo trazó hasta el final y es **inerte** —colapsa un solo segmento y ninguna ruta del servicio tiene dos—, pero conviene saberlo dado el historial de ese fichero. No se toca aquí porque es un fichero compartido con otra sesión en curso.
+- La **auditoría de la versión web** que pidió el usuario —«ligeras diferencias y mal formateados» frente al teléfono— sigue abierta.
 
 ### 2026-09-10 (61) — Lo nuevo entra desde la derecha ✅
 

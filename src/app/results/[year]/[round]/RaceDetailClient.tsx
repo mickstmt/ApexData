@@ -21,6 +21,7 @@ import { SesionPendiente } from './SesionPendiente';
 import { ClasificacionSprint, VueltasDePractica } from './TiemposDeSesion';
 import { comienzoDeCarrera, estadoDeSesion, queEnseñar } from '@/lib/sesiones';
 import { VolverAtras } from '@/components/ui/VolverAtras';
+import { VerReplay } from '@/components/replay/VerReplay';
 import type {
   Race,
   Circuit,
@@ -481,6 +482,13 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                 : null
             }
           />
+
+          {/* La puerta al replay: la carrera coche a coche sobre el circuito.
+              Solo hay carrera que ver si hay resultados, así que va aquí y no
+              en la pestaña pendiente. */}
+          <div className="mt-4">
+            <VerReplay year={year} round={race.round} sesion="R" />
+          </div>
 
           {/* Results Table */}
           <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -992,7 +1000,12 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
         </>
       ) : activeTab === 'sprint' ? (
         race.sprintResults.length > 0 ? (
-          <SprintResults resultados={race.sprintResults} />
+          <>
+            <div className="mb-4">
+              <VerReplay year={year} round={race.round} sesion="S" />
+            </div>
+            <SprintResults resultados={race.sprintResults} />
+          </>
         ) : (
           estadoSprint && (
             <SesionPendiente
