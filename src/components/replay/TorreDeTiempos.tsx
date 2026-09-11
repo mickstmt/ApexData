@@ -99,7 +99,9 @@ export function TorreDeTiempos({
                 {fila.equipo && <span className="ml-1.5 text-xs font-normal text-[var(--replay-apagado)]">{fila.equipo}</span>}
               </span>
               {fila.fuera ? (
-                <span className="font-mono text-xs font-bold tracking-wider text-[var(--replay-roja)]">OUT</span>
+                // La tinta y no el bloque: aquí el rojo se lee contra la
+                // página, y eso pide 4,5:1 en cada tema.
+                <span className="font-mono text-xs font-bold tracking-wider text-[var(--replay-roja-texto)]">OUT</span>
               ) : (
                 <span className="font-mono text-[13px] tabular-nums text-[var(--replay-hueco)]">{fila.hueco}</span>
               )}

@@ -74,6 +74,25 @@
        flotante la va a cambiar— nadie tiene que acordarse de actualizar nada. */
     --barra-inferior: calc(3.75rem + max(0.5rem, env(safe-area-inset-bottom)));
 
+    /* Por qué el rojo de bandera son DOS tokens y no uno.
+       ============================================================
+       Es el mismo rojo haciendo dos trabajos con listones distintos, que es la
+       distinción que `team-colors.ts` ya hace entre un color de identidad y su
+       versión legible como tinta.
+
+       `--replay-roja` es un BLOQUE: el fondo de la píldora, la pista cuando hay
+       bandera roja y el tramo del scrubber. Como fondo solo tiene que dejar
+       leer lo que lleva encima (4,5:1 con el blanco de la píldora) y despegarse
+       de la página como gráfico (3:1). `#D93830` da 4,61 con el blanco, y 4,26
+       sobre carbón y 4,30 sobre el fondo claro.
+
+       `--replay-roja-texto` es TINTA: el «OUT» de quien abandona. Ahí el rojo se
+       lee contra la página y necesita 4,5:1, que es más de lo que puede dar el
+       mismo valor en los dos fondos. Sobre carbón hace falta uno más claro
+       (`#FF4238`, 5,70) y sobre claro uno más oscuro (`#CC352D`, 4,77, derivado
+       con `readableOnLight`). Con un solo token, el «OUT» se quedaba en 3,22
+       sobre el fondo claro: ilegible, y metido por mí al estrenar el tema. */
+
     /* La pantalla del replay, en claro.
        ============================================================
        Durante un tiempo el replay fue siempre carbón, con la app clara
@@ -107,7 +126,8 @@
     --replay-trazado: #8A8A94;
     --replay-amarilla: #B08519;
     --replay-naranja: #CC7121;
-    --replay-roja: #FF4238;
+    --replay-roja: #D93830;
+    --replay-roja-texto: #CC352D;
     --replay-pulgar: #151519;
     --replay-pulgar-borde: #F7F7F8;
   }
@@ -165,10 +185,11 @@
     --replay-tenue: #6E6E7A;
     --replay-acento: #CCFF00;
     --replay-acento-tinta: #000000;
-    --replay-trazado: #50505E;
+    --replay-trazado: #6B6B78;
     --replay-amarilla: #FBBE23;
     --replay-naranja: #FF8D29;
-    --replay-roja: #FF4238;
+    --replay-roja: #D93830;
+    --replay-roja-texto: #FF4238;
     --replay-pulgar: #FFFFFF;
     --replay-pulgar-borde: #0B0B0F;
   }
