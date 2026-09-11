@@ -357,12 +357,21 @@ class FastF1Client {
   /**
    * Get information about a specific session
    */
+  /**
+   * `sondeo` es solo para el experimento de las fuentes: hace que el servicio
+   * ignore lo que tenga guardado y mire de verdad. Se paga con 3,5 segundos
+   * cuando la sesión aún no tiene datos, así que no lo use nada que esté
+   * atendiendo a una persona.
+   */
   async getSessionInfo(
     year: number,
     event: string | number,
-    sessionType: SessionType
+    sessionType: SessionType,
+    opciones?: { sondeo?: boolean }
   ): Promise<SessionInfoResponse> {
-    const endpoint = `/api/sessions/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/info`;
+    const endpoint =
+      `/api/sessions/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/info` +
+      (opciones?.sondeo ? '?sondeo=1' : '');
     return this.fetch<SessionInfoResponse>(endpoint, 60000);
   }
 

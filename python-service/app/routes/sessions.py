@@ -84,20 +84,32 @@ async def get_event_info(year: int, event: str):
 
 
 @router.get("/{year}/{event}/{session_type}/info")
-async def get_session_info(year: int, event: str, session_type: str):
+async def get_session_info(
+    year: int,
+    event: str,
+    session_type: str,
+    sondeo: bool = False,
+):
     """
     Get information about a specific session
 
     Returns session metadata and results
+
+    `sondeo=1` es para el experimento que mide qué fuente publica antes: se
+    salta los dos recuerdos —el del resultado y el del «todavía no»— y mira de
+    verdad. Sin eso, la respuesta puede ser de hace cinco minutos y el instante
+    medido no vale. Cuesta 3,5 segundos cuando no hay datos; por eso solo lo
+    usa el sondeo, que pregunta una vez por minuto.
     """
     try:
         cache_key = f"session_info_{year}_{event}_{session_type}"
 
-        cached_data = cache_manager.get(cache_key)
-        if cached_data is not None:
-            return cached_data
+        if not sondeo:
+            cached_data = cache_manager.get(cache_key)
+            if cached_data is not None:
+                return cached_data
 
-        session = await load_session(year, event, session_type)
+        session = await load_session(year, event, session_type, saltar_memoria=sondeo)
 
         # Get session results
         results = session.results if hasattr(session, 'results') else None

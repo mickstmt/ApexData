@@ -87,6 +87,24 @@
 
 ## Bitácora
 
+### 2026-09-11 (63) — El experimento que empataba por construcción ✅
+
+**Lo que estaba mal**: la carrera entre OpenF1 y FastF1 dio sus dos primeras medidas —P1 y P2 de Madrid— y las dos dijeron lo mismo: OpenF1 31 min, FastF1 32 min. Parecía un resultado. No lo era. La columna que importaba era `probes: 1`: **el primer sondeo ya había encontrado datos en las dos**, así que lo único medido fue «ambas publicaron antes del minuto 31». El minuto de diferencia era el orden de consulta dentro del mismo barrido. El usuario lo vio antes que yo: «si preguntas al mismo tiempo y te responden los dos, no tiene sentido».
+
+**Tres causas, no una**, y arreglar solo la primera no habría servido de nada:
+
+1. **Se preguntaba tarde.** El primer sondeo cayó en el minuto 31 pese a que el reloj corre cada cinco. No he encontrado la causa leyendo el código —la ventana abre en el minuto cero, el calendario se pide sin caché y los pasos previos capturan sus errores—, así que en vez de seguir adivinando ahora se **anota `firstProbeAt`**: la próxima medida dirá por sí sola si la tardanza fue de la fuente o nuestra. Medir antes que teorizar.
+2. **Se preguntaba poco.** Cada cinco minutos no separa a dos fuentes que publican con segundos de diferencia. Ahora hay un **reloj propio de un minuto**, aparte del barrido de avisos, que además usa el calendario que aquel ya pidió: cero peticiones extra a OpenF1.
+3. **FastF1 competía con una piedra atada.** El servicio recuerda cinco minutos que una sesión no tiene datos, así que su «no» podía ser de hacía cinco minutos: un **sesgo sistemático en su contra justo del tamaño de lo que se quería medir**. El sondeo pide ahora `sondeo=1`, que se salta ese recuerdo sin quitárselo a los demás.
+
+**Una cifra del código era falsa y cambió el diseño.** El comentario decía que un sondeo sin datos costaba 3,5 s. Medido contra el servicio: **entre 11 y 13 segundos**, ocupando el único hueco de carga. A un sondeo por minuto eso es el 20% del tiempo con un usuario esperando detrás. De ahí que la cadencia sea **por fuente**: OpenF1 cada minuto (es una petición JSON), FastF1 cada dos (10% de ocupación, y sigue separando diferencias de minutos).
+
+**El marcador ya no miente**: `/api/fuentes` da **segundos** en vez de minutos redondeados —redondear borraba justo la diferencia que se busca—, enseña `firstProbe` y **dice «todavía no se sabe» cuando no se sabe**: con menos de tres sesiones, o con una diferencia por debajo de la resolución del sondeo, no hay ganador.
+
+**Verificación**: 375 unitarias (6 nuevas de cadencia) · 63 de Python (2 nuevas del salto de memoria) · lint y tipos limpios · build como el CI · y **contra el servicio de verdad**: petición normal 14,2 s la primera y 0,22 s la segunda (recuerda), con `sondeo=1` 13,2 s (vuelve a mirar) y normal otra vez 0,21 s (el recuerdo sigue intacto). El camino real del cliente comprobado de punta a punta: el servicio recibe `?sondeo=1`.
+
+**Con fecha**: FP3 y clasificación el sábado 12, carrera el domingo 13. Desplegado hoy para poder medir este fin de semana.
+
 ### 2026-09-10 (62) — El replay: la carrera, coche a coche ✅
 
 **Qué se añade**: una pantalla nueva, `/results/[año]/[ronda]/replay`, donde la carrera se vuelve a ver con los veinte puntos moviéndose sobre el circuito. **No sustituye a nada**: cuelga de la ficha de cada carrera con un botón —«Ver la carrera», «Ver el sprint»— y `/analysis` sigue igual.

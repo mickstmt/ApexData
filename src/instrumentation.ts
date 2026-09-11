@@ -128,5 +128,43 @@ function arrancarAvisos() {
   // vivo: si Node no tiene nada más que hacer, que se apague.
   setInterval(vuelta, CADA_MINUTOS * 60 * 1000).unref?.();
 
+  arrancarSondeo();
+
   console.log(`[avisos] Reloj en marcha: se comprueba cada ${CADA_MINUTOS} minutos.`);
+}
+
+/**
+ * El reloj del experimento de las fuentes, aparte y más rápido.
+ *
+ * ## Por qué no vale el de cinco minutos
+ *
+ * Porque la pregunta es de segundos. Las dos primeras medidas salieron con un
+ * solo sondeo cada una —el primero ya encontró datos—, así que lo único que se
+ * supo fue «las dos publicaron antes del minuto 31». Preguntando cada minuto,
+ * dos fuentes que publican con medio minuto de diferencia se distinguen; cada
+ * cinco, no.
+ *
+ * ## Por qué cuesta poco
+ *
+ * No pide el calendario: usa el que dejó el último barrido. Y `tocaSondear`
+ * espacia la insistencia pasada la primera hora, así que una sesión que nadie
+ * publica no provoca sesenta preguntas por hora durante ocho horas.
+ *
+ * Temporal, como el experimento. Ver `src/lib/push/carrera-de-fuentes.ts`.
+ */
+function arrancarSondeo() {
+  if (process.env.CARRERA_DE_FUENTES === '0') return;
+
+  const sondear = async () => {
+    try {
+      const { sondearConLoRecordado } = await import('@/lib/push/carrera-de-fuentes');
+      const { nuevas } = await sondearConLoRecordado();
+
+      for (const linea of nuevas) console.log(`[fuentes] ${linea}`);
+    } catch (error) {
+      console.error('[fuentes] El sondeo falló:', error);
+    }
+  };
+
+  setInterval(sondear, 60 * 1000).unref?.();
 }

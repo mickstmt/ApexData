@@ -20,8 +20,13 @@ export async function GET() {
     take: 40,
   });
 
-  const minutos = (fin: Date, visto: Date | null) =>
-    visto ? Math.round((visto.getTime() - fin.getTime()) / 60_000) : null;
+  // En segundos, no en minutos. Redondear a minutos era parte del problema: si
+  // una fuente publica cuarenta segundos antes que la otra, redondeado empatan.
+  const segundos = (fin: Date, visto: Date | null) =>
+    visto ? Math.round((visto.getTime() - fin.getTime()) / 1000) : null;
+
+  const reloj = (s: number | null) =>
+    s === null ? null : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
 
   const sesiones = new Map<number, Record<string, unknown>>();
 
@@ -34,11 +39,16 @@ export async function GET() {
       });
     }
 
-    // Los minutos son la respuesta; el resto está para poder desconfiar de ella.
-    // `probes` dice si la medida es fina o gruesa —cada sondeo son cinco
-    // minutos— y `note` qué contestó la fuente la última vez.
+    // Los segundos son la respuesta; el resto está para poder desconfiar de
+    // ella. `firstProbe` dice cuándo empezamos a preguntar —si eso no es casi
+    // cero, la medida no vale y la culpa es nuestra—, `probes` cuántas veces se
+    // preguntó y `note` qué contestó la última vez.
+    const s = segundos(fila.endedAt, fila.firstSeenAt);
+
     sesiones.get(fila.sessionKey)![fila.source] = {
-      minutes: minutos(fila.endedAt, fila.firstSeenAt),
+      seconds: s,
+      clock: reloj(s),
+      firstProbe: reloj(segundos(fila.endedAt, fila.firstProbeAt)),
       probes: fila.probes,
       note: fila.lastNote,
     };
@@ -49,17 +59,41 @@ export async function GET() {
   /** La media de una fuente, contando solo las sesiones que ya resolvió. */
   const media = (fuente: string) => {
     const vistos = lista
-      .map((s) => (s[fuente] as { minutes: number | null } | undefined)?.minutes)
+      .map((s) => (s[fuente] as { seconds: number | null } | undefined)?.seconds)
       .filter((m): m is number => typeof m === 'number');
 
     if (!vistos.length) return null;
     return Math.round(vistos.reduce((a, b) => a + b, 0) / vistos.length);
   };
 
+  /**
+   * Quién gana, dicho solo cuando se puede decir.
+   *
+   * Con una sola sesión medida no hay veredicto, y una diferencia menor que la
+   * resolución del sondeo tampoco: a FastF1 se le pregunta cada dos minutos
+   * —cada pregunta le cuesta doce segundos al servicio—, así que por debajo de
+   * eso no se puede distinguir quién fue antes. Es preferible «todavía no se
+   * sabe» a un ganador inventado.
+   */
+  const RESOLUCION_SEGUNDOS = 120;
+
+  const veredicto = () => {
+    const a = media('openf1');
+    const b = media('fastf1');
+
+    if (a === null || b === null) return 'faltan medidas de alguna de las dos';
+    if (lista.length < 3) return `solo ${lista.length} sesión(es): pocas para concluir`;
+    if (Math.abs(a - b) <= RESOLUCION_SEGUNDOS)
+      return `empate dentro de la resolución del sondeo (${RESOLUCION_SEGUNDOS} s)`;
+
+    return a < b ? 'openf1 publica antes' : 'fastf1 publica antes';
+  };
+
   return NextResponse.json(
     {
       medidas: lista.length,
-      mediaEnMinutos: { openf1: media('openf1'), fastf1: media('fastf1') },
+      veredicto: veredicto(),
+      mediaEnSegundos: { openf1: media('openf1'), fastf1: media('fastf1') },
       sesiones: lista,
     },
     { headers: { 'Cache-Control': 'no-store' } }

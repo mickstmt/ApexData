@@ -110,6 +110,52 @@ class TestSinDatos:
         assert intentos == 1
 
     @pytest.mark.anyio
+    async def test_el_sondeo_se_salta_el_recuerdo_y_vuelve_a_mirar(self, monkeypatch):
+        """Con el recuerdo puesto, FastF1 competia con una piedra atada.
+
+        El experimento que mide que fuente publica antes preguntaba y recibia
+        un "no" de hasta cinco minutos antes: un sesgo sistematico en su contra
+        justo del tamano de lo que se queria medir. `saltar_memoria` vuelve a
+        mirar de verdad.
+        """
+        intentos = 0
+
+        def vacia(*_args, **_kwargs):
+            nonlocal intentos
+            intentos += 1
+            raise loading._SinDatos
+
+        monkeypatch.setattr(loading, "_cargar", vacia)
+
+        for _ in range(3):
+            with pytest.raises(Exception):
+                await loading.load_session(2026, "20", "FP1", saltar_memoria=True)
+
+        assert intentos == 3
+
+    @pytest.mark.anyio
+    async def test_el_sondeo_no_estropea_el_recuerdo_de_los_demas(self, monkeypatch):
+        """Saltarse el recuerdo al preguntar no se lo quita a quien venga detras."""
+        intentos = 0
+
+        def vacia(*_args, **_kwargs):
+            nonlocal intentos
+            intentos += 1
+            raise loading._SinDatos
+
+        monkeypatch.setattr(loading, "_cargar", vacia)
+
+        with pytest.raises(Exception):
+            await loading.load_session(2026, "21", "FP1", saltar_memoria=True)
+
+        # Una peticion normal detras: sigue sirviendose del recuerdo que dejo
+        # el sondeo, sin volver a pagar los 3,5 segundos.
+        with pytest.raises(Exception):
+            await loading.load_session(2026, "21", "FP1")
+
+        assert intentos == 1
+
+    @pytest.mark.anyio
     async def test_cada_sesion_lleva_su_propia_cuenta(self, monkeypatch):
         intentos = []
 

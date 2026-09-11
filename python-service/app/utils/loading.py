@@ -56,11 +56,24 @@ def _clave_sin_datos(year: int, event: str, session_type: str) -> str:
     return f"sin_datos_{year}_{event}_{session_type}"
 
 
-async def load_session(year: int, event: str, session_type: str, **options):
-    """Load a session in a worker thread, or raise a 404 if it has no data yet."""
+async def load_session(
+    year: int,
+    event: str,
+    session_type: str,
+    saltar_memoria: bool = False,
+    **options,
+):
+    """Load a session in a worker thread, or raise a 404 if it has no data yet.
+
+    `saltar_memoria` ignora el recuerdo de «todavía no» y vuelve a mirar de
+    verdad. Lo usa el sondeo que mide qué fuente publica antes: con el recuerdo
+    puesto, la respuesta puede ser de hace cinco minutos, y medir el instante en
+    que aparecen los datos con cinco minutos de error es no medir nada. Cuesta
+    los 3,5 segundos del intento fallido, y por eso no se ofrece a nadie más.
+    """
     clave = _clave_sin_datos(year, event, session_type)
 
-    if cache_manager.get(clave) is not None:
+    if not saltar_memoria and cache_manager.get(clave) is not None:
         raise _sin_datos(year, event, session_type)
 
     async with _una_carga_a_la_vez:

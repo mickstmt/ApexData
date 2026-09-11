@@ -50,6 +50,75 @@ import { SESIONES } from './redaccion';
 /** Cuánto se sigue preguntando tras el final de una sesión. */
 export const VENTANA_HORAS = 8;
 
+/**
+ * ## Lo que falló en el primer intento, y por qué
+ *
+ * Las dos primeras medidas —P1 y P2 de Madrid, 11 de septiembre— dieron OpenF1
+ * 31 min y FastF1 32 min, con **un solo sondeo cada una**. Un solo sondeo
+ * significa que el primero ya encontró datos: lo único medido fue «las dos
+ * tenían datos antes del minuto 31», que no es la pregunta. El minuto de
+ * diferencia era el orden de consulta dentro del mismo barrido.
+ *
+ * Tres cosas lo hacían imposible de responder, y las tres están arregladas:
+ *
+ * 1. **Se preguntaba tarde.** El primer sondeo cayó en el minuto 31. Ahora se
+ *    anota `firstProbeAt`, así que si vuelve a pasar se ve en la tabla en vez
+ *    de deducirse.
+ * 2. **Se preguntaba poco.** Una vez cada cinco minutos no separa a dos fuentes
+ *    que publican con segundos de diferencia. Ahora: **cada minuto la primera
+ *    hora**, que es donde está la respuesta, y cada cinco después.
+ * 3. **FastF1 competía con una piedra atada.** El servicio recuerda cinco
+ *    minutos que una sesión no tiene datos, así que su «no» podía ser de hace
+ *    cinco minutos: un sesgo sistemático EN SU CONTRA de hasta 5 min, justo del
+ *    tamaño de lo que queremos medir. El sondeo ahora pide `sondeo=1`, que se
+ *    salta ese recuerdo.
+ */
+
+/**
+ * Cada cuánto se pregunta durante la primera hora, en minutos.
+ *
+ * Distinto por fuente porque cuestan cosas distintas. Preguntar a OpenF1 es una
+ * petición JSON. Preguntar a FastF1 obliga al servicio a intentar la descarga
+ * entera y **cuesta doce segundos medidos** —el código decía 3,5 y no era
+ * verdad—, y mientras tanto ocupa el único hueco de carga: quien esté pidiendo
+ * telemetría en ese momento espera detrás. Cada minuto serían doce segundos de
+ * cada sesenta.
+ *
+ * Dos minutos deja la ocupación en el diez por ciento y sigue separando a dos
+ * fuentes que publiquen con minutos de diferencia. Si publican con menos de dos
+ * minutos de diferencia, el veredicto lo dice en vez de inventar un ganador.
+ */
+export const CADENCIA_DENSA: Record<Fuente, number> = { openf1: 1, fastf1: 2 };
+
+/** Hasta qué minuto se usa la cadencia densa; después, cada cinco. */
+export const MINUTOS_DENSOS = 60;
+
+/** Cada cuánto se insiste una vez pasada la primera hora. */
+export const ESPACIADO_MINUTOS = 5;
+
+/**
+ * ¿Toca preguntarle a esta fuente ahora?
+ *
+ * Denso donde está la respuesta y espaciado después. Sin esto, el reloj de un
+ * minuto seguiría insistiendo ocho horas a una fuente que no va a contestar.
+ */
+export function tocaSondear(
+  fuente: Fuente,
+  minutosDesdeElFin: number,
+  ultimoSondeo: Date | null,
+  ahora: Date
+): boolean {
+  if (!ultimoSondeo) return true;
+
+  const desdeElUltimo = (ahora.getTime() - ultimoSondeo.getTime()) / 60_000;
+  const cada =
+    minutosDesdeElFin <= MINUTOS_DENSOS ? CADENCIA_DENSA[fuente] : ESPACIADO_MINUTOS;
+
+  // El margen de diez segundos evita que un reloj de 60 s que llega con 59,8 s
+  // se salte una ronda entera por redondeo.
+  return desdeElUltimo >= cada - 1 / 6;
+}
+
 /** Las dos que compiten. */
 export const FUENTES = ['openf1', 'fastf1'] as const;
 export type Fuente = (typeof FUENTES)[number];
@@ -104,7 +173,11 @@ async function sondearFastF1(sesion: SesionOpenF1): Promise<Respuesta> {
   if (!tipo) return { hayDatos: false, nota: 'sesión que no medimos' };
 
   try {
-    const info = await fastf1Client.getSessionInfo(carrera.year, String(carrera.round), tipo);
+    // `sondeo` para que el servicio no conteste con lo que recordaba: medir el
+    // instante en que aparecen los datos con cinco minutos de error es no medir.
+    const info = await fastf1Client.getSessionInfo(carrera.year, String(carrera.round), tipo, {
+      sondeo: true,
+    });
     const filas = info.results?.length ?? 0;
 
     return filas > 0
@@ -150,6 +223,9 @@ export async function sondearFuentes(opciones?: {
   });
 
   for (const sesion of candidatas) {
+    const fin = new Date(sesion.date_end);
+    const minutosDesdeElFin = (ahora.getTime() - fin.getTime()) / 60_000;
+
     for (const fuente of FUENTES) {
       const fila = yaAnotadas.find(
         (f) => f.sessionKey === sesion.session_key && f.source === fuente
@@ -158,14 +234,22 @@ export async function sondearFuentes(opciones?: {
       // Resuelta: ya se sabe cuándo tuvo datos y no hay nada más que preguntar.
       if (fila?.firstSeenAt) continue;
 
+      // El reloj rápido pasa cada minuto, pero a una fuente que lleva horas sin
+      // contestar no se le pregunta sesenta veces por hora.
+      if (!tocaSondear(fuente, minutosDesdeElFin, fila?.updatedAt ?? null, ahora)) continue;
+
       const { hayDatos, nota } = await SONDEOS[fuente](sesion);
       informe.sondeos++;
 
       const datos = {
         sessionName: sesion.session_name,
         year: sesion.year,
-        endedAt: new Date(sesion.date_end),
+        endedAt: fin,
         probes: (fila?.probes ?? 0) + 1,
+        // Se escribe una sola vez, en el primer sondeo: es la prueba de que se
+        // preguntó pronto. Si un día vuelve a salir un número raro, esta
+        // columna dice enseguida si la culpa fue de la fuente o nuestra.
+        ...(fila?.firstProbeAt ? {} : { firstProbeAt: ahora }),
         lastNote: nota,
         ...(hayDatos ? { firstSeenAt: new Date() } : {}),
       };
@@ -177,15 +261,42 @@ export async function sondearFuentes(opciones?: {
       });
 
       if (hayDatos) {
-        const minutos = Math.round(
-          (Date.now() - new Date(sesion.date_end).getTime()) / 60_000
-        );
+        // En segundos: la diferencia entre las dos puede ser de menos de un
+        // minuto, y redondear a minutos la borraría.
+        const segundos = Math.round((Date.now() - fin.getTime()) / 1000);
         informe.nuevas.push(
-          `${fuente} tuvo ${sesion.session_name} de ${sesion.location} a los ${minutos} min (${nota})`
+          `${fuente} tuvo ${sesion.session_name} de ${sesion.location} a los ` +
+            `${Math.floor(segundos / 60)}m ${segundos % 60}s (${nota})`
         );
       }
     }
   }
 
   return informe;
+}
+
+/**
+ * El calendario que vio el último barrido.
+ *
+ * El reloj rápido pregunta cada minuto, y pedirle el calendario a OpenF1 cada
+ * minuto serían mil cuatrocientas peticiones al día para releer unas fechas que
+ * se sabían con semanas de antelación. El barrido de cinco minutos ya lo pide
+ * para otra cosa; el sondeo se sirve de esa copia, cinco minutos vieja como
+ * mucho.
+ */
+let recordadas: SesionOpenF1[] = [];
+
+export function recordarSesiones(sesiones: SesionOpenF1[]): void {
+  recordadas = sesiones;
+}
+
+/**
+ * Un sondeo con el calendario recordado. Es lo que llama el reloj de un minuto.
+ *
+ * Devuelve un informe vacío mientras no haya pasado el primer barrido: sin
+ * calendario no hay nada que sondear, y pedirlo aquí anularía el ahorro.
+ */
+export async function sondearConLoRecordado(ahora?: Date): Promise<InformeDeCarrera> {
+  if (!recordadas.length) return { nuevas: [], sondeos: 0 };
+  return sondearFuentes({ ahora, sesiones: recordadas });
 }

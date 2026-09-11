@@ -1,7 +1,7 @@
 import { sesionesDeTemporada } from '@/services/openf1/client';
 
 import { avisarDeSesionesTerminadas, type Informe } from './avisos-de-sesion';
-import { sondearFuentes, type InformeDeCarrera } from './carrera-de-fuentes';
+import { recordarSesiones, sondearFuentes, type InformeDeCarrera } from './carrera-de-fuentes';
 import { avisarDePrevias, type InformeDePrevias } from './previas-de-sesion';
 
 /**
@@ -25,6 +25,10 @@ export async function darUnaVuelta(opciones?: {
 }): Promise<InformeDeVuelta> {
   const ahora = opciones?.ahora ?? new Date();
   const sesiones = await sesionesDeTemporada(ahora.getFullYear());
+
+  // Para que el reloj de un minuto del experimento no tenga que volver a
+  // pedirlo. Ver `carrera-de-fuentes.ts`.
+  recordarSesiones(sesiones);
 
   // En serie y no en paralelo: las dos escriben en la misma tabla de
   // suscripciones al marcar el último envío, y no hay ninguna prisa.

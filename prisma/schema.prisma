@@ -479,6 +479,15 @@ model SourceProbe {
   /** El primer sondeo en que esta fuente tuvo datos. Nulo = todavía nada. */
   firstSeenAt DateTime?
 
+  /**
+   * Cuándo se preguntó por primera vez.
+   *
+   * Distingue «la fuente tardó media hora» de «tardamos media hora en
+   * preguntar». Sin este dato, las dos primeras medidas del experimento no
+   * significaban nada.
+   */
+  firstProbeAt DateTime?
+
   /** Cuántas veces se le preguntó, para saber si la cuenta es fina o gruesa. */
   probes Int @default(0)
 
