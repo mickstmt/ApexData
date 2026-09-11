@@ -73,6 +73,43 @@
        medido en cuanto monta, así que si la barra cambia —y el rediseño
        flotante la va a cambiar— nadie tiene que acordarse de actualizar nada. */
     --barra-inferior: calc(3.75rem + max(0.5rem, env(safe-area-inset-bottom)));
+
+    /* La pantalla del replay, en claro.
+       ============================================================
+       Durante un tiempo el replay fue siempre carbón, con la app clara
+       alrededor. La razón escrita era buena —es una pantalla de ver, como un
+       vídeo— pero el resultado en el teléfono era un rectángulo negro
+       emparedado entre dos barras blancas translúcidas. Y sobre todo: si la
+       app ofrece un interruptor de tema, el tema tiene que llegar a todas
+       partes. Un modo claro que se salta una pantalla no es un modo claro.
+
+       Van como color completo y no como tripleta HSL, al revés que el resto de
+       tokens, porque el lienzo del mapa no resuelve `var(...)`: estos valores
+       se leen con `getComputedStyle` y se le pasan tal cual. Con tripletas
+       habría que recomponer la cadena en dos sitios.
+
+       Los valores del claro no son inventados: los de superficie y texto son
+       los tokens claros de aquí arriba, y los de bandera son los que produce
+       `readableOnLight` de `team-colors.ts`, que garantiza 3:1 sobre este
+       fondo. La roja sale sin tocar porque ya lo cumplía. */
+    --replay-fondo: #F7F7F8;
+    --replay-superficie: #F0F0F2;
+    --replay-superficie-2: #E4E4E9;
+    --replay-boton: #E4E4E9;
+    --replay-borde: #DEDEE3;
+    --replay-borde-fila: #E8E8EC;
+    --replay-texto: #151519;
+    --replay-apagado: #55555E;
+    --replay-hueco: #3E3E46;
+    --replay-tenue: #6E6E7A;
+    --replay-acento: #526600;
+    --replay-acento-tinta: #FFFFFF;
+    --replay-trazado: #8A8A94;
+    --replay-amarilla: #B08519;
+    --replay-naranja: #CC7121;
+    --replay-roja: #FF4238;
+    --replay-pulgar: #151519;
+    --replay-pulgar-borde: #F7F7F8;
   }
 
   /* Desde `md` no hay barra inferior: nada tiene de qué apartarse. */
@@ -113,6 +150,27 @@
     --podium-gold: 45 95% 62%;
     --podium-silver: 240 8% 72%;
     --podium-bronze: 25 85% 62%;
+
+    /* El replay en oscuro: los mismos valores que estaban escritos a fuego en
+       sus componentes, uno por uno. El tema oscuro no cambia de aspecto. */
+    --replay-fondo: #0B0B0F;
+    --replay-superficie: #151519;
+    --replay-superficie-2: #1B1B22;
+    --replay-boton: #1F1F27;
+    --replay-borde: #26262E;
+    --replay-borde-fila: #16161C;
+    --replay-texto: #F5F5F7;
+    --replay-apagado: #A2A2AC;
+    --replay-hueco: #BFBFC6;
+    --replay-tenue: #6E6E7A;
+    --replay-acento: #CCFF00;
+    --replay-acento-tinta: #000000;
+    --replay-trazado: #50505E;
+    --replay-amarilla: #FBBE23;
+    --replay-naranja: #FF8D29;
+    --replay-roja: #FF4238;
+    --replay-pulgar: #FFFFFF;
+    --replay-pulgar-borde: #0B0B0F;
   }
 
   * {
@@ -471,18 +529,18 @@ html[data-reapertura] [data-splash='auto'] {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 3px solid #0b0b0f;
-  box-shadow: 0 0 0 1px #6e6e7a;
+  background: var(--replay-pulgar);
+  border: 3px solid var(--replay-pulgar-borde);
+  box-shadow: 0 0 0 1px var(--replay-tenue);
   cursor: pointer;
 }
 .replay-scrubber::-moz-range-thumb {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 3px solid #0b0b0f;
-  box-shadow: 0 0 0 1px #6e6e7a;
+  background: var(--replay-pulgar);
+  border: 3px solid var(--replay-pulgar-borde);
+  box-shadow: 0 0 0 1px var(--replay-tenue);
   cursor: pointer;
 }
 .replay-scrubber::-moz-range-track {

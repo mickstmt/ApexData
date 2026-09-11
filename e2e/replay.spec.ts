@@ -183,6 +183,79 @@ for (const [nombre, viewport] of [
   });
 }
 
+/**
+ * El replay sigue el tema de la app.
+ *
+ * Durante un tiempo fue siempre carbón, con la app clara alrededor, y en el
+ * teléfono eso era un rectángulo negro emparedado entre dos barras blancas
+ * translúcidas. Lo que se comprueba aquí son las dos mitades del arreglo: que
+ * en claro el replay es de verdad claro —una sola superficie con el resto de
+ * la app— y que en oscuro no se ha movido NADA, porque los valores oscuros son
+ * exactamente los que estaban escritos a fuego antes.
+ */
+test.describe('el replay sigue el tema', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  const medir = (page: Page) =>
+    page.evaluate(() => {
+      const fila = document.querySelector('ol[aria-label="Clasificación en este instante"] button')!;
+      const celdas = fila.querySelectorAll('span');
+      const play = [...document.querySelectorAll('button')].find((b) => /REPRODUCIR|PAUSA/.test(b.textContent || ''))!;
+      return {
+        body: getComputedStyle(document.body).backgroundColor,
+        replay: getComputedStyle(document.querySelector('main > div > div')!).backgroundColor,
+        puesto: getComputedStyle(celdas[0]).color,
+        barraEquipo: getComputedStyle(celdas[1]).backgroundColor,
+        hueco: getComputedStyle(celdas[celdas.length - 1]).color,
+        playFondo: getComputedStyle(play).backgroundColor,
+        playTinta: getComputedStyle(play).color,
+      };
+    });
+
+  const abrir = async (page: Page, tema: 'light' | 'dark') => {
+    await page.addInitScript((t) => localStorage.setItem('theme', t), tema);
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(page.locator('canvas[aria-label*="Mapa de la carrera"]').first()).toBeVisible({
+      timeout: 20_000,
+    });
+    return medir(page);
+  };
+
+  test('en claro es claro, y una sola superficie con el resto de la app', async ({ page }) => {
+    const m = await abrir(page, 'light');
+
+    // Lo que arregla el fallo: el replay y la página tienen el MISMO fondo. No
+    // basta con que sea claro; si fuera otro claro seguiría siendo un parche
+    // pegado encima.
+    expect(m.replay).toBe(m.body);
+    expect(m.replay).toBe('rgb(247, 247, 248)');
+
+    // El botón grande va en el primario del tema claro, no en la lima, que
+    // sobre blanco no se lee.
+    expect(m.playFondo).toBe('rgb(82, 102, 0)');
+    expect(m.playTinta).toBe('rgb(255, 255, 255)');
+
+    // Y el color de equipo usa la variante derivada para el fondo claro: la
+    // identidad de McLaren (#FF8000) queda en 2,9:1 contra este fondo.
+    expect(m.barraEquipo).toBe('rgb(217, 109, 0)');
+  });
+
+  test('en oscuro no se ha movido ni un tono', async ({ page }) => {
+    const m = await abrir(page, 'dark');
+
+    // Cada uno de estos era un hex escrito a mano en el componente antes de
+    // que el replay tuviera tema. Si alguno cambia, el tema oscuro ha
+    // cambiado de aspecto sin que nadie lo pidiera.
+    expect(m.replay).toBe('rgb(11, 11, 15)'); // #0B0B0F
+    expect(m.puesto).toBe('rgb(162, 162, 172)'); // #A2A2AC
+    expect(m.hueco).toBe('rgb(191, 191, 198)'); // #BFBFC6
+    expect(m.playFondo).toBe('rgb(204, 255, 0)'); // #CCFF00
+    expect(m.playTinta).toBe('rgb(0, 0, 0)');
+    expect(m.barraEquipo).toBe('rgb(255, 128, 0)'); // McLaren, la identidad
+  });
+});
+
 test.describe('la torre en escritorio', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 

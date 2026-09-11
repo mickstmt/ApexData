@@ -85,23 +85,23 @@ export function TorreDeTiempos({
               onClick={() => onElegir(fila.piloto)}
               className={cn(
                 'grid w-full grid-cols-[30px_4px_1fr_auto] items-center gap-x-2.5 px-4 text-left',
-                'min-h-[44px] border-b border-[#16161C] md:min-h-[30px] md:grid-cols-[28px_3px_1fr_auto] md:border-b-0 md:px-3.5',
+                'min-h-[44px] border-b border-[var(--replay-borde-fila)] md:min-h-[30px] md:grid-cols-[28px_3px_1fr_auto] md:border-b-0 md:px-3.5',
                 '[scroll-margin-top:var(--tapado-arriba)] [scroll-margin-bottom:var(--tapado-abajo)] md:[scroll-margin-bottom:0px] md:[scroll-margin-top:0px]',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#CCFF00]',
-                activa ? 'bg-[#1F1F27]' : 'md:hover:bg-[#151519]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--replay-acento)]',
+                activa ? 'bg-[var(--replay-superficie-2)]' : 'md:hover:bg-[var(--replay-superficie)]',
                 fila.fuera && 'opacity-60'
               )}
             >
-              <span className="text-right font-mono text-sm tabular-nums text-[#A2A2AC]">{fila.posicion}</span>
+              <span className="text-right font-mono text-sm tabular-nums text-[var(--replay-apagado)]">{fila.posicion}</span>
               <span aria-hidden className="h-6 w-1 rounded-sm md:h-[18px] md:w-[3px]" style={{ backgroundColor: fila.color }} />
               <span className="min-w-0 truncate text-[15px] font-semibold md:text-sm">
                 {fila.codigo}
-                {fila.equipo && <span className="ml-1.5 text-xs font-normal text-[#A2A2AC]">{fila.equipo}</span>}
+                {fila.equipo && <span className="ml-1.5 text-xs font-normal text-[var(--replay-apagado)]">{fila.equipo}</span>}
               </span>
               {fila.fuera ? (
-                <span className="font-mono text-xs font-bold tracking-wider text-[#FF4238]">OUT</span>
+                <span className="font-mono text-xs font-bold tracking-wider text-[var(--replay-roja)]">OUT</span>
               ) : (
-                <span className="font-mono text-[13px] tabular-nums text-[#BFBFC6]">{fila.hueco}</span>
+                <span className="font-mono text-[13px] tabular-nums text-[var(--replay-hueco)]">{fila.hueco}</span>
               )}
             </button>
           </li>

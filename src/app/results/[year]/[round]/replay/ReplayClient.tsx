@@ -21,6 +21,7 @@ import {
   type Trazado,
 } from '@/lib/replay/progreso';
 import { formatoReloj } from '@/lib/replay/reloj';
+import { useTemaDelReplay, type TemaDelReplay } from '@/components/replay/tema';
 import { teamColor, teamIdFromName } from '@/lib/team-colors';
 import type { PositionsMeta } from '@/types';
 
@@ -37,7 +38,8 @@ import type { PositionsMeta } from '@/types';
  *
  * ## La pantalla
  *
- * La torre, en carbón siempre. En el móvil, el mapa se queda pegado bajo la
+ * Sigue el tema de la app, claro u oscuro, como cualquier otra pantalla: sus
+ * colores son los tokens `--replay-*`. En el móvil, el mapa se queda pegado bajo la
  * cabecera y la torre se desplaza debajo, con los mandos fijos al pie, sobre
  * la barra de pestañas. A partir de `md`, mapa y torre lado a lado: la torre
  * entera cabe sin desplazar y los mandos van bajo el mapa.
@@ -163,10 +165,16 @@ export function ReplayClient({
 
   const titulo = sesion === 'S' ? 'Sprint' : 'Carrera';
 
+  // El tema se resuelve aquí y no dentro de `Replay`, que solo monta cuando la
+  // carrera ya está descargada: leyéndolo desde el principio, para cuando hay
+  // algo que pintar la paleta lleva rato lista y el mapa no se pinta ni una vez
+  // con los colores del otro tema.
+  const tema = useTemaDelReplay();
+
   return (
-    <div className="bg-[#0B0B0F] text-[#F5F5F7]">
+    <div className="bg-[var(--replay-fondo)] text-[var(--replay-texto)]">
       {fase.tipo === 'listo' ? (
-        <Replay datos={fase.datos} year={year} round={round} nombre={nombre} titulo={titulo} />
+        <Replay datos={fase.datos} year={year} round={round} nombre={nombre} titulo={titulo} tema={tema} />
       ) : (
         <div className="flex flex-col md:h-[calc(100dvh-4rem)]">
           <Cabecera year={year} round={round} nombre={nombre} titulo={titulo} />
@@ -193,12 +201,22 @@ export function ReplayClient({
   );
 }
 
+/**
+ * La píldora usa la misma tinta que el mapa y que el scrubber, que es lo que
+ * promete `estados.ts`: si la pista se pinta de ámbar, la palabra que la
+ * nombra va del mismo ámbar. Sobre claro esas tintas son más oscuras —lo pide
+ * el contraste contra el fondo blanco— y la píldora las sigue.
+ *
+ * La tinta de dentro no cambia con el tema porque el fondo de la píldora no es
+ * la página, es el propio color: negro sobre ámbar da 12,5:1 en oscuro y
+ * 6,2:1 en claro, y sobre naranja 9,1 y 6,0.
+ */
 const PILDORA: Record<ClaseDeEstado, string> = {
-  libre: 'bg-[#1B1B22] text-[#BFBFC6]',
-  amarilla: 'bg-[#FBBE23] text-black',
-  sc: 'bg-[#FF8D29] text-black',
-  vsc: 'bg-[#FF8D29] text-black',
-  roja: 'bg-[#FF4238] text-white',
+  libre: 'bg-[var(--replay-superficie-2)] text-[var(--replay-hueco)]',
+  amarilla: 'bg-[var(--replay-amarilla)] text-black',
+  sc: 'bg-[var(--replay-naranja)] text-black',
+  vsc: 'bg-[var(--replay-naranja)] text-black',
+  roja: 'bg-[var(--replay-roja)] text-white',
 };
 
 function Cabecera({
@@ -221,11 +239,11 @@ function Cabecera({
   estado?: ClaseDeEstado;
 }) {
   return (
-    <div className="flex items-end justify-between gap-4 border-b border-[#26262E] px-4 py-3">
+    <div className="flex items-end justify-between gap-4 border-b border-[var(--replay-borde)] px-4 py-3">
       <div className="min-w-0">
         <VolverAtras
           href={`/results/${year}/${round}`}
-          className="mb-1.5 inline-flex min-h-[32px] items-center gap-1.5 text-xs text-[#A2A2AC] hover:text-[#F5F5F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CCFF00]"
+          className="mb-1.5 inline-flex min-h-[32px] items-center gap-1.5 text-xs text-[var(--replay-apagado)] hover:text-[var(--replay-texto)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
           {nombre} {year}
@@ -234,7 +252,7 @@ function Cabecera({
           {vuelta !== undefined ? (
             <>
               Vuelta {vuelta}
-              <span className="text-sm text-[#A2A2AC]">/{totalVueltas}</span>
+              <span className="text-sm text-[var(--replay-apagado)]">/{totalVueltas}</span>
             </>
           ) : (
             titulo
@@ -242,7 +260,7 @@ function Cabecera({
         </h1>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1.5">
-        <span className="font-mono text-[13px] tabular-nums text-[#A2A2AC] md:hidden" aria-label="Minuto de carrera">
+        <span className="font-mono text-[13px] tabular-nums text-[var(--replay-apagado)] md:hidden" aria-label="Minuto de carrera">
           {reloj ?? '0:00'}
         </span>
         <span
@@ -260,15 +278,23 @@ function Aviso({ titulo, children }: { titulo: string; children: React.ReactNode
   return (
     <div role="status" className="mx-auto max-w-md px-6 py-16 text-center">
       <h2 className="mb-2 font-display text-lg font-semibold">{titulo}</h2>
-      <p className="text-sm text-[#A2A2AC]">{children}</p>
+      <p className="text-sm text-[var(--replay-apagado)]">{children}</p>
     </div>
   );
 }
 
-function colorDeEquipo(equipo: string | null, respaldo: string | null): string {
+/**
+ * El color con el que se pinta un equipo, según el fondo que va a tener detrás.
+ *
+ * Sobre carbón vale la identidad tal cual, que es como se ha visto siempre.
+ * Sobre el fondo claro no: el turquesa de Mercedes desaparece a 1,4:1 y el
+ * amarillo de Renault a 1,15. Para eso `team-colors.ts` deriva `onLight`,
+ * oscureciendo la identidad hasta despegarla del blanco sin perder el tono.
+ */
+function colorDeEquipo(equipo: string | null, respaldo: string | null, claro: boolean): string {
   const id = teamIdFromName(equipo);
-  if (id) return teamColor(id).color;
-  return respaldo ?? '#8A8A94';
+  if (id) return claro ? teamColor(id).onLight : teamColor(id).color;
+  return respaldo ?? (claro ? '#55555E' : '#8A8A94');
 }
 
 function Replay({
@@ -277,12 +303,14 @@ function Replay({
   round,
   nombre,
   titulo,
+  tema,
 }: {
   datos: DatosDelReplay;
   year: number;
   round: number;
   nombre: string;
   titulo: string;
+  tema: TemaDelReplay | null;
 }) {
   const { meta, bloque, trazado, progreso } = datos;
   const { count, step: paso } = meta.timeline;
@@ -293,7 +321,11 @@ function Replay({
   const t = k * paso;
   const estado = estadoEn(meta.trackStatus, t);
 
-  const colores = useMemo(() => meta.drivers.map((d) => colorDeEquipo(d.team, d.color)), [meta.drivers]);
+  const claro = tema?.claro ?? false;
+  const colores = useMemo(
+    () => meta.drivers.map((d) => colorDeEquipo(d.team, d.color, claro)),
+    [meta.drivers, claro]
+  );
 
   // Con bandera roja la carrera está detenida.
   const parada = estado === 'roja';
@@ -389,6 +421,7 @@ function Replay({
       bloque={bloque}
       coches={coches}
       estado={estado}
+      paleta={tema?.paleta ?? null}
       elegido={elegido}
       onElegir={elegir}
       suscribir={reloj.suscribir}
@@ -413,7 +446,7 @@ function Replay({
     <div className="md:grid md:h-[calc(100dvh-4rem)] md:grid-cols-[1fr_340px] md:grid-rows-[auto_1fr_auto]">
       <div
         ref={pegadoRef}
-        className="sticky top-[calc(4rem+env(safe-area-inset-top))] z-10 border-b border-[#26262E] bg-[#0B0B0F] md:static md:col-span-2 md:border-b-0"
+        className="sticky top-[calc(4rem+env(safe-area-inset-top))] z-10 border-b border-[var(--replay-borde)] bg-[var(--replay-fondo)] md:static md:col-span-2 md:border-b-0"
       >
         <Cabecera
           year={year}
@@ -429,9 +462,9 @@ function Replay({
       </div>
 
       <div className="hidden min-h-0 md:col-start-1 md:row-start-2 md:block">{mapa('relleno')}</div>
-      <div className="hidden border-t border-[#26262E] md:col-start-1 md:row-start-3 md:block">{controles(true)}</div>
+      <div className="hidden border-t border-[var(--replay-borde)] md:col-start-1 md:row-start-3 md:block">{controles(true)}</div>
 
-      <div className="pb-[124px] md:col-start-2 md:row-span-2 md:row-start-2 md:min-h-0 md:overflow-y-auto md:border-l md:border-[#26262E] md:pb-0">
+      <div className="pb-[124px] md:col-start-2 md:row-span-2 md:row-start-2 md:min-h-0 md:overflow-y-auto md:border-l md:border-[var(--replay-borde)] md:pb-0">
         <TorreDeTiempos
           filas={filas}
           elegido={elegido}
@@ -448,7 +481,7 @@ function Replay({
           rendija se veía la página de detrás. */}
       <div
         ref={mandosRef}
-        className="fixed inset-x-0 bottom-[var(--barra-inferior)] z-40 border-t border-[#26262E] bg-[#0B0B0F] md:hidden"
+        className="fixed inset-x-0 bottom-[var(--barra-inferior)] z-40 border-t border-[var(--replay-borde)] bg-[var(--replay-fondo)] md:hidden"
       >
         {controles(false)}
       </div>

@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { posicionEn, type BloqueDePosiciones } from '@/lib/replay/bloque';
-import { TINTA, type ClaseDeEstado } from '@/lib/replay/estados';
+import { type ClaseDeEstado } from '@/lib/replay/estados';
 import type { Trazado } from '@/lib/replay/progreso';
-import { CARBON } from './tema';
+import type { PaletaDelReplay } from './tema';
 
 /**
  * El circuito con los coches encima.
@@ -20,6 +20,11 @@ import { CARBON } from './tema';
  * La pista se pinta del color del estado —amarilla, roja, naranja— porque es
  * lo que se lee de un vistazo sin saber de Fórmula 1; la píldora de arriba
  * lo dice con palabras para quien no distingue el color.
+ *
+ * Los colores llegan resueltos en `paleta` y no se leen de CSS aquí dentro:
+ * un lienzo no resuelve `var(...)`, se descarta en silencio y queda el negro
+ * por defecto. Mientras la paleta no está, no se pinta — un fotograma tarde es
+ * mejor que un fotograma con los colores del otro tema.
  */
 
 export interface CocheEnElMapa {
@@ -39,6 +44,7 @@ export function MapaDeCarrera({
   bloque,
   coches,
   estado,
+  paleta,
   elegido,
   onElegir,
   suscribir,
@@ -52,6 +58,8 @@ export function MapaDeCarrera({
   bloque: BloqueDePosiciones;
   coches: CocheEnElMapa[];
   estado: ClaseDeEstado;
+  /** Los colores del tema vigente. `null` hasta que hay navegador que leer. */
+  paleta: PaletaDelReplay | null;
   elegido: number | null;
   onElegir: (piloto: number) => void;
   suscribir: (oyente: (k: number) => void) => () => void;
@@ -103,7 +111,7 @@ export function MapaDeCarrera({
     (k: number) => {
       const canvas = canvasRef.current;
       const p = proyeccion.current;
-      if (!canvas || !p) return;
+      if (!canvas || !p || !paleta) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
@@ -114,7 +122,7 @@ export function MapaDeCarrera({
 
       ctx.lineWidth = Math.max(6, Math.min(10, w / 60));
       ctx.lineJoin = 'round';
-      ctx.strokeStyle = TINTA[ultimoEstado.current];
+      ctx.strokeStyle = paleta.estados[ultimoEstado.current];
       ctx.stroke(p.pista);
 
       const radio = w < 480 ? 5 : 6;
@@ -134,7 +142,10 @@ export function MapaDeCarrera({
         ctx.fillStyle = coche.color;
         ctx.fill();
         ctx.lineWidth = resaltado ? 2.5 : 1;
-        ctx.strokeStyle = resaltado ? '#FFFFFF' : CARBON.fondo;
+        // El aro del elegido va en la tinta principal y el borde de los demás
+        // en el fondo: así se separan de la pista sin inventar un color que
+        // solo funcione en uno de los dos temas.
+        ctx.strokeStyle = resaltado ? paleta.texto : paleta.fondo;
         ctx.stroke();
 
         if (resaltado) {
@@ -142,7 +153,7 @@ export function MapaDeCarrera({
           // abreviatura entera se descartaba en silencio, así que el código
           // del piloto se dibujaba con la fuente por defecto de 10 px.
           ctx.font = '600 12px Inter, system-ui, sans-serif';
-          ctx.fillStyle = '#FFFFFF';
+          ctx.fillStyle = paleta.texto;
           ctx.fillText(coche.codigo, sx + radio + 6, sy + 4);
         }
         ctx.globalAlpha = 1;
@@ -151,7 +162,7 @@ export function MapaDeCarrera({
       for (let i = 0; i < enPista.length; i++) if (i !== sel) dibujar(i, false);
       if (sel !== null) dibujar(sel, true);
     },
-    [bloque, girar]
+    [bloque, girar, paleta]
   );
 
   /** Recalcula la proyección al tamaño de la caja y repinta. */

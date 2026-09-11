@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  TINTA,
   claseDeEstado,
   degradadoDelScrubber,
   estadoEn,
@@ -50,11 +49,32 @@ describe('el scrubber', () => {
     expect(tramosDelScrubber([{ status: '2', start: 10, end: 10.5 }], 1000)).toEqual([]);
   });
 
+  // La tinta la pone quien llama, no una tabla de dentro: el replay sigue el
+  // tema de la app y en la pantalla de verdad llegan `var(--replay-*)`. Aquí
+  // se pasan colores de mentira, que es justo lo que demuestra que a esta
+  // función el tema le da igual.
+  const TINTA = {
+    libre: 'GRIS',
+    amarilla: 'AMARILLA',
+    sc: 'NARANJA',
+    vsc: 'NARANJA',
+    roja: 'ROJA',
+  };
+
   it('el degradado lleva paradas duras, no fundidos', () => {
-    const css = degradadoDelScrubber(tramosDelScrubber(TRAMOS, 300), '#333');
+    const css = degradadoDelScrubber(tramosDelScrubber(TRAMOS, 300), '#333', TINTA);
     expect(css.startsWith('linear-gradient(90deg, #333 0%')).toBe(true);
     // La amarilla empieza y acaba en el mismo porcentaje que el gris que la rodea.
     expect(css).toContain(`#333 29.33%, ${TINTA.amarilla} 29.33%`);
     expect(css).toContain(`${TINTA.amarilla} 39.87%, #333 39.87%`);
+  });
+
+  it('la tinta que se le pasa es la que sale, sea cual sea', () => {
+    const css = degradadoDelScrubber(tramosDelScrubber(TRAMOS, 300), 'var(--gris)', {
+      ...TINTA,
+      roja: 'var(--replay-roja)',
+    });
+    expect(css).toContain('var(--replay-roja) 39.87%');
+    expect(css).toContain('var(--gris) 0%');
   });
 });

@@ -14,16 +14,16 @@ export function CargaDelReplay({ fraccion, mensaje }: { fraccion: number | null;
           la descarga, y dentro de la región viva un lector de pantalla los
           leería todos. Quien no ve la barra necesita saber que se está
           cargando, no cada paso. */}
-      <p role="status" className="text-sm text-[#A2A2AC]">
+      <p role="status" className="text-sm text-[var(--replay-apagado)]">
         {mensaje}
       </p>
-      <div className="h-2 w-full overflow-hidden rounded bg-[#1B1B22]" aria-hidden>
+      <div className="h-2 w-full overflow-hidden rounded bg-[var(--replay-superficie-2)]" aria-hidden>
         <div
-          className={`h-full rounded bg-[#CCFF00] transition-[width] duration-200 motion-reduce:transition-none ${pct === null ? 'w-1/4 animate-pulse' : ''}`}
+          className={`h-full rounded bg-[var(--replay-acento)] transition-[width] duration-200 motion-reduce:transition-none ${pct === null ? 'w-1/4 animate-pulse' : ''}`}
           style={pct === null ? undefined : { width: `${pct}%` }}
         />
       </div>
-      <p aria-hidden className="font-mono text-xs tabular-nums text-[#6E6E7A]">
+      <p aria-hidden className="font-mono text-xs tabular-nums text-[var(--replay-tenue)]">
         {pct === null ? 'preparando…' : `${pct} %`}
       </p>
     </div>

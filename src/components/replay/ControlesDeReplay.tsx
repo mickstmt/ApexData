@@ -2,7 +2,7 @@
 
 import { formatoReloj, saltoDe, type Velocidad } from '@/lib/replay/reloj';
 import { degradadoDelScrubber, type TramoDelScrubber } from '@/lib/replay/estados';
-import { CARBON } from './tema';
+import { TINTA_CSS } from './tema';
 
 /**
  * Los mandos del replay: el scrubber con las banderas pintadas, diez segundos
@@ -15,6 +15,10 @@ import { CARBON } from './tema';
  * El scrubber es un `<input type="range">` de verdad: se arrastra con el dedo,
  * se mueve con las flechas y anuncia el minuto de carrera. Las banderas van
  * pintadas en su pista, en el mismo color que la píldora y el mapa.
+ *
+ * El degradado se arma con `var(...)` y no con colores ya resueltos: así sigue
+ * el tema sin que JavaScript tenga que leer nada, y el servidor puede pintar
+ * la misma cadena que el navegador.
  */
 export function ControlesDeReplay({
   k,
@@ -52,13 +56,13 @@ export function ControlesDeReplay({
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-[18px] h-2 rounded"
-          style={{ background: degradadoDelScrubber(tramos, CARBON.superficie2) }}
+          style={{ background: degradadoDelScrubber(tramos, 'var(--replay-superficie-2)', TINTA_CSS) }}
         />
         {vueltas.map((pct, i) => (
           <span
             key={i}
             aria-hidden
-            className="pointer-events-none absolute top-[14px] h-4 w-px bg-[#6E6E7A]"
+            className="pointer-events-none absolute top-[14px] h-4 w-px bg-[var(--replay-tenue)]"
             style={{ left: `${pct}%` }}
           />
         ))}
@@ -71,7 +75,7 @@ export function ControlesDeReplay({
           aria-label="Minuto de la carrera"
           aria-valuetext={formatoReloj(segundos)}
           onChange={(e) => onBuscar(Number(e.target.value))}
-          className="replay-scrubber h-11 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CCFF00]"
+          className="replay-scrubber h-11 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]"
         />
       </div>
 
@@ -83,7 +87,7 @@ export function ControlesDeReplay({
           type="button"
           onClick={onAlternar}
           aria-pressed={reproduciendo}
-          className="h-12 rounded-[10px] bg-[#CCFF00] font-display text-sm font-bold tracking-[.06em] text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          className="h-12 rounded-[10px] bg-[var(--replay-acento)] font-display text-sm font-bold tracking-[.06em] text-[var(--replay-acento-tinta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-texto)]"
         >
           {reproduciendo ? 'PAUSA' : 'REPRODUCIR'}
         </button>
@@ -94,7 +98,7 @@ export function ControlesDeReplay({
           {velocidad}×
         </button>
         {conReloj && (
-          <span className="text-right font-mono text-[13px] tabular-nums text-[#A2A2AC]" aria-hidden>
+          <span className="text-right font-mono text-[13px] tabular-nums text-[var(--replay-apagado)]" aria-hidden>
             {formatoReloj(segundos)}
           </span>
         )}
@@ -104,4 +108,4 @@ export function ControlesDeReplay({
 }
 
 const BOTON =
-  'grid h-11 place-items-center rounded-[10px] bg-[#1F1F27] font-mono text-[13px] font-semibold text-[#F5F5F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CCFF00]';
+  'grid h-11 place-items-center rounded-[10px] bg-[var(--replay-boton)] font-mono text-[13px] font-semibold text-[var(--replay-texto)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]';

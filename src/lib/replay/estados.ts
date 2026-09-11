@@ -30,19 +30,17 @@ const NOMBRES: Record<ClaseDeEstado, string> = {
 };
 
 /**
- * La tinta de cada estado, para el canvas y el scrubber, que no leen CSS.
+ * La tinta de cada estado ya no vive aquí.
  *
- * Son los tokens del tema oscuro de la app —`--slower`, `--live` y un naranja
- * entre los dos— porque la pantalla del replay va siempre en carbón. La pista
- * libre es el gris del trazado.
+ * Vivía: un único juego de colores calibrado contra el carbón, cuando el
+ * replay era siempre oscuro. Ahora sigue el tema de la app, así que hay dos
+ * juegos y quien pinta decide con cuál. Los colores están en `--replay-*` de
+ * `globals.css`; `components/replay/tema.ts` los sirve resueltos al lienzo y
+ * como cadena `var(...)` a lo que es DOM.
+ *
+ * Lo que queda aquí es lo que no depende del tema: qué estado hay en cada
+ * instante y cómo se llama.
  */
-export const TINTA: Record<ClaseDeEstado, string> = {
-  libre: '#50505E',
-  amarilla: '#FBBE23',
-  sc: '#FF8D29',
-  roja: '#FF4238',
-  vsc: '#FF8D29',
-};
 
 export function claseDeEstado(codigo: string): ClaseDeEstado {
   return CLASES[codigo] ?? 'libre';
@@ -89,12 +87,22 @@ export function tramosDelScrubber(tramos: PositionsTrackStatus[], duracion: numb
   return salida;
 }
 
-/** El degradado CSS del scrubber: gris con las paradas de cada tramo. */
-export function degradadoDelScrubber(tramos: TramoDelScrubber[], gris: string): string {
+/**
+ * El degradado CSS del scrubber: gris con las paradas de cada tramo.
+ *
+ * La tinta llega de fuera en vez de salir de una tabla de aquí dentro, porque
+ * depende del tema. Quien llama pasa colores CSS —normalmente `var(...)`, que
+ * cambian solos— y esta función no necesita saber cuál es el tema vigente.
+ */
+export function degradadoDelScrubber(
+  tramos: TramoDelScrubber[],
+  gris: string,
+  tinta: Record<ClaseDeEstado, string>
+): string {
   const paradas = [`${gris} 0%`];
   for (const t of tramos) {
-    const tinta = TINTA[t.clase];
-    paradas.push(`${gris} ${t.desde}%`, `${tinta} ${t.desde}%`, `${tinta} ${t.hasta}%`, `${gris} ${t.hasta}%`);
+    const color = tinta[t.clase];
+    paradas.push(`${gris} ${t.desde}%`, `${color} ${t.desde}%`, `${color} ${t.hasta}%`, `${gris} ${t.hasta}%`);
   }
   paradas.push(`${gris} 100%`);
   return `linear-gradient(90deg, ${paradas.join(', ')})`;

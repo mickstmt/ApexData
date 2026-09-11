@@ -63,3 +63,6 @@ prisma/dev.db
 
 # Archivos de trabajo de las sesiones (volcados, capturas, guiones sueltos).
 .tmp/
+
+# Worktrees temporales de Claude Code: son copias del propio repo.
+.claude/worktrees/
