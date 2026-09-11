@@ -38,7 +38,7 @@
 
 | Punto | Estado | Commit | Lo que quedo medido |
 |---|---|---|---|
-| **18** carrera de fuentes | HECHO, **sin verificar** | `1d2413b` | El lado web esta en produccion. La prueba llega sola con la FP3 del sabado 12: `firstProbe` cerca de `0m 00s` y `probes` mucho mayor que 1. |
+| **18** carrera de fuentes | HECHO, **sin verificar** | `1d2413b` + `432c669` | El segundo lo hizo otra sesion: el arreglo de la mañana seguia midiendo con sesgo. La prueba llega sola con la **FP3 del sabado 12, 10:30Z (05:30 en Lima)**: `firstProbe` cerca de `0m 00s` y `probes` mucho mayor que 1. |
 | **7 + 16** (parte de bug) | HECHO | `4428cee` | El pie medía 553 px DENTRO del replay en iPhone 390, entre el mapa pegado y los mandos. Y la barra no publicaba su alto: cinco sitios lo adivinaban (`4rem`, `4.5rem`, `4.75rem`, `5rem`) y el real es 60 px + borde seguro. Rendija de 4 px -> 0. Scroll 2163 -> 1546 px. |
 | **8** modo claro en el replay | HECHO | `9751d2d` | Decision del usuario contra mi recomendacion, y con razon: «si me das la opcion, damela bien». En claro el replay es `rgb(247,247,248)`, el mismo fondo que el cuerpo y las dos barras. En oscuro cada valor computado coincide uno a uno con el hex que estaba a fuego. |
 | **10b** cursor del scrubber | HECHO | `e4d7771` | No era del tema claro: el riel es `absolute` y el `input` era estatico, asi que el riel pintaba ENCIMA y partia el cursor. Pasaba igual en oscuro desde siempre. |
@@ -537,7 +537,13 @@ gesto que ya existe.
 **Recomendacion**: si, merece la pena. Marcas en el scrubber + tocar para oir.
 
 ---
-## VERIFICACION PENDIENTE (mañana, FP3 a las 11:30Z)
+## VERIFICACION PENDIENTE — FP3 del sabado 12, **10:30Z (05:30 en Lima)**
+
+> **Corregido el 2026-09-11.** Aqui ponia «FP3 a las 11:30Z» y estaba mal: las
+> 11:30Z son la **FP1**, que fue el viernes 11. Consultado en la base, GP de
+> España ronda 14: FP1 `2026-09-11T11:30Z`, FP2 `15:00Z`, **FP3
+> `2026-09-12T10:30Z`**, clasificacion `14:00Z`. La ventana es una hora MAS
+> CORTA de lo que decia este documento, no mas larga.
 El lado web del fix esta confirmado en produccion. **El del servicio Python no se puede
 comprobar desde fuera** (no tiene dominio publico y ninguna ruta nuestra expone
 `sondeo`). La prueba llega sola con la FP3:
