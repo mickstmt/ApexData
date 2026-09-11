@@ -22,7 +22,20 @@ const VIGENCIA_MS = 30_000;
 /** Lo que se espera al servicio antes de darlo por caído. */
 const ESPERA_MS = 2_000;
 
-let ultima: { cuando: number; estado: EstadoServicio } | null = null;
+/**
+ * Lo que el servicio cuenta de sí mismo.
+ *
+ * `desde` es el dato que de verdad importa y el único que no puede quedarse
+ * desactualizado: dice si un Deploy entró o si se está mirando un contenedor de
+ * hace tres días. La versión hay que subirla a mano, así que vale para saber
+ * **qué** corre, pero solo si alguien se acordó de tocarla.
+ */
+interface HuellaDelServicio {
+  version?: string;
+  desde?: string;
+}
+
+let ultima: { cuando: number; estado: EstadoServicio; huella: HuellaDelServicio } | null = null;
 
 /**
  * Le pregunta al servicio de telemetría si está en pie.
@@ -37,26 +50,47 @@ let ultima: { cuando: number; estado: EstadoServicio } | null = null;
  * el CI en cada despliegue y no puede tardar lo que tarde el servicio, ni
  * convertirse en una forma de martillearlo.
  */
-async function estadoDelServicio(): Promise<EstadoServicio> {
+async function estadoDelServicio(): Promise<{
+  estado: EstadoServicio;
+  huella: HuellaDelServicio;
+}> {
   const url = process.env.FASTF1_SERVICE_URL;
-  if (!url) return 'no-configurado';
+  if (!url) return { estado: 'no-configurado', huella: {} };
 
-  if (ultima && Date.now() - ultima.cuando < VIGENCIA_MS) return ultima.estado;
+  if (ultima && Date.now() - ultima.cuando < VIGENCIA_MS) {
+    return { estado: ultima.estado, huella: ultima.huella };
+  }
 
   let estado: EstadoServicio = 'sin-respuesta';
+  let huella: HuellaDelServicio = {};
 
   try {
     const respuesta = await fetch(`${url.replace(/\/$/, '')}/health`, {
       signal: AbortSignal.timeout(ESPERA_MS),
       cache: 'no-store',
     });
-    if (respuesta.ok) estado = 'ok';
+
+    if (respuesta.ok) {
+      estado = 'ok';
+
+      // Lo que diga el servicio es un extra: si un día deja de mandarlo, el
+      // estado sigue siendo válido y aquí no se cae nada.
+      try {
+        const cuerpo = (await respuesta.json()) as { version?: unknown; started_at?: unknown };
+        huella = {
+          ...(typeof cuerpo.version === 'string' ? { version: cuerpo.version } : {}),
+          ...(typeof cuerpo.started_at === 'string' ? { desde: cuerpo.started_at } : {}),
+        };
+      } catch {
+        // Un `/health` que no es JSON sigue siendo un servicio en pie.
+      }
+    }
   } catch (error) {
     console.error('[health] El servicio de telemetría no responde:', error);
   }
 
-  ultima = { cuando: Date.now(), estado };
-  return estado;
+  ultima = { cuando: Date.now(), estado, huella };
+  return { estado, huella };
 }
 
 export async function GET() {
@@ -64,7 +98,7 @@ export async function GET() {
 
   // Las dos comprobaciones a la vez: encadenarlas sumaría la espera del
   // servicio a la de la base sin ganar nada.
-  const [, telemetryService, ultimoAviso] = await Promise.all([
+  const [, servicio, ultimoAviso] = await Promise.all([
     prisma.$queryRaw`SELECT 1`.catch((error) => {
       console.error('[health] Database unreachable:', error);
       database = 'error';
@@ -94,7 +128,11 @@ export async function GET() {
     database,
     // La telemetría es opcional: la app está sana sin ella, así que su estado
     // se informa pero no decide el código de respuesta.
-    telemetryService,
+    telemetryService: servicio.estado,
+    // Qué versión del servicio corre y desde cuándo, para no tener que abrir el
+    // panel de despliegues para saber si un Deploy entró.
+    telemetryVersion: servicio.huella.version ?? null,
+    telemetryStartedAt: servicio.huella.desde ?? null,
     lastNotification: ultimoAviso
       ? {
           session: ultimoAviso.sessionName,

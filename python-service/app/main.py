@@ -16,13 +16,25 @@ fastf1.Cache.enable_cache(settings.FASTF1_CACHE_DIR)
 
 _arranque_logger = logging.getLogger("uvicorn.error")
 
+# Cuándo arrancó este contenedor.
+#
+# La huella de arranque ya lo decía en el registro, pero leer el registro obliga
+# a abrir el panel. Guardado aquí y servido en `/health`, la propia web puede
+# enseñarlo: se ve desde el móvil si un Deploy entró de verdad o se está
+# mirando un contenedor de hace tres días. Y a diferencia de la versión, esto no
+# se puede quedar desactualizado porque nadie tiene que acordarse de tocarlo.
+_arrancado_en: str | None = None
+
 
 @asynccontextmanager
 async def _ciclo_de_vida(app: FastAPI):
     # La huella del despliegue. El panel enseña el registro pero no dice cuándo
     # arrancó cada versión, y sin esta línea no hay forma de saber si un Deploy
     # entró de verdad o se está mirando un contenedor de hace tres días.
+    global _arrancado_en
+
     ahora = datetime.now(timezone.utc)
+    _arrancado_en = ahora.isoformat()
     lima = ahora.astimezone(timezone(timedelta(hours=-5)))
     _arranque_logger.info(
         "ApexData Telemetry v%s desplegado y arrancado: %s UTC (%s hora de Lima)",
@@ -43,7 +55,7 @@ app = FastAPI(
     # La versión sale en la huella de arranque, así que decir siempre «1.0.0»
     # la deja a medias: dice CUÁNDO arrancó pero no QUÉ arrancó. Se sube a mano
     # con cada cambio del servicio, que son pocos y espaciados.
-    version="1.2.0",
+    version="1.3.0",
     docs_url=None if _is_production else "/docs",
     redoc_url=None if _is_production else "/redoc",
     openapi_url=None if _is_production else "/openapi.json",
@@ -75,7 +87,10 @@ async def root():
     return {
         "service": "ApexData F1 Telemetry Service",
         "status": "running",
-        "version": "1.0.0",
+        # De `app.version`, no escrita a mano: decía "1.0.0" mientras la app
+        # declaraba 1.2.0, así que el único número que una máquina podía leer
+        # era el equivocado.
+        "version": app.version,
         "docs": "/docs",
     }
 
@@ -85,6 +100,8 @@ async def health_check():
     """Detailed health check"""
     return {
         "status": "healthy",
+        "version": app.version,
+        "started_at": _arrancado_en,
         "cache_enabled": settings.CACHE_ENABLED,
         "cache_dir": settings.FASTF1_CACHE_DIR,
     }

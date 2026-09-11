@@ -105,6 +105,12 @@
 
 **Con fecha**: FP3 y clasificación el sábado 12, carrera el domingo 13. Desplegado hoy para poder medir este fin de semana.
 
+**Coda del mismo día — dos cosas que salieron de verificar el despliegue.**
+
+*La que no se hizo, y por qué.* Al sondeo de FastF1 se le puso una cadencia de dos minutos en vez de uno porque cada pregunta le cuesta doce segundos al servicio y **solo podía cargar una sesión a la vez**. Con los datos del panel se comprobó que el contenedor **no tiene límites** (6 núcleos, 91 MB en reposo) y que el **VPS tiene 16 GB con 9 disponibles**; medido el coste real de una carga —pico de 379 MB— y probadas **dos descargas en frío simultáneas sin un solo bloqueo de SQLite**, subir el semáforo a dos parecía claro. Se subió. Y entonces falló `test_las_cargas_no_se_solapan`, cuyo motivo escrito **no es el que dice el comentario del código**: la prueba dice «FastF1 no promete ser seguro entre hilos». Una ejecución con éxito no refuta una carrera de datos, que es intermitente por definición, así que **se revirtió entero**. Queda anotado que el cuello de botella no es el servidor —eso ahorra la investigación entera— y la condición para reabrirlo: una prueba de esfuerzo de verdad, no una ejecución con suerte. Pendiente menor: el comentario y la prueba dan razones distintas y el código debería decir las dos.
+
+*La que sí se hizo.* No había forma de saber desde fuera qué versión del servicio corría: el endpoint raíz devolvía `"1.0.0"` escrito a pelo mientras la app declaraba 1.2.0, o sea que **el único número legible por una máquina era el equivocado**. Ahora sale de `app.version`, y `/health` añade **desde cuándo está arrancado** —que es el dato que no puede quedarse viejo, porque nadie tiene que acordarse de tocarlo—. Nuestro `/api/health` los enseña como `telemetryVersion` y `telemetryStartedAt`: se ve desde el móvil si un Deploy entró de verdad, sin abrir el panel. Servicio en 1.3.0.
+
 ### 2026-09-10 (62) — El replay: la carrera, coche a coche ✅
 
 **Qué se añade**: una pantalla nueva, `/results/[año]/[ronda]/replay`, donde la carrera se vuelve a ver con los veinte puntos moviéndose sobre el circuito. **No sustituye a nada**: cuelga de la ficha de cada carrera con un botón —«Ver la carrera», «Ver el sprint»— y `/analysis` sigue igual.
