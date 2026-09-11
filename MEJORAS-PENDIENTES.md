@@ -45,23 +45,39 @@
 | **21** cabecera del detalle | HECHO | `9a21a01` | Australia 2026 en Europe/Madrid: carrera 8 mar 05:00, clasi 7 mar 06:00, P1 6 mar 02:30, P2 6 mar 06:00, P3 7 mar 02:30. Antes las cinco decian lo mismo. |
 | **16** pie en la PWA | HECHO | `1baf369` | Decision del usuario: el pie es de la web. Pero hacia dos trabajos: la atribucion a Jolpica y OpenF1 es **condicion de licencia** (las dos CC BY-NC-SA 4.0, verificado en sus terminos) y ese pie era el unico sitio de la app donde se las nombraba. Se muda a `/acerca`, en el menu «Mas». |
 
-**Suites al cerrar el bloque**: 381 unitarias, 117 e2e (11 nuevas), tipos y lint
+**Suites al cerrar el bloque**: 395 unitarias, 117 e2e (11 nuevas), tipos y lint
 limpios. Build igual que el CI.
 
-## Hallazgos abiertos que NO estaban en la lista
+## Hallazgos que NO estaban en la lista — los tres CERRADOS
 
-Salieron trabajando y estan **sin decidir**. Los dos cambian el aspecto del tema
-oscuro, que el usuario ya dio por bueno, asi que no se tocan por iniciativa mia.
+Salieron trabajando. Los dos primeros se llevaron a mockup porque cambiaban el
+aspecto del tema oscuro, y los decidio el usuario.
 
-- **A. La pildora de bandera roja no llega al contraste.** Texto blanco sobre
-  `#FF4238` = **3,45:1**, por debajo del 4,5 que pide un texto pequeño. Falla
-  **hoy, y en los dos temas**. En negro daria 6,09. -> a mockup.
-- **B. El trazado en oscuro tampoco.** `#50505E` sobre carbon = **2,48:1**, por
-  debajo del 3:1 que pide un grafico. En claro quedo en 3,19:1. Subirlo aclara
-  el circuito, y el usuario dijo que le gusta como se ve. -> a mockup.
-- **C. `.claude/worktrees/` estaba sin ignorar.** Un `git add -A` casi mete un
-  worktree entero en un commit como repositorio embebido. Ya esta en
-  `.gitignore` (va en `9751d2d`). No se ha borrado nada del disco.
+- **A. La pildora de bandera roja. HECHO** (`7d96eb2`). Texto blanco sobre
+  `#FF4238` daba **3,45:1** y un texto pequeño pide 4,5. El usuario eligio
+  oscurecer el rojo a `#D93830` (**4,61:1**); yo recomendaba conservar el rojo y
+  pasar la tinta a negro.
+- **B. El trazado en oscuro. HECHO** (`7d96eb2`). `#50505E` daba **2,48:1** y un
+  grafico con significado pide 3. Ahora `#6B6B78`, **3,74:1**. El minimo que
+  cumplia era `#5E5E6B` (3,08) y se descarto por no dejar margen.
+- **C. `.claude/worktrees/` estaba sin ignorar. HECHO** (`9751d2d`). Un
+  `git add -A` casi mete un worktree entero en un commit como repositorio
+  embebido. No se ha borrado nada del disco.
+
+### Y uno mas que salio al aplicar los anteriores, y era mio
+
+**El «OUT» de la torre era ilegible en el tema claro.** `--replay-roja` no lo usa
+solo la pildora: tambien la pista con bandera roja, el tramo del scrubber y el
+«OUT». Los tres primeros son bloques o graficos y les basta 3:1; el «OUT» es
+TINTA y necesita 4,5. Al estrenar el tema claro esta mañana le di el mismo
+`#FF4238`, que sobre fondo claro da **3,22:1**. No hay un solo rojo que sirva de
+fondo de pildora y de tinta sobre los dos fondos, asi que el token se partio en
+dos: `--replay-roja` (bloque) y `--replay-roja-texto` (tinta, `#FF4238` en
+oscuro y `#CC352D` en claro). Cerrado en `7d96eb2`.
+
+**Prueba nueva**: `tests/contraste-replay.test.ts` lee los tokens de
+`globals.css` y comprueba cada uno contra el umbral que le toca por lo que es,
+en los dos temas. No fija una lista de hex, asi que no se queda desactualizada.
 
 ## Lo que queda, en el orden acordado
 
