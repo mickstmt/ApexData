@@ -15,7 +15,7 @@ import { TiraDeCarrera } from '@/components/results/TiraDeCarrera';
 import { clasesDeDorsal } from '@/lib/medallas';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { estadoEnPalabras, resumirEstado } from '@/lib/estado-resultado';
-import { fechaDeCarrera } from '@/lib/fechas';
+import { fechaDeCarrera, horaUTCDe, tieneHoraConocida } from '@/lib/fechas';
 import { SprintResults } from './SprintResults';
 import { SesionPendiente } from './SesionPendiente';
 import { ClasificacionSprint, VueltasDePractica } from './TiemposDeSesion';
@@ -231,6 +231,56 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
     },
   };
 
+  /**
+   * Cuándo se corrió la sesión que se está viendo.
+   *
+   * La cabecera enseñaba SIEMPRE la fecha y la hora de la carrera, estuvieras
+   * en la pestaña que estuvieras. Desde la tarjeta del calendario se entra a la
+   * «Práctica 1 · vie, 11 sept, 06:30» y arriba ponía «13 de septiembre ·
+   * 08:00», que es el domingo de la carrera. Quien no se sepa el horario de
+   * memoria lee que la P1 fue a las ocho.
+   */
+  const CUANDO_DE_LA_PESTAÑA: Record<SessionTab, Date | null> = {
+    race: race.date,
+    qualifying: race.qualiDate,
+    sprint: race.sprintDate,
+    'sprint-qualifying': race.sprintQualiDate,
+    practice1: race.fp1Date,
+    practice2: race.fp2Date,
+    practice3: race.fp3Date,
+  };
+
+  const cuandoLaSesion = CUANDO_DE_LA_PESTAÑA[activeTab];
+
+  /**
+   * Sin fecha propia se enseña la de la carrera, pero diciendo que lo es.
+   *
+   * Callarlo sería repetir exactamente el fallo que esto arregla.
+   *
+   * Contado sobre la base, porque a ojo se acierta poco: el único caso vivo es
+   * la pestaña de clasificación al sprint en 18 carreras de 2021 y 2022, que
+   * tienen sprint pero no guardan la fecha de esa sesión. Las 24 carreras sin
+   * fecha de P2 y las 30 sin la de P3 NO cuentan: son todas fines de semana al
+   * sprint, y ahí esas dos pestañas no llegan a pintarse.
+   */
+  const laFechaEsDeLaCarrera = activeTab !== 'race' && cuandoLaSesion === null;
+  const fechaEnCabecera = cuandoLaSesion ?? race.date;
+
+  /**
+   * El reloj solo sale cuando se sabe la hora de ESTA sesión.
+   *
+   * Ni inventada ni prestada de la carrera. De 2010 a 2021 la base guarda el
+   * día de cada sesión pero no su hora —Ergast no la publicaba— y son 237 de
+   * las 352 carreras: escribir «00:00» ahí diría que la práctica fue a
+   * medianoche. Mejor no decir nada que decir algo falso.
+   */
+  const horaEnCabecera =
+    activeTab === 'race'
+      ? race.time
+      : tieneHoraConocida(cuandoLaSesion)
+        ? horaUTCDe(cuandoLaSesion!)
+        : null;
+
   const cronometrada = CRONOMETRADAS[activeTab];
 
   const estadoCronometrada =
@@ -363,18 +413,23 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                 <MapPin className="h-4 w-4" />
                 <span>{race.circuit.name}</span>
               </div>
+              {/* La fecha y la hora son las de la pestaña abierta, no las de
+                  la carrera. */}
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                <span>{fechaDeCarrera(race.date)}</span>
+                <span>
+                  {laFechaEsDeLaCarrera && <span className="font-semibold">Carrera: </span>}
+                  {fechaDeCarrera(fechaEnCabecera)}
+                </span>
               </div>
               {/* La hora va en su propio elemento y no pegada a la fecha: son
                   dos zonas distintas —la fecha en UTC porque es un día de
                   calendario, la hora en el reloj de quien mira— y separarlas
                   evita leerlas como una sola cosa. */}
-              {race.time && (
+              {horaEnCabecera && (
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  <HoraDeSalida fecha={race.date} hora={race.time} />
+                  <HoraDeSalida fecha={fechaEnCabecera} hora={horaEnCabecera} />
                 </div>
               )}
             </div>

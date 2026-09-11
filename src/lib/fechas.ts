@@ -47,3 +47,42 @@ export function fechaDeCarreraCorta(fecha: Date | string, locale = 'es-ES'): str
     timeZone: 'UTC',
   });
 }
+
+/**
+ * ¿La fecha de una sesión lleva hora dentro, o es solo un día?
+ *
+ * Las sesiones no siguen la convención de la carrera. `Race.date` es un día de
+ * calendario con la hora aparte en `Race.time`; `fp1Date`, `qualiDate` y las
+ * demás son un instante completo —`2026-03-06T01:30:00Z`— y su campo `*Time`
+ * hermano está a null en las 352 carreras de la base. Nunca se usó.
+ *
+ * El problema es que no todas lo llevan. Medido sobre la base entera: de 2022
+ * en adelante las 115 carreras traen la hora real de cada sesión; de 2010 a
+ * 2021, las 237 restantes guardan el día a medianoche UTC en punto, porque
+ * Ergast nunca publicó esos horarios. Escribir «00:00» ahí no sería un dato
+ * viejo, sería un dato inventado: parecería que la práctica fue a medianoche.
+ *
+ * De ahí la comprobación, que es una heurística y conviene decirlo: se toma
+ * medianoche UTC clavada —hora, minuto y segundo a cero— como «no se sabe la
+ * hora». Ninguna de las 115 sesiones con horario real cae ahí. Podría pasar
+ * algún día con una sesión nocturna, y entonces el precio es ocultar una hora
+ * que sí sabemos; al revés —inventar una que no existe— es peor. Quitarle lo
+ * de heurística exige distinguirlo en la base, que son 352 carreras a resembrar.
+ */
+export function tieneHoraConocida(fecha: Date | string | null | undefined): boolean {
+  if (!fecha) return false;
+  const d = new Date(fecha);
+  return !(d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0);
+}
+
+/**
+ * La hora UTC de un instante, como la escribe la fuente: «01:30:00Z».
+ *
+ * Existe para poder pasarle una sesión a `HoraDeSalida`, que recibe el día y la
+ * hora por separado porque así es como llegan los de la carrera.
+ */
+export function horaUTCDe(fecha: Date | string): string {
+  const d = new Date(fecha);
+  const dos = (n: number) => String(n).padStart(2, '0');
+  return `${dos(d.getUTCHours())}:${dos(d.getUTCMinutes())}:${dos(d.getUTCSeconds())}Z`;
+}

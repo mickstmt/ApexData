@@ -1,7 +1,7 @@
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { fechaDeCarrera, fechaDeCarreraCorta } from '@/lib/fechas';
+import { fechaDeCarrera, fechaDeCarreraCorta, horaUTCDe, tieneHoraConocida } from '@/lib/fechas';
 
 describe('fechaDeCarrera', () => {
   // Medianoche UTC: así están las 352 carreras de la base, porque `date` es una
@@ -100,5 +100,37 @@ describe('ninguna fecha se formatea sin zona horaria', () => {
         'Usa `fechaDeCarrera` o `fechaDeCarreraCorta` de `@/lib/fechas`, o pasa ' +
         '`timeZone` explícitamente.'
     ).toEqual([]);
+  });
+});
+
+describe('la hora de una sesión, cuando se sabe', () => {
+  // Las cifras salen de contar la base entera, no de suponer: de 2010 a 2021
+  // las 237 carreras guardan el día de cada sesión a medianoche UTC porque
+  // Ergast no publicaba horarios; de 2022 en adelante las 115 traen la hora.
+  it('una sesión de 2022 en adelante lleva su hora dentro', () => {
+    expect(tieneHoraConocida(new Date('2026-03-06T01:30:00Z'))).toBe(true);
+    expect(horaUTCDe(new Date('2026-03-06T01:30:00Z'))).toBe('01:30:00Z');
+  });
+
+  it('una de antes de 2022 es solo el día, y eso NO es medianoche', () => {
+    // Escribir «00:00» aquí no sería un dato viejo, sería uno inventado.
+    expect(tieneHoraConocida(new Date('2015-03-13T00:00:00Z'))).toBe(false);
+  });
+
+  it('sin fecha no hay hora que enseñar', () => {
+    expect(tieneHoraConocida(null)).toBe(false);
+    expect(tieneHoraConocida(undefined)).toBe(false);
+  });
+
+  it('la hora se escribe como la manda la fuente, con ceros delante', () => {
+    expect(horaUTCDe(new Date('2026-03-08T04:00:00Z'))).toBe('04:00:00Z');
+    expect(horaUTCDe(new Date('2026-11-21T23:05:07Z'))).toBe('23:05:07Z');
+  });
+
+  it('se lee en UTC, no en la zona de quien ejecuta la prueba', () => {
+    // Si esto se leyera en local, la misma sesión daría horas distintas según
+    // dónde corra el CI — y en media España saldría una hora de más.
+    expect(horaUTCDe('2026-03-06T01:30:00Z')).toBe('01:30:00Z');
+    expect(tieneHoraConocida('2015-03-13T00:00:00Z')).toBe(false);
   });
 });
