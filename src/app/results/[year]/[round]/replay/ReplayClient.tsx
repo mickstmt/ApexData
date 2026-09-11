@@ -442,11 +442,13 @@ function Replay({
         />
       </div>
 
-      {/* Los mandos del móvil, al alcance del pulgar: fijos sobre la barra
-          de pestañas de la app, que mide 4rem más el borde seguro. */}
+      {/* Los mandos del móvil, al alcance del pulgar: fijos justo encima de
+          la barra de pestañas, que publica su alto en `--barra-inferior`.
+          Antes decían `4rem`, cuatro píxeles más que la barra, y por esa
+          rendija se veía la página de detrás. */}
       <div
         ref={mandosRef}
-        className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-40 border-t border-[#26262E] bg-[#0B0B0F] md:hidden"
+        className="fixed inset-x-0 bottom-[var(--barra-inferior)] z-40 border-t border-[#26262E] bg-[#0B0B0F] md:hidden"
       >
         {controles(false)}
       </div>

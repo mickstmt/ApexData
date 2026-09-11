@@ -70,8 +70,40 @@ export function MobileTabBar() {
   // Posición y ancho de la pestaña activa, medidos del DOM: los anchos los
   // reparte flex, así que no se pueden calcular de antemano.
   const lista = useRef<HTMLUListElement>(null);
+  const barra = useRef<HTMLElement>(null);
   const [pildora, setPildora] = useState<React.CSSProperties>({ opacity: 0 });
   const [menuAbierto, setMenuAbierto] = useState(false);
+
+  // La barra dice cuánto tapa, y así nadie más tiene que adivinarlo.
+  //
+  // Había cinco suposiciones sueltas por la app —`4rem`, `4.5rem`, `4.75rem`,
+  // `5rem`— y ninguna acertaba: el alto sale del icono, de la etiqueta y del
+  // borde seguro del teléfono, tres cosas que desde CSS no se pueden sumar de
+  // antemano. Los mandos del replay se apartaban `4rem`, cuatro píxeles de
+  // más, y por esa rendija asomaba el pie de página en el iPhone.
+  //
+  // Se mide, no se calcula, por lo mismo que se mide la cabecera en el replay:
+  // el compilador no ve el layout. Desde `md` la barra está oculta y mide
+  // cero, que es justo lo que hay que publicar.
+  useEffect(() => {
+    const nodo = barra.current;
+    if (!nodo) return;
+
+    const publicar = () =>
+      document.documentElement.style.setProperty('--barra-inferior', `${nodo.offsetHeight}px`);
+
+    publicar();
+    // El observador ve los cambios de contenido; el de la ventana, el cruce de
+    // `md`, donde la barra pasa a `display:none` y el observador puede callar.
+    const observador = new ResizeObserver(publicar);
+    observador.observe(nodo);
+    window.addEventListener('resize', publicar);
+    return () => {
+      observador.disconnect();
+      window.removeEventListener('resize', publicar);
+      document.documentElement.style.removeProperty('--barra-inferior');
+    };
+  }, []);
 
   useEffect(() => {
     const nodo = lista.current;
@@ -104,6 +136,7 @@ export function MobileTabBar() {
   return (
     <>
       <nav
+        ref={barra}
         aria-label="Navegación principal"
       className={cn(
         'fixed inset-x-0 bottom-0 z-50 border-t border-border md:hidden',

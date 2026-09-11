@@ -150,6 +150,36 @@ for (const [nombre, viewport] of [
       expect(tocada.y).toBeGreaterThanOrEqual(pegado.y + pegado.height - 1);
       expect(tocada.y + tocada.height).toBeLessThanOrEqual(cajaPlay.y + 1);
     });
+
+    test('sin pie de página, y los mandos a ras de la barra de pestañas', async ({ page }) => {
+      await simularCarrera(page);
+      await page.goto(REPLAY);
+      await expect(page.locator('canvas[aria-label*="Mapa de la carrera"]').first()).toBeVisible({
+        timeout: 20_000,
+      });
+
+      // Hasta el final del todo, que es donde se veía el problema.
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.waitForTimeout(300);
+
+      // El pie no se pinta en una pantalla que ocupa la ventana entera. Medía
+      // 553 px y salía entre el mapa pegado y los mandos fijos: el logo de
+      // ApexData y la navegación repetida, debajo del circuito.
+      await expect(page.locator('footer')).toHaveCount(0);
+
+      // Y los mandos quedan a ras de la barra, sin rendija por la que ver la
+      // página de detrás. Iban a `4rem`, cuatro píxeles más que la barra.
+      //
+      // Ojo al leer esto: aquí el borde seguro del teléfono vale cero, así que
+      // aquellos cuatro píxeles salían como un solapamiento inofensivo y no
+      // como el hueco que se veía en el iPhone. Lo que se comprueba es que los
+      // dos bordes COINCIDEN, que es lo único cierto con y sin borde seguro.
+      const barra = page.getByRole('navigation', { name: 'Navegación principal' });
+      const mandos = page.locator('div.fixed.inset-x-0.z-40').first();
+      const cajaBarra = (await barra.boundingBox())!;
+      const cajaMandos = (await mandos.boundingBox())!;
+      expect(Math.abs(cajaMandos.y + cajaMandos.height - cajaBarra.y)).toBeLessThanOrEqual(1);
+    });
   });
 }
 

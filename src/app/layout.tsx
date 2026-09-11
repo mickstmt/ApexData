@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Chakra_Petch, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
+import { PieDeLaApp } from '@/components/layout/PieDeLaApp';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PageTransition } from '@/components/providers/PageTransition';
 import { NavigationProgress } from '@/components/providers/NavigationProgress';
@@ -145,11 +145,10 @@ export default async function RootLayout({
               <main id="contenido" className="flex-1">
                 <PageTransition>{children}</PageTransition>
               </main>
-              {/* Clearance for the fixed tab bar, below the last element on the
-                  page so the footer stays reachable on phones. */}
-              <div className="pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-                <Footer />
-              </div>
+              {/* El pie, y el hueco que le deja la barra inferior para que
+                  siga siendo alcanzable en el móvil. Las pantallas que ocupan
+                  la ventana entera no llevan ninguno de los dos. */}
+              <PieDeLaApp />
               <MobileTabBar />
               <IosInstallHint />
               <PwaRegister />

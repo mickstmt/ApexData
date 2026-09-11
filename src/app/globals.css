@@ -59,6 +59,27 @@
     --podium-gold: 45 90% 24%;
     --podium-silver: 240 6% 38%;
     --podium-bronze: 25 75% 32%;
+
+    /* Cuánto tapa la barra inferior, para todo el que necesite apartarse de
+       ella. Existe porque hasta ahora cada sitio se lo inventaba —`4rem`,
+       `4.5rem`, `4.75rem`, `5rem`— y el alto de verdad no es ninguno: la barra
+       mide 60 px de contenido más el borde seguro del teléfono. Los mandos del
+       replay usaban `4rem`, cuatro píxeles de más, y por esa rendija se veía el
+       pie de página en el iPhone. En el Chrome de escritorio el borde seguro es
+       cero y en vez de rendija había un solapamiento de cuatro píxeles, que no
+       se nota; por eso ninguna prueba lo vio.
+
+       Este valor es solo el de partida: `MobileTabBar` lo sustituye por su alto
+       medido en cuanto monta, así que si la barra cambia —y el rediseño
+       flotante la va a cambiar— nadie tiene que acordarse de actualizar nada. */
+    --barra-inferior: calc(3.75rem + max(0.5rem, env(safe-area-inset-bottom)));
+  }
+
+  /* Desde `md` no hay barra inferior: nada tiene de qué apartarse. */
+  @media (min-width: 768px) {
+    :root {
+      --barra-inferior: 0px;
+    }
   }
 
   .dark {
