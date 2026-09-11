@@ -30,6 +30,49 @@
 
 ---
 
+# REGISTRO DE AVANCE
+
+> **GO dado por el usuario el 2026-09-11.** Orden confirmado por el: bugs primero.
+> Cada linea de aqui abajo esta medida en el navegador y cubierta con prueba; el
+> detalle largo vive en el mensaje de cada commit.
+
+| Punto | Estado | Commit | Lo que quedo medido |
+|---|---|---|---|
+| **18** carrera de fuentes | HECHO, **sin verificar** | `1d2413b` | El lado web esta en produccion. La prueba llega sola con la FP3 del sabado 12: `firstProbe` cerca de `0m 00s` y `probes` mucho mayor que 1. |
+| **7 + 16** (parte de bug) | HECHO | `4428cee` | El pie medía 553 px DENTRO del replay en iPhone 390, entre el mapa pegado y los mandos. Y la barra no publicaba su alto: cinco sitios lo adivinaban (`4rem`, `4.5rem`, `4.75rem`, `5rem`) y el real es 60 px + borde seguro. Rendija de 4 px -> 0. Scroll 2163 -> 1546 px. |
+| **8** modo claro en el replay | HECHO | `9751d2d` | Decision del usuario contra mi recomendacion, y con razon: «si me das la opcion, damela bien». En claro el replay es `rgb(247,247,248)`, el mismo fondo que el cuerpo y las dos barras. En oscuro cada valor computado coincide uno a uno con el hex que estaba a fuego. |
+| **10b** cursor del scrubber | HECHO | `e4d7771` | No era del tema claro: el riel es `absolute` y el `input` era estatico, asi que el riel pintaba ENCIMA y partia el cursor. Pasaba igual en oscuro desde siempre. |
+| **21** cabecera del detalle | HECHO | `9a21a01` | Australia 2026 en Europe/Madrid: carrera 8 mar 05:00, clasi 7 mar 06:00, P1 6 mar 02:30, P2 6 mar 06:00, P3 7 mar 02:30. Antes las cinco decian lo mismo. |
+| **16** pie en la PWA | HECHO | `1baf369` | Decision del usuario: el pie es de la web. Pero hacia dos trabajos: la atribucion a Jolpica y OpenF1 es **condicion de licencia** (las dos CC BY-NC-SA 4.0, verificado en sus terminos) y ese pie era el unico sitio de la app donde se las nombraba. Se muda a `/acerca`, en el menu «Mas». |
+
+**Suites al cerrar el bloque**: 381 unitarias, 117 e2e (11 nuevas), tipos y lint
+limpios. Build igual que el CI.
+
+## Hallazgos abiertos que NO estaban en la lista
+
+Salieron trabajando y estan **sin decidir**. Los dos cambian el aspecto del tema
+oscuro, que el usuario ya dio por bueno, asi que no se tocan por iniciativa mia.
+
+- **A. La pildora de bandera roja no llega al contraste.** Texto blanco sobre
+  `#FF4238` = **3,45:1**, por debajo del 4,5 que pide un texto pequeño. Falla
+  **hoy, y en los dos temas**. En negro daria 6,09. -> a mockup.
+- **B. El trazado en oscuro tampoco.** `#50505E` sobre carbon = **2,48:1**, por
+  debajo del 3:1 que pide un grafico. En claro quedo en 3,19:1. Subirlo aclara
+  el circuito, y el usuario dijo que le gusta como se ve. -> a mockup.
+- **C. `.claude/worktrees/` estaba sin ignorar.** Un `git add -A` casi mete un
+  worktree entero en un commit como repositorio embebido. Ya esta en
+  `.gitignore` (va en `9751d2d`). No se ha borrado nada del disco.
+
+## Lo que queda, en el orden acordado
+
+2. **Mockup del layout movil**, los cuatro juntos: 6, 15, 14, 13
+3. **Datos**: 1, 4
+4. **Replay**: 9, 10a, 11, 2, 12, 22
+5. **Sesiones**: 3+20
+6. **Cuentas**: 17, y 5
+
+---
+
 # Mejoras del replay — acumulando hasta el GO del usuario (2026-09-11)
 
 ## 1. BUG · Los huecos se suman durante la bandera roja (y sobreviven al reinicio)
@@ -183,12 +226,20 @@ Esta ligado a los puntos 7 y 13: es el mismo layout.
 
 ## 7. BUG · Hueco feo en el pie, entre los mandos y la barra de menu
 
+> **HECHO** (`4428cee`). Eran dos fallos: el pie pintandose dentro del replay
+> (553 px en iPhone 390) y una rendija de 4 px porque `4rem` no es el alto de la
+> barra. Ver el REGISTRO DE AVANCE.
+
 Bajando del todo, entre el menu del replay y la barra de pestañas de la app **se ve lo
 que hay detras**. En la captura de las 8:29 se aprecia peor de lo que suena: bajo el
 mapa aparece **otra vez el logo «ApexData»** y asoma la palabra «Pilotos» por debajo de
 los mandos. No es solo un hueco: se esta colando la pagina de detras.
 
 ## 8. BUG · El modo claro no se interpreta bien dentro del replay
+
+> **HECHO** (`9751d2d`). El usuario eligio la opcion B del mockup —replay claro
+> de verdad— contra mi recomendacion de «modo cine», y el argumento era mejor
+> que el mio. Ver el REGISTRO DE AVANCE.
 
 Activando el tema claro **estando en el replay**, queda mal: «es como si el replay
 quedara superpuesto». En la captura de las 8:26 se ve la cabecera y la barra de
@@ -201,6 +252,9 @@ que salten. Texto del usuario: «ya tu conoces las mejores formas pero creo que 
 entiendes lo que busco».
 
 ## 10. UX+BUG · La barra de progreso no dice en que minuto estas
+
+> **10b HECHO** (`e4d7771`): el cursor se pintaba detras del riel. **10a SIGUE
+> ABIERTO**: falta el indicador de tiempo, que es una funcion nueva y va a mockup.
 
 Dos cosas en una:
 - **Falta el indicador de tiempo**: ni donde estas ahora, ni a donde vas mientras
@@ -229,9 +283,7 @@ lista de resultados. El usuario dice que **ademas de estar descuadrado, el sitio
 malo**. Pide expresamente: «me lo consultas con opciones o mockup».
 
 ---
-# (marcador antiguo)
-# ESTADO-VIEJO: lista cerrada por el usuario («esto seria todo por el momento»).
-# FALTA EL GO. No tocar codigo hasta entonces.
+# (marcador antiguo, ya superado: el GO se dio el 2026-09-11)
 
 
 # ---- Segunda tanda: barra inferior, PWA y cuentas ----
@@ -271,6 +323,9 @@ punto 6.
 
 ## 16. ARQUITECTURA · ¿Pie de pagina en la PWA?
 
+> **HECHO** (`4428cee` la parte de bug, `1baf369` la decision). Ver el REGISTRO
+> DE AVANCE: la atribucion a las fuentes resulto ser condicion de licencia.
+
 Le hace ruido que la PWA (iOS y Android) lleve **pie de pagina**, sobre todo **la
 navegacion** que ya esta en la barra inferior. Entiende que en la **web** si tenga
 sentido. Propone mover los datos del proyecto a otro sitio. Pide **analisis y
@@ -305,8 +360,8 @@ sincronizacion sin cuentas, hasta cuentas de verdad), con coste y con lo que imp
 privacidad y despliegue.
 
 ---
-# ESTADO: lista CERRADA por el usuario («esto creo que seria todo jeje»). 17 puntos.
-# FALTA EL GO. No se toca codigo hasta entonces.
+# ESTADO: lista CERRADA por el usuario («esto creo que seria todo jeje»).
+# GO dado el 2026-09-11. El avance se lleva en el REGISTRO DE AVANCE de arriba.
 
 ## 17-bis. ACLARACION DEL USUARIO
 La pregunta del punto 17 es concretamente: **¿es viable un modulo de login?** — por
@@ -410,6 +465,8 @@ provisional, no solo decirlo.
 La animacion del reordenamiento -> a mockup, no se decide por escrito.
 
 ## 21. UX · La cabecera del detalle enseña la hora de la CARRERA en todas las pestañas
+
+> **HECHO** (`9a21a01`). Ver el REGISTRO DE AVANCE.
 
 En la tarjeta del calendario, «PRÁCTICA 1 · vie, 11 sept, 06:30». Al entrar en el
 detalle y estar en la pestaña «Práctica Libre 1», la cabecera dice
