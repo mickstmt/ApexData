@@ -94,7 +94,12 @@ h1 { margin: 0 0 6px; font-size: 25px; line-height: 1.15; letter-spacing: -.01em
 /* --- La silueta de referencia: mismo sitio, sin desenfoque ---------------- */
 .silueta {
   position: fixed; left: var(--lado); right: var(--lado);
-  bottom: calc(var(--abajo) + env(safe-area-inset-bottom));
+  /* Desde el borde de VERDAD, sin sumar `env(safe-area-inset-bottom)`.
+     Sumarlo era el fallo: en este iPhone son ~34 px, asi que «6 px» quedaban
+     a 40 del cristal. WhatsApp y Flashscore no lo suman — dejan que la barra
+     baje hasta la zona del indicador, y por eso el indicador blanco les cae
+     encima. Es lo que el usuario pedia al enseñar esas dos capturas. */
+  bottom: var(--abajo);
   height: 68px; border-radius: 34px;
   border: 2px dashed var(--aviso);
   pointer-events: none; z-index: 49;
@@ -103,7 +108,7 @@ h1 { margin: 0 0 6px; font-size: 25px; line-height: 1.15; letter-spacing: -.01em
 /* --- La barra ------------------------------------------------------------- */
 nav {
   position: fixed; left: var(--lado); right: var(--lado);
-  bottom: calc(var(--abajo) + env(safe-area-inset-bottom));
+  bottom: var(--abajo);
   height: 68px; padding: 5px; border-radius: 34px;
   border: 1px solid var(--barra-borde);
   box-shadow: 0 10px 34px rgba(0,0,0,0.45);
@@ -148,18 +153,20 @@ nav .corta { display: none; }
 .modo h2 { color: var(--aviso); }
 .pasos { margin: 8px 0 0; padding-left: 20px; color: var(--apagado); font-size: 13.5px; }
 .pasos li { margin-bottom: 5px; }
-#abajo-6:checked ~ nav, #abajo-6:checked ~ .silueta { --abajo: 6px; }
-#abajo-6:checked ~ .hoja label[for="abajo-6"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
-#abajo-10:checked ~ nav, #abajo-10:checked ~ .silueta { --abajo: 10px; }
-#abajo-10:checked ~ .hoja label[for="abajo-10"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
-#abajo-14:checked ~ nav, #abajo-14:checked ~ .silueta { --abajo: 14px; }
-#abajo-14:checked ~ .hoja label[for="abajo-14"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
-#abajo-18:checked ~ nav, #abajo-18:checked ~ .silueta { --abajo: 18px; }
-#abajo-18:checked ~ .hoja label[for="abajo-18"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
-#abajo-22:checked ~ nav, #abajo-22:checked ~ .silueta { --abajo: 22px; }
-#abajo-22:checked ~ .hoja label[for="abajo-22"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
-#abajo-28:checked ~ nav, #abajo-28:checked ~ .silueta { --abajo: 28px; }
-#abajo-28:checked ~ .hoja label[for="abajo-28"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-0:checked ~ nav, #abajo-0:checked ~ .silueta { --abajo: 0px; }
+#abajo-0:checked ~ .hoja label[for="abajo-0"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-4:checked ~ nav, #abajo-4:checked ~ .silueta { --abajo: 4px; }
+#abajo-4:checked ~ .hoja label[for="abajo-4"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-8:checked ~ nav, #abajo-8:checked ~ .silueta { --abajo: 8px; }
+#abajo-8:checked ~ .hoja label[for="abajo-8"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-12:checked ~ nav, #abajo-12:checked ~ .silueta { --abajo: 12px; }
+#abajo-12:checked ~ .hoja label[for="abajo-12"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-16:checked ~ nav, #abajo-16:checked ~ .silueta { --abajo: 16px; }
+#abajo-16:checked ~ .hoja label[for="abajo-16"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-20:checked ~ nav, #abajo-20:checked ~ .silueta { --abajo: 20px; }
+#abajo-20:checked ~ .hoja label[for="abajo-20"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-24:checked ~ nav, #abajo-24:checked ~ .silueta { --abajo: 24px; }
+#abajo-24:checked ~ .hoja label[for="abajo-24"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
 #lado-4:checked ~ nav, #lado-4:checked ~ .silueta { --lado: 4px; }
 #lado-4:checked ~ .hoja label[for="lado-4"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
 #lado-8:checked ~ nav, #lado-8:checked ~ .silueta { --lado: 8px; }
@@ -199,24 +206,25 @@ nav .corta { display: none; }
 </head>
 <body>
 
+<input type="radio" name="abajo" id="abajo-0" class="oculto">
+<input type="radio" name="abajo" id="abajo-4" class="oculto">
+<input type="radio" name="abajo" id="abajo-8" class="oculto" checked>
+<input type="radio" name="abajo" id="abajo-12" class="oculto">
+<input type="radio" name="abajo" id="abajo-16" class="oculto">
+<input type="radio" name="abajo" id="abajo-20" class="oculto">
+<input type="radio" name="abajo" id="abajo-24" class="oculto">
 <input type="radio" name="cristal" id="cristal-si" class="oculto" checked>
 <input type="radio" name="cristal" id="cristal-no" class="oculto">
 <input type="radio" name="cristal" id="cristal-opaco" class="oculto">
-<input type="radio" name="abajo" id="abajo-6" class="oculto">
-<input type="radio" name="abajo" id="abajo-10" class="oculto">
-<input type="radio" name="abajo" id="abajo-14" class="oculto" checked>
-<input type="radio" name="abajo" id="abajo-18" class="oculto">
-<input type="radio" name="abajo" id="abajo-22" class="oculto">
-<input type="radio" name="abajo" id="abajo-28" class="oculto">
 <input type="radio" name="lado" id="lado-4" class="oculto">
 <input type="radio" name="lado" id="lado-8" class="oculto">
-<input type="radio" name="lado" id="lado-12" class="oculto" checked>
+<input type="radio" name="lado" id="lado-12" class="oculto">
 <input type="radio" name="lado" id="lado-16" class="oculto">
 <input type="radio" name="lado" id="lado-22" class="oculto">
-<input type="radio" name="lado" id="lado-28" class="oculto">
-<input type="radio" name="etq" id="etq-larga" class="oculto" checked>
+<input type="radio" name="lado" id="lado-28" class="oculto" checked>
+<input type="radio" name="etq" id="etq-larga" class="oculto">
 <input type="radio" name="etq" id="etq-pequena" class="oculto">
-<input type="radio" name="etq" id="etq-corta" class="oculto">
+<input type="radio" name="etq" id="etq-corta" class="oculto" checked>
 <input type="radio" name="etq" id="etq-puntos" class="oculto">
 <input type="radio" name="tab" id="tab-0" class="oculto" checked>
 <input type="radio" name="tab" id="tab-1" class="oculto">
@@ -241,14 +249,15 @@ nav .corta { display: none; }
   </div>
 
   <div class="panel aviso">
-    <h2>Lo que hay que mirar</h2>
-    <p>El <b>contorno naranja a rayas</b> está dibujado exactamente donde debe ir la barra, y no lleva desenfoque. Si al desplazar la barra se despega de él, el desenfoque es el culpable.</p>
-    <p>Si los dos se mueven juntos, la causa es otra y hay que seguir buscando. <b>Las dos respuestas sirven.</b></p>
+    <h2>La pregunta que queda</h2>
+    <p>Se movieron los dos juntos, así que el desenfoque está descartado. Falta saber una cosa concreta:</p>
+    <p><b>Cuando dejas de desplazar y levantas el dedo, ¿la barra vuelve sola a su sitio, o se queda arriba?</b></p>
+    <p>Si vuelve sola, es que iOS la repinta tarde durante el gesto y se arregla de una forma; si se queda, es otra cosa distinta.</p>
   </div>
 
   <div class="panel">
-    <h2>El cristal</h2>
-    <p>Prueba las tres, desplazando entre una y otra.</p>
+    <h2>El cristal — descartado</h2>
+    <p>La barra y el contorno se movieron <b>juntos</b>, y el contorno no lleva desenfoque. Si el cristal fuera el culpable, se habrían separado. Queda aquí por si quieres comparar cómo se ve.</p>
     <div class="grupo">
       <label for="cristal-si">Con desenfoque (como hoy)</label>
       <label for="cristal-no">Sin desenfoque</label>
@@ -258,20 +267,22 @@ nav .corta { display: none; }
 
   <div class="panel">
     <h2>Separación del borde de abajo</h2>
-    <p>Hoy son 16 px, y te parecen pocos. Dime cuál te gusta.</p>
+    <p><b>Ahora se mide desde el borde de verdad.</b> Antes le sumaba el área segura del iPhone (~34 px), así que «6 px» eran 40 y por eso ninguna se acercaba a WhatsApp.</p>
+    <p>Con valores bajos el indicador blanco de iOS caerá <b>encima</b> de la barra, igual que en tus capturas. Es lo correcto.</p>
     <div class="grupo">
-        <label for="abajo-6">6px</label>
-        <label for="abajo-10">10px</label>
-        <label for="abajo-14">14px</label>
-        <label for="abajo-18">18px</label>
-        <label for="abajo-22">22px</label>
-        <label for="abajo-28">28px</label>
+        <label for="abajo-0">0px</label>
+        <label for="abajo-4">4px</label>
+        <label for="abajo-8">8px</label>
+        <label for="abajo-12">12px</label>
+        <label for="abajo-16">16px</label>
+        <label for="abajo-20">20px</label>
+        <label for="abajo-24">24px</label>
     </div>
   </div>
 
   <div class="panel">
     <h2>Separación de los lados</h2>
-    <p>Hoy son 10 px.</p>
+    <p>Elegiste <b>28 px</b>, ya marcado. Cámbialo si al bajar la barra deja de encajar.</p>
     <div class="grupo">
         <label for="lado-4">4px</label>
         <label for="lado-8">8px</label>
@@ -283,8 +294,8 @@ nav .corta { display: none; }
   </div>
 
   <div class="panel">
-    <h2>La etiqueta que no cabe</h2>
-    <p>«Clasificación» mide 71 px de texto en una casilla de 60 a lo ancho de un Android. Recomiendo <b>palabras cortas</b>.</p>
+    <h2>La etiqueta — elegida</h2>
+    <p><b>Palabras cortas</b>, ya marcada: «Fechas» y «Puntos».</p>
     <div class="grupo">
       <label for="etq-larga">Como hoy</label>
       <label for="etq-pequena">Letra menor</label>
@@ -294,8 +305,8 @@ nav .corta { display: none; }
   </div>
 
   <div class="panel">
-    <h2>El realce</h2>
-    <p>Toca las pestañas de la barra: ¿el realce <b>recorre</b> la barra o <b>salta</b> de sitio? Prueba de un extremo al otro, de Inicio a Más.</p>
+    <h2>El realce — comprobado</h2>
+    <p>Aquí recorre bien y el toque doble responde. En la app no, así que la causa está en la app y no en la barra: lo siguiente que hay que mirar son las transiciones de vista.</p>
   </div>
 
     <div class="fila-piloto"><span class="pos">1</span><span class="tira" style="background:#00A19B"></span><span class="quien"><b>Andrea Kimi Antonelli</b><span>Mercedes</span></span><span class="pts">267</span></div>
