@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El mapa y la torre — punto 26</title>
+<style>
+/* ---------------------------------------------------------------------------
+   Punto 26: al encoger el circuito se pierden los primeros clasificados.
+
+   Medido en la app real, a 390 px:
+     sin desplazar     mapa 300 px · primera fila visible P1 · 6 filas enteras
+     encogido del todo mapa 108 px · primera fila visible P6 · 10 filas enteras
+
+   No es un efecto raro: el encogido se paga con 220 px de desplazamiento de la
+   torre, y con filas de 44 px eso son exactamente cinco filas. Mientras el
+   gesto sea el mismo, encoger el mapa costará filas siempre.
+
+   Los tokens son los del replay, copiados de `globals.css` sin retocar.
+--------------------------------------------------------------------------- */
+:root {
+  color-scheme: light dark;
+  --fondo: #F7F7F8; --superficie: #F0F0F2; --borde: #DEDEE3; --borde-fila: #E8E8EC;
+  --texto: #151519; --apagado: #55555E; --acento: #526600; --acento-tinta: #FFFFFF;
+  --trazado: #8A8A94; --boton: #E4E4E9;
+  --papel: #EDEFEA; --tarjeta: #FFFFFF; --linea: #D8DCD2; --tinta: #191C17; --tinta-2: #565C52;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #0B0B0F; --superficie: #151519; --borde: #26262E; --borde-fila: #16161C;
+    --texto: #F5F5F7; --apagado: #A2A2AC; --acento: #CCFF00; --acento-tinta: #000000;
+    --trazado: #6B6B78; --boton: #1F1F27;
+    --papel: #0F110E; --tarjeta: #171A15; --linea: #272B23; --tinta: #E9EDE4; --tinta-2: #9AA292;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0; padding: 22px 16px 60px;
+  background: var(--papel); color: var(--tinta);
+  font: 400 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.envoltura { max-width: 1100px; margin: 0 auto; display: grid; gap: 22px; min-width: 0; }
+
+h1 { margin: 0 0 6px; font-size: clamp(24px, 4vw, 32px); line-height: 1.1; letter-spacing: -.01em; }
+.sub { margin: 0; max-width: 62ch; color: var(--tinta-2); font-size: 15px; }
+.sub b { color: var(--tinta); }
+
+.medido {
+  border: 1px solid var(--linea); border-left: 3px solid #A33B00; border-radius: 12px;
+  background: var(--tarjeta); padding: 14px 16px;
+  font: 400 13.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-x: auto;
+}
+@media (prefers-color-scheme: dark) { .medido { border-left-color: #FFA94D; } }
+
+.mandos {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  border: 1px solid var(--linea); border-radius: 12px; background: var(--tarjeta); padding: 10px 12px;
+}
+.mandos .etq {
+  font: 600 10.5px/1 ui-monospace, monospace; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--tinta-2); margin-right: 4px;
+}
+.mandos button {
+  min-height: 40px; padding: 0 12px; border: 1px solid var(--linea); border-radius: 9px;
+  background: transparent; color: var(--tinta-2); font: 500 13.5px/1.2 inherit; cursor: pointer;
+}
+.mandos button[aria-pressed="true"] {
+  background: var(--acento); border-color: var(--acento); color: var(--acento-tinta); font-weight: 600;
+}
+
+.escenario { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(360px,100%), 1fr)); }
+
+.panel { border: 1px solid var(--linea); border-radius: 14px; background: var(--tarjeta); padding: 16px; min-width: 0; }
+.panel h2 { margin: 0 0 4px; font-size: 16px; }
+.panel p { margin: 0 0 10px; font-size: 13.5px; color: var(--tinta-2); }
+.panel p:last-child { margin: 0; }
+.recomendada { border-color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
+.sello {
+  display: inline-block; margin-left: 6px; padding: 3px 7px; border-radius: 5px;
+  background: var(--acento); color: var(--acento-tinta);
+  font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase;
+  vertical-align: middle;
+}
+
+/* --- El teléfono ---------------------------------------------------------- */
+.telefono {
+  width: 390px; max-width: 100%; height: 620px; margin: 0 auto;
+  border: 1px solid var(--linea); border-radius: 18px; overflow: hidden;
+  background: var(--fondo); color: var(--texto);
+  display: grid; grid-template-rows: 44px auto 1fr;
+}
+.t-cab {
+  display: flex; align-items: center; gap: 10px; padding: 0 12px;
+  border-bottom: 1px solid var(--borde); font-size: 15px; font-weight: 700;
+}
+.t-cab .vuelta { font-weight: 400; font-size: 13px; color: var(--apagado); margin-left: auto; }
+
+.t-recorte { overflow: hidden; border-bottom: 1px solid var(--borde); position: relative; }
+.t-escala { transform-origin: top center; }
+.t-mapa { height: 300px; display: grid; place-items: center; }
+.t-mapa svg { width: 62%; height: 240px; }
+
+/* El tirador: solo en las variantes que lo usan. */
+.t-tirador {
+  position: absolute; inset-inline: 0; bottom: 0; height: 26px;
+  display: grid; place-items: center; cursor: grab;
+  background: linear-gradient(to top, var(--fondo), transparent);
+}
+.t-tirador span { width: 44px; height: 4px; border-radius: 2px; background: var(--trazado); }
+.t-tirador[hidden] { display: none; }
+
+.t-boton-mapa {
+  position: absolute; right: 8px; bottom: 8px;
+  min-height: 36px; padding: 0 12px; border: 1px solid var(--borde); border-radius: 18px;
+  background: var(--superficie); color: var(--texto); font: 600 12px/1 inherit; cursor: pointer;
+}
+.t-boton-mapa[hidden] { display: none; }
+
+.t-torre { overflow-y: auto; }
+.t-fila {
+  display: grid; grid-template-columns: 22px 4px 1fr auto; align-items: center; gap: 10px;
+  height: 44px; padding: 0 12px; border-bottom: 1px solid var(--borde-fila);
+}
+.t-fila .pos { font: 600 13px/1 ui-monospace, monospace; color: var(--apagado); text-align: center; }
+.t-fila .tira { height: 24px; border-radius: 2px; }
+.t-fila .quien { font-weight: 600; font-size: 14px; }
+.t-fila .quien small { display: block; font-weight: 400; font-size: 11.5px; color: var(--apagado); }
+.t-fila .hueco { font: 400 12.5px/1 ui-monospace, monospace; color: var(--apagado); }
+
+.lectura {
+  margin-top: 10px; text-align: center;
+  font: 600 12.5px/1.5 ui-monospace, monospace; color: var(--tinta-2);
+}
+.lectura b { color: var(--tinta); }
+.lectura .mal { color: #A33B00; }
+@media (prefers-color-scheme: dark) { .lectura .mal { color: #FFA94D; } }
+
+.nota { border: 1px solid var(--linea); border-left: 3px solid var(--acento); border-radius: 12px; background: var(--tarjeta); padding: 16px; }
+.nota h3 { margin: 0 0 8px; font-size: 16px; }
+.nota p { margin: 0 0 8px; font-size: 14px; color: var(--tinta-2); }
+.nota p:last-child { margin: 0; }
+.nota b { color: var(--tinta); }
+</style>
+</head>
+<body>
+<div class="envoltura">
+
+  <header>
+    <h1>El mapa y la torre</h1>
+    <p class="sub">Punto 26. Desplaza dentro del teléfono y mira la línea de abajo: te dice <b>qué puesto es el primero que se ve</b> en cada momento.</p>
+  </header>
+
+  <div class="medido">
+medido en la app, a 390 px:
+  sin desplazar      mapa 300 px · primera fila P1 · 6 filas enteras
+  encogido del todo  mapa 108 px · primera fila P6 · 10 filas enteras
+
+  el encogido cuesta 220 px de desplazamiento ÷ 44 px por fila = 5 filas
+  </div>
+
+  <div class="mandos">
+    <span class="etq">Variante</span>
+    <button type="button" data-v="hoy" aria-pressed="true">Como hoy</button>
+    <button type="button" data-v="tirador" aria-pressed="false">Tirador en el mapa</button>
+    <button type="button" data-v="boton" aria-pressed="false">Botón de encoger</button>
+    <button type="button" data-v="pegadas" aria-pressed="false">Tres filas fijas</button>
+  </div>
+
+  <div class="escenario">
+    <div>
+      <div class="telefono">
+        <div class="t-cab">GP de Italia <span class="vuelta">Vuelta 33/53</span></div>
+
+        <div class="t-recorte" id="recorte">
+          <div class="t-escala" id="escala">
+            <div class="t-mapa">
+              <svg viewBox="0 0 300 150" role="img" aria-label="Trazado">
+                <path d="M40 124 L196 124 C232 124 246 108 234 92 L180 30 C172 20 158 20 150 28 L120 56 C112 64 100 64 93 56 L76 38 C66 28 50 32 44 44 L26 84 C18 100 24 118 40 124 Z"
+                      fill="none" stroke="var(--trazado)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+                <circle cx="150" cy="124" r="7" fill="#00A19B"/>
+                <circle cx="126" cy="124" r="6" fill="#FF8000"/>
+                <circle cx="104" cy="124" r="6" fill="#E8002D"/>
+              </svg>
+            </div>
+          </div>
+          <div class="t-tirador" id="tirador" hidden><span></span></div>
+          <button type="button" class="t-boton-mapa" id="botonMapa" hidden>Encoger</button>
+        </div>
+
+        <div class="t-torre" id="torre"></div>
+      </div>
+      <p class="lectura" id="lectura">—</p>
+    </div>
+
+    <div style="display:grid; gap:16px; align-content:start;">
+      <div class="panel" id="p-hoy">
+        <h2>Como hoy</h2>
+        <p>El encogido se paga con el desplazamiento de la torre. Para tener el mapa pequeño hay que haber desplazado 220 px, y esos 220 px son cinco filas que se han ido arriba.</p>
+        <p><b>No tiene arreglo dentro de este gesto</b>: son la misma acción.</p>
+      </div>
+
+      <div class="panel recomendada" id="p-tirador">
+        <h2>Tirador en el mapa <span class="sello">Recomendada</span></h2>
+        <p>Se arrastra el borde de abajo del mapa para encogerlo o agrandarlo. La torre se desplaza aparte y no pierde ni una fila.</p>
+        <p>Es el gesto que ya usan las apps con un mapa arriba y una lista debajo, y <b>se queda donde lo dejes</b>: no vuelve solo al desplazar.</p>
+      </div>
+
+      <div class="panel" id="p-boton">
+        <h2>Botón de encoger</h2>
+        <p>Lo mismo, pero con un toque en vez de un arrastre. Más fácil de descubrir y más fácil de acertar con el pulgar; a cambio, solo tiene dos tamaños.</p>
+      </div>
+
+      <div class="panel" id="p-pegadas">
+        <h2>Tres filas fijas</h2>
+        <p>Se conserva el gesto de hoy, pero el podio se queda pegado bajo el mapa mientras desplazas.</p>
+        <p>Resuelve lo del podio, pero <b>los puestos 4 y 5 se siguen perdiendo</b>, y las tres filas fijas se comen parte del sitio que el encogido acababa de ganar.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="nota">
+    <h3>Lo que recomiendo, y por qué</h3>
+    <p><b>El tirador.</b> El problema de fondo no es cuántas filas se pierden: es que <b>encoger el mapa y recorrer la lista son la misma acción</b>, y por eso se estorban. Cualquier arreglo que conserve ese gesto solo reparte el daño.</p>
+    <p>El tirador los separa de verdad, y además gana algo que hoy no existe: el tamaño <b>se queda</b>. Ahora, si desplazas de vuelta al principio, el mapa se agranda solo aunque no quisieras.</p>
+    <p>El botón hace lo mismo y es más fácil de encontrar; si prefieres tocar antes que arrastrar, es igual de buena. Las tres filas fijas las descarto: dejan el fallo a medias.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+
+  var PILOTOS = [
+    ['ANT','Mercedes','#00A19B','líder'],['NOR','McLaren','#FF8000','+1.284'],
+    ['LEC','Ferrari','#E8002D','+4.007'],['VER','Red Bull','#3671C6','+6.512'],
+    ['RUS','Mercedes','#00A19B','+9.880'],['PIA','McLaren','#FF8000','+12.44'],
+    ['HAM','Ferrari','#E8002D','+15.02'],['ALO','Aston Martin','#229971','+18.77'],
+    ['GAS','Alpine','#0093CC','+21.10'],['OCO','Haas','#B6BABD','+24.63'],
+    ['HUL','Audi','#00E701','+27.05'],['STR','Aston Martin','#229971','+30.91'],
+    ['ALB','Williams','#1868DB','+33.40'],['SAI','Williams','#1868DB','+36.22'],
+    ['TSU','Racing Bulls','#6692FF','+39.80'],['LAW','Racing Bulls','#6692FF','+42.15'],
+    ['BEA','Haas','#B6BABD','+45.63'],['COL','Alpine','#0093CC','+48.02'],
+    ['BOR','Audi','#00E701','+51.44'],['BOT','Cadillac','#B00000','+54.90']
+  ];
+
+  var torre = $('torre'), recorte = $('recorte'), escala = $('escala');
+  var tirador = $('tirador'), botonMapa = $('botonMapa'), lectura = $('lectura');
+
+  PILOTOS.forEach(function (p, i) {
+    var d = document.createElement('div');
+    d.className = 't-fila';
+    d.dataset.puesto = String(i + 1);
+    d.innerHTML = '<span class="pos">' + (i + 1) + '</span>' +
+      '<span class="tira" style="background:' + p[2] + '"></span>' +
+      '<span class="quien">' + p[0] + '<small>' + p[1] + '</small></span>' +
+      '<span class="hueco">' + p[3] + '</span>';
+    torre.appendChild(d);
+  });
+
+  var ALTO = 300, MINIMO = 0.36, RECORRIDO = 220;
+  var variante = 'hoy';
+  var k = 1;                 // escala del mapa
+  var pegadas = 0;           // cuántas filas se quedan fijas
+
+  function aplicarMapa() {
+    escala.style.transform = 'scale(' + k + ')';
+    recorte.style.height = Math.round(ALTO * k) + 'px';
+    botonMapa.textContent = k > (1 + MINIMO) / 2 ? 'Encoger' : 'Agrandar';
+  }
+
+  function aplicarPegadas() {
+    var filas = torre.querySelectorAll('.t-fila');
+    for (var i = 0; i < filas.length; i++) {
+      var fija = i < pegadas;
+      filas[i].style.position = fija ? 'sticky' : '';
+      filas[i].style.top = fija ? (i * 44) + 'px' : '';
+      filas[i].style.zIndex = fija ? String(10 - i) : '';
+      filas[i].style.background = fija ? 'var(--fondo)' : '';
+    }
+  }
+
+  /**
+   * Qué puestos se ven, y cuáles faltan.
+   *
+   * Lo de «cuáles faltan» no es adorno: con tres filas fijas, la lectura decía
+   * «primera fila P1, 13 filas» y parecía la mejor de las cuatro — cuando los
+   * puestos 4 y 5 seguían perdidos, solo que ahora en medio de la lista en vez
+   * de arriba. Un mockup que enseña un número halagador de una opción peor
+   * hace elegir mal, así que el hueco se dice.
+   */
+  function leer() {
+    var cajaTorre = torre.getBoundingClientRect();
+    var filas = torre.querySelectorAll('.t-fila');
+    var visibles = [];
+    for (var i = 0; i < filas.length; i++) {
+      var c = filas[i].getBoundingClientRect();
+      if (c.top >= cajaTorre.top - 1 && c.bottom <= cajaTorre.bottom + 1) {
+        visibles.push(Number(filas[i].dataset.puesto));
+      }
+    }
+
+    var faltan = [];
+    if (visibles.length) {
+      for (var p = 1; p < visibles[visibles.length - 1]; p++) {
+        if (visibles.indexOf(p) === -1) faltan.push(p);
+      }
+    }
+
+    lectura.innerHTML =
+      'mapa <b>' + Math.round(ALTO * k) + ' px</b> · ' +
+      '<b>' + visibles.length + '</b> filas enteras · ' +
+      (faltan.length
+        ? 'faltan <b class="mal">P' + faltan.join(', P') + '</b>'
+        : 'desde <b>P1</b>, sin huecos');
+  }
+
+  torre.addEventListener('scroll', function () {
+    if (variante === 'hoy' || variante === 'pegadas') {
+      var avance = Math.min(1, Math.max(0, torre.scrollTop / RECORRIDO));
+      k = 1 - avance * (1 - MINIMO);
+      aplicarMapa();
+    }
+    leer();
+  }, { passive: true });
+
+  // --- El tirador ----------------------------------------------------------
+  var arrastrando = false, desdeY = 0, desdeK = 1;
+
+  function empezar(e) {
+    arrastrando = true;
+    desdeY = (e.touches ? e.touches[0].clientY : e.clientY);
+    desdeK = k;
+    e.preventDefault();
+  }
+  function mover(e) {
+    if (!arrastrando) return;
+    var y = (e.touches ? e.touches[0].clientY : e.clientY);
+    k = Math.min(1, Math.max(MINIMO, desdeK + (y - desdeY) / ALTO));
+    aplicarMapa();
+    leer();
+    e.preventDefault();
+  }
+  function soltar() { arrastrando = false; }
+
+  tirador.addEventListener('pointerdown', empezar);
+  window.addEventListener('pointermove', mover);
+  window.addEventListener('pointerup', soltar);
+  tirador.addEventListener('touchstart', empezar, { passive: false });
+  window.addEventListener('touchmove', mover, { passive: false });
+  window.addEventListener('touchend', soltar);
+
+  botonMapa.addEventListener('click', function () {
+    k = k > (1 + MINIMO) / 2 ? MINIMO : 1;
+    aplicarMapa();
+    leer();
+  });
+
+  // --- Cambiar de variante -------------------------------------------------
+  var caja = document.querySelector('.mandos');
+  caja.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    Array.prototype.forEach.call(caja.querySelectorAll('button'), function (o) {
+      o.setAttribute('aria-pressed', String(o === b));
+    });
+
+    variante = b.dataset.v;
+    torre.scrollTop = 0;
+    k = 1;
+    pegadas = variante === 'pegadas' ? 3 : 0;
+    tirador.hidden = variante !== 'tirador';
+    botonMapa.hidden = variante !== 'boton';
+
+    Array.prototype.forEach.call(document.querySelectorAll('.panel'), function (p) {
+      p.style.opacity = p.id === 'p-' + variante ? '1' : '.45';
+    });
+
+    aplicarMapa();
+    aplicarPegadas();
+    leer();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.panel'), function (p) {
+    p.style.opacity = p.id === 'p-hoy' ? '1' : '.45';
+  });
+  aplicarMapa();
+  leer();
+})();
+</script>
+</body>
+</html>
