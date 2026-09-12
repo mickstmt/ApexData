@@ -45,8 +45,20 @@
 | **21** cabecera del detalle | HECHO | `9a21a01` | Australia 2026 en Europe/Madrid: carrera 8 mar 05:00, clasi 7 mar 06:00, P1 6 mar 02:30, P2 6 mar 06:00, P3 7 mar 02:30. Antes las cinco decian lo mismo. |
 | **16** pie en la PWA | HECHO | `1baf369` | Decision del usuario: el pie es de la web. Pero hacia dos trabajos: la atribucion a Jolpica y OpenF1 es **condicion de licencia** (las dos CC BY-NC-SA 4.0, verificado en sus terminos) y ese pie era el unico sitio de la app donde se las nombraba. Se muda a `/acerca`, en el menu «Mas». |
 
-**Suites al cerrar el bloque**: 395 unitarias, 117 e2e (11 nuevas), tipos y lint
+| **14** barra inferior flotante | HECHO | `2758640` | Afinada por el usuario sobre mockup contra SUS referencias (WhatsApp, Flashscore, Apple Music): alto 68, 10 a los lados, 16 abajo, pildora completa, icono 26, letra 11,5, `blur(2px) saturate(1.8)`. Lo que costo encontrar: **el desenfoque es lo que tapa, no la opacidad** — a la misma opacidad, con 0 se lee una fila entera por debajo y con 6 desaparece. Iconos nuevos: casco, podio y bandera a cuadros. |
+| **6 + 15** el mapa se encoge | HECHO | `1cc677b` | De 300 a 108 px al desplazar; el hueco de la torre de 223 a 415; las filas enteras a la vista de **5 a 8**. La torre pasa a desplazarse en su propia caja y el mapa se encoge con `transform`, no cambiando el lienzo (4 MB de mapa de bits a 3x, reservarlo 60 veces por segundo es lo que produce tirones). Mandos flotando como el mini-reproductor de Apple Music. |
+| **13** el boton «Ver la carrera» | HECHO | `6b100d7` | Era una pastilla de 147 px pegada a la izquierda entre dos piezas de 358. Ahora es el pie de la tarjeta del resumen, a su ancho (332 de 358) y con la junta a cero. |
+
+**Suites al cerrar el bloque**: 399 unitarias, 121 e2e (17 nuevas), tipos y lint
 limpios. Build igual que el CI.
+
+### Correccion a lo prometido en el mockup del 6
+
+Ahi dije **11 filas** y la cifra real es **8**. La diferencia: aquel mockup, al
+encender «cabecera compacta», tambien encogia los mandos de 119 a 76 px, y eso
+no se puede hacer — dejaria los botones por debajo de los 44 px de zona tocable
+minima, que es un limite del proyecto y no una preferencia. La cabecera si bajo
+de 89 a 44 como se prometio. De 4 a 8 sigue siendo el doble.
 
 ## Hallazgos que NO estaban en la lista — los tres CERRADOS
 
@@ -81,11 +93,22 @@ en los dos temas. No fija una lista de hex, asi que no se queda desactualizada.
 
 ## Lo que queda, en el orden acordado
 
-2. **Mockup del layout movil**, los cuatro juntos: 6, 15, 14, 13
 3. **Datos**: 1, 4
 4. **Replay**: 9, 10a, 11, 2, 12, 22
 5. **Sesiones**: 3+20
 6. **Cuentas**: 17, y 5
+
+### Abierto, sin decidir
+
+- **La barra flotante, sobre un titular.** Con el desenfoque tan bajo, un
+  titular grande justo detras compite un poco con las etiquetas. Se probo una
+  sombra en las etiquetas y **no sirve** —«sin sombra» y «con halo» salen
+  indistinguibles, porque el velo de la propia barra se la traga—. Sobre
+  contenido normal la barra se lee limpia. Si algun dia molesta, la palanca que
+  si funciona es subir la opacidad de 34 % a ~45 %, no la sombra.
+- **Los iconos propios.** Casco, podio y bandera a cuadros estan dibujados en
+  `components/iconos/motor.tsx` porque `lucide` no los tiene. Si se quiere un
+  juego completo y coherente para el resto de la app, es una pieza aparte.
 
 ---
 
@@ -227,6 +250,10 @@ iOS quien lo pone.
 
 ## 6. LAYOUT · El circuito se come la pantalla: solo caben 3 pilotos
 
+> **HECHO** (`1cc677b`). Opcion B del mockup: el mapa se encoge al desplazar y
+> nunca desaparece. De 4 filas a 8, no a las 11 que prometi — ver la correccion
+> en el REGISTRO DE AVANCE.
+
 **Lo que dice el usuario**: le gusta como se ve, pero con el circuito siempre en pantalla
 queda muy poco sitio para lo demas y **la navegacion se hace rara**. En las capturas
 solo se ven **tres filas** (15/16/17, o 3/4/5): el resto queda tapado entre el mapa
@@ -294,6 +321,8 @@ obligatorio.
 
 ## 13. UI · El boton «Ver la carrera» esta descuadrado y mal ubicado
 
+> **HECHO** (`6b100d7`). Al pie de la tarjeta del resumen, a su ancho.
+
 Se ve en la captura de la ficha: el boton azul «Ver la carrera» entre el resumen y la
 lista de resultados. El usuario dice que **ademas de estar descuadrado, el sitio es
 malo**. Pide expresamente: «me lo consultas con opciones o mockup».
@@ -305,6 +334,10 @@ malo**. Pide expresamente: «me lo consultas con opciones o mockup».
 # ---- Segunda tanda: barra inferior, PWA y cuentas ----
 
 ## 14. UI · Rediseñar la barra inferior al estilo Flashscore (flotante)
+
+> **HECHO** (`2758640`). Y se mantuvo lo decidido: NO se trato como excepcion,
+> Android hace lo mismo. Los iconos los corrigio el usuario en revision — una
+> carita feliz para «Pilotos» no se defiende.
 
 **Referencia**: capturas de Flashscore. Su menu inferior es **mas bajo que el nuestro**,
 **flotante** (una pildora despegada de los bordes) y **translucido**, al estilo del iOS
@@ -329,6 +362,10 @@ medirlo aparece algo que de verdad solo se puede en iOS, se le enseña concretam
 decide el. No se da por bueno un Android peor sin haberlo intentado.
 
 ## 15. LAYOUT · En el replay, que las secciones se aparten al hacer scroll
+
+> **HECHO** (`1cc677b`), aunque NO como lo propuso el usuario: apartarlas del
+> todo era la opcion A y daba mas filas, pero quitaba de la vista el circuito,
+> que es lo que mas le gusta. Eligio encogerlo.
 
 Su propia propuesta, y es buena: al **scrollear hacia arriba**, que se aparte la
 seccion de «Vuelta 53/53 + boton de volver»; al **scrollear hacia abajo**, que se
