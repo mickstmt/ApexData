@@ -72,7 +72,24 @@
        Este valor es solo el de partida: `MobileTabBar` lo sustituye por su alto
        medido en cuanto monta, así que si la barra cambia —y el rediseño
        flotante la va a cambiar— nadie tiene que acordarse de actualizar nada. */
-    --barra-inferior: calc(3.75rem + max(0.5rem, env(safe-area-inset-bottom)));
+    --barra-inferior: calc(4.25rem + 1rem + env(safe-area-inset-bottom));
+
+    /* El cristal de la barra flotante.
+       ============================================================
+       Afinado con el usuario sobre un mockup, contra las referencias que él
+       trajo: WhatsApp, Flashscore y Apple Music. Los valores no son de gusto,
+       salieron de mirar.
+
+       Lo que costó encontrar: el desenfoque es lo que tapa, no la opacidad.
+       Medido a la misma opacidad del 34 %, con desenfoque 0 se lee una fila
+       entera a través de la barra y con 6 px desaparece — seis píxeles bastan
+       para borrar un texto de trece. De ahí que sean DOS y no veinte.
+
+       Y el panel va más claro que la página, no igual: así se lee «flota». Con
+       el mismo color de la página detrás, la translucidez es invisible por
+       definición, que es justo el error que tenía antes. */
+    --barra-cristal: rgba(255, 255, 255, 0.62);
+    --barra-borde: rgba(20, 20, 26, 0.08);
 
     /* Por qué el rojo de bandera son DOS tokens y no uno.
        ============================================================
@@ -139,6 +156,22 @@
     }
   }
 
+  /* El realce de la pestaña activa VIAJA entre casillas.
+     Es lo que ya hacía la app; lo que cambia es la curva, que ahora rebota un
+     poco al llegar —elegido sobre el mockup— y el radio, proporcional a lo que
+     envuelve en vez de fijo. */
+  .barra-realce {
+    transition:
+      transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      width 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .barra-realce {
+      transition: none;
+    }
+  }
+
   .dark {
     --background: 240 15% 5%;
     --foreground: 240 11% 96%;
@@ -192,6 +225,10 @@
     --replay-roja-texto: #FF4238;
     --replay-pulgar: #FFFFFF;
     --replay-pulgar-borde: #0B0B0F;
+
+    /* En oscuro el panel se eleva aclarando; en claro, blanqueando. */
+    --barra-cristal: rgba(40, 40, 49, 0.34);
+    --barra-borde: rgba(255, 255, 255, 0.10);
   }
 
   * {

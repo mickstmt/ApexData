@@ -4,24 +4,40 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useReducedMotion } from 'framer-motion';
-import { CalendarDays, Home, LayoutGrid, Trophy, Users } from 'lucide-react';
+import { Home, LayoutGrid } from 'lucide-react';
+import { BanderaCuadros, Casco, Podio } from '@/components/iconos/motor';
 import { cn } from '@/lib/utils';
 import { Sheet } from '@/components/ui/Sheet';
 import { FUERA_DE_LA_BARRA, RejillaDeSecciones } from './Secciones';
 
 /**
- * Bottom tab bar, the primary navigation on phones.
+ * La barra inferior: la navegación principal en el teléfono.
  *
- * An installed iOS web app has no browser chrome and no back button, so
- * reaching the main sections has to be possible from anywhere in the app.
- * The bar sits above the home indicator via the safe-area inset; the `max()`
- * keeps sane padding on devices that report no inset at all.
+ * Una app instalada no tiene ni barra del navegador ni botón de volver, así
+ * que llegar a las secciones tiene que ser posible desde cualquier sitio.
+ *
+ * ## Por qué flota
+ *
+ * Antes iba pegada a los tres bordes y era opaca: un tapón. Ahora es una
+ * píldora despegada y translúcida, y el contenido corre por debajo. Eso no es
+ * adorno —da la sensación de que la lista sigue, que es lo que hace que la
+ * pantalla parezca más alta sin esconder nada al desplazar.
+ *
+ * Las medidas están afinadas con el usuario sobre un mockup, contra las
+ * referencias que trajo él (WhatsApp, Flashscore, Apple Music): alto 68, 10 a
+ * los lados, 16 abajo más el borde seguro, píldora completa, icono 26 y
+ * etiqueta 11,5. El cristal vive en `--barra-cristal`.
+ *
+ * ## Lo que NO se negocia
+ *
+ * El área tocable no baja de 44 px aunque el icono mida 26: lo que se toca es
+ * la casilla entera, no el dibujo.
  */
 const TABS = [
   { href: '/', label: 'Inicio', icon: Home },
-  { href: '/calendar', label: 'Calendario', icon: CalendarDays },
-  { href: '/standings', label: 'Clasificación', icon: Trophy },
-  { href: '/drivers', label: 'Pilotos', icon: Users },
+  { href: '/calendar', label: 'Calendario', icon: BanderaCuadros },
+  { href: '/standings', label: 'Clasificación', icon: Podio },
+  { href: '/drivers', label: 'Pilotos', icon: Casco },
 ] as const;
 
 /**
@@ -89,8 +105,14 @@ export function MobileTabBar() {
     const nodo = barra.current;
     if (!nodo) return;
 
-    const publicar = () =>
-      document.documentElement.style.setProperty('--barra-inferior', `${nodo.offsetHeight}px`);
+    const publicar = () => {
+      // Cuánto TAPA, no cuánto mide: desde que flota, entre su borde inferior
+      // y el de la pantalla queda un margen que también hay que esquivar. Con
+      // `offsetHeight` a secas, lo último de cada página se colaba ahí debajo.
+      const caja = nodo.getBoundingClientRect();
+      const tapa = caja.height === 0 ? 0 : Math.round(window.innerHeight - caja.top);
+      document.documentElement.style.setProperty('--barra-inferior', `${tapa}px`);
+    };
 
     publicar();
     // El observador ve los cambios de contenido; el de la ventana, el cruce de
@@ -138,23 +160,27 @@ export function MobileTabBar() {
       <nav
         ref={barra}
         aria-label="Navegación principal"
-      className={cn(
-        'fixed inset-x-0 bottom-0 z-50 border-t border-border md:hidden',
-        'bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/65',
-        'pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2'
-      )}
-    >
-      <ul ref={lista} className="relative flex items-stretch justify-around">
+        className={cn(
+          // Píldora despegada de los tres bordes. El redondeo es medio alto:
+          // en esta forma no es una preferencia, es lo que la hace píldora.
+          'fixed inset-x-[10px] z-50 h-[68px] rounded-[34px] p-[5px] md:hidden',
+          'bottom-[calc(1rem+env(safe-area-inset-bottom))]',
+          'border border-[var(--barra-borde)] shadow-[0_10px_34px_rgba(0,0,0,0.45)]',
+          // El cristal. Poco desenfoque a propósito: medido, con 6 px ya no se
+          // ve nada de lo que pasa por debajo, y verlo es el objetivo.
+          'bg-[var(--barra-cristal)] backdrop-blur-[2px] backdrop-saturate-[1.8]'
+        )}
+      >
+      <ul ref={lista} className="relative flex h-full items-stretch">
         {/* La píldora viaja entre pestañas en vez de aparecer y desaparecer:
             da continuidad espacial a la navegación principal. Va detrás del
             contenido y no captura toques. */}
         <li
           aria-hidden
-          // `inset-y-0` y no `inset-y-1`: con la píldora cuatro píxeles más baja
-          // que la fila, su borde superior caía justo en el icono y parecía que
-          // el icono se salía del fondo. Ahora la píldora llega arriba y abajo,
-          // y el relleno del enlace deja aire por dentro.
-          className="pointer-events-none absolute inset-y-0 left-0 rounded-xl bg-primary/10 transition-[transform,width] duration-[260ms] ease-out motion-reduce:transition-none"
+          // Envuelve la casilla entera —icono Y etiqueta—, no solo el icono.
+          // Es lo que hace reconocible el patrón de WhatsApp y Flashscore; con
+          // un círculo detrás del icono no se lee igual.
+          className="barra-realce pointer-events-none absolute inset-y-0 left-0 rounded-[20px] bg-primary/[.13]"
           style={pildora}
         />
 
@@ -169,18 +195,19 @@ export function MobileTabBar() {
                 aria-current={active ? 'page' : undefined}
                 onClick={alTocar(href)}
                 className={cn(
-                  // 44px is the minimum comfortable touch target on iOS.
-                  'flex min-h-[44px] select-none flex-col items-center justify-center gap-1 px-1 py-1.5',
-                  'text-[10px] font-medium transition-colors',
+                  // El alto es el de la casilla entera: lo que se toca no es el
+                  // dibujo, y 44 px sigue siendo el mínimo aunque el icono mida 26.
+                  'flex h-full min-h-[44px] select-none flex-col items-center justify-center gap-[3px]',
+                  'text-[11.5px] font-medium leading-none transition-colors',
                   // La app desactiva el resaltado gris de iOS al tocar, así que
                   // sin esto pulsar no producía ninguna señal: parecía que la
                   // pestaña no respondía hasta que llegaba la página nueva.
-                  'relative rounded-lg active:scale-95 motion-reduce:active:scale-100',
+                  'relative rounded-[20px] transition-transform duration-[120ms] active:scale-[.92] motion-reduce:active:scale-100',
                   'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
                   active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <Icon className="h-5 w-5" aria-hidden />
+                <Icon className="h-[26px] w-[26px]" aria-hidden />
                 {label}
               </Link>
             </li>
@@ -194,14 +221,14 @@ export function MobileTabBar() {
             aria-expanded={menuAbierto}
             aria-haspopup="dialog"
             className={cn(
-              'flex min-h-[44px] w-full select-none flex-col items-center justify-center gap-1 px-1 py-1.5',
-              'text-[10px] font-medium transition-colors',
-              'relative rounded-lg active:scale-95 motion-reduce:active:scale-100',
+              'flex h-full min-h-[44px] w-full select-none flex-col items-center justify-center gap-[3px]',
+              'text-[11.5px] font-medium leading-none transition-colors',
+              'relative rounded-[20px] transition-transform duration-[120ms] active:scale-[.92] motion-reduce:active:scale-100',
               'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
               menuAbierto ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             )}
           >
-            <LayoutGrid className="h-5 w-5" aria-hidden />
+            <LayoutGrid className="h-[26px] w-[26px]" aria-hidden />
             {ETIQUETA_MAS}
           </button>
         </li>

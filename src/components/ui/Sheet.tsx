@@ -88,7 +88,10 @@ export function Sheet({
           ? // El margen de abajo salva la barra de pestañas, cuyo alto crece con
             // la zona segura del iPhone: por eso se suma el inset en vez de
             // escribir un número fijo que quedaría corto en pantalla completa.
-            'mx-auto mb-[calc(4.5rem_+_env(safe-area-inset-bottom))] mt-auto w-[calc(100%-1rem)] max-w-none rounded-2xl border border-border bg-card p-0 text-foreground shadow-2xl backdrop:bg-foreground/30 sm:mx-auto sm:mb-6 sm:max-w-md'
+            // Se aparta lo que la barra tape, mas un dedo de aire. Antes era
+            // `4.5rem` a mano y se quedo corto en cuanto la barra paso a
+            // flotar: el panel se montaba encima de ella.
+            'mx-auto mb-[calc(var(--barra-inferior)+0.75rem)] mt-auto w-[calc(100%-1rem)] max-w-none rounded-2xl border border-border bg-card p-0 text-foreground shadow-2xl backdrop:bg-foreground/30 sm:mx-auto sm:mb-6 sm:max-w-md'
           : 'm-0 mt-auto w-full max-w-none rounded-t-2xl border-t border-border bg-card p-0 text-foreground shadow-2xl backdrop:bg-foreground/40 sm:mx-auto sm:mb-6 sm:max-w-md sm:rounded-2xl sm:border'
       }
     >

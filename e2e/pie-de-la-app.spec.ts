@@ -38,11 +38,14 @@ const medir = (page: Page) =>
     const caja = document.querySelector<HTMLElement>('[data-pie-de-la-app]')!;
     const pie = document.querySelector<HTMLElement>('footer');
     const nav = document.querySelector<HTMLElement>('nav[aria-label="Navegación principal"]')!;
+    const cb = nav.getBoundingClientRect();
     return {
       marcada: document.documentElement.hasAttribute('data-instalada'),
       altoCaja: Math.round(caja.getBoundingClientRect().height),
       pieVisible: !!pie && getComputedStyle(pie).display !== 'none',
-      altoBarra: Math.round(nav.getBoundingClientRect().height),
+      // Lo que TAPA, no lo que mide: desde que la barra flota queda un margen
+      // entre su borde inferior y el de la pantalla que también estorba.
+      tapaBarra: Math.round(window.innerHeight - cb.top),
     };
   });
 
@@ -51,7 +54,7 @@ test('en la web se pinta el pie', async ({ page }) => {
   const m = await medir(page);
   expect(m.marcada).toBe(false);
   expect(m.pieVisible).toBe(true);
-  expect(m.altoCaja).toBeGreaterThan(m.altoBarra);
+  expect(m.altoCaja).toBeGreaterThan(m.tapaBarra);
 });
 
 test('en la app instalada no se pinta, pero el hueco de la barra sigue', async ({ page }) => {
@@ -65,7 +68,7 @@ test('en la app instalada no se pinta, pero el hueco de la barra sigue', async (
   // Lo que de verdad se puede romper aquí: si al quitar el pie se quitara
   // también su contenedor, lo último de cada página quedaría debajo de la
   // barra. El contenedor tiene que seguir midiendo justo lo que la barra tapa.
-  expect(m.altoCaja).toBe(m.altoBarra);
+  expect(m.altoCaja).toBe(m.tapaBarra);
 });
 
 test('«Acerca de» acredita a las tres fuentes y se llega desde el menú', async ({ page }) => {

@@ -41,7 +41,7 @@ export function IosInstallHint() {
   };
 
   return (
-    <div className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-[55] flex items-start gap-3 rounded-xl border border-border bg-card p-3 shadow-lg md:hidden">
+    <div className="fixed inset-x-3 bottom-[calc(var(--barra-inferior)+0.75rem)] z-[55] flex items-start gap-3 rounded-xl border border-border bg-card p-3 shadow-lg md:hidden">
       <Share className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
       <p className="flex-1 text-sm leading-snug">
         Instala ApexData: toca <strong>Compartir</strong> y luego{' '}

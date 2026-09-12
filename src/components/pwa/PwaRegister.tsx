@@ -141,7 +141,7 @@ export function PwaRegister() {
   if (!updateReady) return null;
 
   return (
-    <div className="fixed inset-x-4 z-[60] flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-lg bottom-[calc(5rem+env(safe-area-inset-bottom))] md:inset-x-auto md:right-6 md:bottom-6 md:max-w-sm">
+    <div className="fixed inset-x-4 z-[60] flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-lg bottom-[calc(var(--barra-inferior)+0.75rem)] md:inset-x-auto md:right-6 md:bottom-6 md:max-w-sm">
       <RefreshCw className="h-5 w-5 shrink-0 text-primary" />
       <p className="flex-1 text-sm">Hay una versión nueva de ApexData.</p>
       <button
