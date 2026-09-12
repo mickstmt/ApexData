@@ -4,378 +4,315 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Maqueta de la barra inferior — ApexData</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
 /* ---------------------------------------------------------------------------
-   Maqueta TEMPORAL de la barra inferior.
-   Vive en `public/` a propósito: el fallo que investiga solo se reproduce en el
-   iPhone del usuario, así que la maqueta tiene que abrirse EN el teléfono, y
-   para eso hay que servirla desde el dominio. Se retira al cerrar el punto 14.
-   Los tokens son los de `globals.css`, copiados sin retocar.
+   Maqueta TEMPORAL de la barra inferior. SIN JAVASCRIPT, a propósito.
+
+   La primera versión llevaba un guion que medía el desvío y escribía un
+   veredicto. No llegó a correr ni una vez: la app sirve
+   `script-src 'self' 'nonce-…' 'strict-dynamic'`, y con `strict-dynamic` el
+   `'self'` se ignora — solo ejecuta lo que lleva el nonce que el servidor
+   genera en cada petición, y eso un archivo estático no puede llevarlo. Las
+   fuentes de Google también estaban bloqueadas, por `font-src 'self'`.
+
+   Aquí todo va con radios y selectores de hermano, que el CSP no toca, y con
+   las fuentes del sistema. La medición numérica la sustituye la SILUETA: un
+   contorno dibujado en el mismo sitio que la barra y sin desenfoque. Si al
+   desplazar los dos se separan, el desenfoque es el culpable.
+
+   Se retira al cerrar el punto 14.
 --------------------------------------------------------------------------- */
 :root {
   color-scheme: light dark;
-  --fondo: #F7F7F8;
-  --tarjeta: #FFFFFF;
-  --tinta: #151519;
-  --apagado: #55555E;
-  --linea: #E4E4E9;
-  --marca: #526600;
-  --marca-tinta: #FFFFFF;
-  --barra-cristal: rgba(255, 255, 255, 0.62);
-  --barra-borde: rgba(20, 20, 26, 0.08);
-  --alerta: #A33B00;
+  --fondo: #F7F7F8; --tarjeta: #FFFFFF; --tinta: #151519; --apagado: #55555E;
+  --linea: #E4E4E9; --marca: #526600; --marca-tinta: #FFFFFF;
+  --barra-cristal: rgba(255, 255, 255, 0.62); --barra-borde: rgba(20, 20, 26, 0.08);
+  --aviso: #A33B00;
+  --abajo: 14px; --lado: 12px;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --fondo: #0B0B0F;
-    --tarjeta: #151519;
-    --tinta: #F5F5F7;
-    --apagado: #A2A2AC;
-    --linea: #26262E;
-    --marca: #CCFF00;
-    --marca-tinta: #000000;
-    --barra-cristal: rgba(40, 40, 49, 0.34);
-    --barra-borde: rgba(255, 255, 255, 0.10);
-    --alerta: #FFA94D;
+    --fondo: #0B0B0F; --tarjeta: #151519; --tinta: #F5F5F7; --apagado: #A2A2AC;
+    --linea: #26262E; --marca: #CCFF00; --marca-tinta: #000000;
+    --barra-cristal: rgba(40, 40, 49, 0.34); --barra-borde: rgba(255, 255, 255, 0.10);
+    --aviso: #FFA94D;
   }
 }
 
 * { box-sizing: border-box; }
 
 body {
-  margin: 0;
-  padding: 16px 16px 260px;
-  background: var(--fondo);
-  color: var(--tinta);
-  font: 400 15px/1.5 Inter, system-ui, sans-serif;
+  margin: 0; padding: 0;
+  background: var(--fondo); color: var(--tinta);
+  font: 400 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-h1 { margin: 0 0 6px; font: 700 24px/1.15 "Chakra Petch", system-ui, sans-serif; }
+.oculto { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.hoja { padding: 18px 16px calc(220px + env(safe-area-inset-bottom)); }
+
+h1 { margin: 0 0 6px; font-size: 25px; line-height: 1.15; letter-spacing: -.01em; }
 .sub { margin: 0 0 18px; color: var(--apagado); font-size: 14px; }
+.sub b { color: var(--tinta); }
 
-.panel {
-  border: 1px solid var(--linea); border-radius: 14px; background: var(--tarjeta);
-  padding: 14px; margin-bottom: 14px;
-}
-.panel h2 {
-  margin: 0 0 10px;
-  font: 600 11px/1 "JetBrains Mono", ui-monospace, monospace;
-  letter-spacing: .13em; text-transform: uppercase; color: var(--apagado);
+.panel { border: 1px solid var(--linea); border-radius: 14px; background: var(--tarjeta); padding: 14px; margin-bottom: 14px; }
+.panel h2 { margin: 0 0 4px; font-size: 15px; }
+.panel p { margin: 0 0 10px; color: var(--apagado); font-size: 13.5px; }
+.panel p:last-child { margin-bottom: 0; }
+
+.grupo { display: flex; flex-wrap: wrap; gap: 6px; }
+.grupo label {
+  flex: 1 1 auto; min-width: 62px; min-height: 44px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  border: 1px solid var(--linea); border-radius: 10px;
+  color: var(--apagado); font-size: 13.5px; line-height: 1.2;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 
-/* --- La sonda: lo que mide el teléfono solo ------------------------------- */
-#sonda {
-  font: 400 12.5px/1.5 "JetBrains Mono", ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-}
-#sonda b { color: var(--tinta); }
-#veredicto { margin-top: 8px; font-weight: 600; font-family: Inter, system-ui, sans-serif; font-size: 14px; }
-#veredicto[data-mal="si"] { color: var(--alerta); }
+.aviso { border-left: 3px solid var(--aviso); }
+.aviso h2 { color: var(--aviso); }
 
-.fila { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.fila:last-child { margin-bottom: 0; }
-.fila label { flex: 0 0 108px; font-size: 13px; color: var(--apagado); }
-.fila output {
-  flex: 0 0 52px; text-align: right;
-  font: 600 13px/1 "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums;
-}
-input[type="range"] { flex: 1; min-width: 0; accent-color: var(--marca); height: 32px; }
+.fila-piloto { display: flex; align-items: center; gap: 11px; border: 1px solid var(--linea); border-radius: 12px; background: var(--tarjeta); padding: 11px 13px; margin-bottom: 9px; }
+.fila-piloto .pos { width: 18px; font-size: 13.5px; color: var(--apagado); font-variant-numeric: tabular-nums; }
+.fila-piloto .tira { width: 4px; height: 30px; border-radius: 2px; flex: none; }
+.fila-piloto .quien { flex: 1; min-width: 0; }
+.fila-piloto .quien b { display: block; font-size: 15px; }
+.fila-piloto .quien span { display: block; font-size: 12.5px; color: var(--apagado); }
+.fila-piloto .pts { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
-.segmentado { display: flex; flex-wrap: wrap; gap: 4px; }
-.segmentado button {
-  flex: 1 1 auto; min-height: 44px; padding: 0 10px;
-  border: 1px solid var(--linea); border-radius: 9px; background: transparent;
-  color: var(--apagado); font: 500 13px/1.2 Inter, system-ui, sans-serif; cursor: pointer;
+/* --- La silueta de referencia: mismo sitio, sin desenfoque ---------------- */
+.silueta {
+  position: fixed; left: var(--lado); right: var(--lado);
+  bottom: calc(var(--abajo) + env(safe-area-inset-bottom));
+  height: 68px; border-radius: 34px;
+  border: 2px dashed var(--aviso);
+  pointer-events: none; z-index: 49;
 }
-.segmentado button[aria-pressed="true"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
 
-.relleno p { margin: 0 0 12px; color: var(--apagado); font-size: 14.5px; }
-.tarjeta-falsa {
-  border: 1px solid var(--linea); border-radius: 12px; background: var(--tarjeta);
-  padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px;
-}
-.tarjeta-falsa .pos { font: 600 14px/1 "JetBrains Mono", ui-monospace, monospace; color: var(--apagado); width: 20px; }
-.tarjeta-falsa .barra-equipo { width: 4px; height: 30px; border-radius: 2px; }
-.tarjeta-falsa .quien { flex: 1; min-width: 0; }
-.tarjeta-falsa .quien b { display: block; font-size: 15px; }
-.tarjeta-falsa .quien span { display: block; font-size: 12.5px; color: var(--apagado); }
-.tarjeta-falsa .pts { font: 600 15px/1 "JetBrains Mono", ui-monospace, monospace; }
-
-/* --- La barra -------------------------------------------------------------- */
-#barra {
-  position: fixed;
-  left: var(--lado); right: var(--lado);
-  bottom: calc(var(--abajo) * 1px + env(safe-area-inset-bottom));
-  height: 68px; padding: 5px;
-  border-radius: 34px;
+/* --- La barra ------------------------------------------------------------- */
+nav {
+  position: fixed; left: var(--lado); right: var(--lado);
+  bottom: calc(var(--abajo) + env(safe-area-inset-bottom));
+  height: 68px; padding: 5px; border-radius: 34px;
   border: 1px solid var(--barra-borde);
   box-shadow: 0 10px 34px rgba(0,0,0,0.45);
   background: var(--barra-cristal);
   z-index: 50;
 }
-#barra[data-cristal="si"] {
-  -webkit-backdrop-filter: blur(2px) saturate(1.8);
-  backdrop-filter: blur(2px) saturate(1.8);
-}
-#barra[data-cristal="opaco"] { background: var(--fondo); }
-
-#barra ul { position: relative; display: flex; height: 100%; margin: 0; padding: 0; list-style: none; }
-#barra li { flex: 1; min-width: 0; }
-#realce {
-  position: absolute; inset-block: 0; left: 0;
+nav ul { position: relative; display: flex; height: 100%; margin: 0; padding: 0; list-style: none; }
+nav li { flex: 1; min-width: 0; }
+nav .realce {
+  position: absolute; inset-block: 0; left: 0; width: 20%;
   border-radius: 20px; background: color-mix(in srgb, var(--marca) 13%, transparent);
-  transition: transform 420ms cubic-bezier(.34,1.56,.64,1), width 420ms cubic-bezier(.34,1.56,.64,1);
-  pointer-events: none;
+  transition: transform 420ms cubic-bezier(.34,1.56,.64,1);
+  pointer-events: none; flex: none;
 }
-#barra a {
+nav label {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   height: 100%; min-height: 44px; border-radius: 20px;
-  color: var(--apagado); text-decoration: none;
-  font: 500 11.5px/1 Inter, system-ui, sans-serif;
-  position: relative;
+  color: var(--apagado); font-size: 11.5px; font-weight: 500; line-height: 1;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-#barra a[aria-current="page"] { color: var(--marca); }
-#barra a svg { width: 26px; height: 26px; }
-#barra .etq { display: block; max-width: 100%; }
+nav svg { width: 26px; height: 26px; }
+nav .etq { max-width: 100%; }
+nav .corta { display: none; }
 
-/* Las tres salidas para la etiqueta que no cabe. */
-#barra[data-etq="recortar"] .etq { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-inline: 2px; }
-#barra[data-etq="encoger"] .etq { font-size: 10px; letter-spacing: -.01em; }
-#barra[data-etq="cortas"] .etq[data-corta] { font-size: 0; }
-#barra[data-etq="cortas"] .etq[data-corta]::after { content: attr(data-corta); font-size: 11.5px; }
+.oculto:focus-visible ~ .hoja label,
+.oculto:focus-visible ~ nav label { outline: 2px solid var(--marca); outline-offset: 2px; }
 
-@media (prefers-reduced-motion: reduce) { #realce { transition: none; } }
+@media (prefers-reduced-motion: reduce) { nav .realce { transition: none; } }
+#abajo-6:checked ~ nav, #abajo-6:checked ~ .silueta { --abajo: 6px; }
+#abajo-6:checked ~ .hoja label[for="abajo-6"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-10:checked ~ nav, #abajo-10:checked ~ .silueta { --abajo: 10px; }
+#abajo-10:checked ~ .hoja label[for="abajo-10"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-14:checked ~ nav, #abajo-14:checked ~ .silueta { --abajo: 14px; }
+#abajo-14:checked ~ .hoja label[for="abajo-14"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-18:checked ~ nav, #abajo-18:checked ~ .silueta { --abajo: 18px; }
+#abajo-18:checked ~ .hoja label[for="abajo-18"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-22:checked ~ nav, #abajo-22:checked ~ .silueta { --abajo: 22px; }
+#abajo-22:checked ~ .hoja label[for="abajo-22"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#abajo-28:checked ~ nav, #abajo-28:checked ~ .silueta { --abajo: 28px; }
+#abajo-28:checked ~ .hoja label[for="abajo-28"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#lado-4:checked ~ nav, #lado-4:checked ~ .silueta { --lado: 4px; }
+#lado-4:checked ~ .hoja label[for="lado-4"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#lado-8:checked ~ nav, #lado-8:checked ~ .silueta { --lado: 8px; }
+#lado-8:checked ~ .hoja label[for="lado-8"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#lado-12:checked ~ nav, #lado-12:checked ~ .silueta { --lado: 12px; }
+#lado-12:checked ~ .hoja label[for="lado-12"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#lado-16:checked ~ nav, #lado-16:checked ~ .silueta { --lado: 16px; }
+#lado-16:checked ~ .hoja label[for="lado-16"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#lado-22:checked ~ nav, #lado-22:checked ~ .silueta { --lado: 22px; }
+#lado-22:checked ~ .hoja label[for="lado-22"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#lado-28:checked ~ nav, #lado-28:checked ~ .silueta { --lado: 28px; }
+#lado-28:checked ~ .hoja label[for="lado-28"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#cristal-si:checked ~ .hoja label[for="cristal-si"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#cristal-no:checked ~ .hoja label[for="cristal-no"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#cristal-opaco:checked ~ .hoja label[for="cristal-opaco"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#cristal-si:checked ~ nav { -webkit-backdrop-filter: blur(2px) saturate(1.8); backdrop-filter: blur(2px) saturate(1.8); }
+#cristal-opaco:checked ~ nav { background: var(--fondo); }
+#etq-larga:checked ~ .hoja label[for="etq-larga"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#etq-pequena:checked ~ .hoja label[for="etq-pequena"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#etq-corta:checked ~ .hoja label[for="etq-corta"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#etq-puntos:checked ~ .hoja label[for="etq-puntos"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+#etq-pequena:checked ~ nav .etq { font-size: 10px; letter-spacing: -.01em; }
+#etq-corta:checked ~ nav .larga { display: none; }
+#etq-corta:checked ~ nav .corta { display: inline; }
+#etq-puntos:checked ~ nav .etq { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; padding-inline: 2px; }
+#tab-0:checked ~ nav .realce { transform: translateX(0%); }
+#tab-0:checked ~ nav label[for="tab-0"] { color: var(--marca); }
+#tab-1:checked ~ nav .realce { transform: translateX(100%); }
+#tab-1:checked ~ nav label[for="tab-1"] { color: var(--marca); }
+#tab-2:checked ~ nav .realce { transform: translateX(200%); }
+#tab-2:checked ~ nav label[for="tab-2"] { color: var(--marca); }
+#tab-3:checked ~ nav .realce { transform: translateX(300%); }
+#tab-3:checked ~ nav label[for="tab-3"] { color: var(--marca); }
+#tab-4:checked ~ nav .realce { transform: translateX(400%); }
+#tab-4:checked ~ nav label[for="tab-4"] { color: var(--marca); }
 </style>
 </head>
 <body>
 
-<h1>La barra inferior</h1>
-<p class="sub">Maqueta para medir en el teléfono lo que desde el ordenador no se reproduce. <b>Desplaza esta página</b> y vigila el recuadro de abajo mientras lo haces.</p>
+<input type="radio" name="cristal" id="cristal-si" class="oculto" checked>
+<input type="radio" name="cristal" id="cristal-no" class="oculto">
+<input type="radio" name="cristal" id="cristal-opaco" class="oculto">
+<input type="radio" name="abajo" id="abajo-6" class="oculto">
+<input type="radio" name="abajo" id="abajo-10" class="oculto">
+<input type="radio" name="abajo" id="abajo-14" class="oculto" checked>
+<input type="radio" name="abajo" id="abajo-18" class="oculto">
+<input type="radio" name="abajo" id="abajo-22" class="oculto">
+<input type="radio" name="abajo" id="abajo-28" class="oculto">
+<input type="radio" name="lado" id="lado-4" class="oculto">
+<input type="radio" name="lado" id="lado-8" class="oculto">
+<input type="radio" name="lado" id="lado-12" class="oculto" checked>
+<input type="radio" name="lado" id="lado-16" class="oculto">
+<input type="radio" name="lado" id="lado-22" class="oculto">
+<input type="radio" name="lado" id="lado-28" class="oculto">
+<input type="radio" name="etq" id="etq-larga" class="oculto" checked>
+<input type="radio" name="etq" id="etq-pequena" class="oculto">
+<input type="radio" name="etq" id="etq-corta" class="oculto">
+<input type="radio" name="etq" id="etq-puntos" class="oculto">
+<input type="radio" name="tab" id="tab-0" class="oculto" checked>
+<input type="radio" name="tab" id="tab-1" class="oculto">
+<input type="radio" name="tab" id="tab-2" class="oculto">
+<input type="radio" name="tab" id="tab-3" class="oculto">
+<input type="radio" name="tab" id="tab-4" class="oculto">
 
-<div class="panel">
-  <h2>Lo que mide tu teléfono ahora mismo</h2>
-  <div id="sonda">
-    desplazamiento: <b id="mScroll">0</b> px<br>
-    alto de la ventana: <b id="mVh">0</b> px<br>
-    borde superior de la barra: <b id="mTop">0</b> px<br>
-    debería ser siempre: <b id="mEsperado">0</b> px<br>
-    desvío máximo visto: <b id="mDesvio">0</b> px
+<main class="hoja">
+  <h1>La barra inferior</h1>
+  <p class="sub">Sin JavaScript: la app bloquea los guiones de los archivos estáticos. <b>Desplaza esta página con el dedo</b> y vigila el contorno naranja.</p>
+
+  <div class="panel aviso">
+    <h2>Lo que hay que mirar</h2>
+    <p>El <b>contorno naranja a rayas</b> está dibujado exactamente donde debe ir la barra, y no lleva desenfoque. Si al desplazar la barra se despega de él, el desenfoque es el culpable.</p>
+    <p>Si los dos se mueven juntos, la causa es otra y hay que seguir buscando. <b>Las dos respuestas sirven.</b></p>
   </div>
-  <div id="veredicto" data-mal="no">Aún sin desplazar.</div>
-</div>
 
-<div class="panel">
-  <h2>El cristal — la sospecha</h2>
-  <div class="segmentado" id="opCristal">
-    <button type="button" data-v="si" aria-pressed="true">Con desenfoque (como hoy)</button>
-    <button type="button" data-v="no" aria-pressed="false">Sin desenfoque</button>
-    <button type="button" data-v="opaco" aria-pressed="false">Opaca del todo</button>
+  <div class="panel">
+    <h2>El cristal</h2>
+    <p>Prueba las tres, desplazando entre una y otra.</p>
+    <div class="grupo">
+      <label for="cristal-si">Con desenfoque (como hoy)</label>
+      <label for="cristal-no">Sin desenfoque</label>
+      <label for="cristal-opaco">Opaca</label>
+    </div>
   </div>
-  <p class="sub" style="margin:10px 0 0">Si con «sin desenfoque» el desvío se queda en 0 y con «como hoy» no, el culpable es el desenfoque.</p>
-</div>
 
-<div class="panel">
-  <h2>Posición y separación</h2>
-  <div class="fila">
-    <label for="abajo">Desde abajo</label>
-    <input type="range" id="abajo" min="0" max="28" step="1" value="16">
-    <output id="vAbajo">16 px</output>
+  <div class="panel">
+    <h2>Separación del borde de abajo</h2>
+    <p>Hoy son 16 px, y te parecen pocos. Dime cuál te gusta.</p>
+    <div class="grupo">
+        <label for="abajo-6">6px</label>
+        <label for="abajo-10">10px</label>
+        <label for="abajo-14">14px</label>
+        <label for="abajo-18">18px</label>
+        <label for="abajo-22">22px</label>
+        <label for="abajo-28">28px</label>
+    </div>
   </div>
-  <div class="fila">
-    <label for="lado">De los lados</label>
-    <input type="range" id="lado" min="0" max="32" step="1" value="10">
-    <output id="vLado">10 px</output>
+
+  <div class="panel">
+    <h2>Separación de los lados</h2>
+    <p>Hoy son 10 px.</p>
+    <div class="grupo">
+        <label for="lado-4">4px</label>
+        <label for="lado-8">8px</label>
+        <label for="lado-12">12px</label>
+        <label for="lado-16">16px</label>
+        <label for="lado-22">22px</label>
+        <label for="lado-28">28px</label>
+    </div>
   </div>
-  <p class="sub" style="margin:4px 0 0">Hoy son 16 y 10. Muévelos hasta que te guste y dime los dos números.</p>
-</div>
 
-<div class="panel">
-  <h2>La etiqueta que no cabe</h2>
-  <div class="segmentado" id="opEtq">
-    <button type="button" data-v="ninguna" aria-pressed="true">Como hoy</button>
-    <button type="button" data-v="encoger" aria-pressed="false">Letra más pequeña</button>
-    <button type="button" data-v="cortas" aria-pressed="false">Palabras cortas</button>
-    <button type="button" data-v="recortar" aria-pressed="false">Recortar con puntos</button>
+  <div class="panel">
+    <h2>La etiqueta que no cabe</h2>
+    <p>«Clasificación» mide 71 px de texto en una casilla de 60 a lo ancho de un Android. Recomiendo <b>palabras cortas</b>.</p>
+    <div class="grupo">
+      <label for="etq-larga">Como hoy</label>
+      <label for="etq-pequena">Letra menor</label>
+      <label for="etq-corta">Palabras cortas</label>
+      <label for="etq-puntos">Con puntos</label>
+    </div>
   </div>
-  <p class="sub" style="margin:10px 0 0">«Clasificación» mide 71 px de texto en una casilla de 72. <b>Palabras cortas</b> es la que recomiendo: «Puntos» y «Fechas» dicen lo mismo y caben de sobra.</p>
-</div>
 
-<div class="panel relleno">
-  <h2>Contenido, para que haya algo que desplazar</h2>
-  <p>Toca las pestañas de la barra y mira si el realce <b>recorre</b> o <b>salta</b>. Y prueba a tocar dos seguidas rápido.</p>
-</div>
+  <div class="panel">
+    <h2>El realce</h2>
+    <p>Toca las pestañas de la barra: ¿el realce <b>recorre</b> la barra o <b>salta</b> de sitio? Prueba de un extremo al otro, de Inicio a Más.</p>
+  </div>
 
-<div id="lista"></div>
+    <div class="fila-piloto"><span class="pos">1</span><span class="tira" style="background:#00A19B"></span><span class="quien"><b>Andrea Kimi Antonelli</b><span>Mercedes</span></span><span class="pts">267</span></div>
+    <div class="fila-piloto"><span class="pos">2</span><span class="tira" style="background:#00A19B"></span><span class="quien"><b>George Russell</b><span>Mercedes</span></span><span class="pts">201</span></div>
+    <div class="fila-piloto"><span class="pos">3</span><span class="tira" style="background:#E8002D"></span><span class="quien"><b>Lewis Hamilton</b><span>Ferrari</span></span><span class="pts">191</span></div>
+    <div class="fila-piloto"><span class="pos">4</span><span class="tira" style="background:#FF8000"></span><span class="quien"><b>Lando Norris</b><span>McLaren</span></span><span class="pts">171</span></div>
+    <div class="fila-piloto"><span class="pos">5</span><span class="tira" style="background:#3671C6"></span><span class="quien"><b>Max Verstappen</b><span>Red Bull</span></span><span class="pts">168</span></div>
+    <div class="fila-piloto"><span class="pos">6</span><span class="tira" style="background:#E8002D"></span><span class="quien"><b>Charles Leclerc</b><span>Ferrari</span></span><span class="pts">152</span></div>
+    <div class="fila-piloto"><span class="pos">7</span><span class="tira" style="background:#FF8000"></span><span class="quien"><b>Oscar Piastri</b><span>McLaren</span></span><span class="pts">149</span></div>
+    <div class="fila-piloto"><span class="pos">8</span><span class="tira" style="background:#229971"></span><span class="quien"><b>Fernando Alonso</b><span>Aston Martin</span></span><span class="pts">88</span></div>
+    <div class="fila-piloto"><span class="pos">1</span><span class="tira" style="background:#00A19B"></span><span class="quien"><b>Andrea Kimi Antonelli</b><span>Mercedes</span></span><span class="pts">267</span></div>
+    <div class="fila-piloto"><span class="pos">2</span><span class="tira" style="background:#00A19B"></span><span class="quien"><b>George Russell</b><span>Mercedes</span></span><span class="pts">201</span></div>
+    <div class="fila-piloto"><span class="pos">3</span><span class="tira" style="background:#E8002D"></span><span class="quien"><b>Lewis Hamilton</b><span>Ferrari</span></span><span class="pts">191</span></div>
+    <div class="fila-piloto"><span class="pos">4</span><span class="tira" style="background:#FF8000"></span><span class="quien"><b>Lando Norris</b><span>McLaren</span></span><span class="pts">171</span></div>
+    <div class="fila-piloto"><span class="pos">5</span><span class="tira" style="background:#3671C6"></span><span class="quien"><b>Max Verstappen</b><span>Red Bull</span></span><span class="pts">168</span></div>
+    <div class="fila-piloto"><span class="pos">6</span><span class="tira" style="background:#E8002D"></span><span class="quien"><b>Charles Leclerc</b><span>Ferrari</span></span><span class="pts">152</span></div>
+    <div class="fila-piloto"><span class="pos">7</span><span class="tira" style="background:#FF8000"></span><span class="quien"><b>Oscar Piastri</b><span>McLaren</span></span><span class="pts">149</span></div>
+    <div class="fila-piloto"><span class="pos">8</span><span class="tira" style="background:#229971"></span><span class="quien"><b>Fernando Alonso</b><span>Aston Martin</span></span><span class="pts">88</span></div>
+    <div class="fila-piloto"><span class="pos">1</span><span class="tira" style="background:#00A19B"></span><span class="quien"><b>Andrea Kimi Antonelli</b><span>Mercedes</span></span><span class="pts">267</span></div>
+    <div class="fila-piloto"><span class="pos">2</span><span class="tira" style="background:#00A19B"></span><span class="quien"><b>George Russell</b><span>Mercedes</span></span><span class="pts">201</span></div>
+    <div class="fila-piloto"><span class="pos">3</span><span class="tira" style="background:#E8002D"></span><span class="quien"><b>Lewis Hamilton</b><span>Ferrari</span></span><span class="pts">191</span></div>
+    <div class="fila-piloto"><span class="pos">4</span><span class="tira" style="background:#FF8000"></span><span class="quien"><b>Lando Norris</b><span>McLaren</span></span><span class="pts">171</span></div>
+    <div class="fila-piloto"><span class="pos">5</span><span class="tira" style="background:#3671C6"></span><span class="quien"><b>Max Verstappen</b><span>Red Bull</span></span><span class="pts">168</span></div>
+    <div class="fila-piloto"><span class="pos">6</span><span class="tira" style="background:#E8002D"></span><span class="quien"><b>Charles Leclerc</b><span>Ferrari</span></span><span class="pts">152</span></div>
+    <div class="fila-piloto"><span class="pos">7</span><span class="tira" style="background:#FF8000"></span><span class="quien"><b>Oscar Piastri</b><span>McLaren</span></span><span class="pts">149</span></div>
+    <div class="fila-piloto"><span class="pos">8</span><span class="tira" style="background:#229971"></span><span class="quien"><b>Fernando Alonso</b><span>Aston Martin</span></span><span class="pts">88</span></div>
+    <div class="fila-piloto"><span class="pos">1</span><span class="tira" style="background:#00A19B"></span><span class="quien"><b>Andrea Kimi Antonelli</b><span>Mercedes</span></span><span class="pts">267</span></div>
+    <div class="fila-piloto"><span class="pos">2</span><span class="tira" style="background:#00A19B"></span><span class="quien"><b>George Russell</b><span>Mercedes</span></span><span class="pts">201</span></div>
+    <div class="fila-piloto"><span class="pos">3</span><span class="tira" style="background:#E8002D"></span><span class="quien"><b>Lewis Hamilton</b><span>Ferrari</span></span><span class="pts">191</span></div>
+    <div class="fila-piloto"><span class="pos">4</span><span class="tira" style="background:#FF8000"></span><span class="quien"><b>Lando Norris</b><span>McLaren</span></span><span class="pts">171</span></div>
+    <div class="fila-piloto"><span class="pos">5</span><span class="tira" style="background:#3671C6"></span><span class="quien"><b>Max Verstappen</b><span>Red Bull</span></span><span class="pts">168</span></div>
+    <div class="fila-piloto"><span class="pos">6</span><span class="tira" style="background:#E8002D"></span><span class="quien"><b>Charles Leclerc</b><span>Ferrari</span></span><span class="pts">152</span></div>
+    <div class="fila-piloto"><span class="pos">7</span><span class="tira" style="background:#FF8000"></span><span class="quien"><b>Oscar Piastri</b><span>McLaren</span></span><span class="pts">149</span></div>
+    <div class="fila-piloto"><span class="pos">8</span><span class="tira" style="background:#229971"></span><span class="quien"><b>Fernando Alonso</b><span>Aston Martin</span></span><span class="pts">88</span></div>
+    <div class="fila-piloto"><span class="pos">1</span><span class="tira" style="background:#00A19B"></span><span class="quien"><b>Andrea Kimi Antonelli</b><span>Mercedes</span></span><span class="pts">267</span></div>
+    <div class="fila-piloto"><span class="pos">2</span><span class="tira" style="background:#00A19B"></span><span class="quien"><b>George Russell</b><span>Mercedes</span></span><span class="pts">201</span></div>
+    <div class="fila-piloto"><span class="pos">3</span><span class="tira" style="background:#E8002D"></span><span class="quien"><b>Lewis Hamilton</b><span>Ferrari</span></span><span class="pts">191</span></div>
+    <div class="fila-piloto"><span class="pos">4</span><span class="tira" style="background:#FF8000"></span><span class="quien"><b>Lando Norris</b><span>McLaren</span></span><span class="pts">171</span></div>
+    <div class="fila-piloto"><span class="pos">5</span><span class="tira" style="background:#3671C6"></span><span class="quien"><b>Max Verstappen</b><span>Red Bull</span></span><span class="pts">168</span></div>
+    <div class="fila-piloto"><span class="pos">6</span><span class="tira" style="background:#E8002D"></span><span class="quien"><b>Charles Leclerc</b><span>Ferrari</span></span><span class="pts">152</span></div>
+    <div class="fila-piloto"><span class="pos">7</span><span class="tira" style="background:#FF8000"></span><span class="quien"><b>Oscar Piastri</b><span>McLaren</span></span><span class="pts">149</span></div>
+    <div class="fila-piloto"><span class="pos">8</span><span class="tira" style="background:#229971"></span><span class="quien"><b>Fernando Alonso</b><span>Aston Martin</span></span><span class="pts">88</span></div>
+</main>
 
-<nav id="barra" data-cristal="si" data-etq="ninguna" style="--abajo:16; --lado:10px" aria-label="Maqueta de navegación">
+<div class="silueta" aria-hidden="true"></div>
+
+<nav aria-label="Maqueta de navegación">
   <ul>
-    <li id="realce-host"><span id="realce"></span></li>
+    <li class="realce" aria-hidden="true"></li>
+      <li><label for="tab-0"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span class="etq"><span class="larga">Inicio</span><span class="corta">Inicio</span></span></label></li>
+      <li><label for="tab-1"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h3V2h2v2h6V2h2v2h3v18H4zm2 6v10h12V10z"/></svg><span class="etq"><span class="larga">Calendario</span><span class="corta">Fechas</span></span></label></li>
+      <li><label for="tab-2"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 20h4v-7H4zm6 0h4V4h-4zm6 0h4v-11h-4z"/></svg><span class="etq"><span class="larga">Clasificación</span><span class="corta">Puntos</span></span></label></li>
+      <li><label for="tab-3"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a7 7 0 0 0-7 7v4h14v-4a7 7 0 0 0-7-7M4 16h16v3H4z"/></svg><span class="etq"><span class="larga">Pilotos</span><span class="corta">Pilotos</span></span></label></li>
+      <li><label for="tab-4"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg><span class="etq"><span class="larga">Más</span><span class="corta">Más</span></span></label></li>
   </ul>
 </nav>
 
-<script>
-(function () {
-  'use strict';
-
-  var $ = function (id) { return document.getElementById(id); };
-
-  // --- La barra, construida para poder cambiarle las etiquetas -------------
-  var TABS = [
-    { etq: 'Inicio', corta: 'Inicio', d: 'M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z' },
-    { etq: 'Calendario', corta: 'Fechas', d: 'M4 4h3V2h2v2h6V2h2v2h3v18H4zm2 6v10h12V10z' },
-    { etq: 'Clasificación', corta: 'Puntos', d: 'M4 20h4v-7H4zm6 0h4V4h-4zm6 0h4v-11h-4z' },
-    { etq: 'Pilotos', corta: 'Pilotos', d: 'M12 3a7 7 0 0 0-7 7v4h14v-4a7 7 0 0 0-7-7M4 16h16v3H4z' },
-    { etq: 'Más', corta: 'Más', d: 'M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z' }
-  ];
-
-  var ul = document.querySelector('#barra ul');
-  var realce = $('realce');
-  var activa = 0;
-
-  TABS.forEach(function (t, i) {
-    var li = document.createElement('li');
-    var a = document.createElement('a');
-    a.href = '#';
-    if (i === 0) a.setAttribute('aria-current', 'page');
-    a.innerHTML =
-      '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="' + t.d + '"/></svg>' +
-      '<span class="etq" data-corta="' + t.corta + '">' + t.etq + '</span>';
-    a.addEventListener('click', function (e) {
-      e.preventDefault();
-      activa = i;
-      Array.prototype.forEach.call(ul.querySelectorAll('a'), function (otro, j) {
-        if (j === i) otro.setAttribute('aria-current', 'page');
-        else otro.removeAttribute('aria-current');
-      });
-      colocarRealce();
-    });
-    li.appendChild(a);
-    ul.appendChild(li);
-  });
-
-  function colocarRealce() {
-    var a = ul.querySelector('a[aria-current="page"]');
-    if (!a) return;
-    var caja = a.getBoundingClientRect();
-    var cont = ul.getBoundingClientRect();
-    realce.style.width = caja.width + 'px';
-    realce.style.transform = 'translateX(' + (caja.left - cont.left) + 'px)';
-  }
-
-  // --- Relleno para poder desplazar ---------------------------------------
-  var NOMBRES = [
-    ['Andrea Kimi Antonelli', 'Mercedes', '#00A19B', 267],
-    ['George Russell', 'Mercedes', '#00A19B', 201],
-    ['Lewis Hamilton', 'Ferrari', '#E8002D', 191],
-    ['Lando Norris', 'McLaren', '#FF8000', 171],
-    ['Max Verstappen', 'Red Bull', '#3671C6', 168],
-    ['Charles Leclerc', 'Ferrari', '#E8002D', 152],
-    ['Oscar Piastri', 'McLaren', '#FF8000', 149],
-    ['Fernando Alonso', 'Aston Martin', '#229971', 88]
-  ];
-  var lista = $('lista');
-  for (var v = 0; v < 4; v++) {
-    NOMBRES.forEach(function (n, i) {
-      var d = document.createElement('div');
-      d.className = 'tarjeta-falsa';
-      d.innerHTML =
-        '<span class="pos">' + (i + 1) + '</span>' +
-        '<span class="barra-equipo" style="background:' + n[2] + '"></span>' +
-        '<span class="quien"><b>' + n[0] + '</b><span>' + n[1] + '</span></span>' +
-        '<span class="pts">' + n[3] + '</span>';
-      lista.appendChild(d);
-    });
-  }
-
-  // --- La sonda: el teléfono se mide solo ---------------------------------
-  var barra = $('barra');
-  var desvioMax = 0;
-
-  function medir() {
-    var caja = barra.getBoundingClientRect();
-    var vh = window.innerHeight;
-    // Donde DEBERÍA estar: la ventana menos lo que la barra ocupa por debajo.
-    var esperado = Math.round(vh - caja.height - parseFloat(getComputedStyle(barra).bottom));
-    var top = Math.round(caja.top);
-    var desvio = Math.abs(top - esperado);
-    if (desvio > desvioMax) desvioMax = desvio;
-
-    $('mScroll').textContent = Math.round(window.scrollY);
-    $('mVh').textContent = Math.round(vh);
-    $('mTop').textContent = top;
-    $('mEsperado').textContent = esperado;
-    $('mDesvio').textContent = desvioMax;
-
-    var ver = $('veredicto');
-    if (window.scrollY < 40) {
-      ver.textContent = 'Desplaza la página para medir.';
-      ver.setAttribute('data-mal', 'no');
-    } else if (desvioMax <= 2) {
-      ver.textContent = 'La barra se queda quieta. Desvío ' + desvioMax + ' px.';
-      ver.setAttribute('data-mal', 'no');
-    } else {
-      ver.textContent = 'La barra SE DESPEGA: se ha ido ' + desvioMax + ' px de su sitio.';
-      ver.setAttribute('data-mal', 'si');
-    }
-  }
-
-  function reiniciar() { desvioMax = 0; medir(); }
-
-  var pedido = null;
-  function alDesplazar() {
-    if (pedido) return;
-    pedido = requestAnimationFrame(function () { pedido = null; medir(); colocarRealce(); });
-  }
-
-  window.addEventListener('scroll', alDesplazar, { passive: true });
-  window.addEventListener('resize', function () { reiniciar(); colocarRealce(); });
-
-  // --- Mandos --------------------------------------------------------------
-  function segmentado(id, alElegir) {
-    var caja = $(id);
-    caja.addEventListener('click', function (e) {
-      var b = e.target.closest('button');
-      if (!b) return;
-      Array.prototype.forEach.call(caja.querySelectorAll('button'), function (o) {
-        o.setAttribute('aria-pressed', String(o === b));
-      });
-      alElegir(b.dataset.v);
-    });
-  }
-
-  segmentado('opCristal', function (v) {
-    barra.setAttribute('data-cristal', v);
-    // Cada variante se mide desde cero: si no, el desvío de la anterior
-    // contaminaría la siguiente y las tres parecerían igual de malas.
-    reiniciar();
-  });
-
-  segmentado('opEtq', function (v) {
-    barra.setAttribute('data-etq', v);
-    requestAnimationFrame(colocarRealce);
-  });
-
-  function deslizador(id, salida, aplicar) {
-    var e = $(id), o = $(salida);
-    var alMover = function () {
-      o.textContent = e.value + ' px';
-      aplicar(e.value);
-      medir();
-    };
-    e.addEventListener('input', alMover);
-    alMover();
-  }
-
-  deslizador('abajo', 'vAbajo', function (v) { barra.style.setProperty('--abajo', v); });
-  deslizador('lado', 'vLado', function (v) { barra.style.setProperty('--lado', v + 'px'); });
-
-  colocarRealce();
-  medir();
-})();
-</script>
 </body>
 </html>
