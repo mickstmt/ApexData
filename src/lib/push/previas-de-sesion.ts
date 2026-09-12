@@ -3,7 +3,7 @@ import { avisarACadaUno, type Aviso } from '@/lib/push';
 import { sesionesDeTemporada } from '@/services/openf1/client';
 import type { SesionOpenF1 } from '@/services/openf1/tipos';
 
-import { diasDeCarrera, redactarPrevia, tocaLaPrevia } from './previa';
+import { RETROVISOR_HORAS, diasDeCarrera, redactarPrevia, tocaLaPrevia } from './previa';
 import { SESIONES, quiereLaSesion } from './redaccion';
 import { granPremioDe } from './gran-premio';
 import { zonaValida } from './zona';
@@ -58,15 +58,18 @@ export async function avisarDePrevias(opciones?: {
 
   const todas = opciones?.sesiones ?? (await sesionesDeTemporada(ahora.getFullYear()));
 
-  // Solo lo que viene: mirar la temporada entera en cada vuelta sería agrupar
-  // ciento quince sesiones por huso horario cada cinco minutos para nada.
+  // Solo lo de alrededor: mirar la temporada entera en cada vuelta sería
+  // agrupar ciento quince sesiones por huso horario cada cinco minutos para
+  // nada. Hacia atrás se mira lo justo para que un grupo no pierda las
+  // sesiones que ya rodaron y con ellas su identidad.
   const horizonte = new Date(ahora.getTime() + HORIZONTE_DIAS * 24 * 3600e3);
-  const proximas = todas.filter((s) => {
+  const retrovisor = new Date(ahora.getTime() - RETROVISOR_HORAS * 3600e3);
+  const enJuego = todas.filter((s) => {
     const inicio = new Date(s.date_start);
-    return inicio > ahora && inicio < horizonte && SESIONES[s.session_name] !== undefined;
+    return inicio > retrovisor && inicio < horizonte && SESIONES[s.session_name] !== undefined;
   });
 
-  if (!proximas.length) return informe;
+  if (!enJuego.length) return informe;
 
   /** Lo que hay que mandar a cada suscripción, ya redactado. */
   const porMandar = new Map<string, Aviso>();
@@ -79,7 +82,7 @@ export async function avisarDePrevias(opciones?: {
 
     // Solo las sesiones que esta persona quiere: si apagó las prácticas, su
     // previa no debe anunciárselas.
-    const suyas = proximas.filter((s) =>
+    const suyas = enJuego.filter((s) =>
       quiereLaSesion(suscripcion.sessions, SESIONES[s.session_name].codigo)
     );
 

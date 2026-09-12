@@ -27,6 +27,35 @@ import { diaAnterior, diaLocal, horaEnZona, instanteDe, type Zona } from './zona
 /** La hora a la que sale la previa, en el reloj de quien la recibe. */
 export const HORA_DE_LA_PREVIA = 20;
 
+/**
+ * Cuánto se mira hacia ATRÁS, y por qué no es cero.
+ *
+ * Aquí estuvo el fallo de la previa repetida. El viernes a las 08:01 llegó un
+ * segundo aviso diciendo «Mañana empieza: Práctica 2 10:00» — la FP2 era ese
+ * mismo día, dos horas después, y la previa buena había salido el jueves a las
+ * 20:00 anunciando las dos sesiones del viernes.
+ *
+ * No fue que la marca fallara. La marca lleva la clave de la PRIMERA sesión
+ * del grupo, y el grupo cambió de primera: mirando solo hacia delante, en
+ * cuanto la FP1 empezó dejó de estar en la lista, así que el grupo del viernes
+ * pasó de [FP1, FP2] a [FP2] y con él su identidad. Grupo nuevo, clave nueva,
+ * sin marca, y `tocaLaPrevia` seguía diciendo que sí porque la FP2 aún no
+ * había empezado. Por eso mencionaba solo la FP2 y por eso decía «empieza»:
+ * era, literalmente, un grupo distinto.
+ *
+ * Con retrovisor, una sesión que ya empezó sigue contando para formar su
+ * grupo, así que el grupo del viernes sigue siendo [FP1, FP2] y `tocaLaPrevia`
+ * lo descarta solo —su primera sesión ya rodó—. Treinta horas y no veinticuatro
+ * porque un día local dura veinticuatro y hace falta margen para alcanzar la
+ * primera sesión de un grupo desde después de la última.
+ *
+ * Mirar atrás no puede resucitar previas viejas: `tocaLaPrevia` exige que la
+ * primera sesión del grupo no haya empezado, y eso es falso para todo grupo del
+ * pasado.
+ */
+export const RETROVISOR_HORAS = 30;
+
+
 export interface DiaDeCarrera {
   /** La sesión más temprana del día. Identifica al grupo. */
   primera: SesionOpenF1;

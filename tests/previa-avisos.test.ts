@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { HORA_DE_LA_PREVIA, diasDeCarrera, redactarPrevia, tocaLaPrevia } from '@/lib/push/previa';
+import {
+  HORA_DE_LA_PREVIA,
+  RETROVISOR_HORAS,
+  diasDeCarrera,
+  redactarPrevia,
+  tocaLaPrevia,
+} from '@/lib/push/previa';
 import { LIMITE_CARACTERES } from '@/lib/push/redaccion';
 import { diaAnterior, diaLocal, horaEnZona, instanteDe, zonaValida } from '@/lib/push/zona';
 import type { SesionOpenF1 } from '@/services/openf1/tipos';
@@ -242,5 +248,74 @@ describe('el texto de la previa', () => {
         );
       }
     }
+  });
+});
+
+/**
+ * La previa repetida del viernes, reproducida.
+ *
+ * El jueves a las 20:00 llegó la previa buena, con las dos sesiones del
+ * viernes. El viernes a las 08:01 llegó una segunda diciendo «Mañana empieza:
+ * Práctica 2 10:00» — esa sesión era ese mismo día, dos horas después.
+ *
+ * No fue que la marca fallara: la marca lleva la clave de la PRIMERA sesión del
+ * grupo, y el grupo cambió de primera cuando la FP1 dejó de estar en la lista
+ * por haber empezado ya.
+ */
+describe('la previa repetida del viernes', () => {
+  /** Jueves 10, 20:00 en Lima. */
+  const JUEVES_20 = new Date('2026-09-11T01:00:00Z');
+  /** Viernes 11, 08:01 en Lima: la FP1 ya rodó, la FP2 aún no. */
+  const VIERNES_0801 = new Date('2026-09-11T13:01:00Z');
+
+  /** El filtro que tenía el emisor: solo lo que todavía no ha empezado. */
+  const soloLoQueViene = (ahora: Date) =>
+    MADRID_2026.filter((s) => new Date(s.date_start) > ahora);
+
+  /** El que tiene ahora, con retrovisor. */
+  const conRetrovisor = (ahora: Date) =>
+    MADRID_2026.filter(
+      (s) => new Date(s.date_start) > new Date(ahora.getTime() - RETROVISOR_HORAS * 3600e3)
+    );
+
+  it('el jueves sale UNA previa, con las dos sesiones del viernes', () => {
+    const [viernes] = diasDeCarrera(conRetrovisor(JUEVES_20), LIMA);
+
+    expect(tocaLaPrevia(viernes, JUEVES_20)).toBe(true);
+    expect(viernes.sesiones.map((s) => s.session_name)).toEqual(['Practice 1', 'Practice 2']);
+    // La marca se guarda con esta clave.
+    expect(viernes.primera.session_key).toBe(1);
+  });
+
+  it('mirando solo hacia delante, el grupo cambia de identidad y vuelve a tocar', () => {
+    // El fallo, tal cual: con la FP1 ya rodando queda un grupo que solo tiene
+    // la FP2, con OTRA primera y por tanto otra clave. La marca del jueves no
+    // lo tapa, y `tocaLaPrevia` sigue diciendo que sí.
+    const [viernes] = diasDeCarrera(soloLoQueViene(VIERNES_0801), LIMA);
+
+    expect(viernes.sesiones.map((s) => s.session_name)).toEqual(['Practice 2']);
+    expect(viernes.primera.session_key).toBe(2);
+    expect(tocaLaPrevia(viernes, VIERNES_0801)).toBe(true);
+  });
+
+  it('con retrovisor el grupo se mantiene entero, y ya no toca', () => {
+    const [viernes] = diasDeCarrera(conRetrovisor(VIERNES_0801), LIMA);
+
+    expect(viernes.sesiones.map((s) => s.session_name)).toEqual(['Practice 1', 'Practice 2']);
+    expect(viernes.primera.session_key).toBe(1);
+    // Su primera sesión ya rodó, así que se descarta solo.
+    expect(tocaLaPrevia(viernes, VIERNES_0801)).toBe(false);
+  });
+
+  it('mirar atrás no resucita previas viejas', () => {
+    // El domingo por la mañana, el retrovisor todavía alcanza a las sesiones
+    // del sábado. Ninguna puede volver a mandarse: `tocaLaPrevia` exige que la
+    // primera del grupo no haya empezado.
+    const domingo = new Date('2026-09-13T12:00:00Z');
+    const dias = diasDeCarrera(conRetrovisor(domingo), LIMA);
+    const pasados = dias.filter((d) => new Date(d.primera.date_start) < domingo);
+
+    expect(pasados.length).toBeGreaterThan(0);
+    for (const dia of pasados) expect(tocaLaPrevia(dia, domingo)).toBe(false);
   });
 });
