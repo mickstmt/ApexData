@@ -36,10 +36,19 @@ const AVISO_SANCIONES =
 export function Parrilla({
   puestos,
   origen,
+  titulo = 'Parrilla de salida',
 }: {
   puestos: PuestoDeParrilla[];
   /** De dónde sale el orden, dicho en una línea. */
   origen: string;
+  /**
+   * Qué es esta lista.
+   *
+   * No siempre es la parrilla de salida: en la pestaña de clasificación, ese
+   * mismo orden ES el resultado de la sesión, y titularlo «parrilla» mandaba a
+   * quien lo leía a pensar en la carrera del día siguiente.
+   */
+  titulo?: string;
 }) {
   if (puestos.length === 0) return null;
 
@@ -47,7 +56,7 @@ export function Parrilla({
     <div className="mt-6">
       <h3 className="mb-1 flex items-center gap-2 text-lg font-bold">
         <Flag className="h-5 w-5 text-primary" aria-hidden />
-        Parrilla de salida
+        {titulo}
       </h3>
       <p className="mb-3 text-sm text-muted-foreground">
         {origen} <b>{AVISO_SANCIONES}</b>
@@ -89,18 +98,35 @@ export function Parrilla({
 
 /** Qué sesión ordena cada parrilla, y cómo se llama al contarlo. */
 const ORIGEN: Record<string, string> = {
-  Q: 'Según el orden de la clasificación.',
+  Q: 'El resultado oficial aún no ha llegado; este orden viene de la cronometría.',
   SQ: 'Según los tiempos de la clasificación al sprint, reconstruidos desde la cronometría.',
+};
+
+/** Cómo se titula cada una: en la clasificación, el orden ES el resultado. */
+const TITULO: Record<string, string> = {
+  Q: 'Orden de la clasificación',
+  SQ: 'Parrilla de salida',
 };
 
 export function ParrillaDesdeTiempos({
   year,
   round,
   sesion,
+  alCargar,
 }: {
   year: number;
   round: number;
   sesion: Extract<SessionType, 'Q' | 'SQ'>;
+  /**
+   * Avisa a quien lo coloca de si hay parrilla que enseñar.
+   *
+   * Existe por una contradicción que vio el usuario: arriba un cartel decía
+   * «los resultados aún no han llegado» y justo debajo estaba la clasificación
+   * entera. Los dos contestan la misma pregunta, así que solo uno debe estar en
+   * pantalla — y quién, depende de algo que solo se sabe aquí, cuando la
+   * descarga termina.
+   */
+  alCargar?: (hayParrilla: boolean) => void;
 }) {
   const [clasificacion, setClasificacion] = useState<SessionClassificationResponse | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -114,10 +140,14 @@ export function ParrillaDesdeTiempos({
     fetch(`/api/clasificacion/${year}/${round}/${sesion}`)
       .then((respuesta) => (respuesta.ok ? respuesta.json() : Promise.reject(respuesta.status)))
       .then((datos: SessionClassificationResponse) => {
-        if (vigente) setClasificacion(datos);
+        if (!vigente) return;
+        setClasificacion(datos);
+        alCargar?.(datos.classification.length > 0);
       })
       .catch(() => {
-        if (vigente) setFallo(true);
+        if (!vigente) return;
+        setFallo(true);
+        alCargar?.(false);
       })
       .finally(() => {
         if (vigente) setCargando(false);
@@ -126,7 +156,7 @@ export function ParrillaDesdeTiempos({
     return () => {
       vigente = false;
     };
-  }, [year, round, sesion]);
+  }, [year, round, sesion, alCargar]);
 
   if (cargando) {
     return (
@@ -150,5 +180,5 @@ export function ParrillaDesdeTiempos({
     tiempo: fila.time,
   }));
 
-  return <Parrilla puestos={puestos} origen={ORIGEN[sesion]} />;
+  return <Parrilla puestos={puestos} titulo={TITULO[sesion]} origen={ORIGEN[sesion]} />;
 }

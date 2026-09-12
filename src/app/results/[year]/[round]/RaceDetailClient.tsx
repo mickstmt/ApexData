@@ -1085,6 +1085,9 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
               nombre="La clasificación"
               estado={estadoClasificacion}
               reconstruir={parrillaDeLaCarrera}
+              // Aquí, y solo aquí, la parrilla ES el resultado de la sesión:
+              // en cuanto llega, el cartel de «aún no ha llegado» sobra.
+              laParrillaEsElResultado
             />
           ) : (
             // Antes de hidratar no se sabe qué hora es, y de eso depende el

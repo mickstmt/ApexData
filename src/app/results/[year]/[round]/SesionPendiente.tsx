@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { CalendarClock, Construction, Radio } from 'lucide-react';
 import Link from 'next/link';
 import { LocalDateTime, RaceCountdown } from '@/components/home/RaceCountdown';
@@ -29,6 +30,7 @@ export function SesionPendiente({
   nombre,
   parrilla,
   reconstruir,
+  laParrillaEsElResultado = false,
 }: {
   estado: QueEnseñar;
   nombre: string;
@@ -42,7 +44,34 @@ export function SesionPendiente({
    * mañana es rehacerla desde la cronometría de FastF1.
    */
   reconstruir?: { year: number; round: number; sesion: 'Q' | 'SQ' };
+  /**
+   * ¿La parrilla de abajo **es** el resultado de esta sesión?
+   *
+   * Solo en la pestaña de clasificación. Ahí el cartel y la parrilla contestan
+   * la misma pregunta —«¿cómo quedó?»— y tenerlos juntos era la contradicción
+   * que reportó el usuario: «decía que aún no tenía los datos pero abajo ya se
+   * habían cargado».
+   *
+   * En la pestaña de CARRERA no: allí el cartel dice cuándo empieza y la
+   * parrilla dice desde dónde sale cada uno. Son dos cosas distintas y las dos
+   * hacen falta. Esto empezó siendo automático y habría borrado la cuenta atrás
+   * del domingo; por eso ahora hay que pedirlo.
+   */
+  laParrillaEsElResultado?: boolean;
 }) {
+  /**
+   * ¿Ha llegado ya la clasificación reconstruida?
+   *
+   * Mientras no, manda el cartel: es lo único que hay que contar. En cuanto
+   * llega, el cartel **se va**, porque los dos contestan la misma pregunta y
+   * tenerlos juntos era la contradicción que reportó el usuario — «decía que
+   * aún no tenía los datos pero abajo ya se habían cargado».
+   *
+   * El estado vive aquí y no abajo porque quien tiene que desaparecer es el de
+   * arriba, y en React eso solo lo puede decidir el padre.
+   */
+  const [hayReconstruida, setHayReconstruida] = useState(false);
+
   // `resultados` no llega nunca aquí —para eso están las tablas—, pero el tipo
   // lo admite y sin esta salida el resto no puede leer `cuando`.
   if (estado.tipo === 'resultados') return null;
@@ -81,7 +110,10 @@ export function SesionPendiente({
     'sin-publicar': {
       icono: CalendarClock,
       titulo: `${nombre} ya terminó, pero los resultados aún no han llegado`,
-      cuerpo: 'La fuente tarda un rato en publicarlos. Se vuelven a pedir cada hora.',
+      // «Cada hora» era falso y además asustaba: `instrumentation.ts` los pide
+      // **cada cinco minutos**. La hora es solo el cron de GitHub, que existe
+      // como red por si el servidor se cayó, no como cadencia normal.
+      cuerpo: 'La fuente tarda un rato en publicarlos. Se vuelven a pedir cada pocos minutos.',
     },
   }[estado.tipo];
 
@@ -89,6 +121,7 @@ export function SesionPendiente({
 
   return (
     <>
+      {!(laParrillaEsElResultado && hayReconstruida) && (
       <div className="rounded-lg border border-border bg-card p-8 text-center">
         <Icono className="mx-auto mb-3 h-10 w-10 text-muted-foreground" aria-hidden />
         <h3 className="mb-2 text-xl font-bold">{encabezado.titulo}</h3>
@@ -105,6 +138,7 @@ export function SesionPendiente({
 
         <p className="mx-auto max-w-prose text-sm text-muted-foreground">{encabezado.cuerpo}</p>
       </div>
+      )}
 
       {parrilla && parrilla.length > 0 ? (
         <Parrilla
@@ -124,6 +158,7 @@ export function SesionPendiente({
             year={reconstruir.year}
             round={reconstruir.round}
             sesion={reconstruir.sesion}
+            alCargar={setHayReconstruida}
           />
         )
       )}

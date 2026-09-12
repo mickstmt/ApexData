@@ -1014,6 +1014,51 @@ test.describe('pestañas de una carrera', () => {
     await expect(page.getByText(/^en \d+[dhm]/i).first()).toBeVisible();
   });
 
+  test('en la carrera, el cartel y la parrilla conviven', async ({ page }) => {
+    // El domingo por la mañana: la carrera aún no ha salido y su parrilla ya
+    // se conoce. Las dos cosas tienen que verse.
+    //
+    // **Lo que esta prueba NO cubre**, y conviene saberlo. Al arreglar el punto
+    // 31 —que el cartel se aparte cuando llega la parrilla reconstruida— la
+    // primera versión lo ocultaba en las TRES pestañas que comparten este
+    // componente, y aquí habría borrado la cuenta atrás. Se comprobó si esta
+    // prueba lo cazaba: **no**. Pasa igual con el fallo puesto, porque con la
+    // clasificación ya en la base se usa la rama de la parrilla guardada y el
+    // camino reconstruido no llega a correr.
+    //
+    // Ese camino solo aparece con la sesión ya corrida y la base todavía sin
+    // ella —un estado que dura minutos y no se puede fabricar desde fuera— así
+    // que se protege por construcción: hay que pedir el ocultado con
+    // `laParrillaEsElResultado`, y solo la pestaña de clasificación lo pide.
+    const anio = new Date().getFullYear();
+    const respuesta = await page.request.get(`/api/seasons/${anio}`);
+    test.skip(!respuesta.ok(), `No hay calendario de ${anio}`);
+
+    const { data } = (await respuesta.json()) as {
+      data?: { races?: { round: number; date: string; qualiDate: string | null }[] };
+    };
+
+    const ahora = Date.now();
+    // Una carrera por correr cuya clasificación ya pasó: el domingo por la
+    // mañana de cualquier fin de semana.
+    const conParrilla = (data?.races ?? []).find(
+      (c) =>
+        c.qualiDate &&
+        new Date(c.qualiDate).getTime() < ahora &&
+        new Date(c.date).getTime() > ahora
+    );
+    test.skip(!conParrilla, 'Ahora mismo no hay ninguna carrera entre su clasificación y su salida');
+
+    await page.goto(`/results/${anio}/${conParrilla!.round}`);
+
+    // Las dos cosas, a la vez.
+    await expect(page.getByText(/La carrera aún no se ha corrido/i)).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByRole('heading', { name: /Parrilla de salida/i })).toBeVisible();
+    await expect(page.getByText(/^en \d+[dhm]/i).first()).toBeVisible();
+  });
+
   test('el horario del fin de semana sale, y no en las temporadas sin hora', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
 

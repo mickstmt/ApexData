@@ -186,7 +186,7 @@ describe('el texto de la previa', () => {
     });
 
     expect(primera.titulo).toBe('Spanish Grand Prix · mañana');
-    expect(primera.cuerpo).toBe('Mañana empieza: Práctica 1 06:30 y Práctica 2 10:00.');
+    expect(primera.cuerpo).toBe('Mañana empieza: Práctica 1 a las 06:30 y Práctica 2 a las 10:00.');
 
     const segunda = redactarPrevia({
       dia: dias[1],
@@ -195,7 +195,7 @@ describe('el texto de la previa', () => {
       zona: LIMA,
     });
 
-    expect(segunda.cuerpo).toBe('Mañana: Práctica 3 05:30 y Clasificación 09:00.');
+    expect(segunda.cuerpo).toBe('Mañana: Práctica 3 a las 05:30 y Clasificación a las 09:00.');
   });
 
   it('escribe las horas en el huso de quien lo recibe', () => {
@@ -209,7 +209,24 @@ describe('el texto de la previa', () => {
     });
 
     // Las mismas sesiones que en Lima salían a las 06:30 y 10:00.
-    expect(previa.cuerpo).toBe('Mañana empieza: Práctica 1 13:30 y Práctica 2 17:00.');
+    expect(previa.cuerpo).toBe('Mañana empieza: Práctica 1 a las 13:30 y Práctica 2 a las 17:00.');
+  });
+
+  it('la hora no se pega al número de la práctica', () => {
+    // Lo reportó el usuario leyendo su propio aviso: «Práctica 3 05:30» pone
+    // dos cifras seguidas separadas por un espacio y hay que pararse a decidir
+    // dónde acaba una. Con «a las» el segundo número se lee como hora sola.
+    const previa = redactarPrevia({
+      dia: diasDeCarrera([sesion('Practice 3', '2026-09-12T10:30:00Z', 1)], LIMA)[0],
+      granPremio: 'Spanish Grand Prix',
+      empieza: false,
+      zona: LIMA,
+    });
+
+    expect(previa.cuerpo).toContain('a las');
+    expect(previa.cuerpo, 'el nombre y la hora vuelven a estar pegados').not.toMatch(
+      /Práctica \d \d{2}:\d{2}/
+    );
   });
 
   it('resume en vez de cortarse cuando el día trae muchas sesiones', () => {
@@ -230,7 +247,7 @@ describe('el texto de la previa', () => {
 
     expect(previa.cuerpo.length).toBeLessThanOrEqual(LIMITE_CARACTERES);
     expect(previa.cuerpo).toContain('4 sesiones');
-    expect(previa.cuerpo).toContain('Práctica 1 06:30');
+    expect(previa.cuerpo).toContain('Práctica 1 a las 06:30');
   });
 
   it('ninguna previa del fin de semana se corta', () => {

@@ -122,8 +122,23 @@ export function redactarPrevia(opciones: {
 }): PrevaRedactada {
   const { dia, granPremio, empieza, zona } = opciones;
 
+  /**
+   * «a las», y no un espacio ni un separador.
+   *
+   * El nombre de una práctica acaba en número, así que «Práctica 3 05:30» pone
+   * dos cifras seguidas y hay que pararse a separarlas. Lo reportó el usuario
+   * leyendo su propia notificación.
+   *
+   * Se eligió entre cinco formas, medidas contra el límite de 90 caracteres:
+   * las cinco caben —la más larga se queda en 77— así que se pudo elegir por
+   * cómo se lee. Un `·` o unos paréntesis dejan los dos números pegados y hay
+   * que interpretar el segundo; «a las» dice que es una hora sin que nadie
+   * tenga que pensarlo.
+   */
   const lista = dia.sesiones
-    .map((s) => `${SESIONES[s.session_name].nombre} ${horaEnZona(new Date(s.date_start), zona)}`)
+    .map(
+      (s) => `${SESIONES[s.session_name].nombre} a las ${horaEnZona(new Date(s.date_start), zona)}`
+    )
     .join(' y ');
 
   const cuerpo = `${empieza ? 'Mañana empieza: ' : 'Mañana: '}${lista}.`;
@@ -136,7 +151,7 @@ export function redactarPrevia(opciones: {
     cuerpo:
       cuerpo.length <= LIMITE_CARACTERES
         ? cuerpo
-        : `Mañana, ${dia.sesiones.length} sesiones. La primera, ${SESIONES[dia.primera.session_name].nombre} ${horaEnZona(new Date(dia.primera.date_start), zona)}.`,
+        : `Mañana, ${dia.sesiones.length} sesiones. La primera, ${SESIONES[dia.primera.session_name].nombre} a las ${horaEnZona(new Date(dia.primera.date_start), zona)}.`,
   };
 }
 
