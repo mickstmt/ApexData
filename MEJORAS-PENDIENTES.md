@@ -124,6 +124,17 @@ en los dos temas. No fija una lista de hex, asi que no se queda desactualizada.
 > numero.** Cada mockup ensena una pieza coherente en vez de trocear la misma
 > pantalla cuatro veces. Paso 1 (9 + 10a) HECHO.
 
+> **2026-09-12, al probar lo desplegado**, entraron cuatro puntos nuevos: **23**
+> (el realce no enciende las pestanas por las que pasa), **24** (decision del
+> usuario: mandos minimos en vertical y replay a pantalla completa en
+> horizontal), **25** (el delta sigue subiendo con todos parados — el arreglo
+> del punto 1 no lo cubrio) y **26** (al encoger el circuito se pierden los
+> primeros clasificados). El **25 y el 26 son fallos de cosas que dabamos por
+> cerradas**, asi que van por delante de lo demas.
+>
+> **Pendiente de limpiar**: `public/maqueta/` —la maqueta de la barra y su
+> manifest— se retira al cerrar el punto 14. Sigue servida en produccion.
+
 4. **Replay**: ~~9 + 10a (mandos y linea de tiempo)~~ -> el circuito (11 + 12),
    el final de carrera (2), las radios (22, avisar por la CSP)
 5. **Sesiones**: 3+20
@@ -613,6 +624,109 @@ gesto que ya existe.
   compartir la app con familia y amigos. Merece una frase, no un veto.
 
 **Recomendacion**: si, merece la pena. Marcas en el scrubber + tocar para oir.
+
+---
+---
+# ---- Tanda del 2026-09-12, probando la barra y el replay ya desplegados ----
+
+## 23. UX · El realce pasa por encima de las pestanas sin encenderlas
+
+**Lo que dice el usuario**: con Inicio marcado, el icono y la palabra van pintados.
+Al tocar Pilotos, el realce se desliza de una a otra **pasando por Fechas y Puntos**, y
+esas dos no se encienden al pasar. «Se que puede parecer algo estupido pero para mi es
+el correcto flujo.» No lo es: el realce tarda 720 ms y durante ese viaje la unica
+pestana coloreada es la de destino, asi que el recorrido se lee como un salto de color
+aunque la forma si viaje.
+
+**Lo que hay hoy**: el color lo pone `aria-current="page"`, que es **binario y salta de
+golpe** al llegar la ruta. No sabe nada de por donde va el realce.
+
+**Por donde iria** (sin decidir, y va a mockup porque es animacion):
+- El realce es un `<li>` con `transform`, asi que **su posicion no se puede consultar
+  desde CSS** para teñir lo que tiene debajo. No hay un selector «lo que esta bajo este
+  elemento».
+- La via realista es un **degradado que viaje con el realce** pintando el texto por
+  `background-clip: text`, o una **segunda fila de pestañas ya coloreadas** recortada
+  por el realce con `clip-path` y moviendose con el. La segunda es la que usan las apps
+  que hacen esto bien, y no necesita JavaScript por fotograma.
+- Coste real: duplicar el marcado de las cinco pestanas. Hay que medir que no rompa la
+  accesibilidad —la copia va `aria-hidden`— ni el area tocable.
+
+## 24. DECISION DEL USUARIO · Mandos minimos en vertical, y replay a pantalla completa
+
+**Decidido por el usuario**, no propuesto por mi: el cuadro que contiene los mandos del
+replay **ocupa demasiada pantalla** en vertical. Se reduce «al maximo posible», muy
+minimalista, al estilo del mini-reproductor de Apple Music que el trajo como referencia.
+
+Y el panel grande —que ya esta bien disenado— **no se tira: se muda** a una funcion
+nueva: **expandir el replay a pantalla completa**, girando el telefono para verlo en
+horizontal.
+
+**Lo que el usuario nombro para el modo reducido**: retroceder, reproducir, avanzar y
+velocidad.
+
+**Preguntas abiertas, que son suyas y hay que hacerlas antes de tocar nada**:
+1. **¿El scrubber se queda en vertical?** No lo nombro. Es la unica forma de saltar a un
+   momento concreto, y sin el solo se puede avanzar de diez en diez segundos. Puede que
+   lo diera por supuesto.
+2. **¿Y el reloj y la vuelta** que se acaban de anadir en el punto 10a?
+3. **¿Como se entra a pantalla completa?** ¿Un boton, o basta con girar el telefono?
+4. **¿Y si el telefono tiene el giro bloqueado?** Mucha gente lo lleva asi; haria falta
+   un boton de todas formas.
+
+**Nota tecnica de partida**: el horizontal cambia el reparto entero —el mapa se puede
+llevar la mitad izquierda y la torre la derecha, que es casi el diseno de escritorio que
+ya existe—. Y `screen.orientation.lock()` **no funciona en Safari de iOS**, asi que no
+se puede forzar el giro: hay que responder a el, no pedirlo.
+
+## 25. BUG REABIERTO · El delta sigue subiendo con todos parados
+
+**Sigue pasando despues del arreglo del punto 1** (`4b66c8e`). El usuario: «el tiempo en
+el delta sigue subiendo aunque el lider y todos los demas esten en boxes por bandera
+amarilla o roja».
+
+**Lo que hace el codigo hoy** (`huecoEn`, `src/lib/replay/progreso.ts:198`): el hueco es
+`entre(bajo + 1, k) * paso`, y `entre` cuenta sobre `relojDeCarrera`, que **solo avanza
+cuando la carrera corre**. Eso deberia congelar el delta con bandera roja.
+
+**Dos hipotesis, y hay que medir cual es** antes de tocar:
+1. **Es la amarilla, y es por diseno.** La entrada del punto 1 dice explicitamente que
+   «el coche de seguridad y la amarilla SI cuentan». Si lo que el usuario ve es con
+   amarilla o coche de seguridad, el codigo hace lo que se decidio — y entonces la
+   decision es la que hay que revisar, no el codigo. Bajo coche de seguridad los coches
+   se agrupan, asi que un hueco que CRECE contradice lo que se ve en el mapa.
+2. **Es la roja y `relojDeCarrera` no la esta viendo.** Entonces el arreglo no llego a
+   cubrir este caso y hay que mirar como se construye ese reloj.
+
+**Lo primero que hay que preguntarle al usuario**: en que sesion y en que minuto lo vio,
+y si la pildora de estado decia ROJA o AMARILLA. Sin eso se arregla a ciegas.
+
+## 26. BUG · Al encoger el circuito se pierden los primeros clasificados
+
+**Lo que dice el usuario**: en vertical ve el circuito y debajo solo los tres primeros.
+Si desplaza para que el circuito se achique y quepan mas pilotos, al llegar al maximo
+encogido **ha perdido a los cinco primeros**, que se han ido detras del mapa. Para
+volver a verlos tiene que agrandar el circuito otra vez.
+
+**Por que pasa**: lo que encoge el mapa es **el propio desplazamiento de la torre**
+(`ReplayClient.tsx`, el observador sobre `torreRef`). La torre es una caja con su propio
+scroll, asi que desplazarla para encoger el mapa **sube sus primeras filas fuera de la
+vista**. Las dos cosas van atadas al mismo gesto y se estorban: no hay forma de tener el
+mapa pequeno Y P1 a la vista.
+
+Es un efecto secundario del punto 6+15, que midio bien lo que buscaba —de 4 a 8 filas
+enteras— pero no vio que esas 8 empiezan en la sexta.
+
+**Salidas posibles** (a mockup, porque cambia el gesto):
+- **Separar los dos gestos**: el mapa se encoge con un tirador o un boton, y la torre se
+  desplaza aparte. Es lo mas predecible y lo que hace cualquier app con un mapa arriba.
+- **Devolver la torre a cero** cuando el mapa termina de encogerse. Resuelve el sintoma
+  pero se siente como un tiron y pelea con el dedo.
+- **Fijar las primeras filas** con `position: sticky` mientras se desplaza. Se ve bien
+  pero hay que decidir cuantas, y comerian el sitio que se acaba de ganar.
+
+**Medir antes de elegir**: cuantas filas enteras se ven en cada combinacion, en los tres
+anchos. La cifra que hay que batir es 8, que es lo que dio el 6+15.
 
 ---
 ## VERIFICACION PENDIENTE — FP3 del sabado 12, **10:30Z (05:30 en Lima)**
