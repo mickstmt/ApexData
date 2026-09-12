@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Maqueta de la barra inferior — ApexData</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* ---------------------------------------------------------------------------
+   Maqueta TEMPORAL de la barra inferior.
+   Vive en `public/` a propósito: el fallo que investiga solo se reproduce en el
+   iPhone del usuario, así que la maqueta tiene que abrirse EN el teléfono, y
+   para eso hay que servirla desde el dominio. Se retira al cerrar el punto 14.
+   Los tokens son los de `globals.css`, copiados sin retocar.
+--------------------------------------------------------------------------- */
+:root {
+  color-scheme: light dark;
+  --fondo: #F7F7F8;
+  --tarjeta: #FFFFFF;
+  --tinta: #151519;
+  --apagado: #55555E;
+  --linea: #E4E4E9;
+  --marca: #526600;
+  --marca-tinta: #FFFFFF;
+  --barra-cristal: rgba(255, 255, 255, 0.62);
+  --barra-borde: rgba(20, 20, 26, 0.08);
+  --alerta: #A33B00;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #0B0B0F;
+    --tarjeta: #151519;
+    --tinta: #F5F5F7;
+    --apagado: #A2A2AC;
+    --linea: #26262E;
+    --marca: #CCFF00;
+    --marca-tinta: #000000;
+    --barra-cristal: rgba(40, 40, 49, 0.34);
+    --barra-borde: rgba(255, 255, 255, 0.10);
+    --alerta: #FFA94D;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 16px 16px 260px;
+  background: var(--fondo);
+  color: var(--tinta);
+  font: 400 15px/1.5 Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1 { margin: 0 0 6px; font: 700 24px/1.15 "Chakra Petch", system-ui, sans-serif; }
+.sub { margin: 0 0 18px; color: var(--apagado); font-size: 14px; }
+
+.panel {
+  border: 1px solid var(--linea); border-radius: 14px; background: var(--tarjeta);
+  padding: 14px; margin-bottom: 14px;
+}
+.panel h2 {
+  margin: 0 0 10px;
+  font: 600 11px/1 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: .13em; text-transform: uppercase; color: var(--apagado);
+}
+
+/* --- La sonda: lo que mide el teléfono solo ------------------------------- */
+#sonda {
+  font: 400 12.5px/1.5 "JetBrains Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+#sonda b { color: var(--tinta); }
+#veredicto { margin-top: 8px; font-weight: 600; font-family: Inter, system-ui, sans-serif; font-size: 14px; }
+#veredicto[data-mal="si"] { color: var(--alerta); }
+
+.fila { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.fila:last-child { margin-bottom: 0; }
+.fila label { flex: 0 0 108px; font-size: 13px; color: var(--apagado); }
+.fila output {
+  flex: 0 0 52px; text-align: right;
+  font: 600 13px/1 "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums;
+}
+input[type="range"] { flex: 1; min-width: 0; accent-color: var(--marca); height: 32px; }
+
+.segmentado { display: flex; flex-wrap: wrap; gap: 4px; }
+.segmentado button {
+  flex: 1 1 auto; min-height: 44px; padding: 0 10px;
+  border: 1px solid var(--linea); border-radius: 9px; background: transparent;
+  color: var(--apagado); font: 500 13px/1.2 Inter, system-ui, sans-serif; cursor: pointer;
+}
+.segmentado button[aria-pressed="true"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+
+.relleno p { margin: 0 0 12px; color: var(--apagado); font-size: 14.5px; }
+.tarjeta-falsa {
+  border: 1px solid var(--linea); border-radius: 12px; background: var(--tarjeta);
+  padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px;
+}
+.tarjeta-falsa .pos { font: 600 14px/1 "JetBrains Mono", ui-monospace, monospace; color: var(--apagado); width: 20px; }
+.tarjeta-falsa .barra-equipo { width: 4px; height: 30px; border-radius: 2px; }
+.tarjeta-falsa .quien { flex: 1; min-width: 0; }
+.tarjeta-falsa .quien b { display: block; font-size: 15px; }
+.tarjeta-falsa .quien span { display: block; font-size: 12.5px; color: var(--apagado); }
+.tarjeta-falsa .pts { font: 600 15px/1 "JetBrains Mono", ui-monospace, monospace; }
+
+/* --- La barra -------------------------------------------------------------- */
+#barra {
+  position: fixed;
+  left: var(--lado); right: var(--lado);
+  bottom: calc(var(--abajo) * 1px + env(safe-area-inset-bottom));
+  height: 68px; padding: 5px;
+  border-radius: 34px;
+  border: 1px solid var(--barra-borde);
+  box-shadow: 0 10px 34px rgba(0,0,0,0.45);
+  background: var(--barra-cristal);
+  z-index: 50;
+}
+#barra[data-cristal="si"] {
+  -webkit-backdrop-filter: blur(2px) saturate(1.8);
+  backdrop-filter: blur(2px) saturate(1.8);
+}
+#barra[data-cristal="opaco"] { background: var(--fondo); }
+
+#barra ul { position: relative; display: flex; height: 100%; margin: 0; padding: 0; list-style: none; }
+#barra li { flex: 1; min-width: 0; }
+#realce {
+  position: absolute; inset-block: 0; left: 0;
+  border-radius: 20px; background: color-mix(in srgb, var(--marca) 13%, transparent);
+  transition: transform 420ms cubic-bezier(.34,1.56,.64,1), width 420ms cubic-bezier(.34,1.56,.64,1);
+  pointer-events: none;
+}
+#barra a {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  height: 100%; min-height: 44px; border-radius: 20px;
+  color: var(--apagado); text-decoration: none;
+  font: 500 11.5px/1 Inter, system-ui, sans-serif;
+  position: relative;
+}
+#barra a[aria-current="page"] { color: var(--marca); }
+#barra a svg { width: 26px; height: 26px; }
+#barra .etq { display: block; max-width: 100%; }
+
+/* Las tres salidas para la etiqueta que no cabe. */
+#barra[data-etq="recortar"] .etq { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-inline: 2px; }
+#barra[data-etq="encoger"] .etq { font-size: 10px; letter-spacing: -.01em; }
+#barra[data-etq="cortas"] .etq[data-corta] { font-size: 0; }
+#barra[data-etq="cortas"] .etq[data-corta]::after { content: attr(data-corta); font-size: 11.5px; }
+
+@media (prefers-reduced-motion: reduce) { #realce { transition: none; } }
+</style>
+</head>
+<body>
+
+<h1>La barra inferior</h1>
+<p class="sub">Maqueta para medir en el teléfono lo que desde el ordenador no se reproduce. <b>Desplaza esta página</b> y vigila el recuadro de abajo mientras lo haces.</p>
+
+<div class="panel">
+  <h2>Lo que mide tu teléfono ahora mismo</h2>
+  <div id="sonda">
+    desplazamiento: <b id="mScroll">0</b> px<br>
+    alto de la ventana: <b id="mVh">0</b> px<br>
+    borde superior de la barra: <b id="mTop">0</b> px<br>
+    debería ser siempre: <b id="mEsperado">0</b> px<br>
+    desvío máximo visto: <b id="mDesvio">0</b> px
+  </div>
+  <div id="veredicto" data-mal="no">Aún sin desplazar.</div>
+</div>
+
+<div class="panel">
+  <h2>El cristal — la sospecha</h2>
+  <div class="segmentado" id="opCristal">
+    <button type="button" data-v="si" aria-pressed="true">Con desenfoque (como hoy)</button>
+    <button type="button" data-v="no" aria-pressed="false">Sin desenfoque</button>
+    <button type="button" data-v="opaco" aria-pressed="false">Opaca del todo</button>
+  </div>
+  <p class="sub" style="margin:10px 0 0">Si con «sin desenfoque» el desvío se queda en 0 y con «como hoy» no, el culpable es el desenfoque.</p>
+</div>
+
+<div class="panel">
+  <h2>Posición y separación</h2>
+  <div class="fila">
+    <label for="abajo">Desde abajo</label>
+    <input type="range" id="abajo" min="0" max="28" step="1" value="16">
+    <output id="vAbajo">16 px</output>
+  </div>
+  <div class="fila">
+    <label for="lado">De los lados</label>
+    <input type="range" id="lado" min="0" max="32" step="1" value="10">
+    <output id="vLado">10 px</output>
+  </div>
+  <p class="sub" style="margin:4px 0 0">Hoy son 16 y 10. Muévelos hasta que te guste y dime los dos números.</p>
+</div>
+
+<div class="panel">
+  <h2>La etiqueta que no cabe</h2>
+  <div class="segmentado" id="opEtq">
+    <button type="button" data-v="ninguna" aria-pressed="true">Como hoy</button>
+    <button type="button" data-v="encoger" aria-pressed="false">Letra más pequeña</button>
+    <button type="button" data-v="cortas" aria-pressed="false">Palabras cortas</button>
+    <button type="button" data-v="recortar" aria-pressed="false">Recortar con puntos</button>
+  </div>
+  <p class="sub" style="margin:10px 0 0">«Clasificación» mide 71 px de texto en una casilla de 72. <b>Palabras cortas</b> es la que recomiendo: «Puntos» y «Fechas» dicen lo mismo y caben de sobra.</p>
+</div>
+
+<div class="panel relleno">
+  <h2>Contenido, para que haya algo que desplazar</h2>
+  <p>Toca las pestañas de la barra y mira si el realce <b>recorre</b> o <b>salta</b>. Y prueba a tocar dos seguidas rápido.</p>
+</div>
+
+<div id="lista"></div>
+
+<nav id="barra" data-cristal="si" data-etq="ninguna" style="--abajo:16; --lado:10px" aria-label="Maqueta de navegación">
+  <ul>
+    <li id="realce-host"><span id="realce"></span></li>
+  </ul>
+</nav>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // --- La barra, construida para poder cambiarle las etiquetas -------------
+  var TABS = [
+    { etq: 'Inicio', corta: 'Inicio', d: 'M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z' },
+    { etq: 'Calendario', corta: 'Fechas', d: 'M4 4h3V2h2v2h6V2h2v2h3v18H4zm2 6v10h12V10z' },
+    { etq: 'Clasificación', corta: 'Puntos', d: 'M4 20h4v-7H4zm6 0h4V4h-4zm6 0h4v-11h-4z' },
+    { etq: 'Pilotos', corta: 'Pilotos', d: 'M12 3a7 7 0 0 0-7 7v4h14v-4a7 7 0 0 0-7-7M4 16h16v3H4z' },
+    { etq: 'Más', corta: 'Más', d: 'M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z' }
+  ];
+
+  var ul = document.querySelector('#barra ul');
+  var realce = $('realce');
+  var activa = 0;
+
+  TABS.forEach(function (t, i) {
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.href = '#';
+    if (i === 0) a.setAttribute('aria-current', 'page');
+    a.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="' + t.d + '"/></svg>' +
+      '<span class="etq" data-corta="' + t.corta + '">' + t.etq + '</span>';
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      activa = i;
+      Array.prototype.forEach.call(ul.querySelectorAll('a'), function (otro, j) {
+        if (j === i) otro.setAttribute('aria-current', 'page');
+        else otro.removeAttribute('aria-current');
+      });
+      colocarRealce();
+    });
+    li.appendChild(a);
+    ul.appendChild(li);
+  });
+
+  function colocarRealce() {
+    var a = ul.querySelector('a[aria-current="page"]');
+    if (!a) return;
+    var caja = a.getBoundingClientRect();
+    var cont = ul.getBoundingClientRect();
+    realce.style.width = caja.width + 'px';
+    realce.style.transform = 'translateX(' + (caja.left - cont.left) + 'px)';
+  }
+
+  // --- Relleno para poder desplazar ---------------------------------------
+  var NOMBRES = [
+    ['Andrea Kimi Antonelli', 'Mercedes', '#00A19B', 267],
+    ['George Russell', 'Mercedes', '#00A19B', 201],
+    ['Lewis Hamilton', 'Ferrari', '#E8002D', 191],
+    ['Lando Norris', 'McLaren', '#FF8000', 171],
+    ['Max Verstappen', 'Red Bull', '#3671C6', 168],
+    ['Charles Leclerc', 'Ferrari', '#E8002D', 152],
+    ['Oscar Piastri', 'McLaren', '#FF8000', 149],
+    ['Fernando Alonso', 'Aston Martin', '#229971', 88]
+  ];
+  var lista = $('lista');
+  for (var v = 0; v < 4; v++) {
+    NOMBRES.forEach(function (n, i) {
+      var d = document.createElement('div');
+      d.className = 'tarjeta-falsa';
+      d.innerHTML =
+        '<span class="pos">' + (i + 1) + '</span>' +
+        '<span class="barra-equipo" style="background:' + n[2] + '"></span>' +
+        '<span class="quien"><b>' + n[0] + '</b><span>' + n[1] + '</span></span>' +
+        '<span class="pts">' + n[3] + '</span>';
+      lista.appendChild(d);
+    });
+  }
+
+  // --- La sonda: el teléfono se mide solo ---------------------------------
+  var barra = $('barra');
+  var desvioMax = 0;
+
+  function medir() {
+    var caja = barra.getBoundingClientRect();
+    var vh = window.innerHeight;
+    // Donde DEBERÍA estar: la ventana menos lo que la barra ocupa por debajo.
+    var esperado = Math.round(vh - caja.height - parseFloat(getComputedStyle(barra).bottom));
+    var top = Math.round(caja.top);
+    var desvio = Math.abs(top - esperado);
+    if (desvio > desvioMax) desvioMax = desvio;
+
+    $('mScroll').textContent = Math.round(window.scrollY);
+    $('mVh').textContent = Math.round(vh);
+    $('mTop').textContent = top;
+    $('mEsperado').textContent = esperado;
+    $('mDesvio').textContent = desvioMax;
+
+    var ver = $('veredicto');
+    if (window.scrollY < 40) {
+      ver.textContent = 'Desplaza la página para medir.';
+      ver.setAttribute('data-mal', 'no');
+    } else if (desvioMax <= 2) {
+      ver.textContent = 'La barra se queda quieta. Desvío ' + desvioMax + ' px.';
+      ver.setAttribute('data-mal', 'no');
+    } else {
+      ver.textContent = 'La barra SE DESPEGA: se ha ido ' + desvioMax + ' px de su sitio.';
+      ver.setAttribute('data-mal', 'si');
+    }
+  }
+
+  function reiniciar() { desvioMax = 0; medir(); }
+
+  var pedido = null;
+  function alDesplazar() {
+    if (pedido) return;
+    pedido = requestAnimationFrame(function () { pedido = null; medir(); colocarRealce(); });
+  }
+
+  window.addEventListener('scroll', alDesplazar, { passive: true });
+  window.addEventListener('resize', function () { reiniciar(); colocarRealce(); });
+
+  // --- Mandos --------------------------------------------------------------
+  function segmentado(id, alElegir) {
+    var caja = $(id);
+    caja.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      Array.prototype.forEach.call(caja.querySelectorAll('button'), function (o) {
+        o.setAttribute('aria-pressed', String(o === b));
+      });
+      alElegir(b.dataset.v);
+    });
+  }
+
+  segmentado('opCristal', function (v) {
+    barra.setAttribute('data-cristal', v);
+    // Cada variante se mide desde cero: si no, el desvío de la anterior
+    // contaminaría la siguiente y las tres parecerían igual de malas.
+    reiniciar();
+  });
+
+  segmentado('opEtq', function (v) {
+    barra.setAttribute('data-etq', v);
+    requestAnimationFrame(colocarRealce);
+  });
+
+  function deslizador(id, salida, aplicar) {
+    var e = $(id), o = $(salida);
+    var alMover = function () {
+      o.textContent = e.value + ' px';
+      aplicar(e.value);
+      medir();
+    };
+    e.addEventListener('input', alMover);
+    alMover();
+  }
+
+  deslizador('abajo', 'vAbajo', function (v) { barra.style.setProperty('--abajo', v); });
+  deslizador('lado', 'vLado', function (v) { barra.style.setProperty('--lado', v + 'px'); });
+
+  colocarRealce();
+  medir();
+})();
+</script>
+</body>
+</html>
