@@ -378,8 +378,8 @@ function Replay({
    * una bandera roja. Se calcula una vez: recorre la línea de tiempo entera.
    */
   const relojCarrera = useMemo(
-    () => relojDeCarrera(meta.trackStatus, count, paso),
-    [meta.trackStatus, count, paso]
+    () => relojDeCarrera(meta.trackStatus, count, paso, progreso),
+    [meta.trackStatus, count, paso, progreso]
   );
 
   const { filas, coches, lider } = useMemo(() => {

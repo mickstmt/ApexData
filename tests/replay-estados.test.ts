@@ -123,3 +123,90 @@ describe('el reloj de la carrera', () => {
     expect(reloj[99]).toBe(99);
   });
 });
+
+describe('el reloj también ve una suspensión mal declarada', () => {
+  const PASO_S = 0.25;
+
+  /**
+   * Una carrera de juguete con el caso real dentro.
+   *
+   * Reproduce lo que pasó en el GP de Italia de 2026: `track_status` declara
+   * una roja corta, pero la carrera sigue detenida mucho más tiempo bajo un
+   * estado que dice verde y amarilla. Medido en producción: 1819 s parados
+   * frente a 103 declarados, y el delta de Hamilton pasaba de 16 s a 1223,8
+   * sin que su distancia al líder cambiara un metro.
+   */
+  function carrera(): { tramos: { status: string; start: number; end: number }[]; progreso: Float64Array[] } {
+    const count = 200;
+    const lider = new Float64Array(count);
+    const segundo = new Float64Array(count);
+
+    for (let k = 1; k < count; k++) {
+      // Parados de verdad entre los instantes 60 y 160, pero solo los 20
+      // primeros están declarados como roja.
+      const corriendo = k < 60 || k >= 160;
+      lider[k] = lider[k - 1] + (corriendo ? 10 : 0);
+      segundo[k] = segundo[k - 1] + (corriendo ? 10 : 0);
+    }
+
+    return {
+      tramos: [
+        { status: '1', start: 0, end: 60 * PASO_S },
+        { status: '5', start: 60 * PASO_S, end: 80 * PASO_S },
+        { status: '2', start: 80 * PASO_S, end: 160 * PASO_S },
+        { status: '1', start: 160 * PASO_S, end: 200 * PASO_S },
+      ],
+      progreso: [lider, segundo],
+    };
+  }
+
+  it('sin las posiciones, cuenta los cien instantes parados como carrera', () => {
+    // El comportamiento anterior, que se deja fijado a propósito: es lo que
+    // pasa cuando nadie le pasa el progreso, y explica de dónde salía el fallo.
+    const { tramos } = carrera();
+    const reloj = relojDeCarrera(tramos, 200, PASO_S);
+
+    // De 60 a 160 hay 100 instantes parados; solo 20 están declarados rojos.
+    expect(reloj[199] - reloj[59]).toBe(120);
+  });
+
+  it('con las posiciones, no cuenta ninguno de los cien', () => {
+    const { tramos, progreso } = carrera();
+    const reloj = relojDeCarrera(tramos, 200, PASO_S, progreso);
+
+    // Solo los 40 instantes finales, que son los únicos en que alguien avanza.
+    expect(reloj[199] - reloj[59]).toBe(40);
+  });
+
+  it('un coche parado no detiene el reloj si los demás ruedan', () => {
+    // El miedo que hizo descartar esto la primera vez. No se mira un coche: se
+    // mira si NINGUNO avanza, y uno en boxes no puede congelar la carrera.
+    const count = 100;
+    const rodando = new Float64Array(count);
+    const enBoxes = new Float64Array(count);
+    for (let k = 1; k < count; k++) {
+      rodando[k] = rodando[k - 1] + 10;
+      enBoxes[k] = k < 40 ? enBoxes[k - 1] + 10 : enBoxes[k - 1];
+    }
+
+    const reloj = relojDeCarrera([{ status: '1', start: 0, end: 100 * PASO_S }], count, PASO_S, [
+      rodando,
+      enBoxes,
+    ]);
+
+    expect(reloj[99]).toBe(99);
+  });
+
+  it('un hueco de datos no es una parada', () => {
+    // Sin posiciones no se sabe si alguien avanzó, y no saber no es motivo
+    // para congelar: eso encogería los huecos sin que nada lo dijera.
+    const count = 60;
+    const via = new Float64Array(count);
+    for (let k = 1; k < count; k++) via[k] = via[k - 1] + 10;
+    for (let k = 20; k < 30; k++) via[k] = Number.NaN;
+
+    const reloj = relojDeCarrera([{ status: '1', start: 0, end: 60 * PASO_S }], count, PASO_S, [via]);
+
+    expect(reloj[59]).toBe(59);
+  });
+});

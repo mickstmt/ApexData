@@ -57,26 +57,88 @@ const NOMBRES: Record<ClaseDeEstado, string> = {
  * él el hueco sale constante y correcto: antes de la bandera, durante, y
  * después del reinicio.
  *
- * Se construye de `track_status` y no de si los coches se mueven, porque es el
- * dato que DECLARA que la carrera está detenida. Deducirlo del movimiento
- * confundiría una parada con un coche que va despacio, y con una bandera roja
- * los coches no se quedan quietos: se van al pit lane, que también es moverse.
+ * ## Por qué no basta con `track_status`
  *
- * La contrapartida, y conviene saberla: si una sesión no trae su bandera roja
- * en `track_status`, esto no la ve y el hueco vuelve a engordar.
+ * La primera versión miraba solo la bandera declarada, y dejó escrita su propia
+ * contrapartida: «si una sesión no trae su bandera roja en `track_status`, esto
+ * no la ve y el hueco vuelve a engordar». Eso pasó.
+ *
+ * En el GP de Italia de 2026, medido sobre los datos de producción: la carrera
+ * estuvo **detenida 1819 segundos** y `track_status` declara **103** de roja.
+ * El resto los declara *verde* y *amarilla* con los veintidós coches parados en
+ * el sitio. El delta de Hamilton pasaba de 16 s a **1223,8** sin que su
+ * distancia al líder cambiara ni un metro: exactamente los 1207 s del tramo mal
+ * declarado. El usuario lo vio como «el tiempo sigue subiendo aunque estén
+ * todos parados», y tenía razón.
+ *
+ * ## Por qué mirar el movimiento sí vale, ahora
+ *
+ * Aquella versión descartó deducirlo del movimiento por dos miedos, y los dos
+ * se comprobaron sobre datos reales antes de cambiar nada:
+ *
+ * - *«Confundiría una parada con un coche que va despacio»*. No, porque no se
+ *   mira un coche: se mira si **ninguno de los veintidós** avanza. Uno puede ir
+ *   al ralentí; los veintidós a la vez, solo si la carrera está detenida.
+ * - *«Con bandera roja los coches no se quedan quietos, se van al pit lane»*.
+ *   Cierto, y por eso el estado declarado **sigue contando**: durante los 103 s
+ *   de roja declarada el líder avanzó 2007 m, o sea 19,5 m/s. Las dos reglas se
+ *   suman, no se sustituyen.
+ *
+ * Lo que sí encontró la medición, y conviene saber que es correcto: además de
+ * la suspensión, la regla marca dos tramos de ~70 s declarados VERDES en los
+ * que nadie se mueve. No son datos ausentes —los veintidós tienen posición— ni
+ * un fallo: son las **dos paradas en la parrilla** de una reanudación con
+ * salida parada, separadas por una vuelta de formación de 128 s. Ahí los coches
+ * están quietos de verdad y congelar el reloj es lo que toca.
  */
 export function relojDeCarrera(
   tramos: PositionsTrackStatus[],
   count: number,
-  paso: number
+  paso: number,
+  progreso?: Float64Array[]
 ): Int32Array {
   // `reloj[k]` = instantes de carrera en marcha desde la salida hasta `k`.
   const reloj = new Int32Array(count);
+
+  /**
+   * Lo más lejos que ha llegado alguien en cada instante.
+   *
+   * Se mira el máximo y no el líder por nombre: quién va primero cambia a lo
+   * largo de la carrera, y este cálculo tiene que valer en todos los instantes
+   * sin depender de un orden que aún no se ha resuelto.
+   */
+  const puntero = progreso ? new Float64Array(count).fill(Number.NaN) : null;
+
+  if (puntero && progreso) {
+    for (let k = 0; k < count; k++) {
+      let tope = Number.NaN;
+      for (const via of progreso) {
+        const v = via[k];
+        if (!Number.isNaN(v) && (Number.isNaN(tope) || v > tope)) tope = v;
+      }
+      puntero[k] = tope;
+    }
+  }
+
+  /** Un centímetro: por debajo de eso es ruido de proyección, no avance. */
+  const QUIETO = 0.01;
+
   let corridos = 0;
   for (let k = 1; k < count; k++) {
-    if (estadoEn(tramos, k * paso) !== 'roja') corridos++;
+    const declaradaRoja = estadoEn(tramos, k * paso) === 'roja';
+
+    // Sin dato no se decide nada: un hueco en las posiciones no es una parada,
+    // y tratarlo como tal congelaría el reloj por no saber.
+    const nadieAvanza =
+      puntero !== null &&
+      !Number.isNaN(puntero[k]) &&
+      !Number.isNaN(puntero[k - 1]) &&
+      puntero[k] - puntero[k - 1] <= QUIETO;
+
+    if (!declaradaRoja && !nadieAvanza) corridos++;
     reloj[k] = corridos;
   }
+
   return reloj;
 }
 
