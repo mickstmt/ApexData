@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   claseDeEstado,
+  relojDeCarrera,
   degradadoDelScrubber,
   estadoEn,
   nombreDeEstado,
@@ -76,5 +77,49 @@ describe('el scrubber', () => {
     });
     expect(css).toContain('var(--replay-roja) 39.87%');
     expect(css).toContain('var(--gris) 0%');
+  });
+});
+
+describe('el reloj de la carrera', () => {
+  const PASO = 0.25;
+
+  it('sin banderas rojas, cuenta todos los instantes', () => {
+    const reloj = relojDeCarrera([{ status: '1', start: 0, end: 25 }], 100, PASO);
+    expect(reloj[0]).toBe(0);
+    expect(reloj[99]).toBe(99);
+  });
+
+  it('se detiene con la bandera roja y sigue al reanudar', () => {
+    // Cuarenta instantes verdes, cuarenta rojos, veinte verdes.
+    const reloj = relojDeCarrera(
+      [
+        { status: '1', start: 0, end: 40 * PASO },
+        { status: '5', start: 40 * PASO, end: 80 * PASO },
+        { status: '1', start: 80 * PASO, end: 100 * PASO },
+      ],
+      100,
+      PASO
+    );
+
+    expect(reloj[39]).toBe(39);
+    // Durante la parada no avanza ni uno.
+    expect(reloj[79]).toBe(reloj[40]);
+    // Y al reanudar cuenta otra vez: veinte instantes más, no sesenta.
+    expect(reloj[99] - reloj[79]).toBe(20);
+  });
+
+  it('el safety car y la amarilla SÍ cuentan: ahí se corre', () => {
+    // Es la distinción que importa. Con coche de seguridad la carrera sigue
+    // —más despacio, pero sigue— así que los huecos son huecos de verdad.
+    const reloj = relojDeCarrera(
+      [
+        { status: '2', start: 0, end: 10 },
+        { status: '4', start: 10, end: 20 },
+        { status: '6', start: 20, end: 25 },
+      ],
+      100,
+      PASO
+    );
+    expect(reloj[99]).toBe(99);
   });
 });

@@ -182,20 +182,38 @@ export function ordenEn(progreso: Float64Array[], k: number): number[] {
  * por piloto y por cuarto de segundo, y con la carrera parada recorría la
  * parada entera.
  *
- * Lo que la bisección NO cambia es el número: con todos quietos, el instante
- * en que el líder pasó por ahí se queda atrás mientras el reloj sigue, así que
- * el hueco crece aunque nadie se mueva. No es un fallo de la cuenta sino de la
- * pregunta: con la carrera detenida no hay distancia en pista que medir. Por
- * eso la pantalla no lo enseña con bandera roja.
+ * ## Por qué recibe un reloj
+ *
+ * El tiempo que se cuenta entre «el líder pasó por aquí» y «ahora» tiene que
+ * ser tiempo de CARRERA. Contando el del calendario, una bandera roja entra
+ * entera en todos los huecos: en la captura del usuario la parrilla marcaba
+ * +1416 s repartidos en un rango de quince segundos, y la píldora ya decía
+ * PISTA LIBRE. La inflación sobrevivía al reinicio porque los coches todavía no
+ * habían pasado del progreso que el líder tenía al pararse.
+ *
+ * Con el reloj de `relojDeCarrera` sale constante y correcto en los tres
+ * momentos: antes de la bandera, durante y después. Sin él —el reloj es
+ * opcional— se comporta como siempre.
  */
-export function huecoEn(progreso: Float64Array[], k: number, lider: number, piloto: number, paso: number): number {
+export function huecoEn(
+  progreso: Float64Array[],
+  k: number,
+  lider: number,
+  piloto: number,
+  paso: number,
+  reloj?: Int32Array
+): number {
   const p = progreso[piloto][k];
   if (piloto === lider || Number.isNaN(p)) return 0;
 
   const historia = progreso[lider];
 
-  // El líder ya estaba por delante en la salida: todo el tiempo transcurrido.
-  if (Number.isNaN(historia[0]) || historia[0] >= p) return k * paso;
+  /** Instantes de carrera entre dos momentos, saltándose lo que no se corrió. */
+  const entre = (desde: number, hasta: number) =>
+    reloj ? reloj[hasta] - reloj[desde] : hasta - desde;
+
+  // El líder ya estaba por delante en la salida: todo lo que se lleva corrido.
+  if (Number.isNaN(historia[0]) || historia[0] >= p) return entre(0, k) * paso;
 
   let bajo = 0, alto = k;
   while (bajo < alto) {
@@ -206,7 +224,7 @@ export function huecoEn(progreso: Float64Array[], k: number, lider: number, pilo
 
   // `bajo` es el último instante con el líder por detrás; en el siguiente ya
   // había pasado por aquí.
-  return (k - bajo - 1) * paso;
+  return entre(bajo + 1, k) * paso;
 }
 
 /** En qué vuelta va un coche, desde 1. */

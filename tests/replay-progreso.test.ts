@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SIN_DATO, leerBloque } from '@/lib/replay/bloque';
+import { relojDeCarrera } from '@/lib/replay/estados';
 import {
   INSTANTES_QUIETO,
   calcularProgreso,
@@ -152,6 +153,79 @@ describe('el orden y los huecos', () => {
 
     expect(alPararse).toBeLessThan(2);
     expect(alFinal).toBeGreaterThan(alPararse + 15);
+  });
+
+  /**
+   * La captura del usuario: la píldora decía PISTA LIBRE y toda la parrilla
+   * marcaba +1416 s —veintitrés minutos y medio— repartidos en un rango de
+   * solo quince segundos. Ese desplazamiento constante era la parada por
+   * bandera roja, metida entera en el hueco de todos.
+   */
+  it('una bandera roja no se mete en los huecos, ni durante ni después', () => {
+    const PASO = 0.25;
+    const COUNT = 400;
+    // Ciento veinte instantes rodando, ochenta parados, y el resto rodando
+    // otra vez. La bandera no puede caer antes: el líder arranca por delante,
+    // así que hasta que el de atrás no llega a donde el líder empezó no hay
+    // «cuándo pasó por aquí» que buscar, y `huecoEn` devuelve todo lo corrido.
+    const PARA = 120;
+    const SIGUE = 200;
+    const parado = (desde: number): [number[], number[]] => {
+      const [xs, ys] = coche(COUNT, desde, 50);
+      for (let k = PARA; k < SIGUE; k++) { xs[k] = xs[PARA - 1]; ys[k] = ys[PARA - 1]; }
+      // Y al reanudar, siguen desde donde se quedaron.
+      for (let k = SIGUE; k < COUNT; k++) {
+        const d = (desde + (PARA - 1 + (k - SIGUE + 1)) * 50) % (2 * Math.PI * RADIO);
+        const a = d / RADIO;
+        xs[k] = Math.round(Math.cos(a) * RADIO);
+        ys[k] = Math.round(Math.sin(a) * RADIO);
+      }
+      return [xs, ys];
+    };
+
+    // Los dos arrancan ya dentro de la vuelta —un desplazamiento negativo
+    // proyecta al final del círculo y el de atrás saldría por delante— y el
+    // de atrás va a 2000 dm: cuarenta instantes, diez segundos.
+    //
+    // El tamaño del hueco importa: la inflación dura mientras el coche no ha
+    // pasado del progreso que el líder tenía al pararse, o sea más o menos lo
+    // que mide el propio hueco. En la carrera real eran quince segundos, y por
+    // eso la captura lo pilló.
+    const p = calcularProgreso(bloqueDe([parado(3000), parado(1000)]), trazado);
+    const reloj = relojDeCarrera(
+      [
+        { status: '1', start: 0, end: PARA * PASO },
+        { status: '5', start: PARA * PASO, end: SIGUE * PASO },
+        { status: '1', start: SIGUE * PASO, end: COUNT * PASO },
+      ],
+      COUNT,
+      PASO
+    );
+
+    const antes = huecoEn(p, PARA - 1, 0, 1, PASO, reloj);
+    expect(antes).toBeCloseTo(10, 0);
+
+    // Sin el reloj, el hueco se traga los veinte segundos de parada. Se mide
+    // recién reanudada —instante 120, veinte después del verde— que es donde
+    // estaba la captura: la píldora ya decía PISTA LIBRE y la parrilla seguía
+    // marcando la parada entera.
+    const sinReloj = huecoEn(p, SIGUE + 20, 0, 1, PASO);
+    expect(sinReloj).toBeGreaterThan(antes + 15);
+
+    // Con él, el mismo hueco en los tres momentos: antes de la bandera, recién
+    // reanudada y mucho después.
+    for (const instante of [PARA - 1, SIGUE + 20, 350]) {
+      expect(Math.abs(huecoEn(p, instante, 0, 1, PASO, reloj) - antes)).toBeLessThanOrEqual(PASO * 3);
+    }
+  });
+
+  it('sin reloj se comporta como siempre', () => {
+    // El reloj es opcional a propósito: quien no lo pasa obtiene exactamente
+    // el mismo número de antes, y eso es lo que hace que este cambio no pueda
+    // romper nada que ya funcionara.
+    const p = calcularProgreso(bloqueDe([coche(100, 0, 50), coche(100, -200, 50)]), trazado);
+    const todoCorre = relojDeCarrera([{ status: '1', start: 0, end: 100 * 0.25 }], 100, 0.25);
+    expect(huecoEn(p, 50, 0, 1, 0.25, todoCorre)).toBeCloseTo(huecoEn(p, 50, 0, 1, 0.25), 10);
   });
 
   it('el hueco sobrevive al cruce de meta del líder', () => {

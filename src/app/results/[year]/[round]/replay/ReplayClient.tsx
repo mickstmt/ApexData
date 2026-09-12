@@ -10,7 +10,13 @@ import { TorreDeTiempos, type FilaDeLaTorre } from '@/components/replay/TorreDeT
 import { useRelojDeReplay } from '@/components/replay/useRelojDeReplay';
 import { PRIMERA_TEMPORADA_CON_REPLAY } from '@/components/replay/VerReplay';
 import { leerBloque, type BloqueDePosiciones } from '@/lib/replay/bloque';
-import { estadoEn, nombreDeEstado, tramosDelScrubber, type ClaseDeEstado } from '@/lib/replay/estados';
+import {
+  estadoEn,
+  nombreDeEstado,
+  relojDeCarrera,
+  tramosDelScrubber,
+  type ClaseDeEstado,
+} from '@/lib/replay/estados';
 import {
   calcularProgreso,
   estaFuera,
@@ -367,6 +373,15 @@ function Replay({
   // Con bandera roja la carrera está detenida.
   const parada = estado === 'roja';
 
+  /**
+   * El reloj que se detiene con la carrera, para que los huecos no se traguen
+   * una bandera roja. Se calcula una vez: recorre la línea de tiempo entera.
+   */
+  const relojCarrera = useMemo(
+    () => relojDeCarrera(meta.trackStatus, count, paso),
+    [meta.trackStatus, count, paso]
+  );
+
   const { filas, coches, lider } = useMemo(() => {
     const orden = ordenEn(progreso, k);
     const lider = orden[0] ?? 0;
@@ -387,13 +402,19 @@ function Replay({
       // quietos y la cuenta daría lo que lleve durando la parada. Y el de
       // quien está fuera tampoco se calcula: su fila enseña OUT.
       hueco:
-        idx === 0 ? 'líder' : fuera[i] ? '' : parada ? '—' : `+${huecoEn(progreso, k, lider, i, paso).toFixed(1)}s`,
+        idx === 0
+          ? 'líder'
+          : fuera[i]
+            ? ''
+            : parada
+              ? '—'
+              : `+${huecoEn(progreso, k, lider, i, paso, relojCarrera).toFixed(1)}s`,
       fuera: fuera[i],
     }));
 
     const coches = meta.drivers.map((d, i) => ({ color: colores[i], codigo: d.code, fuera: fuera[i] }));
     return { filas, coches, lider };
-  }, [progreso, k, meta.drivers, colores, paso, parada]);
+  }, [progreso, k, meta.drivers, colores, paso, parada, relojCarrera]);
 
   const tramos = useMemo(() => tramosDelScrubber(meta.trackStatus, count * paso), [meta.trackStatus, count, paso]);
 
