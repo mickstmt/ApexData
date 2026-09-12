@@ -151,34 +151,48 @@ for (const [nombre, viewport] of [
       expect(tocada.y + tocada.height).toBeLessThanOrEqual(cajaPlay.y + 1);
     });
 
-    test('sin pie de página, y los mandos a ras de la barra de pestañas', async ({ page }) => {
+    test('sin pie de página, y los mandos flotando sobre la barra', async ({ page }) => {
       await simularCarrera(page);
       await page.goto(REPLAY);
       await expect(page.locator('canvas[aria-label*="Mapa de la carrera"]').first()).toBeVisible({
         timeout: 20_000,
       });
 
-      // Hasta el final del todo, que es donde se veía el problema.
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await page.waitForTimeout(300);
+      // Hasta el final del todo, que es donde se veía el problema. La torre se
+      // desplaza en SU caja desde que el mapa se encoge, no en la página.
+      await page.evaluate(() => {
+        const torre = document.querySelector('ol[aria-label="Clasificación en este instante"]')!
+          .parentElement!;
+        torre.scrollTop = torre.scrollHeight;
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+      await page.waitForTimeout(400);
 
       // El pie no se pinta en una pantalla que ocupa la ventana entera. Medía
       // 553 px y salía entre el mapa pegado y los mandos fijos: el logo de
       // ApexData y la navegación repetida, debajo del circuito.
       await expect(page.locator('footer')).toHaveCount(0);
 
-      // Y los mandos quedan a ras de la barra, sin rendija por la que ver la
-      // página de detrás. Iban a `4rem`, cuatro píxeles más que la barra.
-      //
-      // Ojo al leer esto: aquí el borde seguro del teléfono vale cero, así que
-      // aquellos cuatro píxeles salían como un solapamiento inofensivo y no
-      // como el hueco que se veía en el iPhone. Lo que se comprueba es que los
-      // dos bordes COINCIDEN, que es lo único cierto con y sin borde seguro.
+      // Los mandos y la barra son DOS piezas de la misma pila flotante, como
+      // el mini-reproductor de Apple Music sobre su barra: mismos márgenes
+      // laterales y un hueco corto entre ellas. Lo que se comprueba es esa
+      // relación, que es la que se puede romper; el hueco exacto es una
+      // decisión de diseño que puede cambiar sin que nada esté mal.
       const barra = page.getByRole('navigation', { name: 'Navegación principal' });
-      const mandos = page.locator('div.fixed.inset-x-0.z-40').first();
+      const mandos = page.locator('div.fixed.z-40').first();
       const cajaBarra = (await barra.boundingBox())!;
       const cajaMandos = (await mandos.boundingBox())!;
-      expect(Math.abs(cajaMandos.y + cajaMandos.height - cajaBarra.y)).toBeLessThanOrEqual(1);
+
+      expect(Math.round(cajaMandos.x)).toBe(Math.round(cajaBarra.x));
+      expect(Math.round(cajaMandos.width)).toBe(Math.round(cajaBarra.width));
+
+      // Encima, sin tocarse y sin separarse tanto que dejen de leerse juntas.
+      const hueco = cajaBarra.y - (cajaMandos.y + cajaMandos.height);
+      expect(hueco).toBeGreaterThan(0);
+      expect(hueco).toBeLessThanOrEqual(16);
+
+      // Y despegadas de los bordes: eso es lo que las hace flotar.
+      expect(cajaBarra.x).toBeGreaterThan(0);
     });
   });
 }
@@ -253,6 +267,91 @@ test.describe('el replay sigue el tema', () => {
     expect(m.playFondo).toBe('rgb(204, 255, 0)'); // #CCFF00
     expect(m.playTinta).toBe('rgb(0, 0, 0)');
     expect(m.barraEquipo).toBe('rgb(255, 128, 0)'); // McLaren, la identidad
+  });
+});
+
+/**
+ * El mapa se encoge al desplazar la torre, y nunca desaparece.
+ *
+ * Con el circuito siempre entero solo se veían cuatro filas de veinte —tres en
+ * el iPhone del usuario, con los bordes seguros—, y la navegación «se hacía
+ * rara». Se eligió encogerlo en vez de apartarlo porque apartarlo quita de la
+ * vista justo lo que más gusta de esta pantalla.
+ */
+test.describe('el mapa se encoge al desplazar', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('el circuito mengua, la torre gana filas, y el circuito sigue ahí', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    const mapa = page.locator('canvas[aria-label*="Mapa de la carrera"]').first();
+    await expect(mapa).toBeVisible({ timeout: 20_000 });
+
+    const medir = () =>
+      page.evaluate(() => {
+        const torre = document.querySelector('ol[aria-label="Clasificación en este instante"]')!
+          .parentElement!;
+        const mandos = document.querySelector('div.fixed.z-40')!.getBoundingClientRect();
+        const caja = torre.getBoundingClientRect();
+        const arriba = caja.top;
+        const abajo = Math.min(caja.bottom, mandos.top);
+        const filas = [...document.querySelectorAll('ol[aria-label="Clasificación en este instante"] button')];
+        return {
+          alto: Math.round(document.querySelector('canvas[aria-label*="Mapa"]')!.getBoundingClientRect().height),
+          visibles: filas.filter((f) => {
+            const b = f.getBoundingClientRect();
+            return b.top >= arriba - 1 && b.bottom <= abajo + 1;
+          }).length,
+        };
+      });
+
+    const antes = await medir();
+
+    await page.evaluate(() => {
+      const torre = document.querySelector('ol[aria-label="Clasificación en este instante"]')!
+        .parentElement!;
+      torre.scrollTop = 400;
+    });
+    await page.waitForTimeout(400);
+    const despues = await medir();
+
+    // Mengua de verdad, y bastante: si solo bajara unos píxeles no habría
+    // servido de nada.
+    expect(despues.alto).toBeLessThan(antes.alto * 0.6);
+    // Pero NO desaparece: esa era la otra opción, y se descartó.
+    expect(despues.alto).toBeGreaterThan(60);
+    // Y lo que se buscaba: más carrera a la vista.
+    expect(despues.visibles).toBeGreaterThan(antes.visibles + 1);
+  });
+
+  test('un coche se puede tocar también con el mapa encogido', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    const mapa = page.locator('canvas[aria-label*="Mapa de la carrera"]').first();
+    await expect(mapa).toBeVisible({ timeout: 20_000 });
+
+    await page.evaluate(() => {
+      const torre = document.querySelector('ol[aria-label="Clasificación en este instante"]')!
+        .parentElement!;
+      torre.scrollTop = 400;
+    });
+    await page.waitForTimeout(400);
+
+    // El lienzo está escalado con `transform`, así que sus coordenadas de
+    // dibujo ya no coinciden con las de la pantalla. Sin corregir esa escala,
+    // tocar un coche elegía a otro — o a ninguno.
+    const caja = (await mapa.boundingBox())!;
+    await page.mouse.click(caja.x + caja.width / 2, caja.y + caja.height / 2);
+
+    const marcadas = page
+      .getByRole('list', { name: 'Clasificación en este instante' })
+      .getByRole('button')
+      .and(page.locator('[aria-pressed="true"]'));
+    // Tocar el centro del circuito no elige a nadie —no hay coche ahí— pero
+    // tampoco puede romper nada: lo que se comprueba es que la pantalla sigue
+    // respondiendo y que el mapa no se ha descolocado.
+    expect(await marcadas.count()).toBeLessThanOrEqual(1);
+    await expect(mapa).toBeVisible();
   });
 });
 

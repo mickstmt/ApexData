@@ -215,8 +215,14 @@ export function MapaDeCarrera({
   const alTocar = (evento: React.PointerEvent<HTMLCanvasElement>) => {
     const p = proyeccion.current;
     if (!p) return;
+    // El lienzo puede estar escalado con `transform` —el mapa se encoge al
+    // desplazar la torre— y entonces la caja que se ve mide menos que la caja
+    // de la que salen las coordenadas. Sin dividir por esa escala, tocar un
+    // coche del borde de abajo elegía a otro.
     const caja = evento.currentTarget.getBoundingClientRect();
-    const x = evento.clientX - caja.left, y = evento.clientY - caja.top;
+    const escalaVisual = caja.width / (evento.currentTarget.offsetWidth || caja.width);
+    const x = (evento.clientX - caja.left) / escalaVisual;
+    const y = (evento.clientY - caja.top) / escalaVisual;
 
     let mejor: number | null = null, distancia = RADIO_DE_TOQUE * RADIO_DE_TOQUE;
     for (let i = 0; i < coches.length; i++) {

@@ -35,7 +35,6 @@ export function TorreDeTiempos({
   elegido,
   onElegir,
   className,
-  tapadoArriba = 0,
   tapadoAbajo = 0,
 }: {
   filas: FilaDeLaTorre[];
@@ -43,16 +42,14 @@ export function TorreDeTiempos({
   onElegir: (piloto: number) => void;
   className?: string;
   /**
-   * Cuánto hay tapado por encima y por debajo, en píxeles, en el móvil: el
-   * bloque pegado con el mapa, y los mandos fijos con la barra de pestañas.
+   * Cuánto tapan los mandos flotantes por debajo, en el móvil.
    *
    * Es lo que hace que «poner a la vista» ponga de verdad a la vista: sin
-   * `scroll-margin`, desplazar hasta una fila la dejaba en el borde, justo
-   * debajo del mapa o de los mandos, y no se podía tocar. Se vio con la
-   * carrera real, con la fila 18. A partir de `md` la torre se desplaza sola
-   * y no hay nada encima, así que ahí los márgenes son cero.
+   * `scroll-margin`, desplazar hasta una fila la dejaba justo debajo de los
+   * mandos y no se podía tocar. Se vio con la carrera real, con la fila 18.
+   * Por arriba ya no hace falta: la torre se desplaza dentro de su propia
+   * caja, que empieza donde acaba el mapa.
    */
-  tapadoArriba?: number;
   tapadoAbajo?: number;
 }) {
   const refs = useRef(new Map<number, HTMLButtonElement>());
@@ -69,7 +66,7 @@ export function TorreDeTiempos({
     <ol
       className={cn('m-0 list-none p-0', className)}
       aria-label="Clasificación en este instante"
-      style={{ '--tapado-arriba': `${tapadoArriba}px`, '--tapado-abajo': `${tapadoAbajo}px` } as React.CSSProperties}
+      style={{ '--tapado-abajo': `${tapadoAbajo}px` } as React.CSSProperties}
     >
       {filas.map((fila) => {
         const activa = fila.piloto === elegido;
@@ -86,7 +83,7 @@ export function TorreDeTiempos({
               className={cn(
                 'grid w-full grid-cols-[30px_4px_1fr_auto] items-center gap-x-2.5 px-4 text-left',
                 'min-h-[44px] border-b border-[var(--replay-borde-fila)] md:min-h-[30px] md:grid-cols-[28px_3px_1fr_auto] md:border-b-0 md:px-3.5',
-                '[scroll-margin-top:var(--tapado-arriba)] [scroll-margin-bottom:var(--tapado-abajo)] md:[scroll-margin-bottom:0px] md:[scroll-margin-top:0px]',
+                '[scroll-margin-bottom:var(--tapado-abajo)] md:[scroll-margin-bottom:0px]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--replay-acento)]',
                 activa ? 'bg-[var(--replay-superficie-2)]' : 'md:hover:bg-[var(--replay-superficie)]',
                 fila.fuera && 'opacity-60'
