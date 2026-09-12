@@ -451,6 +451,17 @@ function Replay({
   const recorteRef = useRef<HTMLDivElement>(null);
   const escalaRef = useRef<HTMLDivElement>(null);
   const torreRef = useRef<HTMLDivElement>(null);
+  const tiradorRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Cuánto está encogido el mapa, entre 0,36 y 1.
+   *
+   * En una referencia y no en estado: el arrastre lo cambia sesenta veces por
+   * segundo, y volver a renderizar esta pantalla —con su lienzo y sus veintidós
+   * filas— en cada fotograma es exactamente el tirón que el encogido por
+   * `transform` vino a evitar. Aquí solo se tocan dos estilos.
+   */
+  const escalaDelMapa = useRef(1);
 
   /**
    * Cuánto tapan los mandos flotantes por debajo de la torre.
@@ -483,12 +494,26 @@ function Replay({
   }, []);
 
   /**
-   * El mapa se encoge al desplazar la torre, y nunca desaparece.
+   * El mapa se encoge con SU PROPIO tirador, y nunca desaparece.
    *
-   * Es la opción que eligió el usuario sobre el mockup: con el circuito
-   * siempre entero solo se veían cuatro filas de veinte —tres en su iPhone, con
-   * los bordes seguros—, y apartarlo del todo habría quitado de la vista lo que
-   * más le gusta. Encogiéndolo se pasa de 4 filas a 11 sin perderlo.
+   * Que no desaparezca fue la decisión original del usuario sobre mockup: con
+   * el circuito siempre entero solo se veían cuatro filas de veinte, y
+   * apartarlo del todo habría quitado de la vista lo que más le gusta.
+   *
+   * ## Por qué ya no lo mueve el desplazamiento de la torre
+   *
+   * Porque encoger el mapa y recorrer la lista eran **la misma acción**, y se
+   * estorbaban. Medido en la app a 390 px: sin desplazar se veía desde P1 con
+   * seis filas enteras; con el mapa al mínimo, desde **P6**. Cinco filas
+   * perdidas, y no por casualidad — el encogido costaba 220 px de
+   * desplazamiento y las filas miden 44. El usuario lo dijo así: «al reducir al
+   * máximo el circuito pierdo a los cinco primeros clasificados».
+   *
+   * Eso no tenía arreglo dentro de aquel gesto: cualquier variante que lo
+   * conservara solo repartía el daño. Se llevaron cuatro a mockup y el usuario
+   * eligió el tirador, que además gana algo que antes no existía: **el tamaño
+   * se queda**. Antes, volver arriba en la lista agrandaba el mapa aunque no
+   * quisieras.
    *
    * Se hace con `transform` y no cambiando el alto del lienzo a propósito. El
    * lienzo se reserva por píxel físico: en un teléfono a 3× son cuatro megas de
@@ -499,38 +524,83 @@ function Replay({
    * resuelve `MapaDeCarrera` midiendo su propia caja.
    */
   useEffect(() => {
-    const torre = torreRef.current;
+    const tirador = tiradorRef.current;
     const recorte = recorteRef.current;
     const escala = escalaRef.current;
-    if (!torre || !recorte || !escala) return;
+    if (!tirador || !recorte || !escala) return;
 
-    /** A cuánto se queda el mapa del todo, y en cuánto desplazamiento. */
+    /** A cuánto se queda el mapa del todo. */
     const MINIMO = 0.36;
-    const RECORRIDO = 220;
 
-    let pedido = 0;
     const pintar = () => {
-      pedido = 0;
       const alto = escala.offsetHeight;
       if (!alto) return;
-      const avance = Math.min(1, Math.max(0, torre.scrollTop / RECORRIDO));
-      const k = 1 - avance * (1 - MINIMO);
-      escala.style.transform = `scale(${k})`;
-      recorte.style.height = `${Math.round(alto * k)}px`;
+      escala.style.transform = `scale(${escalaDelMapa.current})`;
+      recorte.style.height = `${Math.round(alto * escalaDelMapa.current)}px`;
+      tirador.setAttribute('aria-valuenow', String(Math.round(escalaDelMapa.current * 100)));
     };
 
-    const alDesplazar = () => {
-      if (!pedido) pedido = requestAnimationFrame(pintar);
+    const poner = (k: number) => {
+      escalaDelMapa.current = Math.min(1, Math.max(MINIMO, k));
+      pintar();
+    };
+
+    let desdeY = 0;
+    let desdeK = 1;
+
+    const empezar = (evento: PointerEvent) => {
+      desdeY = evento.clientY;
+      desdeK = escalaDelMapa.current;
+      // La captura es lo que hace que el arrastre siga funcionando cuando el
+      // dedo se sale del tirador, que con 28 px de alto pasa constantemente.
+      tirador.setPointerCapture(evento.pointerId);
+      evento.preventDefault();
+    };
+
+    const mover = (evento: PointerEvent) => {
+      if (!tirador.hasPointerCapture(evento.pointerId)) return;
+      const alto = escala.offsetHeight || 1;
+      poner(desdeK + (evento.clientY - desdeY) / alto);
+      evento.preventDefault();
+    };
+
+    const soltar = (evento: PointerEvent) => {
+      if (tirador.hasPointerCapture(evento.pointerId)) {
+        tirador.releasePointerCapture(evento.pointerId);
+      }
+    };
+
+    /**
+     * Con el teclado también, que es lo que lo convierte en un control de
+     * verdad y no en un gesto que solo existe para quien puede arrastrar.
+     * Es el patrón de separador de la especificación de ARIA.
+     */
+    const tecla = (evento: KeyboardEvent) => {
+      const salto = 0.08;
+      if (evento.key === 'ArrowUp') poner(escalaDelMapa.current - salto);
+      else if (evento.key === 'ArrowDown') poner(escalaDelMapa.current + salto);
+      else if (evento.key === 'Home') poner(MINIMO);
+      else if (evento.key === 'End') poner(1);
+      else return;
+      evento.preventDefault();
     };
 
     pintar();
-    torre.addEventListener('scroll', alDesplazar, { passive: true });
+    tirador.addEventListener('pointerdown', empezar);
+    tirador.addEventListener('pointermove', mover);
+    tirador.addEventListener('pointerup', soltar);
+    tirador.addEventListener('pointercancel', soltar);
+    tirador.addEventListener('keydown', tecla);
     const observador = new ResizeObserver(pintar);
     observador.observe(escala);
+
     return () => {
-      torre.removeEventListener('scroll', alDesplazar);
+      tirador.removeEventListener('pointerdown', empezar);
+      tirador.removeEventListener('pointermove', mover);
+      tirador.removeEventListener('pointerup', soltar);
+      tirador.removeEventListener('pointercancel', soltar);
+      tirador.removeEventListener('keydown', tecla);
       observador.disconnect();
-      cancelAnimationFrame(pedido);
     };
   }, []);
 
@@ -605,6 +675,23 @@ function Replay({
           <div ref={escalaRef} className="origin-top will-change-transform">
             {mapa('proporcion')}
           </div>
+        </div>
+
+        {/* El tirador va en su propia franja, entre el mapa y la torre, y no
+            encima del mapa: superpuesto se comería los toques de los coches
+            que pasan por abajo, que es justo donde se agolpan en la recta. */}
+        <div
+          ref={tiradorRef}
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Tamaño del circuito"
+          aria-valuemin={36}
+          aria-valuemax={100}
+          aria-valuenow={100}
+          tabIndex={0}
+          className="grid h-7 touch-none cursor-ns-resize place-items-center border-b border-[var(--replay-borde)] bg-[var(--replay-fondo)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--replay-acento)] md:hidden"
+        >
+          <span aria-hidden className="h-1 w-11 rounded-full bg-[var(--replay-trazado)]" />
         </div>
       </div>
 

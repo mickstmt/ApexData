@@ -508,57 +508,141 @@ test.describe('el replay sigue el tema', () => {
 });
 
 /**
- * El mapa se encoge al desplazar la torre, y nunca desaparece.
+ * El mapa se encoge con su tirador, y nunca desaparece.
  *
- * Con el circuito siempre entero solo se veían cuatro filas de veinte —tres en
- * el iPhone del usuario, con los bordes seguros—, y la navegación «se hacía
- * rara». Se eligió encogerlo en vez de apartarlo porque apartarlo quita de la
- * vista justo lo que más gusta de esta pantalla.
+ * Que no desaparezca fue la decisión original: apartarlo del todo quita de la
+ * vista justo lo que más gusta de esta pantalla. Que lo mueva un tirador y no
+ * el desplazamiento de la torre es la corrección del punto 26 — antes eran la
+ * misma acción y se estorbaban.
  */
-test.describe('el mapa se encoge al desplazar', () => {
+test.describe('el mapa se encoge con su tirador', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('el circuito mengua, la torre gana filas, y el circuito sigue ahí', async ({ page }) => {
+  /** Los puestos que se ven enteros en la torre, en orden. */
+  const puestosALaVista = (page: Page) =>
+    page.evaluate(() => {
+      const lista = document.querySelector('ol[aria-label="Clasificación en este instante"]')!;
+      const caja = lista.parentElement!.getBoundingClientRect();
+      const mandos = document.querySelector('div.fixed.z-40')!.getBoundingClientRect();
+      const abajo = Math.min(caja.bottom, mandos.top);
+
+      return [...lista.querySelectorAll('button')]
+        .map((f, i) => ({ i: i + 1, b: f.getBoundingClientRect() }))
+        .filter(({ b }) => b.top >= caja.top - 1 && b.bottom <= abajo + 1)
+        .map(({ i }) => i);
+    });
+
+  const altoDelMapa = (page: Page) =>
+    page.evaluate(() =>
+      Math.round(document.querySelector('canvas[aria-label*="Mapa"]')!.getBoundingClientRect().height)
+    );
+
+  /** Arrastra el tirador hacia arriba: encoge el mapa. */
+  async function encoger(page: Page, pixeles = 300) {
+    const t = (await page.locator('[role="separator"][aria-label="Tamaño del circuito"]').boundingBox())!;
+    await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2 - pixeles, { steps: 12 });
+    await page.mouse.up();
+  }
+
+  test('al encoger se ven más filas, y el circuito sigue ahí', async ({ page }) => {
     await simularCarrera(page);
     await page.goto(REPLAY);
-    const mapa = page.locator('canvas[aria-label*="Mapa de la carrera"]').first();
-    await expect(mapa).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('canvas[aria-label*="Mapa de la carrera"]').first()).toBeVisible({
+      timeout: 20_000,
+    });
 
-    const medir = () =>
-      page.evaluate(() => {
-        const torre = document.querySelector('ol[aria-label="Clasificación en este instante"]')!
-          .parentElement!;
-        const mandos = document.querySelector('div.fixed.z-40')!.getBoundingClientRect();
-        const caja = torre.getBoundingClientRect();
-        const arriba = caja.top;
-        const abajo = Math.min(caja.bottom, mandos.top);
-        const filas = [...document.querySelectorAll('ol[aria-label="Clasificación en este instante"] button')];
-        return {
-          alto: Math.round(document.querySelector('canvas[aria-label*="Mapa"]')!.getBoundingClientRect().height),
-          visibles: filas.filter((f) => {
-            const b = f.getBoundingClientRect();
-            return b.top >= arriba - 1 && b.bottom <= abajo + 1;
-          }).length,
-        };
-      });
+    const altoAntes = await altoDelMapa(page);
+    const antes = await puestosALaVista(page);
 
-    const antes = await medir();
+    await encoger(page);
+
+    const altoDespues = await altoDelMapa(page);
+    const despues = await puestosALaVista(page);
+
+    // Mengua de verdad: si solo bajara unos píxeles no habría servido de nada.
+    expect(altoDespues).toBeLessThan(altoAntes * 0.6);
+    // Pero NO desaparece: esa era la otra opción, y se descartó.
+    expect(altoDespues).toBeGreaterThan(60);
+    // Y lo que se buscaba: más carrera a la vista.
+    expect(despues.length).toBeGreaterThan(antes.length + 1);
+  });
+
+  test('con el mapa al mínimo, el líder sigue a la vista', async ({ page }) => {
+    // **El punto 26.** Antes, encoger el mapa costaba 220 px de desplazamiento
+    // de la torre, y con filas de 44 px eso eran cinco filas: con el circuito
+    // al mínimo la lista empezaba en P6. Medido en la app antes de tocarlo.
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(page.locator('canvas[aria-label*="Mapa de la carrera"]').first()).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await encoger(page);
+
+    const visibles = await puestosALaVista(page);
+    expect(visibles[0], `la lista empieza en P${visibles[0]} en vez de P1`).toBe(1);
+
+    // Y sin huecos: la variante de «filas fijas» dejaba P1 arriba pero perdía
+    // el 4 y el 5 en medio, y por eso se descartó.
+    const seguidos = visibles.every((p, i) => i === 0 || p === visibles[i - 1] + 1);
+    expect(seguidos, `faltan puestos en medio: ${visibles.join(', ')}`).toBe(true);
+  });
+
+  test('el tamaño se queda al desplazar la torre', async ({ page }) => {
+    // Lo que se gana de propina al separar los gestos. Antes, volver al
+    // principio de la lista agrandaba el mapa aunque no quisieras.
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(page.locator('canvas[aria-label*="Mapa de la carrera"]').first()).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await encoger(page);
+    const encogido = await altoDelMapa(page);
 
     await page.evaluate(() => {
       const torre = document.querySelector('ol[aria-label="Clasificación en este instante"]')!
         .parentElement!;
       torre.scrollTop = 400;
+      torre.dispatchEvent(new Event('scroll'));
     });
-    await page.waitForTimeout(400);
-    const despues = await medir();
+    await page.waitForTimeout(300);
+    expect(await altoDelMapa(page)).toBe(encogido);
 
-    // Mengua de verdad, y bastante: si solo bajara unos píxeles no habría
-    // servido de nada.
-    expect(despues.alto).toBeLessThan(antes.alto * 0.6);
-    // Pero NO desaparece: esa era la otra opción, y se descartó.
-    expect(despues.alto).toBeGreaterThan(60);
-    // Y lo que se buscaba: más carrera a la vista.
-    expect(despues.visibles).toBeGreaterThan(antes.visibles + 1);
+    await page.evaluate(() => {
+      const torre = document.querySelector('ol[aria-label="Clasificación en este instante"]')!
+        .parentElement!;
+      torre.scrollTop = 0;
+      torre.dispatchEvent(new Event('scroll'));
+    });
+    await page.waitForTimeout(300);
+    expect(await altoDelMapa(page), 'volver arriba lo ha agrandado solo').toBe(encogido);
+  });
+
+  test('también se maneja con el teclado', async ({ page }) => {
+    // Un gesto que solo existe para quien puede arrastrar deja fuera a quien
+    // navega con teclado. Es el patrón de separador de ARIA.
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(page.locator('canvas[aria-label*="Mapa de la carrera"]').first()).toBeVisible({
+      timeout: 20_000,
+    });
+
+    const tirador = page.locator('[role="separator"][aria-label="Tamaño del circuito"]');
+    const entero = await altoDelMapa(page);
+
+    await tirador.focus();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(200);
+    const minimo = await altoDelMapa(page);
+    expect(minimo).toBeLessThan(entero * 0.6);
+    await expect(tirador).toHaveAttribute('aria-valuenow', '36');
+
+    await page.keyboard.press('End');
+    await page.waitForTimeout(200);
+    expect(await altoDelMapa(page)).toBe(entero);
   });
 
   test('un coche se puede tocar también con el mapa encogido', async ({ page }) => {
@@ -567,12 +651,7 @@ test.describe('el mapa se encoge al desplazar', () => {
     const mapa = page.locator('canvas[aria-label*="Mapa de la carrera"]').first();
     await expect(mapa).toBeVisible({ timeout: 20_000 });
 
-    await page.evaluate(() => {
-      const torre = document.querySelector('ol[aria-label="Clasificación en este instante"]')!
-        .parentElement!;
-      torre.scrollTop = 400;
-    });
-    await page.waitForTimeout(400);
+    await encoger(page);
 
     // El lienzo está escalado con `transform`, así que sus coordenadas de
     // dibujo ya no coinciden con las de la pantalla. Sin corregir esa escala,
