@@ -1574,6 +1574,94 @@ test.describe('márgenes en móvil', () => {
     expect(icono.y - pildora.y).toBeGreaterThanOrEqual(3);
     expect(pildora.y + pildora.height - icono.y - icono.height).toBeGreaterThan(0);
   });
+
+  test('la barra se ancla al borde de verdad: 20 abajo y 26 a los lados', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    const caja = (await page.locator('nav[aria-label="Navegación principal"]').boundingBox())!;
+    expect(Math.round(caja.x)).toBe(26);
+    expect(Math.round(390 - (caja.x + caja.width))).toBe(26);
+    expect(Math.round(844 - (caja.y + caja.height))).toBe(20);
+
+    // Y sin `env(safe-area-inset-bottom)` en el `bottom`, que es lo que la
+    // despegaba: iOS reevalúa ese valor mientras se desplaza, así que la barra
+    // se iba con la página y se quedaba donde la dejaras. Medido en el teléfono
+    // sobre una maqueta: con `env()` se iba, sin él se queda. El aire de abajo
+    // se pone en píxeles y punto.
+    const abajo = await page.locator('nav[aria-label="Navegación principal"]').evaluate(
+      (el) => getComputedStyle(el).bottom
+    );
+    expect(abajo).toBe('20px');
+  });
+
+  test('al tocar, el realce sale antes de que llegue la página', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    const barra = page.locator('nav[aria-label="Navegación principal"]');
+    const pildora = barra.locator('li[aria-hidden]');
+    // La matriz se lee EN el navegador: `DOMMatrixReadOnly` no existe en Node.
+    const donde = () =>
+      pildora.evaluate((el) => Math.round(new DOMMatrixReadOnly(getComputedStyle(el).transform).m41));
+
+    const partida = await donde();
+
+    // El realce estaba atado al cambio de ruta, que en el teléfono llega tarde:
+    // para cuando la página nueva se montaba, ya aparecía puesto en su destino.
+    // Por eso se veían «salida y llegada» y nunca el viaje. Ahora arranca con el
+    // toque, así que se mueve aunque la navegación no haya terminado.
+    await barra.getByRole('link', { name: 'Pilotos' }).click();
+    await expect.poll(donde, { timeout: 1000 }).toBeGreaterThan(partida + 50);
+  });
+
+  test('tocar dos pestañas seguidas lleva a la segunda, no a ninguna', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    // El fallo: `pathname` es la ruta YA cambiada, así que entre tocar y llegar
+    // seguía diciendo `/`. El segundo toque se comparaba con esa ruta vieja
+    // —«si ya estás en Inicio»—, se quedaba en un desplazamiento y no navegaba.
+    const barra = page.locator('nav[aria-label="Navegación principal"]');
+    await barra.getByRole('link', { name: 'Puntos de la clasificación' }).click();
+    await barra.getByRole('link', { name: 'Fechas del calendario' }).click();
+
+    await page.waitForURL('**/calendar', { timeout: 15_000 });
+    expect(new URL(page.url()).pathname).toBe('/calendar');
+  });
+
+  test('las etiquetas caben, y su nombre completo sigue anunciándose', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto('/');
+
+    const barra = page.locator('nav[aria-label="Navegación principal"]');
+
+    // «Clasificación» ocupaba 71 px de texto en una casilla de 60 y se salía del
+    // realce. Ninguna etiqueta puede pasar del 85 % de su casilla.
+    const medidas = await barra.evaluate((nav) =>
+      Array.from(nav.querySelectorAll('li:not([aria-hidden])')).map((li) => {
+        const control = li.firstElementChild as HTMLElement;
+        const texto = Array.from(control.childNodes).find((n) => n.nodeType === 3);
+        const rango = document.createRange();
+        let ancho = 0;
+        if (texto) {
+          rango.selectNodeContents(texto);
+          ancho = rango.getBoundingClientRect().width;
+        }
+        return { t: control.textContent?.trim() ?? '', ancho, casilla: li.getBoundingClientRect().width };
+      })
+    );
+
+    for (const m of medidas) {
+      expect(m.ancho / m.casilla, `«${m.t}» ocupa ${Math.round((m.ancho / m.casilla) * 100)}% de su casilla`)
+        .toBeLessThan(0.85);
+    }
+
+    // Corta a la vista, completa al oído: un nombre accesible que no contenga
+    // el texto visible deja fuera a quien maneja el teléfono por voz.
+    await expect(barra.getByRole('link', { name: 'Fechas del calendario' })).toHaveText('Fechas');
+    await expect(barra.getByRole('link', { name: 'Puntos de la clasificación' })).toHaveText('Puntos');
+  });
 });
 
 test.describe('temporada por defecto', () => {

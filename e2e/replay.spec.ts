@@ -359,6 +359,43 @@ test.describe('los mandos dicen lo que hacen', () => {
     await expect(burbuja).toHaveCount(0);
   });
 
+  test('ningún mando se sale del cristal, ni en el móvil más estrecho', async ({ page }) => {
+    // Los lados de estos mandos siguen a los de la barra de pestañas, que el
+    // usuario subió de 10 a 26 px. Eso estrecha la fila, y una revisión avisó
+    // de que a 360 el botón de velocidad se saldría. **No se reproduce**:
+    // medido, la fila mide 274 px y su contenido ocupa los mismos 274, con el
+    // último botón acabando en 317 dentro de un cristal que llega a 334.
+    //
+    // La prueba se queda igualmente, porque el margen es de 17 px y cualquier
+    // texto más largo o un icono más ancho se lo come sin que nada avise: un
+    // hijo que desborda a su padre no ensancha el documento, así que la
+    // comprobación de arrastre horizontal que ya existe no lo vería.
+    await page.setViewportSize({ width: 360, height: 800 });
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+
+    const fila = page.locator('[data-botonera]').filter({ visible: true });
+
+    // El contenido cabe en su caja. Es la comprobación que sí caza un desborde.
+    const desborde = await fila.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(desborde, 'la fila de mandos desborda su propia caja').toBeLessThanOrEqual(0);
+
+    // Y ningún botón asoma fuera del cristal que los contiene.
+    const cristal = (await fila.evaluate((el) => {
+      const c = el.closest('.fixed') as HTMLElement;
+      const r = c.getBoundingClientRect();
+      return { izq: r.x, der: r.right };
+    }))!;
+
+    for (const nombre of ['Retroceder 10 s', 'REPRODUCIR', 'Avanzar 10 s', /Velocidad/]) {
+      const caja = (await visible(page, nombre).boundingBox())!;
+      expect(caja.x, `«${nombre}» se sale por la izquierda`).toBeGreaterThanOrEqual(cristal.izq - 1);
+      expect(caja.x + caja.width, `«${nombre}» se sale por la derecha`).toBeLessThanOrEqual(cristal.der + 1);
+      expect(caja.height, `«${nombre}» baja de 44 px`).toBeGreaterThanOrEqual(44);
+    }
+  });
+
   test('tras tocar y soltar, las flechas siguen enseñando a dónde vas', async ({ page }) => {
     await simularCarrera(page);
     await page.goto(REPLAY);

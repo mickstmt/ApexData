@@ -464,7 +464,12 @@ function Replay({
   useEffect(() => {
     const medir = () => {
       const barra = document.documentElement.style.getPropertyValue('--barra-inferior');
-      const tapaBarra = Number.parseFloat(barra) || 84;
+      // El 88 es el valor de partida de `--barra-inferior` en `globals.css`
+      // —68 de alto más 20 de aire—, y tiene que seguirlo: este respaldo solo
+      // se usa en el primer `medir()`, antes de que la barra publique su
+      // medida, y con un número viejo la última fila de la torre quedaba unos
+      // píxeles por debajo de donde debía durante ese instante.
+      const tapaBarra = Number.parseFloat(barra) || 88;
       setTapaAbajo(Math.round(tapaBarra + 8 + (mandosRef.current?.offsetHeight ?? 0)));
     };
     medir();
@@ -624,10 +629,15 @@ function Replay({
       {/* Los mandos, como el mini-reproductor de Apple Music: cuando hay dos
           barras no se apilan como dos bloques pegados al borde, sino como dos
           piezas de la misma pila flotante — mismos márgenes que la barra de
-          pestañas, mismo cristal, un hueco corto entre ellas. */}
+          pestañas, mismo cristal, un hueco corto entre ellas.
+
+          Los 26 px de los lados no son de aquí: los eligió el usuario para la
+          barra de pestañas y estos los copian, porque las dos se leen como una
+          sola pila y un desfase de dieciséis píxeles entre ellas se ve. Hay una
+          prueba que lo fija, y es la que cazó el desajuste al cambiarlo. */}
       <div
         ref={mandosRef}
-        className="fixed inset-x-[10px] z-40 rounded-[21px] border border-[var(--barra-borde)] bg-[var(--barra-cristal)] shadow-[0_10px_34px_rgba(0,0,0,0.45)] backdrop-blur-[2px] backdrop-saturate-[1.8] md:hidden"
+        className="fixed inset-x-[26px] z-40 rounded-[21px] border border-[var(--barra-borde)] bg-[var(--barra-cristal)] shadow-[0_10px_34px_rgba(0,0,0,0.45)] backdrop-blur-[2px] backdrop-saturate-[1.8] md:hidden"
         style={{ bottom: 'calc(var(--barra-inferior) + 8px)' }}
       >
         {controles(false)}

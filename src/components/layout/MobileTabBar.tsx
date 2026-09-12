@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useReducedMotion } from 'framer-motion';
 import { Home, LayoutGrid } from 'lucide-react';
@@ -23,21 +23,37 @@ import { FUERA_DE_LA_BARRA, RejillaDeSecciones } from './Secciones';
  * adorno —da la sensación de que la lista sigue, que es lo que hace que la
  * pantalla parezca más alta sin esconder nada al desplazar.
  *
- * Las medidas están afinadas con el usuario sobre un mockup, contra las
- * referencias que trajo él (WhatsApp, Flashscore, Apple Music): alto 68, 10 a
- * los lados, 16 abajo más el borde seguro, píldora completa, icono 26 y
- * etiqueta 11,5. El cristal vive en `--barra-cristal`.
+ * Las medidas están afinadas con el usuario sobre maqueta, contra las
+ * referencias que trajo él (WhatsApp, Flashscore, Apple Music): alto 68,
+ * **26 a los lados y 20 abajo**, píldora completa, icono 26 y etiqueta 11,5.
+ * El cristal vive en `--barra-cristal`.
+ *
+ * Los 20 de abajo se miden **desde el borde**, sin sumar el área segura. Ver el
+ * porqué en el `bottom` de la propia barra: no es solo estético, es lo que la
+ * mantenía anclada al desplazar.
  *
  * ## Lo que NO se negocia
  *
  * El área tocable no baja de 44 px aunque el icono mida 26: lo que se toca es
  * la casilla entera, no el dibujo.
  */
+/**
+ * Las etiquetas son cortas por una medida, no por gusto.
+ *
+ * «Clasificación» ocupaba **71 px de texto en una casilla de 60** al ancho de
+ * un Android, y por eso se salía del realce al marcarla. Encogerla a 10 px la
+ * dejaba al 95 % —sin margen— y recortarla con puntos daba «Clasifica…», que
+ * no dice nada. «Puntos» se queda en el 62 % y dice lo mismo.
+ *
+ * El nombre completo no se pierde: va en `nombre`, que es lo que se anuncia, y
+ * contiene la palabra visible a propósito — un nombre accesible que no incluya
+ * el texto que se ve deja fuera a quien maneja el teléfono por voz.
+ */
 const TABS = [
-  { href: '/', label: 'Inicio', icon: Home },
-  { href: '/calendar', label: 'Calendario', icon: BanderaCuadros },
-  { href: '/standings', label: 'Clasificación', icon: Podio },
-  { href: '/drivers', label: 'Pilotos', icon: Casco },
+  { href: '/', label: 'Inicio', nombre: 'Inicio', icon: Home },
+  { href: '/calendar', label: 'Fechas', nombre: 'Fechas del calendario', icon: BanderaCuadros },
+  { href: '/standings', label: 'Puntos', nombre: 'Puntos de la clasificación', icon: Podio },
+  { href: '/drivers', label: 'Pilotos', nombre: 'Pilotos', icon: Casco },
 ] as const;
 
 /**
@@ -127,6 +143,20 @@ export function MobileTabBar() {
     };
   }, []);
 
+  /** Pone el realce sobre una casilla, midiéndola del DOM. */
+  const colocarPildora = useCallback((casilla: HTMLElement | null) => {
+    const nodo = lista.current;
+    if (!nodo || !casilla) return;
+
+    const caja = casilla.getBoundingClientRect();
+    const contenedor = nodo.getBoundingClientRect();
+    setPildora({
+      opacity: 1,
+      width: `${caja.width}px`,
+      transform: `translateX(${caja.left - contenedor.left}px)`,
+    });
+  }, []);
+
   useEffect(() => {
     const nodo = lista.current;
     if (!nodo) return;
@@ -134,23 +164,59 @@ export function MobileTabBar() {
     const medir = () => {
       const activa = nodo.querySelector<HTMLElement>('[aria-current="page"]');
       if (!activa) return setPildora({ opacity: 0 });
-
-      const caja = activa.getBoundingClientRect();
-      const contenedor = nodo.getBoundingClientRect();
-      setPildora({
-        opacity: 1,
-        width: `${caja.width}px`,
-        transform: `translateX(${caja.left - contenedor.left}px)`,
-      });
+      colocarPildora(activa);
     };
 
     medir();
     window.addEventListener('resize', medir);
     return () => window.removeEventListener('resize', medir);
+  }, [pathname, colocarPildora]);
+
+  /**
+   * A dónde se ha tocado mientras la ruta todavía dice otra cosa.
+   *
+   * `pathname` es la ruta **ya cambiada**, no la que se está pidiendo, así que
+   * entre tocar y llegar sigue diciendo la de antes. Sin esta cuenta, tocar
+   * Pilotos y enseguida Inicio hacía que el segundo toque se comparara con la
+   * ruta vieja —«si ya estás en Inicio»—, se quedara en un desplazamiento y no
+   * navegara. El usuario lo describió como «no responde».
+   */
+  const destinoPendiente = useRef<string | null>(null);
+
+  useEffect(() => {
+    destinoPendiente.current = null;
   }, [pathname]);
 
-  const alTocar = (href: string) => (evento: React.MouseEvent) => {
-    if (pathname !== href) return;
+  const alTocar = (href: string) => (evento: React.MouseEvent<HTMLAnchorElement>) => {
+    // Se mide la CASILLA, no el enlace.
+    //
+    // El enlace lleva `active:scale-[.92]` mientras el dedo está encima, así
+    // que medirlo dentro de su propio manejador devuelve el 92 % de su ancho:
+    // el realce viajaba encogido y solo se ajustaba al aterrizar la ruta.
+    // Medido: 184 px en vez de 200. La casilla que lo envuelve no se escala.
+    //
+    // El realce arranca al TOCAR, no al llegar.
+    //
+    // Estaba atado al cambio de ruta, que en el teléfono llega tarde: para
+    // cuando la página nueva se montaba, el realce aparecía ya puesto en su
+    // destino. Por eso se veían «salida y llegada» y nunca el viaje — el
+    // recorrido sí ocurría, pero contra una pantalla que aún no se pintaba.
+    colocarPildora(evento.currentTarget.parentElement);
+
+    // Un toque mientras se va a otro sitio es un cambio de idea: que navegue.
+    const enVuelo = destinoPendiente.current;
+    if (enVuelo !== null && enVuelo !== href) {
+      destinoPendiente.current = href;
+      return;
+    }
+
+    if (pathname !== href) {
+      destinoPendiente.current = href;
+      return;
+    }
+
+    // Volver arriba al tocar la pestaña en la que ya estás: es lo que hace
+    // cualquier app nativa, y aquí no hacía nada.
     evento.preventDefault();
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   };
@@ -163,8 +229,21 @@ export function MobileTabBar() {
         className={cn(
           // Píldora despegada de los tres bordes. El redondeo es medio alto:
           // en esta forma no es una preferencia, es lo que la hace píldora.
-          'fixed inset-x-[10px] z-50 h-[68px] rounded-[34px] p-[5px] md:hidden',
-          'bottom-[calc(1rem+env(safe-area-inset-bottom))]',
+          'fixed inset-x-[26px] z-50 h-[68px] rounded-[34px] p-[5px] md:hidden',
+          // Veinte píxeles del borde de VERDAD, sin sumar el área segura.
+          //
+          // Sumarla hacía dos cosas malas. La visible: en un iPhone son ~34 px,
+          // así que la barra quedaba a más de cincuenta del cristal, lejos de
+          // WhatsApp y Flashscore — que dejan que el indicador del sistema les
+          // caiga encima, y es lo que el usuario pedía enseñando esas capturas.
+          //
+          // Y la que costó encontrar: **la barra se despegaba al desplazar**.
+          // iOS reevalúa `env(safe-area-inset-bottom)` durante el gesto, así que
+          // un `bottom` que dependiera de él se movía con la página y se quedaba
+          // donde lo dejaras. Medido sobre una maqueta instalada en el teléfono:
+          // con `env()` se iba, sin él se queda quieta, y es el único cambio de
+          // posicionamiento entre las dos versiones.
+          'bottom-[20px]',
           'border border-[var(--barra-borde)] shadow-[0_10px_34px_rgba(0,0,0,0.45)]',
           // El cristal. Poco desenfoque a propósito: medido, con 6 px ya no se
           // ve nada de lo que pasa por debajo, y verlo es el objetivo.
@@ -184,7 +263,7 @@ export function MobileTabBar() {
           style={pildora}
         />
 
-        {TABS.map(({ href, label, icon: Icon }) => {
+        {TABS.map(({ href, label, nombre, icon: Icon }) => {
           const active =
             href === '/' ? pathname === '/' : pathname.startsWith(href) || seccion === href;
 
@@ -193,6 +272,7 @@ export function MobileTabBar() {
               <Link
                 href={href}
                 aria-current={active ? 'page' : undefined}
+                aria-label={nombre === label ? undefined : nombre}
                 onClick={alTocar(href)}
                 className={cn(
                   // El alto es el de la casilla entera: lo que se toca no es el

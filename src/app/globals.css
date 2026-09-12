@@ -70,9 +70,11 @@
        se nota; por eso ninguna prueba lo vio.
 
        Este valor es solo el de partida: `MobileTabBar` lo sustituye por su alto
-       medido en cuanto monta, así que si la barra cambia —y el rediseño
-       flotante la va a cambiar— nadie tiene que acordarse de actualizar nada. */
-    --barra-inferior: calc(4.25rem + 1rem + env(safe-area-inset-bottom));
+       medido en cuanto monta, así que si la barra cambia nadie tiene que
+       acordarse de actualizar nada. Ya no lleva `env(safe-area-inset-bottom)`
+       porque la barra tampoco: iOS lo reevalúa mientras se desplaza, y eso la
+       despegaba del borde. */
+    --barra-inferior: calc(68px + 20px);
 
     /* El cristal de la barra flotante.
        ============================================================
@@ -160,10 +162,14 @@
      Es lo que ya hacía la app; lo que cambia es la curva, que ahora rebota un
      poco al llegar —elegido sobre el mockup— y el radio, proporcional a lo que
      envuelve en vez de fijo. */
+  /* 720 ms, elegido por el usuario sobre los 420 que tenía.
+     El realce viaja de una pestaña a otra y ese viaje es la información: a 420
+     el recorrido se leía como un parpadeo. La curva conserva el rebote corto
+     del final, que es lo que hace que llegue en vez de frenar. */
   .barra-realce {
     transition:
-      transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
-      width 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform 720ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      width 720ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   @media (prefers-reduced-motion: reduce) {

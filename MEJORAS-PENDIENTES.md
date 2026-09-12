@@ -52,9 +52,22 @@
 | **4** la previa repetida | HECHO | `d40f51f` | No fallo la marca: el grupo cambio de identidad. La marca lleva la clave de la PRIMERA sesion del grupo, y al filtrar solo lo que aun no ha empezado, el grupo del viernes paso de [FP1, FP2] a [FP2]. Arreglado mirando 30 h hacia atras al agrupar. |
 | **9** los saltos dicen cuanto mueven | HECHO | (este commit) | Dos piezas, no una: el «10 s» fijo contesta antes de pulsar y el destello despues. El destello dice el salto REAL — a 2 s del final dice «+2 s», no «+10 s». Y `saltoReal` no redondea: con `Math.round`, medio segundo daba `-0` —igual a 0— y el boton de atras se apagaba a dos instantes del inicio, dejando esos 0,5 s fuera de su alcance. Zona muerta de medio paso, y solo hacia atras. |
 | **10a** en que minuto estas | HECHO | (este commit) | Reloj y duracion pegados al scrubber, y burbuja con vuelta y minuto al arrastrar (tambien con las flechas). La vuelta NO va en la fila fija: la cabecera ya la lleva como titular y era decirla dos veces — mi mockup lo ocultaba porque ponia el nombre del GP en la cabecera, y ese fue un fallo de fidelidad mio. El reloj pasa a `1:18:42` cuando hay horas, con el hueco reservado en `ch` para que no salte al cruzarla. En escritorio los cuatro mandos van centrados y se quita el reloj del final de la fila: a 40 px del nuevo era decir la hora dos veces. Medido en los tres anchos y los dos temas: el «10 s» de 8,5 px da 6,47 en oscuro y 5,82 en claro, sobre un liston de 4,5. |
+| **14-bis** la barra, corregida | HECHO | (este commit) | Cinco cosas que reporto el usuario sobre la barra ya rediseñada. **La que se movia al desplazar era `env(safe-area-inset-bottom)`**: iOS lo reevalua durante el gesto, asi que un `bottom` que dependiera de el se iba con la pagina y se quedaba donde lo dejaras. Se descubrio sin querer, al quitarlo de la maqueta para poder bajar la barra: dejo de moverse. El desenfoque quedo descartado antes — la barra y un contorno SIN desenfoque se movieron juntos. **Medidas elegidas por el usuario sobre maqueta instalada en su telefono**: 20 px desde el borde de verdad y 26 a los lados, contra WhatsApp y Flashscore, que dejan que el indicador del sistema les caiga encima. Los mandos del replay copian los 26, y hay una prueba que lo fija. **Etiquetas cortas**: «Clasificacion» ocupaba 71 px de texto en una casilla de 60 y se salia del realce; «Puntos» se queda en el 62 %. El nombre completo sigue anunciandose y contiene la palabra visible, que es lo que necesita quien maneja por voz. **El toque que no respondia**: `pathname` es la ruta YA cambiada, asi que tocar Pilotos y enseguida Inicio comparaba el segundo toque con la ruta vieja, se quedaba en un desplazamiento y no navegaba. **El realce que no recorria**: estaba atado al cambio de ruta, que en el telefono llega tarde; ahora arranca con el toque. Duracion 420 -> 720 ms, elegido por el usuario. |
 
 **Suites al cerrar el bloque de datos**: 408 unitarias, 121 e2e (26 nuevas en
 total), tipos y lint limpios. Build igual que el CI.
+
+**Suites tras la barra (14-bis)**: 417 unitarias, 134 e2e, tipos y lint limpios,
+build igual que el CI. La revision de codigo saco cuatro cosas: dos reales —el
+realce se medía sobre el enlace mientras `active:scale-[.92]` lo encogia, asi
+que viajaba al 92 % de su ancho (184 px en vez de 200), y un respaldo de 84 px
+que habia dejado de seguir a `--barra-inferior`— y dos que **no se sostuvieron**:
+un desborde de los mandos del replay a 360 px que no se reproduce (medido: la
+fila ocupa 274 de 274 y el ultimo boton acaba en 317 dentro de un cristal que
+llega a 334) y un comentario que si estaba desactualizado. La prueba que se
+escribio para el desborde resulto **vacua** —pasaba igual con los valores viejos,
+comprobado revirtiendolos— y se reescribio comparando `scrollWidth` con
+`clientWidth`, que es lo que si caza un desborde.
 
 **Suites tras los mandos del replay (9 y 10a)**: 417 unitarias, 129 e2e, tipos y
 lint limpios, build igual que el CI. La revision de codigo saco seis cosas y las
