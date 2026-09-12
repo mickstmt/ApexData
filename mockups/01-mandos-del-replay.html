@@ -1,0 +1,791 @@
+<title>Mandos del replay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+/* ---------------------------------------------------------------------------
+   Paleta de la HOJA (no del replay).
+   Un gris con sesgo verde, para que el lima del replay pertenezca a la misma
+   familia sin competir con el. La hoja sigue el tema de quien mira; el replay
+   de la maqueta tiene su propio interruptor, porque hay que poder leer esto en
+   oscuro mientras se juzga el replay en claro.
+--------------------------------------------------------------------------- */
+:root {
+  --suelo: #EDEFEA;
+  --panel: #FFFFFF;
+  --panel-2: #F5F7F1;
+  --tinta: #191C17;
+  --tinta-2: #565C52;
+  --linea: #D8DCD2;
+  --linea-fuerte: #BFC5B7;
+  --marca: #435600;
+  --marca-tinta: #FFFFFF;
+  --aviso: #8A4B00;
+  --sombra: 0 1px 2px rgba(25,28,23,.05), 0 8px 24px rgba(25,28,23,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --suelo: #0F110E;
+    --panel: #171A15;
+    --panel-2: #1D2119;
+    --tinta: #E9EDE4;
+    --tinta-2: #9AA292;
+    --linea: #272B23;
+    --linea-fuerte: #3A4034;
+    --marca: #CCFF00;
+    --marca-tinta: #0F110E;
+    --aviso: #E8A552;
+    --sombra: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] {
+  --suelo: #0F110E;
+  --panel: #171A15;
+  --panel-2: #1D2119;
+  --tinta: #E9EDE4;
+  --tinta-2: #9AA292;
+  --linea: #272B23;
+  --linea-fuerte: #3A4034;
+  --marca: #CCFF00;
+  --marca-tinta: #0F110E;
+  --aviso: #E8A552;
+  --sombra: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+}
+
+/* ---------------------------------------------------------------------------
+   Los tokens REALES del replay, copiados de globals.css sin retocar.
+   Van sobre el escenario, no sobre :root, para que la maqueta pueda enseñar el
+   replay en claro dentro de una pagina en oscuro.
+--------------------------------------------------------------------------- */
+[data-replay="claro"] {
+  --replay-fondo:#F7F7F8; --replay-superficie:#F0F0F2; --replay-superficie-2:#E4E4E9;
+  --replay-boton:#E4E4E9; --replay-borde:#DEDEE3; --replay-borde-fila:#E8E8EC;
+  --replay-texto:#151519; --replay-apagado:#55555E; --replay-tenue:#6E6E7A;
+  --replay-acento:#526600; --replay-acento-tinta:#FFFFFF; --replay-trazado:#8A8A94;
+  --replay-amarilla:#B08519; --replay-naranja:#CC7121; --replay-roja:#D93830;
+  --replay-roja-texto:#CC352D; --replay-pulgar:#151519; --replay-pulgar-borde:#F7F7F8;
+}
+[data-replay="oscuro"] {
+  --replay-fondo:#0B0B0F; --replay-superficie:#151519; --replay-superficie-2:#1B1B22;
+  --replay-boton:#1F1F27; --replay-borde:#26262E; --replay-borde-fila:#16161C;
+  --replay-texto:#F5F5F7; --replay-apagado:#A2A2AC; --replay-tenue:#6E6E7A;
+  --replay-acento:#CCFF00; --replay-acento-tinta:#000000; --replay-trazado:#6B6B78;
+  --replay-amarilla:#FBBE23; --replay-naranja:#FF8D29; --replay-roja:#D93830;
+  --replay-roja-texto:#FF4238; --replay-pulgar:#FFFFFF; --replay-pulgar-borde:#0B0B0F;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding-block: 28px 72px;
+  padding-left: 20px;
+  padding-right: 20px;
+  background: var(--suelo);
+  color: var(--tinta);
+  font: 400 15px/1.55 Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.envoltura { max-width: 1180px; margin: 0 auto; display: grid; gap: 26px; min-width: 0; }
+
+/* --- cabecera -------------------------------------------------------------- */
+.portada { display: grid; gap: 10px; }
+.eyebrow {
+  font: 600 11px/1 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--tinta-2);
+}
+h1 {
+  margin: 0; font: 700 clamp(26px, 4.4vw, 38px)/1.08 "Chakra Petch", system-ui, sans-serif;
+  letter-spacing: -.01em; text-wrap: balance;
+}
+.entradilla { margin: 0; max-width: 62ch; color: var(--tinta-2); font-size: 15.5px; }
+
+/* --- barra de mandos globales ---------------------------------------------- */
+.globales {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center;
+  padding: 12px 14px; border: 1px solid var(--linea); border-radius: 12px;
+  background: var(--panel); box-shadow: var(--sombra);
+}
+.grupo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.grupo > .etq {
+  font: 600 10.5px/1 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: .13em; text-transform: uppercase; color: var(--tinta-2);
+}
+.segmentado { display: flex; flex-wrap: wrap; gap: 3px; padding: 3px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--linea); min-width: 0; }
+.segmentado button {
+  min-height: 32px; padding: 0 11px; border: 0; border-radius: 6px; background: transparent;
+  color: var(--tinta-2); font: 500 12.5px/1 Inter, system-ui, sans-serif; cursor: pointer;
+  white-space: nowrap;
+}
+.segmentado button[aria-pressed="true"] { background: var(--marca); color: var(--marca-tinta); font-weight: 600; }
+.segmentado button:focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; }
+
+/* --- escenario ------------------------------------------------------------- */
+.escenario {
+  display: grid; justify-items: center; gap: 12px; min-width: 0;
+  padding: 26px 14px; border: 1px solid var(--linea); border-radius: 14px; overflow: hidden;
+  background: repeating-linear-gradient(45deg, transparent 0 9px, color-mix(in srgb, var(--linea) 40%, transparent) 9px 10px), var(--panel-2);
+}
+.rotulo-ancho {
+  font: 600 10.5px/1 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: .13em; text-transform: uppercase; color: var(--tinta-2);
+}
+
+.marco {
+  width: 390px; max-width: 100%;
+  border: 1px solid var(--linea-fuerte); border-radius: 18px; overflow: hidden;
+  background: var(--replay-fondo); color: var(--replay-texto);
+  font-family: Inter, system-ui, sans-serif;
+  box-shadow: var(--sombra);
+}
+.marco.w360 { width: 360px; }
+.marco.w1100 { width: 100%; max-width: 1100px; border-radius: 12px; }
+
+/* cabecera del replay */
+.r-cab {
+  display: grid; grid-template-columns: auto minmax(0,1fr) auto auto;
+  align-items: center; gap: 0 8px; height: 44px; padding-right: 12px;
+  border-bottom: 1px solid var(--replay-borde);
+}
+.r-atras { width: 44px; height: 44px; display: grid; place-items: center; color: var(--replay-apagado); }
+.r-tit { margin: 0; min-width: 0; font: 700 17px/1 "Chakra Petch", system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-reloj-cab { font: 400 13px/1 "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; color: var(--replay-apagado); }
+.r-pildora {
+  padding: 6px 8px; border-radius: 4px; font: 600 10px/1 "Chakra Petch", system-ui, sans-serif;
+  letter-spacing: .1em; text-transform: uppercase;
+  background: color-mix(in srgb, var(--replay-trazado) 22%, transparent); color: var(--replay-apagado);
+}
+
+/* cuerpo: mapa + torre */
+.r-cuerpo { position: relative; }
+.r-mapa { height: 132px; border-bottom: 1px solid var(--replay-borde); display: grid; place-items: center; overflow: hidden; }
+.r-mapa svg { width: 74%; height: 104px; }
+.r-torre { padding: 6px 0 0; }
+.r-fila {
+  display: grid; grid-template-columns: 26px 4px 1fr auto; align-items: center; gap: 9px;
+  height: 40px; padding: 0 14px; border-bottom: 1px solid var(--replay-borde-fila);
+}
+.r-pos { font: 600 13px/1 "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; color: var(--replay-apagado); text-align: center; }
+.r-barra { height: 22px; border-radius: 2px; }
+.r-piloto { font: 600 14px/1 Inter, system-ui, sans-serif; }
+.r-equipo { display: block; font: 400 11px/1.3 Inter, system-ui, sans-serif; color: var(--replay-apagado); margin-top: 2px; }
+.r-hueco { font: 400 12.5px/1 "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; color: var(--replay-apagado); }
+
+/* mandos flotantes (movil) */
+.r-mandos-flot {
+  margin: 10px; border: 1px solid var(--replay-borde); border-radius: 16px;
+  background: color-mix(in srgb, var(--replay-superficie) 92%, transparent);
+  backdrop-filter: blur(2px) saturate(1.8);
+}
+.r-mandos { display: grid; gap: 8px; padding: 8px 16px 10px; }
+
+/* la fila del scrubber, con las medidas reales del proyecto */
+.r-pista { position: relative; display: flex; align-items: center; height: 44px; }
+.r-riel { position: absolute; inset-inline: 0; top: 18px; height: 8px; border-radius: 4px; pointer-events: none; }
+.r-marca-vuelta { position: absolute; top: 14px; width: 1px; height: 16px; background: var(--replay-tenue); pointer-events: none; }
+input[type="range"].scrub {
+  position: relative; height: 44px; width: 100%; margin: 0;
+  appearance: none; -webkit-appearance: none; background: transparent; cursor: pointer;
+}
+input[type="range"].scrub:focus-visible { outline: 2px solid var(--replay-acento); outline-offset: -2px; border-radius: 6px; }
+input[type="range"].scrub::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--replay-pulgar); border: 3px solid var(--replay-pulgar-borde);
+  box-shadow: 0 0 0 1px var(--replay-tenue); cursor: pointer;
+}
+input[type="range"].scrub::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--replay-pulgar); border: 3px solid var(--replay-pulgar-borde);
+  box-shadow: 0 0 0 1px var(--replay-tenue); cursor: pointer;
+}
+input[type="range"].scrub::-moz-range-track { background: transparent; }
+
+/* fila de botones */
+.r-botonera { display: grid; grid-template-columns: 44px 1fr 44px 56px; align-items: center; gap: 10px; }
+/* Escritorio: los cuatro mandos centrados como un bloque.
+   Estaban apretados a la izquierda porque un `1fr` final empujaba el reloj al
+   borde opuesto; con el reloj ya encima del scrubber ese `1fr` solo servia
+   para descentrar. `justify-content` centra las pistas dentro de la fila. */
+.marco.w1100 .r-botonera { grid-template-columns: 44px 200px 44px 56px; justify-content: center; }
+.marco.w1100 .r-mandos { padding-inline: 24px; }
+.marco.w1100 .r-mandos-flot { margin: 0; border: 0; border-top: 1px solid var(--replay-borde); border-radius: 0; background: var(--replay-fondo); backdrop-filter: none; }
+.marco.w1100 .r-barra-app { display: none; }
+
+/* El escritorio de verdad son DOS columnas, no una fila ancha: mapa y mandos a
+   la izquierda, la torre entera a la derecha en 340 px. Importa para esta
+   decision — los botones no se centran sobre 1100 px, sino sobre lo que queda
+   a la izquierda. Con la maqueta a una columna se juzgaba otra cosa. */
+.marco.w1100 .r-cuerpo { display: grid; grid-template-columns: minmax(0,1fr) 340px; grid-template-rows: 1fr auto; }
+.marco.w1100 .r-mapa { grid-column: 1; grid-row: 1; height: 300px; border-bottom: 0; }
+.marco.w1100 .r-mapa svg { height: 250px; width: 62%; }
+.marco.w1100 .r-mandos-flot { grid-column: 1; grid-row: 2; }
+.marco.w1100 .r-torre { grid-column: 2; grid-row: 1 / span 2; border-left: 1px solid var(--replay-borde); padding-top: 0; }
+.r-bt {
+  height: 44px; display: grid; place-items: center; gap: 1px; border: 0; border-radius: 10px;
+  background: var(--replay-boton); color: var(--replay-texto);
+  font: 600 13px/1 "JetBrains Mono", ui-monospace, monospace; cursor: pointer;
+}
+.r-bt:disabled { opacity: .4; cursor: default; }
+.r-bt:focus-visible { outline: 2px solid var(--replay-acento); outline-offset: 2px; }
+.r-bt svg { width: 20px; height: 20px; fill: currentColor; }
+.r-bt .seg { font: 600 8.5px/1 "JetBrains Mono", ui-monospace, monospace; letter-spacing: .02em; color: var(--replay-apagado); }
+.r-play {
+  height: 48px; border: 0; border-radius: 10px; background: var(--replay-acento); color: var(--replay-acento-tinta);
+  font: 700 14px/1 "Chakra Petch", system-ui, sans-serif; letter-spacing: .06em; cursor: pointer;
+}
+.r-play:focus-visible { outline: 2px solid var(--replay-texto); outline-offset: 2px; }
+.r-reloj-mandos { text-align: right; font: 400 13px/1 "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; color: var(--replay-apagado); }
+
+/* 10a-A: reloj fijo sobre el scrubber */
+.r-tiempos {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font: 400 12.5px/1 "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums;
+  color: var(--replay-apagado);
+}
+.r-tiempos .ahora { color: var(--replay-texto); font-weight: 600; font-size: 14px; }
+.r-tiempos .vuelta { color: var(--replay-apagado); }
+
+/* 10a-B: burbuja sobre el pulgar */
+.r-burbuja {
+  position: absolute; bottom: 38px; transform: translateX(-50%);
+  padding: 5px 9px; border-radius: 8px; white-space: nowrap;
+  background: var(--replay-texto); color: var(--replay-fondo);
+  font: 600 12.5px/1 "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums;
+  pointer-events: none; opacity: 0; transition: opacity .12s ease;
+}
+.r-burbuja[data-visible="si"] { opacity: 1; }
+.r-burbuja::after {
+  content: ""; position: absolute; left: 50%; bottom: -4px; width: 8px; height: 8px;
+  transform: translateX(-50%) rotate(45deg); background: var(--replay-texto);
+}
+
+/* 9-B: destello del salto */
+.r-destello {
+  position: absolute; left: 50%; bottom: 62px; transform: translateX(-50%);
+  padding: 7px 14px; border-radius: 999px; white-space: nowrap;
+  background: color-mix(in srgb, var(--replay-texto) 92%, transparent); color: var(--replay-fondo);
+  font: 700 14px/1 "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums;
+  pointer-events: none; opacity: 0;
+}
+.r-destello[data-visible="si"] { animation: destello 900ms ease forwards; }
+@keyframes destello {
+  0% { opacity: 0; transform: translateX(-50%) translateY(6px) scale(.94); }
+  14% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .r-destello[data-visible="si"] { animation: destello-quieto 900ms steps(1) forwards; }
+  @keyframes destello-quieto { 0%,70% { opacity: 1; transform: translateX(-50%); } 100% { opacity: 0; transform: translateX(-50%); } }
+  .r-burbuja { transition: none; }
+}
+
+/* barra inferior de la app, solo como referencia de que hay debajo */
+.r-barra-app {
+  margin: 0 10px 10px; height: 56px; border-radius: 18px;
+  border: 1px solid var(--replay-borde);
+  background: color-mix(in srgb, var(--replay-superficie) 70%, transparent);
+  display: grid; grid-auto-flow: column; align-items: center; justify-items: center;
+  font: 500 10.5px/1 Inter, system-ui, sans-serif; color: var(--replay-apagado);
+}
+
+/* --- paneles de opciones --------------------------------------------------- */
+.opciones { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr)); }
+.panel { min-width: 0; border: 1px solid var(--linea); border-radius: 14px; background: var(--panel); padding: 18px; display: grid; gap: 12px; align-content: start; }
+.panel h2 { margin: 0; font: 700 19px/1.2 "Chakra Petch", system-ui, sans-serif; }
+.panel .punto { font: 600 10.5px/1 "JetBrains Mono", ui-monospace, monospace; letter-spacing: .13em; text-transform: uppercase; color: var(--marca); }
+[data-theme="dark"] .panel .punto, :root:not([data-theme="light"]) .panel .punto { color: var(--marca); }
+.panel .dicho { margin: 0; padding-left: 12px; border-left: 2px solid var(--linea-fuerte); color: var(--tinta-2); font-size: 14px; font-style: italic; }
+.eleccion { display: grid; gap: 8px; }
+.eleccion label {
+  display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start;
+  padding: 11px 12px; border: 1px solid var(--linea); border-radius: 10px; cursor: pointer; background: var(--panel-2);
+}
+.eleccion label:has(input:checked) { border-color: var(--marca); box-shadow: inset 0 0 0 1px var(--marca); }
+.eleccion label:has(input:focus-visible) { outline: 2px solid var(--marca); outline-offset: 2px; }
+.eleccion input { margin: 2px 0 0; accent-color: var(--marca); }
+.eleccion .nombre { font-weight: 600; font-size: 14.5px; display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.eleccion .que { display: block; color: var(--tinta-2); font-size: 13.5px; margin-top: 3px; }
+.sello {
+  font: 600 9.5px/1 "JetBrains Mono", ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase;
+  padding: 3px 6px; border-radius: 4px; background: var(--marca); color: var(--marca-tinta);
+}
+
+/* --- recomendacion y notas -------------------------------------------------- */
+.cierre { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); }
+.nota { min-width: 0; border: 1px solid var(--linea); border-left: 3px solid var(--marca); border-radius: 12px; background: var(--panel); padding: 18px; display: grid; gap: 10px; align-content: start; }
+.nota.abierta { border-left-color: var(--aviso); }
+.nota h3 { margin: 0; font: 700 16px/1.25 "Chakra Petch", system-ui, sans-serif; }
+.nota p { margin: 0; font-size: 14px; color: var(--tinta-2); }
+.nota p strong { color: var(--tinta); }
+.nota ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--tinta-2); display: grid; gap: 6px; }
+code { font: 400 12.5px/1 "JetBrains Mono", ui-monospace, monospace; padding: 1px 5px; border-radius: 4px; background: var(--panel-2); border: 1px solid var(--linea); }
+
+.pie { color: var(--tinta-2); font-size: 13px; text-align: center; }
+</style>
+
+<div class="envoltura">
+
+  <header class="portada">
+    <span class="eyebrow">Paso 1 de 4 · bloque de replay</span>
+    <h1>Los mandos del replay</h1>
+    <p class="entradilla">
+      Dos huecos que salieron revisando el GP de Italia en el iPhone: los botones de salto
+      no dicen cuánto mueven (<strong>punto 9</strong>) y la barra de progreso no dice en qué
+      minuto estás (<strong>punto 10a</strong>). Están en los mismos cien píxeles de pantalla,
+      así que se deciden juntos: hay que ver si conviven o se estorban.
+      Todo lo de abajo <strong>funciona</strong> — arrastra, salta y reproduce.
+    </p>
+  </header>
+
+  <div class="globales">
+    <div class="grupo">
+      <span class="etq">Ancho</span>
+      <div class="segmentado" id="anchos">
+        <button type="button" data-ancho="390" aria-pressed="false">iPhone 390</button>
+        <button type="button" data-ancho="360" aria-pressed="false">Android 360</button>
+        <button type="button" data-ancho="1100" aria-pressed="true">Escritorio 1100</button>
+      </div>
+    </div>
+    <div class="grupo">
+      <span class="etq">Tema del replay</span>
+      <div class="segmentado" id="temas">
+        <button type="button" data-tema="oscuro" aria-pressed="true">Oscuro</button>
+        <button type="button" data-tema="claro" aria-pressed="false">Claro</button>
+      </div>
+    </div>
+    <div class="grupo">
+      <span class="etq">Reloj <span class="sello">Decidido</span></span>
+      <div class="segmentado" id="formatos">
+        <button type="button" data-formato="mss" aria-pressed="false">78:42</button>
+        <button type="button" data-formato="hms" aria-pressed="true">1:18:42</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="escenario">
+    <span class="rotulo-ancho" id="rotuloAncho">Escritorio · 1100 px</span>
+
+    <div class="marco w1100" id="marco" data-replay="oscuro">
+      <div class="r-cab">
+        <span class="r-atras" aria-hidden>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </span>
+        <h2 class="r-tit">GP de Italia</h2>
+        <span class="r-reloj-cab" id="relojCabecera">48:20</span>
+        <span class="r-pildora">Verde</span>
+      </div>
+
+      <div class="r-cuerpo">
+        <div class="r-mapa">
+          <!-- Monza, a grandes rasgos: la recta principal, las dos Lesmo y la parabolica. -->
+          <svg viewBox="0 0 300 150" role="img" aria-label="Trazado de Monza">
+            <path d="M40 124 L196 124 C232 124 246 108 234 92 L180 30 C172 20 158 20 150 28 L120 56 C112 64 100 64 93 56 L76 38 C66 28 50 32 44 44 L26 84 C18 100 24 118 40 124 Z"
+                  fill="none" stroke="var(--replay-trazado)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+            <circle cx="150" cy="124" r="7" fill="#00A19B" stroke="var(--replay-fondo)" stroke-width="2.5"/>
+            <circle cx="126" cy="124" r="6" fill="#FF8000" stroke="var(--replay-fondo)" stroke-width="2.5"/>
+            <circle cx="104" cy="124" r="6" fill="#E8002D" stroke="var(--replay-fondo)" stroke-width="2.5"/>
+            <circle cx="222" cy="104" r="6" fill="#3671C6" stroke="var(--replay-fondo)" stroke-width="2.5"/>
+          </svg>
+        </div>
+
+        <div class="r-torre">
+          <div class="r-fila"><span class="r-pos">1</span><span class="r-barra" style="background:#00A19B"></span><span><span class="r-piloto">ANT</span><span class="r-equipo">Mercedes</span></span><span class="r-hueco">líder</span></div>
+          <div class="r-fila"><span class="r-pos">2</span><span class="r-barra" style="background:#FF8000"></span><span><span class="r-piloto">NOR</span><span class="r-equipo">McLaren</span></span><span class="r-hueco">+1.284</span></div>
+          <div class="r-fila"><span class="r-pos">3</span><span class="r-barra" style="background:#E8002D"></span><span><span class="r-piloto">LEC</span><span class="r-equipo">Ferrari</span></span><span class="r-hueco">+4.007</span></div>
+          <div class="r-fila"><span class="r-pos">4</span><span class="r-barra" style="background:#3671C6"></span><span><span class="r-piloto">VER</span><span class="r-equipo">Red Bull</span></span><span class="r-hueco">+6.512</span></div>
+        </div>
+
+        <div class="r-mandos-flot">
+          <div class="r-mandos">
+
+            <!-- 10a-A · reloj fijo, siempre a la vista -->
+            <div class="r-tiempos" id="tiemposFijos" hidden>
+              <span><span class="ahora" id="tAhora">48:20</span> <span class="vuelta" id="tVuelta">· vuelta 33</span></span>
+              <span id="tTotal">78:42</span>
+            </div>
+
+            <div class="r-pista">
+              <div class="r-riel" id="riel"></div>
+              <div id="marcasVuelta"></div>
+              <input type="range" class="scrub" id="scrub" min="0" max="4722" step="1" value="2900"
+                     aria-label="Minuto de la carrera" aria-valuetext="48:20">
+              <!-- 10a-B · burbuja sobre el pulgar -->
+              <div class="r-burbuja" id="burbuja" data-visible="no">48:20</div>
+              <!-- 9-B · destello del salto -->
+              <div class="r-destello" id="destello" data-visible="no">+10 s</div>
+            </div>
+
+            <div class="r-botonera">
+              <button type="button" class="r-bt" id="btAtras" aria-label="Diez segundos atrás">
+                <svg viewBox="0 0 24 24" aria-hidden><path d="M11 6 3 12l8 6zM20 6l-8 6 8 6z"/></svg>
+                <span class="seg" id="segAtras" hidden>10 s</span>
+              </button>
+              <button type="button" class="r-play" id="btPlay" aria-pressed="false">REPRODUCIR</button>
+              <button type="button" class="r-bt" id="btAdelante" aria-label="Diez segundos adelante">
+                <svg viewBox="0 0 24 24" aria-hidden><path d="M13 6l8 6-8 6zM4 6l8 6-8 6z"/></svg>
+                <span class="seg" id="segAdelante" hidden>10 s</span>
+              </button>
+              <button type="button" class="r-bt" id="btVel">1×</button>
+              <span class="r-reloj-mandos" id="relojMandos" hidden>48:20</span>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="r-barra-app" aria-hidden>
+          <span>Inicio</span><span>Calendario</span><span>Clasificación</span><span>Pilotos</span><span>Telemetría</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="opciones">
+
+    <div class="panel">
+      <span class="punto">Punto 9 · Decidido: C</span>
+      <h2>Que los botones digan cuánto mueven</h2>
+      <p class="dicho">«Quiere un indicador al pulsar: algo tipo “+10 seg” / “−10 seg” en pantalla, según lo que salten.»</p>
+      <div class="eleccion" id="op9">
+        <label>
+          <input type="radio" name="op9" value="A">
+          <span>
+            <span class="nombre">A · La marca en el botón</span>
+            <span class="que">Un «10 s» fijo bajo la doble flecha. Se sabe antes de pulsar, y no se mueve nada. Lo que hacen el reproductor de iOS y YouTube.</span>
+          </span>
+        </label>
+        <label>
+          <input type="radio" name="op9" value="B">
+          <span>
+            <span class="nombre">B · El destello al pulsar</span>
+            <span class="que">Una píldora «+10 s» aparece sobre los mandos y se va sola. Es literalmente lo que pediste, pero no ayuda a quien aún no ha pulsado.</span>
+          </span>
+        </label>
+        <label>
+          <input type="radio" name="op9" value="C" checked>
+          <span>
+            <span class="nombre">C · Las dos <span class="sello">Elegida</span></span>
+            <span class="que">La marca resuelve «no dicen cuánto mueven»; el destello confirma el salto <em>real</em>. Pruébalo cerca del final: el destello dice «+4 s» porque eso es lo que queda, y el botón se apaga al llegar.</span>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <span class="punto">Punto 10a · Decidido: C</span>
+      <h2>En qué minuto estás</h2>
+      <p class="dicho">«Falta el indicador de tiempo: ni dónde estás ahora, ni a dónde vas mientras arrastras el cursor.»</p>
+      <div class="eleccion" id="op10">
+        <label>
+          <input type="radio" name="op10" value="A">
+          <span>
+            <span class="nombre">A · El reloj fijo</span>
+            <span class="que">Minuto actual y duración, sobre el scrubber. En el móvil el reloj vive hoy en la cabecera, lejos del dedo; esto lo trae al lado de lo que se toca.</span>
+          </span>
+        </label>
+        <label>
+          <input type="radio" name="op10" value="B">
+          <span>
+            <span class="nombre">B · La burbuja al arrastrar</span>
+            <span class="que">Sigue al pulgar mientras arrastras y desaparece al soltar. Resuelve «a dónde voy», pero en reposo la pantalla vuelve a no decir nada.</span>
+          </span>
+        </label>
+        <label>
+          <input type="radio" name="op10" value="C" checked>
+          <span>
+            <span class="nombre">C · Las dos, y con la vuelta <span class="sello">Elegida</span></span>
+            <span class="que">Reloj fijo en reposo, burbuja al arrastrar — y las dos dicen también la <em>vuelta</em>. En una carrera «vuelta 33 de 53» sitúa mejor que «48:20», y ya tenemos los cruces de meta del líder dibujados en la barra.</span>
+          </span>
+        </label>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="cierre">
+    <div class="nota">
+      <h3>Lo decidido</h3>
+      <p><strong>9-C, 10a-C y el reloj en <code>1:18:42</code>.</strong> Los dos puntos van a C por el mismo motivo: cada uno es en realidad dos preguntas distintas, y una sola pieza solo contesta una.</p>
+      <ul>
+        <li>«¿Cuánto mueve?» se pregunta <strong>antes</strong> de pulsar — eso lo contesta la marca fija, no el destello.</li>
+        <li>«¿Se movió, y cuánto?» se pregunta <strong>después</strong> — eso lo contesta el destello, y solo él.</li>
+        <li>«¿Dónde estoy?» es continuo — reloj fijo.</li>
+        <li>«¿A dónde voy?» es momentáneo — burbuja.</li>
+      </ul>
+      <p>Juntas caben: el destello sale sobre los mandos y la burbuja sobre el riel, a alturas distintas. Ponlas las dos a la vez en el escenario y compruébalo.</p>
+    </div>
+
+    <div class="nota">
+      <h3>Un detalle que cambia el texto</h3>
+      <p>El salto real <strong>no siempre son 10 s</strong>. <code>onBuscar</code> recorta contra los extremos, así que a los 4 segundos de carrera «−10 s» mueve 4. Decir «−10 s» ahí sería mentir, y es el tipo de detalle que hace que un indicador nuevo se sienta roto.</p>
+      <p>En la maqueta el destello dice <strong>el salto que de verdad ocurrió</strong>, y el botón se apaga cuando ya no queda nada. Arrastra al principio o al final del todo para verlo.</p>
+    </div>
+
+    <div class="nota abierta">
+      <h3>Lo único que queda por mirar: el escritorio</h3>
+      <p>Los cuatro mandos van ahora <strong>centrados</strong>. Estaban apretados contra la izquierda porque un <code>1fr</code> al final de la fila empujaba el reloj al borde opuesto.</p>
+      <p><strong>Y ese reloj de la derecha ha desaparecido.</strong> No es un olvido: con 10a-C el reloj ya está encima del scrubber, así que dejarlo también al lado de los botones sería decir la misma hora dos veces en la misma caja. Si lo prefieres ahí, se devuelve — pero entonces la fila deja de poder centrarse del todo.</p>
+      <p>El cambio de reloj a <code>1:18:42</code> toca además la cabecera del replay, no solo esto.</p>
+    </div>
+  </section>
+
+  <p class="pie">Datos de ejemplo del GP de Italia 2026 · 53 vueltas · 1 h 18 min 42 s. Los colores, medidas y tipos son los del proyecto, sin retocar.</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // --- La carrera de ejemplo ------------------------------------------------
+  // Monza 2026: 53 vueltas, 1h18m42s. El replay va a 4 Hz con paso de 1 s en
+  // la maqueta, asi que un instante es un segundo y las cuentas se leen.
+  var TOTAL = 4722;               // segundos de carrera
+  var VUELTAS = 53;
+  var PASO = 1;
+  var SALTO = 10;
+
+  // Los cruces de meta del lider. No son regulares a proposito: la salida es
+  // lenta y hay un coche de seguridad a mitad, como en la carrera de verdad.
+  var cruces = (function () {
+    var t = 0, out = [];
+    for (var v = 1; v <= VUELTAS; v++) {
+      var vuelta = 84;
+      if (v === 1) vuelta = 104;                 // salida parada
+      else if (v >= 24 && v <= 27) vuelta = 132; // coche de seguridad
+      t += vuelta;
+      out.push(Math.min(t, TOTAL));
+    }
+    return out;
+  })();
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  var marco = $('marco'), scrub = $('scrub');
+  var riel = $('riel'), marcas = $('marcasVuelta');
+  var burbuja = $('burbuja'), destello = $('destello');
+  var relojCab = $('relojCabecera'), relojMandos = $('relojMandos');
+  var tiemposFijos = $('tiemposFijos'), tAhora = $('tAhora'), tVuelta = $('tVuelta'), tTotal = $('tTotal');
+  var segAtras = $('segAtras'), segAdelante = $('segAdelante');
+  var btAtras = $('btAtras'), btAdelante = $('btAdelante'), btPlay = $('btPlay'), btVel = $('btVel');
+  var rotulo = $('rotuloAncho');
+
+  var estado = { t: 2900, op9: 'C', op10: 'C', formato: 'hms', ancho: '1100', reproduciendo: false, velocidad: 1, arrastrando: false };
+
+  // --- Formato --------------------------------------------------------------
+  function dos(n) { return String(n).padStart(2, '0'); }
+
+  function reloj(seg) {
+    var s = Math.max(0, Math.floor(seg));
+    if (estado.formato === 'hms') {
+      var h = Math.floor(s / 3600);
+      var m = Math.floor((s % 3600) / 60);
+      return h > 0 ? h + ':' + dos(m) + ':' + dos(s % 60) : Math.floor(s / 60) + ':' + dos(s % 60);
+    }
+    return Math.floor(s / 60) + ':' + dos(s % 60);
+  }
+
+  /** La vuelta en curso: cuantos cruces del lider quedan ya detras, mas uno. */
+  function vueltaEn(seg) {
+    var n = 0;
+    for (var i = 0; i < cruces.length; i++) { if (cruces[i] <= seg) n++; else break; }
+    return Math.min(n + 1, VUELTAS);
+  }
+
+  // --- El riel, con sus banderas -------------------------------------------
+  // Los mismos tramos que pinta `degradadoDelScrubber`: verde casi todo, un
+  // coche de seguridad a mitad y un amarillo corto al principio.
+  var TRAMOS = [
+    { de: 0,    a: 0.055, color: 'var(--replay-amarilla)' },
+    { de: 0.055,a: 0.405, color: 'var(--replay-trazado)' },
+    { de: 0.405,a: 0.505, color: 'var(--replay-naranja)' },
+    { de: 0.505,a: 1,     color: 'var(--replay-trazado)' }
+  ];
+
+  function pintarRiel() {
+    var trozos = TRAMOS.map(function (t) {
+      return t.color + ' ' + (t.de * 100).toFixed(2) + '% ' + (t.a * 100).toFixed(2) + '%';
+    });
+    riel.style.background = 'linear-gradient(90deg, ' + trozos.join(', ') + ')';
+
+    marcas.innerHTML = '';
+    cruces.forEach(function (t) {
+      var s = document.createElement('span');
+      s.className = 'r-marca-vuelta';
+      s.style.left = (t / TOTAL * 100) + '%';
+      marcas.appendChild(s);
+    });
+  }
+
+  // --- Pintar ---------------------------------------------------------------
+  function posicionDelPulgar() {
+    // El pulgar mide 22 px y no llega a los bordes: hay que descontarlo para
+    // que la burbuja caiga encima y no un poco al lado en los extremos.
+    var ancho = scrub.getBoundingClientRect().width;
+    var pct = estado.t / TOTAL;
+    return 11 + pct * (ancho - 22);
+  }
+
+  function pintar() {
+    var t = estado.t;
+    scrub.value = String(Math.floor(t));
+    scrub.setAttribute('aria-valuetext', reloj(t) + ', vuelta ' + vueltaEn(t) + ' de ' + VUELTAS);
+
+    relojCab.textContent = reloj(t);
+    relojMandos.textContent = reloj(t);
+
+    tAhora.textContent = reloj(t);
+    tTotal.textContent = reloj(TOTAL);
+    tVuelta.textContent = estado.op10 === 'C' ? '· vuelta ' + vueltaEn(t) + ' de ' + VUELTAS : '';
+
+    burbuja.textContent = estado.op10 === 'C'
+      ? 'V' + vueltaEn(t) + ' · ' + reloj(t)
+      : reloj(t);
+    burbuja.style.left = posicionDelPulgar() + 'px';
+
+    // Los extremos: si no queda nada que saltar, el boton se apaga.
+    btAtras.disabled = t <= 0;
+    btAdelante.disabled = t >= TOTAL;
+  }
+
+  function aplicarOpciones() {
+    var ver9marca = estado.op9 === 'A' || estado.op9 === 'C';
+    segAtras.hidden = !ver9marca;
+    segAdelante.hidden = !ver9marca;
+
+    var verFijo = estado.op10 === 'A' || estado.op10 === 'C';
+    tiemposFijos.hidden = !verFijo;
+
+    // En escritorio el reloj de los mandos ya existe hoy; con el reloj fijo
+    // arriba seria decir lo mismo dos veces en la misma fila.
+    relojMandos.hidden = !(estado.ancho === '1100' && !verFijo);
+
+    pintar();
+  }
+
+  // --- Saltos ---------------------------------------------------------------
+  var temporizadorDestello = null;
+
+  function saltar(signo) {
+    var antes = estado.t;
+    var destino = Math.max(0, Math.min(TOTAL, antes + signo * SALTO / PASO));
+    var movido = Math.round(destino - antes);
+    estado.t = destino;
+    pintar();
+
+    if (estado.op9 === 'B' || estado.op9 === 'C') {
+      if (movido === 0) return;
+      destello.textContent = (movido > 0 ? '+' : '−') + Math.abs(movido) + ' s';
+      destello.setAttribute('data-visible', 'no');
+      // Reiniciar la animacion: sin esto, dos pulsaciones seguidas no repiten.
+      void destello.offsetWidth;
+      destello.setAttribute('data-visible', 'si');
+      clearTimeout(temporizadorDestello);
+      temporizadorDestello = setTimeout(function () { destello.setAttribute('data-visible', 'no'); }, 900);
+    }
+  }
+
+  btAtras.addEventListener('click', function () { saltar(-1); });
+  btAdelante.addEventListener('click', function () { saltar(1); });
+
+  // --- Scrubber -------------------------------------------------------------
+  scrub.addEventListener('input', function () {
+    estado.t = Number(scrub.value);
+    pintar();
+  });
+
+  function empezarArrastre() {
+    if (estado.op10 === 'A') return;
+    estado.arrastrando = true;
+    burbuja.setAttribute('data-visible', 'si');
+    pintar();
+  }
+  function terminarArrastre() {
+    estado.arrastrando = false;
+    burbuja.setAttribute('data-visible', 'no');
+  }
+  scrub.addEventListener('pointerdown', empezarArrastre);
+  scrub.addEventListener('pointerup', terminarArrastre);
+  scrub.addEventListener('pointercancel', terminarArrastre);
+  scrub.addEventListener('focus', empezarArrastre);
+  scrub.addEventListener('blur', terminarArrastre);
+  scrub.addEventListener('keydown', empezarArrastre);
+
+  // --- Reproducir -----------------------------------------------------------
+  var ultimo = 0, pedido = null;
+
+  function tic(ahora) {
+    if (!estado.reproduciendo) return;
+    if (!ultimo) ultimo = ahora;
+    var dt = (ahora - ultimo) / 1000;
+    ultimo = ahora;
+    estado.t = Math.min(TOTAL, estado.t + dt * estado.velocidad);
+    if (estado.t >= TOTAL) parar();
+    pintar();
+    pedido = requestAnimationFrame(tic);
+  }
+
+  function parar() {
+    estado.reproduciendo = false;
+    btPlay.textContent = 'REPRODUCIR';
+    btPlay.setAttribute('aria-pressed', 'false');
+    cancelAnimationFrame(pedido);
+    ultimo = 0;
+  }
+
+  btPlay.addEventListener('click', function () {
+    if (estado.reproduciendo) { parar(); return; }
+    if (estado.t >= TOTAL) estado.t = 0;
+    estado.reproduciendo = true;
+    btPlay.textContent = 'PAUSA';
+    btPlay.setAttribute('aria-pressed', 'true');
+    ultimo = 0;
+    pedido = requestAnimationFrame(tic);
+  });
+
+  var VELOCIDADES = [1, 2, 4, 8];
+  btVel.addEventListener('click', function () {
+    var i = VELOCIDADES.indexOf(estado.velocidad);
+    estado.velocidad = VELOCIDADES[(i + 1) % VELOCIDADES.length];
+    btVel.textContent = estado.velocidad + '×';
+  });
+
+  // --- Mandos de la maqueta -------------------------------------------------
+  function segmentado(id, clave, alCambiar) {
+    var caja = $(id);
+    caja.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      Array.prototype.forEach.call(caja.querySelectorAll('button'), function (otro) {
+        otro.setAttribute('aria-pressed', String(otro === b));
+      });
+      alCambiar(b.dataset[clave]);
+    });
+  }
+
+  var ROTULOS = { '390': 'iPhone · 390 px', '360': 'Android · 360 px', '1100': 'Escritorio · 1100 px' };
+
+  segmentado('anchos', 'ancho', function (v) {
+    estado.ancho = v;
+    marco.classList.remove('w360', 'w1100');
+    if (v === '360') marco.classList.add('w360');
+    if (v === '1100') marco.classList.add('w1100');
+    rotulo.textContent = ROTULOS[v];
+    aplicarOpciones();
+  });
+
+  segmentado('temas', 'tema', function (v) { marco.setAttribute('data-replay', v); });
+  segmentado('formatos', 'formato', function (v) { estado.formato = v; pintar(); });
+
+  $('op9').addEventListener('change', function (e) { estado.op9 = e.target.value; aplicarOpciones(); });
+  $('op10').addEventListener('change', function (e) { estado.op10 = e.target.value; aplicarOpciones(); });
+
+  // --- Arranque -------------------------------------------------------------
+  pintarRiel();
+  aplicarOpciones();
+  window.addEventListener('resize', pintar);
+})();
+</script>

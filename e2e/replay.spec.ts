@@ -207,6 +207,206 @@ for (const [nombre, viewport] of [
  * la app— y que en oscuro no se ha movido NADA, porque los valores oscuros son
  * exactamente los que estaban escritos a fuego antes.
  */
+test.describe('los mandos dicen lo que hacen', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  const mandos = (page: Page) => page.locator('[data-botonera]').filter({ visible: true });
+  const tiempos = (page: Page) => page.locator('[data-tiempos]').filter({ visible: true });
+
+  test('los botones de salto dicen «10 s» antes de pulsarlos', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+
+    // El hueco reportado: dos dobles flechas sin decir cuánto mueven. La marca
+    // contesta antes de pulsar; el destello, después. Aquí va la primera.
+    await expect(mandos(page)).toContainText('10 s');
+    await expect(visible(page, 'Retroceder 10 s')).toBeVisible();
+    await expect(visible(page, 'Avanzar 10 s')).toBeVisible();
+  });
+
+  test('el reloj y la vuelta van pegados al scrubber, no solo en la cabecera', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+
+    // La duración es (count - 1) × paso y no count × paso: es el tope al que
+    // llega el scrubber, y tiene que ser alcanzable arrastrando.
+    await expect(tiempos(page)).toContainText('0:00');
+    await expect(tiempos(page)).toContainText('0:29');
+
+    // La vuelta NO va aquí: la cabecera ya la lleva como titular, y ponerla
+    // también abajo era decir lo mismo dos veces en la misma pantalla. Vive en
+    // la burbuja, que contesta otra pregunta: a qué vuelta estás yendo.
+    await expect(tiempos(page)).not.toContainText(/vuelta/i);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Vuelta \d+/);
+
+    // Y está donde se toca: por debajo del mapa y a menos de una fila de los
+    // botones. Repetir el reloj de la cabecera solo se justifica por eso.
+    const caja = (await tiempos(page).boundingBox())!;
+    const play = (await visible(page, 'REPRODUCIR').boundingBox())!;
+    expect(play.y - (caja.y + caja.height)).toBeLessThan(80);
+  });
+
+  /**
+   * El destello dura 900 ms y luego se va **para siempre**.
+   *
+   * Por eso no vale `toHaveText`: reintenta, pero sobre un elemento que ya no
+   * vuelve, así que en una tanda lenta fallaría sin poder recuperarse nunca.
+   * Esta suite ya tiene historial de fallos por lentitud. Se arma un vigilante
+   * ANTES de pulsar y se queda con el texto en cuanto el nodo aparece.
+   */
+  const cazarDestello = (page: Page) =>
+    page.evaluate(
+      () =>
+        new Promise<string>((resolver, rechazar) => {
+          const ya = document.querySelector('[data-destello]');
+          if (ya) return resolver(ya.textContent ?? '');
+          const observador = new MutationObserver(() => {
+            const nodo = document.querySelector('[data-destello]');
+            if (!nodo) return;
+            observador.disconnect();
+            resolver(nodo.textContent ?? '');
+          });
+          observador.observe(document.body, { subtree: true, childList: true });
+          setTimeout(() => {
+            observador.disconnect();
+            rechazar(new Error('el destello no llegó a aparecer'));
+          }, 10_000);
+        })
+    );
+
+  test('el destello dice el salto que de verdad ocurrió, no siempre diez', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+
+    // En medio de la carrera, diez son diez.
+    await moverScrubber(page, 60);
+    const enMedio = cazarDestello(page);
+    await visible(page, 'Avanzar 10 s').click();
+    expect(await enMedio).toBe('+10 s');
+
+    // Antes del segundo, esperar a que el primero se vaya: dura 900 ms, y el
+    // vigilante se quedaba con el que seguía en pantalla en vez de con el
+    // nuevo. Este fallo lo encontró la propia prueba.
+    await expect(page.locator('[data-destello]')).toHaveCount(0);
+
+    // Cerca del tope, no: de 111 a 119 hay 8 instantes de 0,25 s, o sea 2 s.
+    // Decir «+10 s» aquí sería mentir, y es lo que hace que un indicador
+    // nuevo se sienta roto — se pulsa y la barra apenas se mueve.
+    await moverScrubber(page, 111);
+    const cercaDelTope = cazarDestello(page);
+    await visible(page, 'Avanzar 10 s').click();
+    expect(await cercaDelTope).toBe('+2 s');
+  });
+
+  test('en los topes el botón se apaga sin llevarse el foco', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+
+    // El replay abre en el instante cero: atrás no hay nada.
+    await expect(visible(page, 'Retroceder 10 s')).toHaveAttribute('aria-disabled', 'true');
+    await expect(visible(page, 'Avanzar 10 s')).not.toHaveAttribute('aria-disabled', 'true');
+
+    await moverScrubber(page, COUNT - 1);
+    await expect(visible(page, 'Avanzar 10 s')).toHaveAttribute('aria-disabled', 'true');
+    await expect(visible(page, 'Retroceder 10 s')).not.toHaveAttribute('aria-disabled', 'true');
+
+    // Y es `aria-disabled` y no `disabled` por esto: un botón que se deshabilita
+    // por haberlo pulsado tira el foco al cuerpo, y quien navega con el teclado
+    // tiene que volver a recorrer la página entera para seguir.
+    const adelante = visible(page, 'Avanzar 10 s');
+    await adelante.focus();
+    await page.keyboard.press('Enter');
+    await expect(adelante).toBeFocused();
+  });
+
+  test('a medio paso del inicio todavía se puede volver atrás', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+
+    // La zona muerta que tenía: `Math.round(-0.5)` da `-0`, que es igual a 0,
+    // así que el botón se apagaba a dos instantes del principio y esos últimos
+    // 0,5 s quedaban fuera de su alcance. Solo hacia atrás — hacia delante el
+    // redondeo al alza lo tapaba.
+    await moverScrubber(page, 2);
+    const atras = visible(page, 'Retroceder 10 s');
+    await expect(atras).not.toHaveAttribute('aria-disabled', 'true');
+
+    const salto = cazarDestello(page);
+    await atras.click();
+    expect(await salto).toBe('−0,5 s');
+    await expect(page.getByLabel('Minuto de la carrera').filter({ visible: true })).toHaveValue('0');
+  });
+
+  test('al mover el scrubber sale a dónde vas, y se va al soltar', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+
+    const burbuja = page.locator('[data-burbuja]').filter({ visible: true });
+    await expect(burbuja).toHaveCount(0);
+
+    // Con el teclado, que es el mismo camino que el dedo: el `focus` la saca.
+    const scrubber = await moverScrubber(page, 80);
+    await scrubber.focus();
+    await expect(burbuja).toHaveText(/V\d+ · 0:20/);
+
+    await scrubber.blur();
+    await expect(burbuja).toHaveCount(0);
+  });
+
+  test('tras tocar y soltar, las flechas siguen enseñando a dónde vas', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+
+    // El fallo que vigila: con un solo interruptor para el dedo y el foco,
+    // soltar el dedo lo apagaba con el control TODAVÍA enfocado, y a partir de
+    // ahí las flechas ya no sacaban la burbuja. Se veía roto justo para quien
+    // más la necesita: el que no puede mirar dónde cae su dedo.
+    const scrubber = page.getByLabel('Minuto de la carrera').filter({ visible: true });
+    const burbuja = page.locator('[data-burbuja]').filter({ visible: true });
+
+    await scrubber.click();
+    await expect(scrubber).toBeFocused();
+    await expect(burbuja).toHaveCount(1);
+
+    await page.keyboard.press('ArrowRight');
+    await expect(burbuja).toHaveCount(1);
+  });
+});
+
+test.describe('los mandos en escritorio', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('los cuatro van centrados, y el reloj ya no se dice dos veces', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+
+    const botonera = page.locator('[data-botonera]').filter({ visible: true });
+    const fila = (await botonera.boundingBox())!;
+    const primero = (await visible(page, 'Retroceder 10 s').boundingBox())!;
+    const ultimo = (await visible(page, /Velocidad/).boundingBox())!;
+
+    // Estaban apretados a la izquierda porque un `1fr` al final de la fila
+    // empujaba el reloj al borde opuesto.
+    const izquierda = primero.x - fila.x;
+    const derecha = fila.x + fila.width - (ultimo.x + ultimo.width);
+    expect(Math.abs(izquierda - derecha)).toBeLessThan(2);
+    expect(izquierda).toBeGreaterThan(20);
+
+    // Y el reloj que había al final de esta fila se fue: con el nuevo a
+    // cuarenta píxeles, era decir la misma hora dos veces en la misma caja.
+    await expect(botonera).toHaveText(/^(?!.*0:29).*$/s);
+    await expect(page.locator('[data-tiempos]').filter({ visible: true })).toContainText('0:29');
+  });
+});
+
 test.describe('el replay sigue el tema', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -436,10 +636,12 @@ test.describe('reproducir y elegir', () => {
     await page.waitForTimeout(600);
     expect(await reloj.textContent()).toBe(parado);
 
-    // El scrubber anuncia el minuto y salta.
+    // El scrubber anuncia el minuto y salta. Y desde que la vuelta se enseña
+    // pegada al scrubber, también la dice: quien va con lector de pantalla se
+    // quedaba solo con el minuto, que es la mitad de lo que ve el resto.
     const scrubber = await moverScrubber(page, COUNT - 1);
     await expect(reloj).toHaveText('0:29');
-    await expect(scrubber).toHaveAttribute('aria-valuetext', '0:29');
+    await expect(scrubber).toHaveAttribute('aria-valuetext', '0:29, vuelta 1 de 52');
   });
 
   test('buscar mientras se reproduce no vuelve atrás solo', async ({ page }) => {

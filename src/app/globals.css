@@ -620,3 +620,28 @@ html[data-instalada] [data-pie-de-la-app] > footer {
 .replay-scrubber::-moz-range-track {
   background: transparent;
 }
+
+/**
+ * El destello que confirma un salto de diez segundos.
+ *
+ * Aparece, se queda lo justo para leerse y se va. Con «reducir movimiento» no
+ * desaparece el aviso —eso sería quitar información a quien la pidió—: lo que
+ * se quita es el desplazamiento y la escala, y queda un encendido y apagado
+ * limpio.
+ */
+.replay-destello {
+  animation: replay-destello 900ms ease forwards;
+}
+@keyframes replay-destello {
+  0% { opacity: 0; transform: translateX(-50%) translateY(6px) scale(.94); }
+  14% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  70% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-4px) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .replay-destello { animation: replay-destello-quieto 900ms steps(1) forwards; }
+  @keyframes replay-destello-quieto {
+    0%, 70% { opacity: 1; transform: translateX(-50%); }
+    100% { opacity: 0; transform: translateX(-50%); }
+  }
+}

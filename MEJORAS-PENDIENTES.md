@@ -50,9 +50,21 @@
 | **13** el boton «Ver la carrera» | HECHO | `6b100d7` | Era una pastilla de 147 px pegada a la izquierda entre dos piezas de 358. Ahora es el pie de la tarjeta del resumen, a su ancho (332 de 358) y con la junta a cero. |
 | **1** los huecos en bandera roja | HECHO | `4b66c8e` | El desplazamiento de +1416 s ERA la parada, metida entera en el hueco de todos. El parche anterior no bastaba: al reanudar el estado ya es verde y la inflacion dura lo que mide el propio hueco. Se mide sobre `relojDeCarrera`, que solo corre cuando la carrera corre. El coche de seguridad y la amarilla SI cuentan. |
 | **4** la previa repetida | HECHO | `d40f51f` | No fallo la marca: el grupo cambio de identidad. La marca lleva la clave de la PRIMERA sesion del grupo, y al filtrar solo lo que aun no ha empezado, el grupo del viernes paso de [FP1, FP2] a [FP2]. Arreglado mirando 30 h hacia atras al agrupar. |
+| **9** los saltos dicen cuanto mueven | HECHO | (este commit) | Dos piezas, no una: el «10 s» fijo contesta antes de pulsar y el destello despues. El destello dice el salto REAL — a 2 s del final dice «+2 s», no «+10 s». Y `saltoReal` no redondea: con `Math.round`, medio segundo daba `-0` —igual a 0— y el boton de atras se apagaba a dos instantes del inicio, dejando esos 0,5 s fuera de su alcance. Zona muerta de medio paso, y solo hacia atras. |
+| **10a** en que minuto estas | HECHO | (este commit) | Reloj y duracion pegados al scrubber, y burbuja con vuelta y minuto al arrastrar (tambien con las flechas). La vuelta NO va en la fila fija: la cabecera ya la lleva como titular y era decirla dos veces — mi mockup lo ocultaba porque ponia el nombre del GP en la cabecera, y ese fue un fallo de fidelidad mio. El reloj pasa a `1:18:42` cuando hay horas, con el hueco reservado en `ch` para que no salte al cruzarla. En escritorio los cuatro mandos van centrados y se quita el reloj del final de la fila: a 40 px del nuevo era decir la hora dos veces. Medido en los tres anchos y los dos temas: el «10 s» de 8,5 px da 6,47 en oscuro y 5,82 en claro, sobre un liston de 4,5. |
 
-**Suites al cerrar el bloque**: 408 unitarias, 121 e2e (26 nuevas en total),
-tipos y lint limpios. Build igual que el CI.
+**Suites al cerrar el bloque de datos**: 408 unitarias, 121 e2e (26 nuevas en
+total), tipos y lint limpios. Build igual que el CI.
+
+**Suites tras los mandos del replay (9 y 10a)**: 417 unitarias, 129 e2e, tipos y
+lint limpios, build igual que el CI. La revision de codigo saco seis cosas y las
+seis se arreglaron antes de commitear: el `-0` de arriba; que soltar el dedo
+dejaba el scrubber enfocado pero sin burbuja, rompiendo el camino del teclado;
+que `disabled` en los topes se llevaba el foco al cuerpo (ahora `aria-disabled`);
+una prueba del destello que no podia recuperarse de una tanda lenta, porque el
+elemento desaparece a los 900 ms y no vuelve; que las banderas del riel se
+repartian sobre `count x paso` mientras el pulgar iba sobre `(count-1) x paso`;
+y dos comentarios que justificaban decisiones con una etiqueta que ya no existe.
 
 ### Correccion a lo prometido en el mockup del 6
 
@@ -95,7 +107,12 @@ en los dos temas. No fija una lista de hex, asi que no se queda desactualizada.
 
 ## Lo que queda, en el orden acordado
 
-4. **Replay**: 9, 10a, 11, 2, 12, 22
+> **Orden confirmado por el usuario el 2026-09-11: por superficie, no por
+> numero.** Cada mockup ensena una pieza coherente en vez de trocear la misma
+> pantalla cuatro veces. Paso 1 (9 + 10a) HECHO.
+
+4. **Replay**: ~~9 + 10a (mandos y linea de tiempo)~~ -> el circuito (11 + 12),
+   el final de carrera (2), las radios (22, avisar por la CSP)
 5. **Sesiones**: 3+20
 6. **Cuentas**: 17, y 5
 

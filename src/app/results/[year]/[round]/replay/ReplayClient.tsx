@@ -416,17 +416,32 @@ function Replay({
     return { filas, coches, lider };
   }, [progreso, k, meta.drivers, colores, paso, parada, relojCarrera]);
 
-  const tramos = useMemo(() => tramosDelScrubber(meta.trackStatus, count * paso), [meta.trackStatus, count, paso]);
+  /**
+   * El riel se reparte sobre `(count - 1) × paso`, no sobre `count × paso`.
+   *
+   * Es la escala del pulgar: el `max` del `input` es `count - 1`, así que el
+   * extremo derecho del riel es ese instante y no uno más. Con la duración
+   * inflada en un paso, las banderas y las marcas de vuelta caían un pelo a la
+   * izquierda de donde el pulgar las leía. La diferencia es despreciable en una
+   * carrera entera —un instante entre miles— pero es una contradicción, y desde
+   * que el total se enseña escrito al lado, una que se puede ver.
+   */
+  const duracionDelRiel = Math.max(0, (count - 1) * paso);
+
+  const tramos = useMemo(
+    () => tramosDelScrubber(meta.trackStatus, duracionDelRiel),
+    [meta.trackStatus, duracionDelRiel]
+  );
 
   // Las marcas de vuelta del scrubber: los cruces de meta de quien más dio,
   // cada diez vueltas. Con las 72 de una carrera el scrubber era un peine.
   const marcasDeVuelta = useMemo(() => {
-    const duracion = count * paso;
+    const duracion = duracionDelRiel;
     const ganador = meta.drivers.reduce((mejor, d) => (d.laps.length > mejor.laps.length ? d : mejor), meta.drivers[0]);
     return ganador.laps
       .filter((c, i) => (i + 1) % 10 === 0 && c > 0 && c < duracion)
       .map((c) => (c / duracion) * 100);
-  }, [meta.drivers, count, paso]);
+  }, [meta.drivers, duracionDelRiel]);
 
   const vuelta = Math.min(meta.totalLaps, vueltaEn(progreso, lider, k, trazado.longitud));
   const elegir = (i: number) => setElegido((actual) => (actual === i ? null : i));
@@ -526,6 +541,8 @@ function Replay({
       onAlternar={reloj.alternar}
       onVelocidad={reloj.cambiarVelocidad}
       onBuscar={reloj.buscar}
+      vuelta={vuelta}
+      totalVueltas={meta.totalLaps}
       conReloj={conReloj}
     />
   );
