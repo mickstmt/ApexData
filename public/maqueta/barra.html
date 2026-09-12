@@ -3,7 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Maqueta de la barra inferior — ApexData</title>
+<title>MAQUETA · barra ApexData</title>
+<link rel="manifest" href="/maqueta/manifest.webmanifest">
+<meta name="theme-color" content="#0B0B0F">
+<!-- Lo que hace que iOS la abra SIN barras del navegador al lanzarla desde el
+     icono. Sin esto se abre en Safari, y Safari no reproduce las condiciones
+     de la app: su barra de direcciones se encoge al desplazar, la altura de la
+     ventana cambia sola y `env(safe-area-inset-bottom)` no vale lo mismo. Medir
+     ahi no sirve para lo que esta maqueta investiga. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MAQUETA">
 <style>
 /* ---------------------------------------------------------------------------
    Maqueta TEMPORAL de la barra inferior. SIN JAVASCRIPT, a propósito.
@@ -121,6 +132,22 @@ nav .corta { display: none; }
 .oculto:focus-visible ~ nav label { outline: 2px solid var(--marca); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) { nav .realce { transition: none; } }
+
+/* --- En que modo se esta mirando esto -------------------------------------
+   Sin JavaScript tambien se puede saber: `display-mode` es una consulta de
+   medios. Importa decirlo en grande porque en Safari esta maqueta NO mide lo
+   que se quiere medir. */
+.solo-app { display: none; }
+@media (display-mode: standalone) {
+  .solo-navegador { display: none; }
+  .solo-app { display: block; }
+  .modo { border-left-color: #2E7D32; }
+  .modo h2 { color: #2E7D32; }
+}
+.modo { border-left: 3px solid var(--aviso); }
+.modo h2 { color: var(--aviso); }
+.pasos { margin: 8px 0 0; padding-left: 20px; color: var(--apagado); font-size: 13.5px; }
+.pasos li { margin-bottom: 5px; }
 #abajo-6:checked ~ nav, #abajo-6:checked ~ .silueta { --abajo: 6px; }
 #abajo-6:checked ~ .hoja label[for="abajo-6"] { background: var(--marca); border-color: var(--marca); color: var(--marca-tinta); font-weight: 600; }
 #abajo-10:checked ~ nav, #abajo-10:checked ~ .silueta { --abajo: 10px; }
@@ -199,7 +226,19 @@ nav .corta { display: none; }
 
 <main class="hoja">
   <h1>La barra inferior</h1>
-  <p class="sub">Sin JavaScript: la app bloquea los guiones de los archivos estáticos. <b>Desplaza esta página con el dedo</b> y vigila el contorno naranja.</p>
+  <p class="sub">Sin JavaScript: la app bloquea los guiones de los archivos estáticos. <b>Instálala en la pantalla de inicio</b> y ábrela desde ahí — en Safari no mide lo mismo.</p>
+
+  <div class="panel modo">
+    <h2 class="solo-navegador">Estas en Safari: asi no sirve</h2>
+    <p class="solo-navegador">La barra de direcciones se encoge al desplazar y la altura de la ventana cambia sola, asi que aqui no se reproducen las condiciones de la app instalada. <b>Instala esta maqueta primero:</b></p>
+    <ol class="pasos solo-navegador">
+      <li>Toca <b>Compartir</b> (el cuadrado con la flecha).</li>
+      <li><b>Anadir a pantalla de inicio</b>.</li>
+      <li>Cierra Safari y abrela desde el icono <b>MAQUETA</b>.</li>
+    </ol>
+    <h2 class="solo-app">Modo aplicacion: ya puedes medir</h2>
+    <p class="solo-app">Sin barras del navegador, igual que la app. Lo que veas aqui si vale.</p>
+  </div>
 
   <div class="panel aviso">
     <h2>Lo que hay que mirar</h2>

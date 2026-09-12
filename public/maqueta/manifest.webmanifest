@@ -1,0 +1,11 @@
+{
+  "name": "MAQUETA · barra ApexData",
+  "short_name": "MAQUETA",
+  "description": "Maqueta temporal para medir la barra inferior en modo aplicacion.",
+  "start_url": "/maqueta/barra.html",
+  "scope": "/maqueta/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B0B0F",
+  "theme_color": "#0B0B0F"
+}
