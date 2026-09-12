@@ -48,9 +48,11 @@
 | **14** barra inferior flotante | HECHO | `2758640` | Afinada por el usuario sobre mockup contra SUS referencias (WhatsApp, Flashscore, Apple Music): alto 68, 10 a los lados, 16 abajo, pildora completa, icono 26, letra 11,5, `blur(2px) saturate(1.8)`. Lo que costo encontrar: **el desenfoque es lo que tapa, no la opacidad** — a la misma opacidad, con 0 se lee una fila entera por debajo y con 6 desaparece. Iconos nuevos: casco, podio y bandera a cuadros. |
 | **6 + 15** el mapa se encoge | HECHO | `1cc677b` | De 300 a 108 px al desplazar; el hueco de la torre de 223 a 415; las filas enteras a la vista de **5 a 8**. La torre pasa a desplazarse en su propia caja y el mapa se encoge con `transform`, no cambiando el lienzo (4 MB de mapa de bits a 3x, reservarlo 60 veces por segundo es lo que produce tirones). Mandos flotando como el mini-reproductor de Apple Music. |
 | **13** el boton «Ver la carrera» | HECHO | `6b100d7` | Era una pastilla de 147 px pegada a la izquierda entre dos piezas de 358. Ahora es el pie de la tarjeta del resumen, a su ancho (332 de 358) y con la junta a cero. |
+| **1** los huecos en bandera roja | HECHO | `4b66c8e` | El desplazamiento de +1416 s ERA la parada, metida entera en el hueco de todos. El parche anterior no bastaba: al reanudar el estado ya es verde y la inflacion dura lo que mide el propio hueco. Se mide sobre `relojDeCarrera`, que solo corre cuando la carrera corre. El coche de seguridad y la amarilla SI cuentan. |
+| **4** la previa repetida | HECHO | `d40f51f` | No fallo la marca: el grupo cambio de identidad. La marca lleva la clave de la PRIMERA sesion del grupo, y al filtrar solo lo que aun no ha empezado, el grupo del viernes paso de [FP1, FP2] a [FP2]. Arreglado mirando 30 h hacia atras al agrupar. |
 
-**Suites al cerrar el bloque**: 399 unitarias, 121 e2e (17 nuevas), tipos y lint
-limpios. Build igual que el CI.
+**Suites al cerrar el bloque**: 408 unitarias, 121 e2e (26 nuevas en total),
+tipos y lint limpios. Build igual que el CI.
 
 ### Correccion a lo prometido en el mockup del 6
 
@@ -93,7 +95,6 @@ en los dos temas. No fija una lista de hex, asi que no se queda desactualizada.
 
 ## Lo que queda, en el orden acordado
 
-3. **Datos**: 1, 4
 4. **Replay**: 9, 10a, 11, 2, 12, 22
 5. **Sesiones**: 3+20
 6. **Cuentas**: 17, y 5
@@ -115,6 +116,11 @@ en los dos temas. No fija una lista de hex, asi que no se queda desactualizada.
 # Mejoras del replay — acumulando hasta el GO del usuario (2026-09-11)
 
 ## 1. BUG · Los huecos se suman durante la bandera roja (y sobreviven al reinicio)
+
+> **HECHO** (`4b66c8e`). El diagnostico de partida de este documento era
+> correcto, incluido que el parche anterior no bastaba. Queda sin poder
+> comprobar el sub-fallo de «la pildora dice PISTA LIBRE con los coches en fila
+> en el pit lane»: eso es cosa de `track_status` y necesita la sesion real.
 
 **Lo que se ve** (captura del usuario, en produccion): la pildora dice **PISTA LIBRE**
 y sin embargo toda la parrilla marca +1416,8s ... +1431,3s. Veinte coches metidos en
@@ -201,6 +207,11 @@ clasificacion como aproximacion (y se dice que lo es) o si hay otra fuente.
 `results.grid`) y que pantallas enseñan hoy una sesion vacia.
 
 ## 4. BUG · Llego una SEGUNDA previa, solo de la FP2, y encima decia «mañana»
+
+> **HECHO** (`d40f51f`). Las tres preguntas contestadas en el mensaje del
+> commit. La sospecha del documento —«dos sesiones del mismo dia cayendo en
+> grupos distintos»— estaba cerca pero no era eso: es el MISMO grupo perdiendo
+> a su primera sesion, y con ella su identidad.
 
 **CORREGIDO por el usuario. Mi primera lectura era falsa**: supuse que la previa diaria
 habia salido 12 h tarde, sin comprobar que hay un solo emisor. No fue eso.
