@@ -71,3 +71,50 @@ test.describe('la cabecera sigue a la pestaña', () => {
     expect(sq.horas).toBe(0);
   });
 });
+
+/**
+ * La puerta al replay, al pie de la tarjeta del resumen.
+ *
+ * Estaba suelta entre el resumen y la tabla: 147 px pegados a la izquierda en
+ * el hueco entre dos piezas de 358. Eso era lo «descuadrado», y el sitio
+ * tampoco era bueno.
+ */
+test.describe('el botón de ver la carrera', () => {
+  test('ocupa el ancho de la tarjeta y va soldado a ella', async ({ page }) => {
+    await page.goto('/results/2026/12');
+    const boton = page.getByRole('link', { name: /Ver la carrera/ });
+    await boton.waitFor({ timeout: 30_000 });
+    await boton.scrollIntoViewIfNeeded();
+
+    const m = await page.evaluate(() => {
+      const b = [...document.querySelectorAll('a')].find((a) => /Ver la carrera/.test(a.textContent || ''))!;
+      const pie = b.closest('div')!;
+      const arriba = pie.previousElementSibling!.getBoundingClientRect();
+      return {
+        anchoBoton: b.getBoundingClientRect().width,
+        anchoPie: pie.getBoundingClientRect().width,
+        // Negativo sería pintarse encima; positivo, un hueco que rompe la
+        // tarjeta en dos. Tiene que ser cero.
+        junta: Math.round(pie.getBoundingClientRect().top - arriba.bottom),
+      };
+    });
+
+    // Ya no es una pastilla: ocupa la tarjeta menos su relleno.
+    expect(m.anchoBoton).toBeGreaterThan(m.anchoPie * 0.85);
+    expect(m.junta).toBe(0);
+  });
+
+  test('antes de 2018 no hay replay, y no queda una caja vacía', async ({ page }) => {
+    // `VerReplay` no se pinta sin posiciones, así que el pie tampoco puede
+    // pintarse: serían bordes alrededor de nada.
+    await page.goto('/results/2015/2');
+    await expect(page.getByRole('link', { name: /Ver la carrera/ })).toHaveCount(0);
+
+    const vacias = await page.evaluate(() =>
+      [...document.querySelectorAll('div.rounded-b-lg.border-t-0')].filter(
+        (d) => (d.textContent ?? '').trim() === ''
+      ).length
+    );
+    expect(vacias).toBe(0);
+  });
+});

@@ -28,6 +28,7 @@
 export function TiraDeCarrera({
   vueltas,
   vueltaRapida,
+  soldado = false,
 }: {
   /** Vueltas que completó el ganador. */
   vueltas: number | null | undefined;
@@ -39,6 +40,14 @@ export function TiraDeCarrera({
     apellido: string;
     velocidad: string | null;
   } | null;
+  /**
+   * Cierto cuando debajo va todavía otra pieza —hoy, la puerta al replay—.
+   *
+   * Suelta el radio y el margen de abajo, pero NO el borde: ese pasa a hacer
+   * de línea entre las dos, que es lo que las mantiene leyéndose como una sola
+   * tarjeta en vez de como una pila.
+   */
+  soldado?: boolean;
 }) {
   // Sin ninguno de los dos datos no hay tira que dibujar, y una tira vacía
   // pegada al podio se leería como un borde suelto.
@@ -51,7 +60,11 @@ export function TiraDeCarrera({
   return (
     // Comparte borde con el podio —que pierde el suyo inferior— para que los
     // dos se lean como una pieza: podio sobre plinto, no dos tarjetas.
-    <div className="-mt-6 mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-b-lg border border-t-0 border-border bg-card px-3 py-2">
+    <div
+      className={`-mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 border border-t-0 border-border bg-card px-3 py-2 ${
+        soldado ? '' : 'mb-6 rounded-b-lg'
+      }`}
+    >
       {vueltas ? (
         <p className="m-0 flex items-baseline gap-1.5">
           <span className="font-mono text-[0.9375rem] font-bold tabular-nums">{vueltas}</span>

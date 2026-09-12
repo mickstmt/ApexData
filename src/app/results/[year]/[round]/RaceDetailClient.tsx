@@ -21,7 +21,8 @@ import { SesionPendiente } from './SesionPendiente';
 import { ClasificacionSprint, VueltasDePractica } from './TiemposDeSesion';
 import { comienzoDeCarrera, estadoDeSesion, queEnseñar } from '@/lib/sesiones';
 import { VolverAtras } from '@/components/ui/VolverAtras';
-import { VerReplay } from '@/components/replay/VerReplay';
+import { PRIMERA_TEMPORADA_CON_REPLAY, VerReplay } from '@/components/replay/VerReplay';
+import { cn } from '@/lib/utils';
 import type {
   Race,
   Circuit,
@@ -389,6 +390,21 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
       points: r.points,
     }));
 
+  /**
+   * De qué piezas se compone la tarjeta del resumen, para saber cómo soldarle
+   * la puerta del replay.
+   *
+   * Ninguna de las tres es segura: el podio no se dibuja con menos de tres
+   * clasificados, la tira no se dibuja sin vueltas ni vuelta rápida, y el
+   * enlace al replay no existe antes de 2018. Sin mirarlo, el pie acaba siendo
+   * una caja con bordes y nada dentro, o pegándose a lo que no debe.
+   */
+  const hayPodio = podioDeLaCarrera.length >= 3;
+  const hayTira = Boolean(race.results[0]?.laps) || Boolean(fastestLapResult?.fastestLapTime);
+  const hayReplay = year >= PRIMERA_TEMPORADA_CON_REPLAY;
+  /** El pie se suelda solo si hay algo arriba a lo que soldarlo. */
+  const pieSoldado = hayReplay && (hayPodio || hayTira);
+
   return (
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
@@ -523,7 +539,7 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
               de abajo. Las dos tarjetas de 134 px que había aquí dejaban la
               primera posición 190 px por debajo de lo que se ve sin arrastrar
               en un iPhone; la tira ocupa 37. */}
-          <PodioDeCarrera puestos={podioDeLaCarrera} soldado />
+          <PodioDeCarrera puestos={podioDeLaCarrera} soldado={hayTira || pieSoldado} />
           <TiraDeCarrera
             vueltas={race.results[0]?.laps}
             vueltaRapida={
@@ -536,14 +552,37 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
                   }
                 : null
             }
+            soldado={pieSoldado}
           />
 
-          {/* La puerta al replay: la carrera coche a coche sobre el circuito.
+          {/* La puerta al replay, al PIE de la tarjeta del resumen.
+              Estaba suelta entre el resumen y la tabla: 147 px pegados a la
+              izquierda en el hueco entre dos piezas de 358, que es lo que se
+              leía como descuadrado. Aquí ocupa el ancho de la tarjeta y queda
+              pegada a lo que reproduce — el podio y la vuelta rápida.
               Solo hay carrera que ver si hay resultados, así que va aquí y no
               en la pestaña pendiente. */}
-          <div className="mt-4">
-            <VerReplay year={year} round={race.round} sesion="R" />
-          </div>
+          {hayReplay && (
+            <div
+              className={cn(
+                'mb-6',
+                pieSoldado && 'rounded-b-lg border border-t-0 border-border bg-card p-3',
+                // El margen negativo solo cuando lo de encima es el PODIO, que
+                // lleva su propio `mb-6`. La tira soldada ya no lo lleva, y
+                // ponérselo aquí hacía que el pie se pintara 24 px por encima
+                // de ella: se veía bien de casualidad, porque el texto de la
+                // tira va centrado en lo que quedaba a la vista.
+                pieSoldado && !hayTira && '-mt-6'
+              )}
+            >
+              <VerReplay
+                year={year}
+                round={race.round}
+                sesion="R"
+                className="flex w-full justify-center"
+              />
+            </div>
+          )}
 
           {/* Results Table */}
           <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -1056,8 +1095,15 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
       ) : activeTab === 'sprint' ? (
         race.sprintResults.length > 0 ? (
           <>
+            {/* Sin tarjeta de resumen que soldar, pero con el mismo defecto:
+                una pastilla suelta encima de una lista de ancho completo. */}
             <div className="mb-4">
-              <VerReplay year={year} round={race.round} sesion="S" />
+              <VerReplay
+                year={year}
+                round={race.round}
+                sesion="S"
+                className="flex w-full justify-center"
+              />
             </div>
             <SprintResults resultados={race.sprintResults} />
           </>
