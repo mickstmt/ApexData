@@ -4,7 +4,7 @@ import { sesionesDeTemporada } from '@/services/openf1/client';
 import type { SesionOpenF1 } from '@/services/openf1/tipos';
 
 import { RETROVISOR_HORAS, diasDeCarrera, redactarPrevia, tocaLaPrevia } from './previa';
-import { SESIONES, quiereLaSesion } from './redaccion';
+import { SESIONES, quiereLaSesion, rutaDeSesion } from './redaccion';
 import { granPremioDe } from './gran-premio';
 import { zonaValida } from './zona';
 
@@ -132,7 +132,15 @@ export async function avisarDePrevias(opciones?: {
       porMandar.set(suscripcion.id, {
         titulo: previa.titulo,
         cuerpo: previa.cuerpo,
-        url: `/results/${carrera.year}/${carrera.round}`,
+        // La previa anuncia un día entero, así que abre por la PRIMERA
+        // sesión del grupo: es la que va a correrse antes y de la que se
+        // querrá ver el resultado. Es la misma sesión que da su identidad al
+        // grupo y su clave a la marca de enviado.
+        url: rutaDeSesion(
+          carrera.year,
+          carrera.round,
+          SESIONES[dia.primera.session_name].pestana
+        ),
         etiqueta: `previa-${dia.primera.session_key}`,
       });
 

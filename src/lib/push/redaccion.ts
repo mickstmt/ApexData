@@ -21,8 +21,30 @@ export interface Sesion {
   codigo: string;
   /** Como se dice en la notificación: «Práctica 1», «Clasificación»… */
   nombre: string;
+  /**
+   * A qué pestaña de la ficha lleva el aviso.
+   *
+   * Vive aquí, pegado al código, y no en quien construye la dirección, porque
+   * eso era justo el fallo: los avisos abrían `/results/{año}/{ronda}` a secas
+   * y aterrizaban en la pestaña por defecto. Tocar el aviso de la clasificación
+   * del sábado llevaba a CARRERA, que ni se había corrido.
+   *
+   * Son los identificadores que `RaceDetailClient` acepta por `?sesion=`. Si
+   * alguien añade una sesión aquí, el tipo le obliga a decir dónde vive.
+   */
+  pestana: PestanaDeSesion;
   tipo: TipoDeSesion;
 }
+
+/** Las pestañas de la ficha de carrera, tal como las lee `?sesion=`. */
+export type PestanaDeSesion =
+  | 'practice1'
+  | 'practice2'
+  | 'practice3'
+  | 'sprint-qualifying'
+  | 'sprint'
+  | 'qualifying'
+  | 'race';
 
 /**
  * Lo que cabe en la pantalla de bloqueo antes de que iOS corte el texto.
@@ -37,14 +59,30 @@ const MAXIMO_FAVORITOS = 2;
 
 /** Los nombres de OpenF1, traducidos y clasificados por comportamiento. */
 export const SESIONES: Record<string, Sesion> = {
-  'Practice 1': { codigo: 'FP1', nombre: 'Práctica 1', tipo: 'practica' },
-  'Practice 2': { codigo: 'FP2', nombre: 'Práctica 2', tipo: 'practica' },
-  'Practice 3': { codigo: 'FP3', nombre: 'Práctica 3', tipo: 'practica' },
-  'Sprint Qualifying': { codigo: 'SQ', nombre: 'Clasificación al sprint', tipo: 'sprint-quali' },
-  Sprint: { codigo: 'S', nombre: 'Sprint', tipo: 'sprint' },
-  Qualifying: { codigo: 'Q', nombre: 'Clasificación', tipo: 'quali' },
-  Race: { codigo: 'R', nombre: 'Carrera', tipo: 'carrera' },
+  'Practice 1': { codigo: 'FP1', nombre: 'Práctica 1', pestana: 'practice1', tipo: 'practica' },
+  'Practice 2': { codigo: 'FP2', nombre: 'Práctica 2', pestana: 'practice2', tipo: 'practica' },
+  'Practice 3': { codigo: 'FP3', nombre: 'Práctica 3', pestana: 'practice3', tipo: 'practica' },
+  'Sprint Qualifying': {
+    codigo: 'SQ',
+    nombre: 'Clasificación al sprint',
+    pestana: 'sprint-qualifying',
+    tipo: 'sprint-quali',
+  },
+  Sprint: { codigo: 'S', nombre: 'Sprint', pestana: 'sprint', tipo: 'sprint' },
+  Qualifying: { codigo: 'Q', nombre: 'Clasificación', pestana: 'qualifying', tipo: 'quali' },
+  Race: { codigo: 'R', nombre: 'Carrera', pestana: 'race', tipo: 'carrera' },
 };
+
+/**
+ * La dirección de la ficha, abierta por la pestaña de esa sesión.
+ *
+ * `race` se deja sin parámetro a propósito: es la pestaña por defecto, y
+ * añadirlo solo alargaría la dirección sin cambiar dónde se aterriza.
+ */
+export function rutaDeSesion(year: number, round: number, pestana: PestanaDeSesion): string {
+  const base = `/results/${year}/${round}`;
+  return pestana === 'race' ? base : `${base}?sesion=${pestana}`;
+}
 
 /** Todos los códigos, que es lo que recibe quien no ha tocado nada. */
 export const TODAS_LAS_SESIONES = Object.values(SESIONES).map((s) => s.codigo);

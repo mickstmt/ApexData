@@ -14,6 +14,7 @@ import {
   redactarAviso,
   type Favorito,
   type Sesion,
+  rutaDeSesion,
 } from './redaccion';
 
 /**
@@ -154,7 +155,7 @@ export async function avisarDeSesionesTerminadas(opciones?: {
       continue;
     }
 
-    const url = `/results/${carrera.year}/${carrera.round}`;
+    const url = rutaDeSesion(carrera.year, carrera.round, sesion.pestana);
 
     const generico = redactarAviso({
       sesion,

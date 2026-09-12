@@ -418,6 +418,29 @@ test.describe('sesiones enlazadas', () => {
 
     await expect(page.getByRole('tab', { selected: true })).toHaveText(/CARRERA/i);
   });
+
+  test('todas las pestañas a las que apunta un aviso existen de verdad', async ({ page }) => {
+    // Cierra el círculo del punto 27. Las pruebas de `rutaDeSesion` comprueban
+    // que el aviso apunta a `?sesion=practice3`; esta comprueba que la ficha
+    // entiende ese valor. Sin las dos, un aviso podría llevar a una dirección
+    // con buena pinta que aterriza en la pestaña por defecto, que es justo el
+    // fallo que el usuario reportó tocando el aviso de la clasificación.
+    const ESPERADO: Record<string, RegExp> = {
+      practice1: /PL1|Práctica Libre 1/i,
+      practice2: /PL2|Práctica Libre 2/i,
+      practice3: /PL3|Práctica Libre 3/i,
+      qualifying: /CLASI|Clasificación/i,
+      race: /CARRERA|Carrera/i,
+    };
+
+    for (const [pestaña, titulo] of Object.entries(ESPERADO)) {
+      await page.goto(`/results/2024/1?sesion=${pestaña}`);
+      await expect(
+        page.getByRole('tab', { selected: true }),
+        `«?sesion=${pestaña}» no selecciona su pestaña`
+      ).toHaveText(titulo);
+    }
+  });
 });
 
 test.describe('tiempos de FastF1 en la ficha de la carrera', () => {
