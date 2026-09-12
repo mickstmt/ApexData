@@ -18,13 +18,42 @@
 import 'dotenv/config';
 
 import { darUnaVuelta } from '../src/lib/push/vuelta';
+import { OpenF1NoDisponibleError } from '../src/services/openf1/client';
 import { prisma } from '../src/lib/prisma';
 
 async function main() {
   const ensayo = process.argv.includes('--probar');
 
   const suscritos = await prisma.pushSubscription.count();
-  const { resultados: informe, previas } = await darUnaVuelta({ ensayo });
+
+  /**
+   * Que OpenF1 no conteste no es un fallo de esta ejecución.
+   *
+   * El calendario sale solo de ahí, así que sin él no hay nada que mirar: ni
+   * resultados, ni previas, ni sondeo. Antes eso salía por la puerta de los
+   * errores y tumbaba la vuelta con un correo de «Run failed», y la persona
+   * que lo recibe no puede hacer nada — el problema está en el otro extremo.
+   *
+   * No se pierde ningún aviso por salir así: una sesión solo se marca como
+   * avisada **cuando el envío sale**, y `estaEnPunto` sigue mirando cuarenta y
+   * ocho horas hacia atrás. La vuelta siguiente recoge lo que esta no pudo.
+   * Lo que cuesta es retraso, y eso se dice en el resumen para que se vea.
+   */
+  let vuelta;
+  try {
+    vuelta = await darUnaVuelta({ ensayo });
+  } catch (error) {
+    if (!(error instanceof OpenF1NoDisponibleError)) throw error;
+
+    console.warn(`::warning::OpenF1 no contesto: ${error.message}`);
+    console.warn(
+      '::warning::Esta vuelta no mira nada. No se pierde ningun aviso: la siguiente lo recoge, ' +
+        'y la ventana de resultados es de 48 h. Si se repite muchas vueltas seguidas, mirar OpenF1.'
+    );
+    return;
+  }
+
+  const { resultados: informe, previas } = vuelta;
 
   if (previas.sinZona) {
     console.log(`· ${previas.sinZona} suscripciones sin huso horario: se quedan sin previa.`);

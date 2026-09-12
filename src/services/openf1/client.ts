@@ -59,10 +59,27 @@ async function duerme(ms: number): Promise<void> {
 }
 
 /**
- * Una petición a OpenF1 que devuelve una lista, con reintentos.
+ * Los estados que mejoran esperando, y por qué el 401 está entre ellos.
  *
- * Solo se reintenta lo que puede arreglarse esperando: el corte por ritmo (429)
- * y los fallos del servidor (5xx). Un 400 no mejora por insistir.
+ * Los evidentes son el corte por ritmo (429) y los fallos del servidor (5xx).
+ * Un 400 no mejora por insistir, y por eso no está.
+ *
+ * El **401 y el 403 sí están**, y es contraintuitivo: normalmente significan
+ * «no tienes permiso», que no se arregla reintentando. Pero OpenF1 no pide
+ * credenciales —sus datos históricos son libres— así que un 401 suyo no puede
+ * ser eso. Lo que es, medido el 2026-09-12: su limitador cortando las IPs
+ * compartidas de los runners de GitHub. Dos vueltas del reloj murieron con
+ * `OpenF1 respondió 401` mientras desde una conexión doméstica la misma URL
+ * devolvía 200 tres de tres, a la misma hora.
+ *
+ * Si algún día OpenF1 cerrara de verdad su API, esto lo convertiría en cuatro
+ * intentos en vez de uno antes de rendirse — once segundos de más, una vez por
+ * vuelta. Barato comparado con perder la vuelta entera por un tropiezo.
+ */
+const REINTENTABLES = new Set([401, 403, 429]);
+
+/**
+ * Una petición a OpenF1 que devuelve una lista, con reintentos.
  */
 async function pedirLista<T>(url: string): Promise<T[]> {
   let ultimo = '';
@@ -82,7 +99,7 @@ async function pedirLista<T>(url: string): Promise<T[]> {
         cache: 'no-store',
       });
 
-      if (respuesta.status === 429 || respuesta.status >= 500) {
+      if (REINTENTABLES.has(respuesta.status) || respuesta.status >= 500) {
         ultimo = `HTTP ${respuesta.status}`;
         continue;
       }
