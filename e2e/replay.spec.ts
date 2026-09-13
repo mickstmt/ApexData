@@ -365,14 +365,20 @@ test.describe('los mandos dicen lo que hacen', () => {
   const mandos = (page: Page) => page.locator('[data-botonera]').filter({ visible: true });
   const tiempos = (page: Page) => page.locator('[data-tiempos]').filter({ visible: true });
 
-  test('los botones de salto dicen «10 s» antes de pulsarlos', async ({ page }) => {
+  test('los botones de salto no escriben «10 s», pero sí lo anuncian', async ({ page }) => {
     await simularCarrera(page);
     await page.goto(REPLAY);
     await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
-    // El hueco reportado: dos dobles flechas sin decir cuánto mueven. La marca
-    // contesta antes de pulsar; el destello, después. Aquí va la primera.
-    await expect(mandos(page)).toContainText('10 s');
+    // Esta prueba vigilaba lo CONTRARIO hasta el 2026-09-13, y sigue aquí por
+    // eso. El usuario quitó la etiqueta al rediseñar los mandos, y tenía razón:
+    // el destello que sale al pulsar dice el salto REAL —a dos segundos del
+    // final dice «+2 s», no «+10 s»—, así que el texto fijo decía algo MENOS
+    // preciso que lo que ya se ve.
+    await expect(mandos(page)).not.toContainText('10 s');
+
+    // Lo que no se pierde: la cantidad sigue en el nombre accesible, que es lo
+    // que necesita quien maneja el teléfono por voz.
     await expect(visible(page, 'Retroceder 10 s')).toBeVisible();
     await expect(visible(page, 'Avanzar 10 s')).toBeVisible();
   });
@@ -610,6 +616,9 @@ test.describe('el replay sigue el tema', () => {
         puesto: getComputedStyle(celdas[0]).color,
         barraEquipo: getComputedStyle(celdas[1]).backgroundColor,
         hueco: getComputedStyle(celdas[celdas.length - 1]).color,
+        // El play dejo de ser una pastilla rellena al pasar los mandos a la
+        // familia A —solo iconos—, asi que lo que lleva el acento es la TINTA
+        // y el fondo tiene que ser transparente.
         playFondo: getComputedStyle(play).backgroundColor,
         playTinta: getComputedStyle(play).color,
       };
@@ -636,8 +645,8 @@ test.describe('el replay sigue el tema', () => {
 
     // El botón grande va en el primario del tema claro, no en la lima, que
     // sobre blanco no se lee.
-    expect(m.playFondo).toBe('rgb(82, 102, 0)');
-    expect(m.playTinta).toBe('rgb(255, 255, 255)');
+    expect(m.playFondo).toBe('rgba(0, 0, 0, 0)');
+    expect(m.playTinta).toBe('rgb(82, 102, 0)'); // #526600, el acento en claro
 
     // Y el color de equipo usa la variante derivada para el fondo claro: la
     // identidad de McLaren (#FF8000) queda en 2,9:1 contra este fondo.
@@ -653,8 +662,8 @@ test.describe('el replay sigue el tema', () => {
     expect(m.replay).toBe('rgb(11, 11, 15)'); // #0B0B0F
     expect(m.puesto).toBe('rgb(162, 162, 172)'); // #A2A2AC
     expect(m.hueco).toBe('rgb(191, 191, 198)'); // #BFBFC6
-    expect(m.playFondo).toBe('rgb(204, 255, 0)'); // #CCFF00
-    expect(m.playTinta).toBe('rgb(0, 0, 0)');
+    expect(m.playFondo).toBe('rgba(0, 0, 0, 0)');
+    expect(m.playTinta).toBe('rgb(204, 255, 0)'); // #CCFF00, el acento en oscuro
     expect(m.barraEquipo).toBe('rgb(255, 128, 0)'); // McLaren, la identidad
   });
 });

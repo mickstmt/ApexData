@@ -134,6 +134,12 @@
     --replay-superficie: #F0F0F2;
     --replay-superficie-2: #E4E4E9;
     --replay-boton: #E4E4E9;
+    /* El fondo que sale SOLO al pulsar un mando del replay.
+       Translucido a proposito, eleccion del usuario: «un poco traslucido o
+       transparente». En reposo los botones no tienen fondo —familia A de la
+       maqueta, tambien elegida por el— asi que este realce es la unica senal
+       de que el dedo llego, y tiene que notarse sin competir con el icono. */
+    --replay-boton-pulsado: rgba(21, 21, 25, 0.10);
     --replay-borde: #DEDEE3;
     --replay-borde-fila: #E8E8EC;
     --replay-texto: #151519;
@@ -260,6 +266,9 @@
     --replay-superficie: #151519;
     --replay-superficie-2: #1B1B22;
     --replay-boton: #1F1F27;
+    /* Ver el claro. En oscuro el velo va en blanco, que es lo unico que se ve
+       sobre un fondo casi negro. */
+    --replay-boton-pulsado: rgba(245, 245, 247, 0.14);
     --replay-borde: #26262E;
     --replay-borde-fila: #16161C;
     --replay-texto: #F5F5F7;

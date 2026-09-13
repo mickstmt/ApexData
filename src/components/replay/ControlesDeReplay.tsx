@@ -44,10 +44,16 @@ import { TINTA_CSS } from './tema';
  *
  * | Pregunta | Cuándo | Quién la contesta |
  * |---|---|---|
- * | ¿Cuánto mueve? | antes de pulsar | el «10 s» fijo del botón |
- * | ¿Se movió, y cuánto? | después | el destello |
+ * | ¿Se movió, y cuánto? | después de pulsar | el destello |
  * | ¿Dónde estoy? | siempre | el reloj fijo sobre el scrubber |
  * | ¿A dónde voy? | al arrastrar | la burbuja sobre el pulgar |
+ *
+ * El «10 s» escrito en el botón, que antes contestaba a «¿cuánto mueve?» antes
+ * de pulsar, **se quitó** por decisión del usuario. Y con razón: el destello
+ * dice el salto REAL —a dos segundos del final dice «+2 s», no «+10 s»—, así
+ * que la etiqueta fija decía algo menos preciso que lo que ya se ve. La
+ * cantidad sigue en el nombre accesible del botón, que es lo que necesita
+ * quien lo maneja por voz.
  *
  * El reloj ya estaba en la cabecera, pero en el móvil la cabecera está arriba
  * y los mandos flotan abajo: medio teléfono de distancia entre lo que se toca
@@ -214,14 +220,14 @@ export function ControlesDeReplay({
       onClick={onAlternar}
       aria-pressed={reproduciendo}
       aria-label={reproduciendo ? 'Pausa' : 'Reproducir'}
-      className="grid h-12 place-items-center rounded-[10px] bg-[var(--replay-acento)] text-[var(--replay-acento-tinta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-texto)]"
+      className="grid h-12 min-w-[48px] place-items-center rounded-[14px] text-[var(--replay-acento)] transition-colors duration-100 active:bg-[var(--replay-boton-pulsado)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]"
     >
       {reproduciendo ? (
-        <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden>
+        <svg viewBox="0 0 24 24" className="h-7 w-7 fill-current" aria-hidden>
           <path d="M7 5h4v14H7zM13 5h4v14h-4z" />
         </svg>
       ) : (
-        <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden>
+        <svg viewBox="0 0 24 24" className="h-7 w-7 fill-current" aria-hidden>
           <path d="M8 5l12 7-12 7z" />
         </svg>
       )}
@@ -236,8 +242,11 @@ export function ControlesDeReplay({
       aria-label="Retroceder 10 s"
       className={BOTON}
     >
-      <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden><path d="M11 6 3 12l8 6zM20 6l-8 6 8 6z" /></svg>
-      <span aria-hidden className="font-mono text-[8.5px] font-semibold leading-none text-[var(--replay-apagado)]">10 s</span>
+      {/* Sin el «10 s» escrito: decision del usuario, y ademas el destello que
+          sale al pulsar dice el salto REAL —a dos segundos del final dice
+          «+2 s», no «+10 s»—, asi que la etiqueta fija decia algo MENOS preciso
+          que lo que ya se ve. El nombre accesible si lo sigue diciendo. */}
+      <svg viewBox="0 0 24 24" className="h-[22px] w-[22px] fill-current" aria-hidden><path d="M11 6 3 12l8 6zM20 6l-8 6 8 6z" /></svg>
     </button>
   );
 
@@ -249,8 +258,7 @@ export function ControlesDeReplay({
       aria-label="Avanzar 10 s"
       className={BOTON}
     >
-      <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden><path d="M13 6l8 6-8 6zM4 6l8 6-8 6z" /></svg>
-      <span aria-hidden className="font-mono text-[8.5px] font-semibold leading-none text-[var(--replay-apagado)]">10 s</span>
+      <svg viewBox="0 0 24 24" className="h-[22px] w-[22px] fill-current" aria-hidden><path d="M13 6l8 6-8 6zM4 6l8 6-8 6z" /></svg>
     </button>
   );
 
@@ -437,5 +445,18 @@ export function ControlesDeReplay({
   );
 }
 
+/**
+ * Los mandos son SOLO EL ICONO, y el fondo sale al pulsar.
+ *
+ * Elegido por el usuario sobre maqueta —«estos botones expandidos son
+ * horripilantes»— entre cuatro familias: sin fondo, en un bloque con
+ * separadores, con relieve, y en una capsula. Se quedo con la primera, y con
+ * el fondo de pulsado **translucido**, no un bloque solido.
+ *
+ * Lo que hay que vigilar de esta eleccion, y por eso esta escrito aqui: sin
+ * fondo en reposo, el borde de cada boton lo pone el ojo. Por eso el area
+ * tocable se fija a 44x44 aunque el dibujo mida 22, igual que se hizo con la
+ * barra de abajo — donde medimos que el 25 % no respondia por no cuidar esto.
+ */
 const BOTON =
-  'grid h-11 place-items-center gap-px rounded-[10px] bg-[var(--replay-boton)] font-mono text-[13px] font-semibold text-[var(--replay-texto)] aria-disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]';
+  'grid h-11 min-w-[44px] place-items-center rounded-[12px] text-[var(--replay-apagado)] font-mono text-[13px] font-semibold transition-colors duration-100 active:bg-[var(--replay-boton-pulsado)] aria-disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]';
