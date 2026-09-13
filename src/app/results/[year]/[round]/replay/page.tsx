@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { PRIMERA_TEMPORADA_CON_REPLAY } from '@/components/replay/VerReplay';
@@ -28,7 +29,15 @@ interface ReplayPageProps {
   searchParams: Promise<{ sesion?: string }>;
 }
 
-async function carreraDe(year: number, round: number) {
+/**
+ * Envuelto en `cache`: `generateMetadata` y la página piden lo mismo.
+ *
+ * Sin esto son DOS consultas por visita para el mismo registro. Da igual en
+ * local y no da igual donde importa: el servidor de pruebas comparte UNA
+ * conexión a la base y cada consulta cuesta ~500 ms contra Virginia, así que
+ * cada viaje de más se le suma a todo lo demás que esté esperando turno.
+ */
+const carreraDe = cache(async (year: number, round: number) => {
   if (!Number.isInteger(year) || !Number.isInteger(round)) return null;
 
   return prisma.race.findUnique({
@@ -39,7 +48,7 @@ async function carreraDe(year: number, round: number) {
       circuit: { select: { name: true, location: true } },
     },
   });
-}
+});
 
 /**
  * La clasificación oficial: quién va en cada puesto y con qué tiempo.
