@@ -50,7 +50,7 @@ import type { PositionsMeta } from '@/types';
  * Sigue el tema de la app, claro u oscuro, como cualquier otra pantalla: sus
  * colores son los tokens `--replay-*`. En el móvil, el mapa se queda pegado bajo la
  * cabecera y la torre se desplaza debajo, con los mandos fijos al pie, sobre
- * la barra de pestañas. A partir de `md`, mapa y torre lado a lado: la torre
+ * la barra de pestañas. A partir de `pc`, mapa y torre lado a lado: la torre
  * entera cabe sin desplazar y los mandos van bajo el mapa.
  */
 
@@ -199,7 +199,7 @@ export function ReplayClient({
           ordenOficial={ordenOficial}
         />
       ) : (
-        <div className="flex flex-col md:h-[calc(100dvh-4rem)]">
+        <div className="flex flex-col pc:h-[calc(100dvh-4rem)]">
           <Cabecera year={year} round={round} nombre={nombre} titulo={titulo} />
           <div className="flex-1">
             {fase.tipo === 'cargando' && <CargaDelReplay fraccion={fase.fraccion} mensaje={fase.mensaje} />}
@@ -245,13 +245,13 @@ const PILDORA: Record<ClaseDeEstado, string> = {
 /**
  * La cabecera del replay, en dos alturas y un solo DOM.
  *
- * En el móvil va en UNA línea de 44 px; a partir de `md` se despliega en dos,
+ * En el móvil va en UNA línea de 44 px; a partir de `pc` se despliega en dos,
  * con el nombre del Gran Premio entero. Son 45 px que se le devuelven a la
  * torre donde hacen falta, y salen gratis: la flecha, «Vuelta 53/53», el reloj
  * y la píldora caben de sobra en una fila de 390.
  *
  * Las dos formas salen de la misma rejilla a propósito. Pintar dos cabeceras y
- * esconder una con `md:hidden` es lo que hice primero, y dejaba en la página
+ * esconder una con `pc:hidden` es lo que hice primero, y dejaba en la página
  * dos relojes con la misma etiqueta, dos `role="status"` y dos `<h1>`: quien
  * escucha la página lo oía todo dos veces. Una prueba lo cazó al chocar con
  * dos elementos donde esperaba uno.
@@ -283,7 +283,7 @@ function Cabecera({
     <div
       className={cn(
         'grid h-11 grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-2 border-b border-[var(--replay-borde)] pr-3',
-        'md:h-auto md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:gap-x-4 md:gap-y-1.5 md:px-4 md:py-3'
+        'pc:h-auto pc:grid-cols-[minmax(0,1fr)_auto] pc:items-end pc:gap-x-4 pc:gap-y-1.5 pc:px-4 pc:py-3'
       )}
     >
       <VolverAtras
@@ -292,16 +292,16 @@ function Cabecera({
         className={cn(
           'grid h-11 w-11 shrink-0 place-items-center text-[var(--replay-apagado)] hover:text-[var(--replay-texto)]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--replay-acento)]',
-          'md:col-start-1 md:row-start-1 md:inline-flex md:h-auto md:min-h-[32px] md:w-auto md:items-center md:gap-1.5 md:justify-self-start md:text-xs'
+          'pc:col-start-1 pc:row-start-1 pc:inline-flex pc:h-auto pc:min-h-[32px] pc:w-auto pc:items-center pc:gap-1.5 pc:justify-self-start pc:text-xs'
         )}
       >
-        <ArrowLeft className="h-5 w-5 md:h-3.5 md:w-3.5" aria-hidden />
-        <span className="hidden md:inline">
+        <ArrowLeft className="h-5 w-5 pc:h-3.5 pc:w-3.5" aria-hidden />
+        <span className="hidden pc:inline">
           {nombre} {year}
         </span>
       </VolverAtras>
 
-      <h1 className="min-w-0 truncate font-display text-lg font-bold leading-none md:col-start-1 md:row-start-2 md:text-2xl">
+      <h1 className="min-w-0 truncate font-display text-lg font-bold leading-none pc:col-start-1 pc:row-start-2 pc:text-2xl">
         {vuelta !== undefined ? (
           <>
             Vuelta {vuelta}
@@ -313,7 +313,7 @@ function Cabecera({
       </h1>
 
       <span
-        className="shrink-0 font-mono text-[13px] tabular-nums text-[var(--replay-apagado)] md:col-start-2 md:row-start-1 md:justify-self-end"
+        className="shrink-0 font-mono text-[13px] tabular-nums text-[var(--replay-apagado)] pc:col-start-2 pc:row-start-1 pc:justify-self-end"
         aria-label="Minuto de carrera"
       >
         {reloj ?? '0:00'}
@@ -323,7 +323,7 @@ function Cabecera({
         role="status"
         className={cn(
           'inline-block shrink-0 rounded px-2 py-1.5 font-display text-[10px] font-semibold uppercase tracking-[.1em]',
-          'md:col-start-2 md:row-start-2 md:justify-self-end',
+          'pc:col-start-2 pc:row-start-2 pc:justify-self-end',
           PILDORA[estado]
         )}
       >
@@ -841,10 +841,10 @@ function Replay({
     //
     // Escritorio: tres filas y dos columnas — cabecera a lo ancho; mapa y
     // mandos a la izquierda; la torre entera a la derecha, desplazable.
-    <div className="flex h-[calc(100dvh-4rem-env(safe-area-inset-top))] flex-col md:grid md:h-[calc(100dvh-4rem)] md:grid-cols-[1fr_340px] md:grid-rows-[auto_1fr_auto]">
+    <div className="flex h-[calc(100dvh-4rem-env(safe-area-inset-top))] flex-col pc:grid pc:h-[calc(100dvh-4rem)] pc:grid-cols-[1fr_340px] pc:grid-rows-[auto_1fr_auto]">
       <div
         ref={pegadoRef}
-        className="shrink-0 bg-[var(--replay-fondo)] md:col-span-2"
+        className="shrink-0 bg-[var(--replay-fondo)] pc:col-span-2"
       >
         <Cabecera
           year={year}
@@ -861,7 +861,7 @@ function Replay({
             nunca cambia de tamaño y el encogido no cuesta nada. */}
         <div
           ref={recorteRef}
-          className="relative overflow-hidden border-b border-[var(--replay-borde)] md:hidden"
+          className="relative overflow-hidden border-b border-[var(--replay-borde)] pc:hidden"
         >
           <div ref={escalaRef} className="origin-top will-change-transform">
             {mapa('proporcion')}
@@ -891,28 +891,28 @@ function Replay({
           aria-valuemax={100}
           aria-valuenow={100}
           tabIndex={0}
-          className="grid h-7 touch-none cursor-ns-resize place-items-center border-b border-[var(--replay-borde)] bg-[var(--replay-fondo)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--replay-acento)] md:hidden"
+          className="grid h-7 touch-none cursor-ns-resize place-items-center border-b border-[var(--replay-borde)] bg-[var(--replay-fondo)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--replay-acento)] pc:hidden"
         >
           <span aria-hidden className="h-1 w-11 rounded-full bg-[var(--replay-trazado)]" />
         </div>
       </div>
 
-      <div className="hidden min-h-0 md:col-start-1 md:row-start-2 md:block">{mapa('relleno')}</div>
-      <div className="hidden border-t border-[var(--replay-borde)] md:col-start-1 md:row-start-3 md:block">{controles(true)}</div>
+      <div className="hidden min-h-0 pc:col-start-1 pc:row-start-2 pc:block">{mapa('relleno')}</div>
+      <div className="hidden border-t border-[var(--replay-borde)] pc:col-start-1 pc:row-start-3 pc:block">{controles(true)}</div>
 
       <div
         ref={torreRef}
-        className="min-h-0 flex-1 overflow-y-auto md:col-start-2 md:row-span-2 md:row-start-2 md:border-l md:border-[var(--replay-borde)]"
+        className="min-h-0 flex-1 overflow-y-auto pc:col-start-2 pc:row-span-2 pc:row-start-2 pc:border-l pc:border-[var(--replay-borde)]"
       >
         <TorreDeTiempos
           filas={filas}
           elegido={elegido}
           onElegir={elegir}
-          className="md:py-1.5"
+          className="pc:py-1.5"
           tapadoAbajo={tapaAbajo}
         />
         {/* Aire para que la última fila pueda subir por encima de los mandos. */}
-        <div aria-hidden className="md:hidden" style={{ height: tapaAbajo }} />
+        <div aria-hidden className="pc:hidden" style={{ height: tapaAbajo }} />
       </div>
 
       {/* Los mandos, como el mini-reproductor de Apple Music: cuando hay dos
@@ -926,7 +926,7 @@ function Replay({
           prueba que lo fija, y es la que cazó el desajuste al cambiarlo. */}
       <div
         ref={mandosRef}
-        className="fixed inset-x-[26px] z-40 rounded-[21px] border border-[var(--barra-borde)] bg-[var(--barra-cristal)] shadow-[0_10px_34px_rgba(0,0,0,0.45)] backdrop-blur-[2px] backdrop-saturate-[1.8] md:hidden"
+        className="fixed inset-x-[26px] z-40 rounded-[21px] border border-[var(--barra-borde)] bg-[var(--barra-cristal)] shadow-[0_10px_34px_rgba(0,0,0,0.45)] backdrop-blur-[2px] backdrop-saturate-[1.8] pc:hidden"
         style={{ bottom: 'calc(var(--barra-inferior) + 8px)' }}
       >
         {controles(false)}

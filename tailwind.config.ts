@@ -12,6 +12,23 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      /**
+       * `pc`: hay ancho de escritorio Y altura para usarlo.
+       *
+       * `md` mira solo el ancho, y un telefono tumbado mide 844x390: pasa de
+       * sobra los 768 px y la app se cree un ordenador. El usuario lo vio al
+       * salir de la pantalla completa con el telefono girado — «no entiendo que
+       * version es esa»: la cabecera del sitio puesta y el mapa diminuto,
+       * porque el reparto de escritorio le da 340 px a la torre y deja al
+       * circuito sin sitio en 390 px de alto.
+       *
+       * No se toca `md` a proposito: en una tabla o una lista, mas ancho SI es
+       * mejor aunque haya poca altura. El problema es de las pantallas que
+       * reparten en vertical, y esas son las que usan `pc`.
+       */
+      screens: {
+        pc: { raw: '(min-width: 768px) and (min-height: 500px)' },
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

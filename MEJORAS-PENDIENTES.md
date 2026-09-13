@@ -989,6 +989,21 @@ ordenador: cabecera del sitio, mapa pequeño. El usuario: «no entiendo que
 version es esa». El arreglo natural es que el layout de escritorio no aplique a
 un viewport de 390 px de alto.
 
+**HECHO (2026-09-13).** Punto de corte nuevo, `pc`, que pide **ancho de
+escritorio Y altura para usarlo**: `(min-width: 768px) and (min-height: 500px)`.
+Lo usan las pantallas del replay, que son las que reparten en vertical.
+
+**`md` no se toca a proposito**: en una tabla o una lista, mas ancho SI es mejor
+aunque haya poca altura. El problema no era el ancho, era repartirlo en vertical
+sin vertical que repartir.
+
+Medido tumbado a 844x390, saliendo de la pantalla completa: la torre pasa de
+**339 px de ancho y filas de 30** —la columna de escritorio— a ocupar los 844 y
+filas de 44, que es la de tocar con el dedo. Y a 1280x900 sigue siendo la de
+escritorio, que es el contrapeso: esto no puede arreglar el telefono rompiendo
+el ordenador. Las dos cosas tienen prueba, y la primera se comprobo fallando con
+el corte saboteado a solo ancho: 339 px.
+
 ## 35. BUG · La barra de progreso queda bajo el menu
 
 En esa misma pantalla en vertical, el scrubber cae detras de la barra de

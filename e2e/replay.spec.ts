@@ -1072,6 +1072,71 @@ test.describe('los mandos mínimos y la pantalla completa', () => {
   });
 });
 
+test.describe('un teléfono tumbado no es un ordenador', () => {
+  test.use({ viewport: TUMBADO });
+
+  test('al salir de la pantalla completa sigue siendo la app de móvil', async ({ page }) => {
+    /**
+     * Lo reportado: «aparece la barra de arriba que no debería, el mapa muy
+     * pequeño, no entiendo qué versión es esa».
+     *
+     * Era el reparto de ESCRITORIO metido en un teléfono. Tumbado mide 844 px
+     * de ancho, pasa de sobra los 768 del punto `md`, y la app se creía un
+     * ordenador: la torre se lleva 340 px fijos y al circuito no le queda sitio
+     * en 390 px de alto.
+     *
+     * Ahora el replay usa `pc`, que pide ancho de escritorio **y** altura para
+     * usarlo. `md` no se toca: en una tabla, más ancho sí es mejor aunque haya
+     * poca altura.
+     */
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+
+    // Tumbado entra solo en pantalla completa; el caso es justo al salir.
+    const salir = page.getByRole('button', { name: 'Salir de pantalla completa' });
+    await expect(salir).toBeVisible({ timeout: 20_000 });
+    await salir.click();
+
+    const torre = page.getByRole('list', { name: 'Clasificación en este instante' }).filter({
+      visible: true,
+    });
+    await expect(torre).toBeVisible();
+
+    const anchoDeLaVentana = TUMBADO.width;
+    const caja = (await torre.boundingBox())!;
+
+    // La torre ocupa el ancho entero, no una columna de 340 al lado del mapa.
+    expect(caja.width, 'la torre sigue repartida como en un ordenador').toBeGreaterThan(
+      anchoDeLaVentana * 0.9
+    );
+
+    // Y las filas son las de tocar con el dedo, no las de ratón.
+    const fila = torre.locator('li button').first();
+    const alto = (await fila.boundingBox())!.height;
+    expect(alto, 'las filas se han quedado en la densidad de escritorio').toBeGreaterThanOrEqual(
+      44
+    );
+  });
+
+  test('en un escritorio de verdad el reparto sigue siendo el de escritorio', async ({ page }) => {
+    // El contrapeso: esto no puede arreglar el teléfono rompiendo el ordenador.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+
+    const torre = page.getByRole('list', { name: 'Clasificación en este instante' }).filter({
+      visible: true,
+    });
+    await expect(torre).toBeVisible({ timeout: 20_000 });
+
+    const caja = (await torre.boundingBox())!;
+    expect(caja.width, 'la torre debería ser una columna estrecha').toBeLessThan(420);
+
+    const alto = (await torre.locator('li button').first().boundingBox())!.height;
+    expect(alto, 'las filas deberían ser las de ratón').toBeLessThan(40);
+  });
+});
+
 test.describe('el cursor del scrubber', () => {
   test.use({ viewport: TUMBADO });
 
