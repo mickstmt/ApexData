@@ -1724,6 +1724,44 @@ test.describe('márgenes en móvil', () => {
     expect(new URL(page.url()).pathname).toBe('/calendar');
   });
 
+  test('la barra se toca entera, también su borde y lo que queda debajo', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    const barra = page.locator('nav[aria-label="Navegación principal"]');
+    await expect(barra).toBeVisible();
+
+    // Medido antes de arreglarlo: el 25 % de la barra no respondía. Son los
+    // 6 px de `padding` y borde que la rodean, más los 20 px que hay entre la
+    // barra y el cristal del teléfono — justo la franja donde cae el pulgar
+    // cuando se va rápido, porque es la más cómoda de alcanzar.
+    //
+    // Se le pregunta al navegador qué hay en cada punto, que es lo único que
+    // dice de verdad si algo es tocable; una medida de cajas no vale, porque
+    // un `::after` transparente no tiene caja propia en el árbol.
+    const sordo = await page.evaluate(() => {
+      const nav = document.querySelector('nav[aria-label="Navegación principal"]')!;
+      const caja = nav.getBoundingClientRect();
+      let total = 0;
+      let vivos = 0;
+
+      // La barra entera, y además la franja hasta el borde de la pantalla.
+      for (let y = Math.ceil(caja.top); y < window.innerHeight - 1; y += 2) {
+        for (let x = Math.ceil(caja.left); x < caja.right; x += 2) {
+          total++;
+          const el = document.elementFromPoint(x, y);
+          if (el && el.closest('nav[aria-label="Navegación principal"] li > a, nav[aria-label="Navegación principal"] li > button')) {
+            vivos++;
+          }
+        }
+      }
+
+      return Math.round(((total - vivos) / total) * 100);
+    });
+
+    expect(sordo, 'parte de la barra no responde al toque').toBeLessThanOrEqual(5);
+  });
+
   test('las etiquetas caben, y su nombre completo sigue anunciándose', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.goto('/');

@@ -166,6 +166,32 @@
      El realce viaja de una pestaña a otra y ese viaje es la información: a 420
      el recorrido se leía como un parpadeo. La curva conserva el rebote corto
      del final, que es lo que hace que llegue en vez de frenar. */
+  /* La casilla se toca mas alla de lo que se ve.
+     ------------------------------------------------------------------
+     Medido en un iPhone 390: el 25 % de la barra NO respondia. Son los
+     6 px de `padding` y borde que la rodean, mas los 20 px que hay entre
+     la barra y el borde de la pantalla — justo la franja donde cae el
+     pulgar cuando se va rapido, porque es la mas comoda de alcanzar.
+
+     El dibujo no cambia: lo que crece es un `::after` transparente. Hacia
+     abajo llega hasta el cristal del telefono; a los lados, solo la
+     primera y la ultima casilla se estiran, para no pisarse entre ellas.
+
+     Lo que NO arregla: el area util de cada casilla ya era 65x56, por
+     encima de los 44 px minimos. Esto no va de tamaño, va de que el
+     borde de una pildora flotante parece tocable y no lo era. */
+  .barra-toque::after {
+    content: '';
+    position: absolute;
+    top: -6px;
+    bottom: -26px;
+    left: 0;
+    right: 0;
+  }
+
+  li:first-child > .barra-toque::after { left: -6px; }
+  li:last-child > .barra-toque::after { right: -6px; }
+
   .barra-realce {
     transition:
       transform 720ms cubic-bezier(0.34, 1.56, 0.64, 1),

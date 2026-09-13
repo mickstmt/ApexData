@@ -282,7 +282,7 @@ export function MobileTabBar() {
                   // La app desactiva el resaltado gris de iOS al tocar, así que
                   // sin esto pulsar no producía ninguna señal: parecía que la
                   // pestaña no respondía hasta que llegaba la página nueva.
-                  'relative rounded-[20px] transition-transform duration-[120ms] active:scale-[.92] motion-reduce:active:scale-100',
+                  'barra-toque relative rounded-[20px] transition-transform duration-[120ms] active:scale-[.92] motion-reduce:active:scale-100',
                   'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
                   active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 )}
@@ -303,7 +303,7 @@ export function MobileTabBar() {
             className={cn(
               'flex h-full min-h-[44px] w-full select-none flex-col items-center justify-center gap-[3px]',
               'text-[11.5px] font-medium leading-none transition-colors',
-              'relative rounded-[20px] transition-transform duration-[120ms] active:scale-[.92] motion-reduce:active:scale-100',
+              'barra-toque relative rounded-[20px] transition-transform duration-[120ms] active:scale-[.92] motion-reduce:active:scale-100',
               'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
               menuAbierto ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             )}
