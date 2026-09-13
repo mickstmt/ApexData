@@ -87,6 +87,27 @@
 
 ## Bitácora
 
+### 2026-09-12 (65) — El final de carrera, el doble toque, y la barra acorralada ✅
+
+**Punto 2 · el final de carrera.** El replay terminaba con un orden que no era el de la carrera. Medido contra el resultado oficial en el último instante: **8 fallos de 10 en Hungría, 5 en Países Bajos, 4 en Italia**. La causa es que la bandera a cuadros cae **66-79 s antes del final de los datos** — ese minuto largo es la vuelta de celebración, donde el ganador levanta el pie y los de atrás le comen metros. Ordenando por cruces de meta los fallos caen a **0, 0 y 2**; las dos de Hungría son HAM y LEC, que cruzó 4,3 s después y sin embargo es cuarto: sanción posterior a la carrera. Manda el resultado oficial cuando la base lo tiene, y los cruces cuando no. Verificado contra Italia y Hungría reales en el navegador: la torre coincide **fila a fila** con la clasificación oficial, con sus huecos y sus vueltas.
+
+Tres fallos que **solo aparecieron midiendo con datos reales**, no con escenarios de prueba: `parseFloat('1:05.187')` devuelve **1**, y el undécimo de Italia salía con `+1.0s` por delante del décimo; el decimoquinto cruza en **6754,37** y los datos terminan en **6754,25**, así que su banderita no salía nunca; y los huecos medidos contra el ganador ya aparcado daban valores **negativos**, que se veían en pantalla como `+-0.3s`.
+
+**Decisiones del usuario**: sin animación de bandera y sin tarjeta de ganador ni de podio —«es una repetición, no tiene sentido darle tanta importancia»—, y la banderita **detrás** del tiempo, contra mi recomendación, que era delante por la columna de números.
+
+**Punto 28 · el zoom.** Medido: **todo lo interactivo de la app estaba en `touch-action: auto`**, así que iOS reservaba el doble toque para ampliar y esperaba ~300 ms en cada botón antes de responder. Arreglado con `manipulation`, que apaga ese gesto y deja el pellizco. El usuario preguntó qué utilidad tiene el pellizco antes de decidir —buena pregunta—, se le dieron los tres sitios donde sirve (tablas densas, gráficos de análisis, poca vista) y **decidió dejarlo como está**.
+
+**Punto 5 · «from ApexData».** Verificado en vez de prometido: `showNotification` no recibe ningún subtítulo, la Notification API no tiene ese campo, y la cadena **no aparece en ningún archivo del repositorio**. Lo pone iOS. No se puede quitar; la única palanca sería renombrar la PWA, que también renombra el icono de la pantalla de inicio.
+
+**Punto 14-ter · la barra.** De tres síntomas quedan cero y medio. La **deriva ya no pasa** —era `env(safe-area-inset-bottom)`, arreglado en el 14-bis—, y lo de «toda la barra reacciona al pulsar» **nunca fue**: medido, pulsando una pestaña cambia su caja y la barra y las otras cuatro no se mueven un píxel. Queda el toque perdido. Se descartó el pulsado con una maqueta de cuatro barras que solo se diferencian en eso —«en todas va bien, ninguna se pega»—, y se descartó también la zona muerta, que **era real y estaba mal**: el 25 % de la barra no respondía (43 % contando la franja hasta el borde de la pantalla), porque los 6 px de `padding` y los 20 px de separación no eran tocables. Arreglado sin cambiar el dibujo y desplegado, pero el usuario dice que sigue igual. **La culpa queda en la navegación**, que es lo único que la maqueta no reproduce.
+
+**Errores propios, que es lo que evita repetirlos.** Dije «reproducido en WebKit, 4 de 10» y **era falso**: mis toques sintéticos ni acertaban el elemento, y después resultó que ese WebKit no navega con ningún enlace —ni la barra, ni uno normal, ni un `.click()` por código— por errores de SSL cargando recursos. Detecté un realce «descuadrado» que era el rebote de la curva medido a medio camino, no un fallo. Y planteé al usuario una pregunta partida en dos que no se podía contestar, como él mismo señaló: si el toque se pierde, el realce no puede seguirte.
+
+**Punto 23 · el realce.** Las tres primeras versiones le parecieron idénticas, y tenía razón: medido, con la curva de hoy el realce **cruza la barra entera en 268 ms** y los otros 450 de los 720 son el rebote oscilando en el destino. Lo que había que elegir no era la técnica sino la curva.
+
+**Estado**: 448 pruebas unitarias y 150 de navegador en verde. Todo lo nuevo se comprobó **fallando con el arreglo saboteado**, que es la única forma de saber que una prueba prueba algo.
+
+
 ### 2026-09-11 (64) — La revisión del cierre encontró que el arreglo de la mañana seguía midiendo con sesgo ✅
 
 **Lo que pasó**: la revisión previa al cierre, sobre el rango de la sesión, devolvió **ocho defectos** en los dos commits de la mañana. Dos de ellos rompían justo lo que el arreglo venía a arreglar.

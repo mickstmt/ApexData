@@ -507,6 +507,44 @@ dispositivo.
 
 ## 18. EXPERIMENTO · La carrera de fuentes empata por construccion
 
+> **VEREDICTO (2026-09-13): FastF1 publica antes, y por mucho.** Cinco medidas,
+> tres de ellas limpias —`firstProbe` cerca de cero y varios sondeos—, todas del
+> fin de semana de España:
+>
+> | Sesion | FastF1 | OpenF1 | Diferencia |
+> |---|---|---|---|
+> | **Carrera** | **9m 57s** | 46m 44s | **-36 min** |
+> | Clasificacion | 25m 00s | 30m 59s | -6 min |
+> | Practica 3 | 42m 57s | 49m 56s | -7 min |
+>
+> Media: FastF1 1698 s contra OpenF1 2284 s. El propio endpoint lo resume en
+> «fastf1 publica antes».
+>
+> **El caso real que lo cierra**: la carrera termino a las 15:00 UTC y el aviso
+> le llego al usuario a las **15:50:38 UTC** — cincuenta minutos. Se descompone
+> exactamente: 35 de espera obligatoria + 12 hasta que OpenF1 publico + el
+> barrido. Con FastF1 habrian sido unos **doce minutos**.
+>
+> **Por que existe la espera de 35 min**: OpenF1 considera «en directo» —y de
+> pago— desde 30 min antes de empezar hasta 30 despues de terminar. FastF1 no
+> tiene esa ventana, asi que la espera desaparece con el cambio.
+>
+> **Lo decidido con el usuario**: NO cambiar una por otra, sino **preguntar
+> primero a FastF1 y dejar OpenF1 de respaldo**. Se lleva los 35 minutos de
+> ganancia sin perder la red de seguridad.
+>
+> **Lo que hay que tener en cuenta al hacerlo**:
+> - Sondear FastF1 obliga al servicio a cargar la sesion entera (36 s medidos) y
+>   solo carga una a la vez: sondear desde el minuto 5 en vez del 35 multiplica
+>   las veces. Hay que acotar la ventana y parar en cuanto conteste.
+> - Los avisos pasarian a depender de nuestro propio servicio. Hoy, si se cae,
+>   siguen llegando porque OpenF1 es ajeno. De ahi el respaldo.
+> - Son tres medidas limpias de UN fin de semana y UN circuito.
+>
+> Al cerrarlo se borra `src/lib/push/carrera-de-fuentes.ts` y su tabla, que se
+> escribieron para desaparecer.
+
+
 **Estado real, consultado en produccion (`/api/fuentes`, 2026-09-11)**: el experimento
 esta vivo y tiene sus dos primeras medidas (P1 y P2 de Madrid). OpenF1 31 min, FastF1
 32 min en las dos — **pero `probes: 1` en las cuatro filas**.
@@ -653,6 +691,14 @@ gesto que ya existe.
 # ---- Tanda del 2026-09-12, probando la barra y el replay ya desplegados ----
 
 ## 23. UX · El realce pasa por encima de las pestanas sin encenderlas
+
+> **ELEGIDO POR EL USUARIO (2026-09-13): la curva D, rebote suave**
+> —`cubic-bezier(0.34, 1.15, 0.64, 1)`—. La tecnica es la de dos capas con
+> recorte; lo que se elige es cuanto de los 720 ms es recorrido de verdad.
+> Medido en la maqueta: B (la curva de hoy) 258 ms, **D 432 ms**, C (sin rebote)
+> 609 ms. Con la D se conserva el muelle y el recorrido dura casi el doble que
+> hoy, que es lo que hacia invisible el efecto.
+
 
 **Lo que dice el usuario**: con Inicio marcado, el icono y la palabra van pintados.
 Al tocar Pilotos, el realce se desliza de una a otra **pasando por Fechas y Puntos**, y
@@ -853,3 +899,169 @@ FastF1, no la RAM. Eso ahorra la investigación entera.
 **Discrepancia a corregir algún día**: el comentario de `loading.py` da una razón
 (seguir vivo) y la prueba da otra (hilos). Las dos importan, pero el código debería
 decir las dos.
+
+---
+---
+# ---- Tanda del 2026-09-13, probando el fin de semana de Espana ----
+
+> Todo lo de aqui abajo sale de que el usuario uso la app durante el GP de
+> Espana y mando capturas. Cada punto lleva **lo que se midio**, no lo que se
+> supuso.
+
+## 32. BUG+DECISION · La pantalla completa en vertical no lleva a ningun sitio
+
+**Lo que reporta**: pulsar «expandir» sin girar el telefono deja el modo
+horizontal metido en una pantalla vertical — torre cortada por la derecha,
+circuito aplastado, barra de progreso escondida bajo el menu. Y el usuario
+esperaba que el boton girase la pantalla solo.
+
+**Correccion mia**: en iOS **no se puede girar la pantalla por codigo**.
+`screen.orientation.lock()` no existe en Safari y el campo `orientation` del
+manifest se ignora aunque la app este instalada. Si se dio a entender lo
+contrario, fue un error.
+
+**Las cinco situaciones, validadas**:
+
+| Bloqueo de rotacion | Que hace el usuario | Que pasa hoy |
+|---|---|---|
+| Desactivado | Gira el telefono | OK, entra el modo que se diseño |
+| Desactivado | Pulsa expandir en vertical | El modo horizontal en pantalla vertical |
+| Desactivado | Sale del modo estando tumbado | Cae en el layout de ESCRITORIO (ver 34) |
+| **Activado** | Pulsa expandir y gira | **Callejon sin salida**: el viewport nunca pasa a horizontal |
+| Cualquiera | Intenta pulsar expandir | El boton queda bajo la barra de estado (ver 33) |
+
+Y un limite duro: **desde la web no se puede leer si el bloqueo esta activado**.
+Solo se infiere: «han pasado N segundos y sigue en vertical».
+
+**Las tres salidas**:
+
+1. **Solo el aviso de girar.** Simple, pero con el bloqueo activado deja tirado.
+2. **Girar los componentes por CSS.** Lo unico que funciona con el bloqueo
+   activado. El doble giro que temia el usuario **se resuelve solo**: las dos
+   rotaciones dependen de la misma señal, asi que al pasar el viewport a
+   horizontal se quita la nuestra. Cuesta: `position: fixed` dentro de algo
+   rotado deja de anclarse a la pantalla —ya mordio con la barra—, los margenes
+   de la muesca quedan del lado contrario, y una captura del usuario saldria
+   girada.
+3. **Las dos por pasos (recomendada).** Aviso animado al pulsar; si gira, entra
+   el modo real; si pasan unos segundos y no cambia, aparece «Girar de todos
+   modos» que aplica la rotacion por CSS. Opt-in explicito.
+
+**El aviso lo eligio el usuario con una referencia**: telefono con flechas
+girando, texto al lado, **animado** —las flechas parpadean unas cuatro veces y
+el telefono gira—, ocupando la pantalla. Y el boton de expandir **se queda
+visible** en vertical, pero tiene que ser pulsable.
+
+**PENDIENTE**: que el usuario elija 1, 2 o 3.
+
+## 33. BUG · Falta `env(safe-area-inset-top)` en la pantalla completa
+
+El contenedor del modo completo reserva `env(safe-area-inset-left)`, `right` y
+`bottom`, **pero no `top`**. Se diseño pensando en horizontal, donde la muesca
+queda al lado; en vertical el hueco esta arriba y nadie lo reservo, asi que la
+cabecera de 40 px se mete debajo de la hora, el wifi y la bateria — y el boton
+de expandir **no se deja pulsar**.
+
+## 34. BUG · El layout de escritorio en un movil tumbado
+
+Un telefono tumbado mide 844 px de ancho y el punto `md` de Tailwind esta en
+768. Al **salir** de la pantalla completa estando tumbado, la app se cree un
+ordenador: cabecera del sitio, mapa pequeño. El usuario: «no entiendo que
+version es esa». El arreglo natural es que el layout de escritorio no aplique a
+un viewport de 390 px de alto.
+
+## 35. BUG · La barra de progreso queda bajo el menu
+
+En esa misma pantalla en vertical, el scrubber cae detras de la barra de
+pestañas. Va aunque el modo completo no llegue a abrirse nunca en vertical.
+
+## 36. TEXTO · El aviso de abandono dice `DNF`, y debe decir `DNF · LEC`
+
+Malentendido mio: el usuario dijo «en lugar de LEC - abandona debe ser DNF» y se
+leyo como sustituir el rotulo entero, cuando queria cambiar solo la palabra y
+conservar el codigo del piloto.
+
+## 37. BUG · El indicador miente durante una parada larga
+
+**Medido en Italia 2026**, tramos de `track_status`:
+
+```
+   252s ->  355s  ( 103s)  ROJA
+   355s ->  371s  (  16s)  verde
+   371s -> 1578s  (1208s)  AMARILLA
+```
+
+La roja **declarada** dura 103 s. Despues hay **1208 s de amarilla** — veinte
+minutos— mientras los coches estan en el garaje: la detencion real fue de
+1819 s (medida en el punto 25). La app se pasa veinte minutos diciendo
+«amarilla» y pintando el circuito de naranja. Por una amarilla nadie va al
+garaje.
+
+**Ya existe la señal**: el «nadie avanza» que se calculo para `relojDeCarrera`
+en el punto 25. Hoy solo lo usa el reloj.
+
+**PENDIENTE**: que palabra usar durante esos minutos — «BANDERA ROJA», que es lo
+que pasa en pista aunque el dato ya no lo declare, o «CARRERA DETENIDA», que es
+literal y no inventa una bandera. Mi voto: la segunda.
+
+## 38. BUG DE PRODUCTO · La portada contradice a la notificacion
+
+A las cuatro horas de acabar el GP de España, la portada decia «proxima carrera:
+Azerbaiyan» (correcto) y «ultimo resultado: **Italian Grand Prix**». Comprobado:
+
+- Ronda 14 existe en la base con **0 resultados**
+- La ultima con resultados es la 13
+- **Jolpica no publicaba nada** a las 4 h (con Italia tardo entre 6 y 8)
+
+No es un fallo nuestro: son **tres fuentes a tres velocidades** y se enseñan
+juntas. El calendario al instante, la notificacion a los 46 min por OpenF1, y
+los resultados de la base sin llegar.
+
+**Dos tamaños**: el cartel honesto —«Spanish Grand Prix · resultados en camino»,
+con el lenguaje de sesion pendiente que la app ya usa— y llenar la base desde
+FastF1 marcando provisional, que va con el punto 18.
+
+## 39. BUG · Veintiun abandonos falsos al relanzar tras la bandera roja
+
+**Medido en Italia 2026**, contando quien pasa de «dentro» a «fuera» en cada
+instante:
+
+```
+  cuando          cuantos  quienes
+     4:49           1      LEC                      <- el abandono de verdad
+    35:32          21      ANT VER NOR PIA HAM ...  <- LA PARRILLA ENTERA
+    38:60-39:05     5      VER GAS COL LEC NOR      <- el relanzamiento
+    42:14           2      GAS LEC
+    70:11           1      ALO                      <- de verdad
+    74:57           1      STR                      <- de verdad
+```
+
+**La causa**: `estaFuera` exige «60 s quieto **mientras el lider avanza**».
+Durante la media hora de parada no se mueve nadie, lider incluido, asi que no
+salta nada. Pero en cuanto el lider arranca la vuelta de formacion, el ya avanza
+y los demas siguen con el progreso plano de los 60 s anteriores, que eran de
+parada: los veintiuno cumplen la condicion a la vez. Y se repite en la parada de
+la parrilla del relanzamiento.
+
+**Es el tercer bug de la misma familia** —el delta que se inflaba, el reloj que
+seguia corriendo, y esto—: se miden **60 segundos de reloj de pared donde habia
+que medir 60 segundos de carrera**. Con `relojDeCarrera` la ventana se salta la
+parada entera.
+
+## 40. UI · Rediseñar los mandos del replay
+
+**Lo que dice el usuario**: «estos botones expandidos son horripilantes», y que
+en el modo normal tambien se pueden mejorar. Y quiere **quitar el «10 s»**.
+
+Quitarlo es correcto y no se pierde nada: al pulsar ya sale en el centro el
+salto REAL —a dos segundos del final dice «+2 s», no «+10 s»—, asi que la
+etiqueta fija dice algo MENOS preciso que lo que se ve. El nombre accesible si
+sigue diciendo la cantidad.
+
+Maqueta en `/maqueta/mandos.html` con cuatro familias, cada una en sus dos
+formas —riel vertical y fila— y con su pulsado: **A** solo iconos, **B** un solo
+bloque con separadores, **C** con relieve, **D** una capsula (recomendada, es la
+forma que ya tiene la barra de abajo de la app). Comprobado que **ningun boton
+baja de 44 px** en ninguna familia.
+
+**PENDIENTE**: que el usuario elija una letra.

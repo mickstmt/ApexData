@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0B0B0F">
+<link rel="manifest" href="/maqueta/manifest-mandos.webmanifest">
+<title>MAQUETA · los mandos del replay</title>
+<style>
+/* ---------------------------------------------------------------------------
+   LOS MANDOS DEL REPLAY — CUATRO FAMILIAS
+
+   Lo que dijo el usuario: «estos botones expandidos son horripilantes», y que
+   en el modo normal tambien se pueden mejorar. Y que quiere quitar el «10 s».
+
+   Por que quitarlo es correcto y no una perdida: al pulsar ya sale en el centro
+   de la pantalla el salto REAL —a dos segundos del final dice «+2 s», no
+   «+10 s»—, asi que la etiqueta fija dice algo MENOS preciso que lo que se ve.
+   El nombre accesible del boton si sigue diciendo la cantidad, que es lo que
+   necesita quien maneja por voz.
+
+   LO QUE NO SE NEGOCIA: el area tocable no baja de 44 px aunque el icono se vea
+   mas pequeno. Ayer medimos que el 25 % de la barra de abajo no respondia por
+   exactamente ese descuido.
+
+   SIN JAVASCRIPT: la CSP bloquea cualquier script de un archivo estatico. El
+   pulsado se ve con `:active`, que funciona con el dedo encima.
+--------------------------------------------------------------------------- */
+:root {
+  color-scheme: dark;
+  --fondo: #0B0B0F;
+  --superficie: #151519;
+  --superficie-2: #1E1E24;
+  --borde: #26262E;
+  --texto: #F5F5F7;
+  --apagado: #A2A2AC;
+  --acento: #CCFF00;
+  --acento-tinta: #000000;
+  --papel: #0F110E;
+  --linea: #272B23;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; padding: 20px 16px 48px;
+  background: var(--papel); color: var(--texto);
+  font: 400 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+.envoltura { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: minmax(0,1fr); gap: 22px; }
+h1 { margin: 0 0 4px; font-size: 22px; line-height: 1.15; }
+.sub { margin: 0; color: var(--apagado); font-size: 13.5px; }
+.sub b { color: var(--texto); }
+
+.familia { border: 1px solid var(--linea); border-radius: 16px; padding: 14px; background: #121410; }
+.familia h2 {
+  margin: 0 0 2px; font: 600 11px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--acento);
+}
+.familia p { margin: 0 0 14px; font-size: 13px; color: var(--apagado); }
+.familia p b { color: var(--texto); }
+
+/* Las dos formas en que viven: el riel vertical y la fila de abajo. */
+.formas { display: grid; gap: 14px; grid-template-columns: 84px minmax(0, 1fr); align-items: stretch; }
+.escena {
+  position: relative; border: 1px solid var(--borde); border-radius: 12px;
+  background: var(--fondo); overflow: hidden;
+}
+.escena .etq {
+  position: absolute; top: 6px; left: 8px; z-index: 2;
+  font: 500 9px/1 ui-monospace, monospace; letter-spacing: .1em;
+  text-transform: uppercase; color: #55555E;
+}
+.riel { display: grid; place-items: center; min-height: 300px; padding: 26px 0; }
+.fila { display: grid; place-items: center; min-height: 300px; padding: 0 10px; }
+
+/* --- el tejido comun ---------------------------------------------------- */
+.grupo-v { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.grupo-h { display: flex; align-items: center; gap: 10px; }
+
+.btn {
+  position: relative; display: grid; place-items: center;
+  min-width: 44px; min-height: 44px;
+  border: 0; background: transparent; color: var(--texto);
+  cursor: pointer; padding: 0;
+}
+.btn svg { display: block; width: 22px; height: 22px; }
+.btn .vel { font: 600 13px/1 ui-monospace, monospace; }
+/* El area tocable no baja de 44 px aunque el dibujo sea menor. */
+.btn::after { content: ''; position: absolute; inset: -2px; }
+
+.acento { color: var(--acento); }
+
+/* =======================================================================
+   A · SOLO ICONOS. Sin fondo. Lo sostiene el espaciado.
+   ===================================================================== */
+.a .btn { color: var(--apagado); transition: color 120ms, transform 120ms; }
+.a .btn:active { transform: scale(.88); }
+.a .play { color: var(--acento); }
+.a .play svg { width: 30px; height: 30px; }
+.a .grupo-v { gap: 16px; }
+.a .grupo-h { gap: 18px; }
+
+/* =======================================================================
+   B · UN SOLO BLOQUE. Los tres de transporte juntos, con separadores.
+   ===================================================================== */
+.b .bloque {
+  display: flex; background: var(--superficie); border: 1px solid var(--borde);
+  border-radius: 14px; overflow: hidden;
+}
+.b .grupo-v .bloque { flex-direction: column; }
+.b .bloque .btn { border-radius: 0; color: var(--apagado); transition: background 120ms; }
+.b .bloque .btn + .btn { box-shadow: inset 0 1px 0 var(--borde); }
+.b .grupo-h .bloque .btn + .btn { box-shadow: inset 1px 0 0 var(--borde); }
+.b .bloque .btn:active { background: var(--superficie-2); }
+.b .play { color: var(--acento); }
+.b .suelto {
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 14px;
+  color: var(--apagado); transition: background 120ms;
+}
+.b .suelto:active { background: var(--superficie-2); }
+
+/* =======================================================================
+   C · CON RELIEVE. Circulos con fondo y sombra; el play manda.
+   ===================================================================== */
+.c .btn {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--superficie); border: 1px solid var(--borde); color: var(--apagado);
+  box-shadow: 0 2px 6px rgba(0,0,0,.55);
+  transition: box-shadow 120ms, transform 120ms, background 120ms;
+}
+.c .btn:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.7);
+  background: #101014;
+}
+.c .play {
+  width: 58px; height: 58px; background: var(--acento); border-color: var(--acento);
+  color: var(--acento-tinta);
+}
+.c .play svg { width: 26px; height: 26px; }
+.c .play:active { background: #B8E600; }
+
+/* =======================================================================
+   D · UNA CAPSULA. Todo dentro de una sola pieza; el play es un circulo.
+   ===================================================================== */
+.d .capsula {
+  display: flex; align-items: center; gap: 2px; padding: 5px;
+  background: rgba(28,28,34,.9); border: 1px solid var(--borde); border-radius: 999px;
+}
+.d .grupo-v .capsula { flex-direction: column; }
+.d .capsula .btn { border-radius: 999px; color: var(--apagado); }
+.d .capsula .btn::before {
+  content: ''; position: absolute; inset: 4px; border-radius: 999px;
+  border: 2px solid var(--acento); opacity: 0; transform: scale(.6);
+}
+.d .capsula .btn:active::before { animation: aro 420ms ease-out; }
+@keyframes aro {
+  0% { opacity: .9; transform: scale(.6); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+.d .play {
+  background: var(--acento); color: var(--acento-tinta);
+  width: 44px; height: 44px; border-radius: 50%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .a .btn, .c .btn { transition: none; }
+  .d .capsula .btn:active::before { animation: none; opacity: .9; }
+}
+
+/* --- la nota final ------------------------------------------------------ */
+.nota { border: 1px solid var(--linea); border-radius: 14px; padding: 14px; font-size: 13.5px; color: var(--apagado); }
+.nota b { color: var(--texto); }
+.nota p { margin: 0 0 10px; } .nota p:last-child { margin: 0; }
+.con10 { font: 400 9px/1 ui-monospace, monospace; color: #55555E; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="envoltura">
+
+  <header>
+    <h1>Los mandos del replay</h1>
+    <p class="sub">Cuatro familias, cada una en sus <b>dos formas</b>: el riel vertical de pantalla completa y la fila del modo normal. <b>Púlsalos</b>, que el pulsado es la mitad de la decisión. Ninguna lleva el «10 s».</p>
+  </header>
+
+  <!-- ============================ A ============================ -->
+  <div class="familia a">
+    <h2>A · sólo iconos</h2>
+    <p>Sin fondo. Lo sostiene el espaciado, y el play es lo único con color. Es lo más cercano a un reproductor del sistema. <b>Pulsado</b>: el icono se encoge.</p>
+    <div class="formas">
+      <div class="escena riel"><span class="etq">riel</span>
+        <div class="grupo-v">
+          <button class="btn" type="button" aria-label="Retroceder 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2 12zM22 6v12l-9-6z"/></svg></button>
+          <button class="btn play" type="button" aria-label="Pausa"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button>
+          <button class="btn" type="button" aria-label="Avanzar 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 6v12l9-6zM2 6v12l9-6z"/></svg></button>
+          <button class="btn" type="button" aria-label="Velocidad 4x"><span class="vel">4×</span></button>
+        </div>
+      </div>
+      <div class="escena fila"><span class="etq">fila</span>
+        <div class="grupo-h">
+          <button class="btn" type="button" aria-label="Retroceder 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2 12zM22 6v12l-9-6z"/></svg></button>
+          <button class="btn play" type="button" aria-label="Pausa"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button>
+          <button class="btn" type="button" aria-label="Avanzar 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 6v12l9-6zM2 6v12l9-6z"/></svg></button>
+          <button class="btn" type="button" aria-label="Velocidad 4x"><span class="vel">4×</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ B ============================ -->
+  <div class="familia b">
+    <h2>B · un solo bloque</h2>
+    <p>Los tres de transporte en una pieza con separadores finos, y la velocidad aparte porque no es lo mismo. Deja de haber cuatro islas sueltas. <b>Pulsado</b>: la casilla se aclara, nada se mueve.</p>
+    <div class="formas">
+      <div class="escena riel"><span class="etq">riel</span>
+        <div class="grupo-v">
+          <div class="bloque">
+            <button class="btn" type="button" aria-label="Retroceder 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2 12zM22 6v12l-9-6z"/></svg></button>
+            <button class="btn play" type="button" aria-label="Pausa"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button>
+            <button class="btn" type="button" aria-label="Avanzar 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 6v12l9-6zM2 6v12l9-6z"/></svg></button>
+          </div>
+          <button class="btn suelto" type="button" aria-label="Velocidad 4x"><span class="vel">4×</span></button>
+        </div>
+      </div>
+      <div class="escena fila"><span class="etq">fila</span>
+        <div class="grupo-h">
+          <div class="bloque">
+            <button class="btn" type="button" aria-label="Retroceder 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2 12zM22 6v12l-9-6z"/></svg></button>
+            <button class="btn play" type="button" aria-label="Pausa"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button>
+            <button class="btn" type="button" aria-label="Avanzar 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 6v12l9-6zM2 6v12l9-6z"/></svg></button>
+          </div>
+          <button class="btn suelto" type="button" aria-label="Velocidad 4x"><span class="vel">4×</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ C ============================ -->
+  <div class="familia c">
+    <h2>C · con relieve</h2>
+    <p>Círculos con fondo y sombra, y el play más grande y en acento: hay una jerarquía clara de qué se pulsa más. <b>Pulsado</b>: se hunde, como un botón físico.</p>
+    <div class="formas">
+      <div class="escena riel"><span class="etq">riel</span>
+        <div class="grupo-v">
+          <button class="btn" type="button" aria-label="Retroceder 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2 12zM22 6v12l-9-6z"/></svg></button>
+          <button class="btn play" type="button" aria-label="Pausa"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button>
+          <button class="btn" type="button" aria-label="Avanzar 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 6v12l9-6zM2 6v12l9-6z"/></svg></button>
+          <button class="btn" type="button" aria-label="Velocidad 4x"><span class="vel">4×</span></button>
+        </div>
+      </div>
+      <div class="escena fila"><span class="etq">fila</span>
+        <div class="grupo-h">
+          <button class="btn" type="button" aria-label="Retroceder 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2 12zM22 6v12l-9-6z"/></svg></button>
+          <button class="btn play" type="button" aria-label="Pausa"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button>
+          <button class="btn" type="button" aria-label="Avanzar 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 6v12l9-6zM2 6v12l9-6z"/></svg></button>
+          <button class="btn" type="button" aria-label="Velocidad 4x"><span class="vel">4×</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ D ============================ -->
+  <div class="familia d">
+    <h2>D · una cápsula</h2>
+    <p>Todo dentro de una sola pieza, con el play como círculo de acento. Es la misma forma que ya tiene la barra de abajo de la app, así que el replay deja de parecer otra aplicación. <b>Pulsado</b>: un aro que crece y se va.</p>
+    <div class="formas">
+      <div class="escena riel"><span class="etq">riel</span>
+        <div class="grupo-v">
+          <div class="capsula">
+            <button class="btn" type="button" aria-label="Retroceder 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2 12zM22 6v12l-9-6z"/></svg></button>
+            <button class="btn play" type="button" aria-label="Pausa"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button>
+            <button class="btn" type="button" aria-label="Avanzar 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 6v12l9-6zM2 6v12l9-6z"/></svg></button>
+            <button class="btn" type="button" aria-label="Velocidad 4x"><span class="vel">4×</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="escena fila"><span class="etq">fila</span>
+        <div class="grupo-h">
+          <div class="capsula">
+            <button class="btn" type="button" aria-label="Retroceder 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2 12zM22 6v12l-9-6z"/></svg></button>
+            <button class="btn play" type="button" aria-label="Pausa"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button>
+            <button class="btn" type="button" aria-label="Avanzar 10 segundos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 6v12l9-6zM2 6v12l9-6z"/></svg></button>
+            <button class="btn" type="button" aria-label="Velocidad 4x"><span class="vel">4×</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nota">
+    <p><b>Mi recomendación: la D.</b> Es la única que no inventa un lenguaje nuevo — la barra de abajo de la app ya es una cápsula con un realce dentro, así que el replay pasa a parecer la misma aplicación en vez de una pantalla aparte. Y en el riel vertical, que es donde hoy se ven «horripilantes», una sola pieza alargada se lee como un mando; cuatro pastillas sueltas, no.</p>
+    <p>La <b>C</b> es la más clara de todas si lo que más te importa es no fallar el botón, porque la jerarquía se ve de lejos. La descarto por poco: con sombras y relieve pesa más de lo que la pantalla puede permitirse encima del circuito.</p>
+    <p>La <b>B</b> ordena bien pero sigue siendo dos piezas, y la <b>A</b> es la más limpia y la más fácil de fallar: sin fondo, el borde de cada botón lo pones tú con el ojo.</p>
+    <p><b>Lo que necesito de ti</b>: una letra. Y si quieres el pulsado de una con la forma de otra, dímelo — son independientes.</p>
+  </div>
+
+</div>
+</body>
+</html>
