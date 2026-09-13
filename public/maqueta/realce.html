@@ -57,6 +57,12 @@ h1 { margin: 0 0 4px; font-size: 21px; line-height: 1.15; }
 .sub b { color: var(--texto); }
 
 .bloque { margin: 0 0 26px; }
+.medido {
+  margin: 0 0 22px; padding: 12px 14px; border: 1px solid var(--linea);
+  border-left: 3px solid #FFA94D; border-radius: 12px;
+  font: 400 12px/1.55 ui-monospace, Menlo, monospace; white-space: pre; overflow-x: auto;
+  color: var(--apagado);
+}
 .titulo {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0 0 8px;
   font: 600 11px/1 ui-monospace, Menlo, monospace; letter-spacing: .12em; text-transform: uppercase;
@@ -136,29 +142,29 @@ h1 { margin: 0 0 4px; font-size: 21px; line-height: 1.15; }
 .b input:nth-of-type(5):checked ~ .capa { clip-path: inset(0 0% 0 80%); }
 
 /* =======================================================================
-   C · RECORTE SUAVE. Igual, pero los bordes se difuminan: cada pestaña se
-       enciende y se apaga progresivamente en vez de de golpe.
+   C y D · MISMA TECNICA QUE B, OTRA CURVA.
+
+   MEDIDO en la maqueta anterior: con la curva de hoy el recorte cruza la
+   barra ENTERA en 268 ms, y los otros 450 ms de los 720 son el rebote
+   oscilando ya en el destino (87,7 % -> 80 %). O sea que cada pestaña
+   intermedia se enciende y se apaga en unos 80 ms: no da tiempo a verlo, y
+   por eso las tres primeras versiones parecian identicas.
+
+   Lo que hay que elegir no es el recorte, es la curva.
    ===================================================================== */
-.c .capa {
-  transition: -webkit-mask-position var(--duracion) var(--curva), mask-position var(--duracion) var(--curva);
-  /* La parte opaca mide 44 % x 0,46 = 20,2 %, o sea una pestaña justa: en
-     reposo la marcada queda pintada ENTERA, y lo que se difumina son solo
-     los bordes por donde el realce entra y sale. */
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 27%, #000 73%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, #000 27%, #000 73%, transparent 100%);
-  -webkit-mask-size: 44% 100%;
-  mask-size: 44% 100%;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-}
-.c input:nth-of-type(1):checked ~ .capa { -webkit-mask-position: -21.4% 0; mask-position: -21.4% 0; }
-.c input:nth-of-type(2):checked ~ .capa { -webkit-mask-position: 14.3% 0; mask-position: 14.3% 0; }
-.c input:nth-of-type(3):checked ~ .capa { -webkit-mask-position: 50% 0; mask-position: 50% 0; }
-.c input:nth-of-type(4):checked ~ .capa { -webkit-mask-position: 85.7% 0; mask-position: 85.7% 0; }
-.c input:nth-of-type(5):checked ~ .capa { -webkit-mask-position: 121.4% 0; mask-position: 121.4% 0; }
+.c { --curva: cubic-bezier(0.65, 0, 0.35, 1); }   /* viaja todo el rato */
+.d { --curva: cubic-bezier(0.34, 1.15, 0.64, 1); } /* rebote suave */
+
+.c .capa, .d .capa { transition: clip-path var(--duracion) var(--curva); }
+
+.c input:nth-of-type(1):checked ~ .capa, .d input:nth-of-type(1):checked ~ .capa { clip-path: inset(0 80% 0 0%); }
+.c input:nth-of-type(2):checked ~ .capa, .d input:nth-of-type(2):checked ~ .capa { clip-path: inset(0 60% 0 20%); }
+.c input:nth-of-type(3):checked ~ .capa, .d input:nth-of-type(3):checked ~ .capa { clip-path: inset(0 40% 0 40%); }
+.c input:nth-of-type(4):checked ~ .capa, .d input:nth-of-type(4):checked ~ .capa { clip-path: inset(0 20% 0 60%); }
+.c input:nth-of-type(5):checked ~ .capa, .d input:nth-of-type(5):checked ~ .capa { clip-path: inset(0 0% 0 80%); }
 
 @media (prefers-reduced-motion: reduce) {
-  .realce, .b .capa, .c .capa { transition: none; }
+  .realce, .capa { transition: none; }
 }
 
 .nota {
@@ -177,35 +183,43 @@ h1 { margin: 0 0 4px; font-size: 21px; line-height: 1.15; }
 <body>
 
 <h1>El realce enciende lo que pisa</h1>
-<p class="sub">Toca <b>Inicio</b> y luego <b>Más</b>, que es el viaje más largo, en las tres barras. Mira si Fechas, Puntos y Pilotos <b>se encienden al pasar el realce por encima</b> o si sólo se enciende el destino.</p>
+<p class="sub">Toca <b>Inicio</b> y luego <b>Más</b> en cada barra, que es el viaje más largo. Lo que cambia entre las tres últimas <b>no es el efecto, es la curva</b>: la técnica es la misma.</p>
 
-<p class="aviso">Se ve igual en el navegador que instalada: aquí no hay medidas que dependan del modo aplicación. Los 720 ms y la curva son los de la app.</p>
+<div class="medido">medido en la maqueta anterior, con la curva de hoy:
+
+  el realce cruza la barra ENTERA en 268 ms
+  los otros 450 ms de los 720 son el rebote ya en el destino
+
+  cada pestaña intermedia se enciende unos 80 ms -> no da tiempo a verla,
+  y por eso las tres versiones anteriores parecian identicas</div>
 
 <div class="bloque">
-  <p class="titulo">A · como está hoy <span>el color salta de golpe al destino</span></p>
+  <p class="titulo">A · como está hoy <span>solo se enciende el destino</span></p>
   <nav class="barra a">
     <div class="fila">
-      <input type="radio" name="a" id="a1" checked><input type="radio" name="a" id="a2">
-      <input type="radio" name="a" id="a3"><input type="radio" name="a" id="a4">
-      <input type="radio" name="a" id="a5">
+      <input type="radio" name="a" id="a1" checked><input type="radio" name="a" id="a2"><input type="radio" name="a" id="a3"><input type="radio" name="a" id="a4"><input type="radio" name="a" id="a5">
       <span class="realce"></span>
       <label class="pestana" for="a1"><span class="icono"></span>Inicio</label>
       <label class="pestana" for="a2"><span class="icono"></span>Fechas</label>
       <label class="pestana" for="a3"><span class="icono"></span>Puntos</label>
       <label class="pestana" for="a4"><span class="icono"></span>Pilotos</label>
       <label class="pestana" for="a5"><span class="icono"></span>Más</label>
-      <span class="capa" aria-hidden="true"></span>
+      <span class="capa" aria-hidden="true">
+        <span class="pestana"><span class="icono"></span>Inicio</span>
+        <span class="pestana"><span class="icono"></span>Fechas</span>
+        <span class="pestana"><span class="icono"></span>Puntos</span>
+        <span class="pestana"><span class="icono"></span>Pilotos</span>
+        <span class="pestana"><span class="icono"></span>Más</span>
+      </span>
     </div>
   </nav>
 </div>
 
-<div class="bloque recomendada">
-  <p class="titulo">B · recorte duro <span class="sello">Recomendada</span> <span>lo que el realce tapa, se ve pintado</span></p>
+<div class="bloque">
+  <p class="titulo">B · la curva de hoy <span>con rebote: el viaje se acaba en 268 ms</span></p>
   <nav class="barra b">
     <div class="fila">
-      <input type="radio" name="b" id="b1" checked><input type="radio" name="b" id="b2">
-      <input type="radio" name="b" id="b3"><input type="radio" name="b" id="b4">
-      <input type="radio" name="b" id="b5">
+      <input type="radio" name="b" id="b1" checked><input type="radio" name="b" id="b2"><input type="radio" name="b" id="b3"><input type="radio" name="b" id="b4"><input type="radio" name="b" id="b5">
       <span class="realce"></span>
       <label class="pestana" for="b1"><span class="icono"></span>Inicio</label>
       <label class="pestana" for="b2"><span class="icono"></span>Fechas</label>
@@ -223,13 +237,11 @@ h1 { margin: 0 0 4px; font-size: 21px; line-height: 1.15; }
   </nav>
 </div>
 
-<div class="bloque">
-  <p class="titulo">C · recorte suave <span>se enciende y se apaga progresivamente</span></p>
+<div class="bloque recomendada">
+  <p class="titulo">C · viaja todo el rato <span class="sello">Recomendada</span><span>sin rebote, los 720 ms son recorrido</span></p>
   <nav class="barra c">
     <div class="fila">
-      <input type="radio" name="c" id="c1" checked><input type="radio" name="c" id="c2">
-      <input type="radio" name="c" id="c3"><input type="radio" name="c" id="c4">
-      <input type="radio" name="c" id="c5">
+      <input type="radio" name="c" id="c1" checked><input type="radio" name="c" id="c2"><input type="radio" name="c" id="c3"><input type="radio" name="c" id="c4"><input type="radio" name="c" id="c5">
       <span class="realce"></span>
       <label class="pestana" for="c1"><span class="icono"></span>Inicio</label>
       <label class="pestana" for="c2"><span class="icono"></span>Fechas</label>
@@ -247,10 +259,32 @@ h1 { margin: 0 0 4px; font-size: 21px; line-height: 1.15; }
   </nav>
 </div>
 
+<div class="bloque">
+  <p class="titulo">D · rebote suave <span>algo de muelle, pero se ve el viaje</span></p>
+  <nav class="barra d">
+    <div class="fila">
+      <input type="radio" name="d" id="d1" checked><input type="radio" name="d" id="d2"><input type="radio" name="d" id="d3"><input type="radio" name="d" id="d4"><input type="radio" name="d" id="d5">
+      <span class="realce"></span>
+      <label class="pestana" for="d1"><span class="icono"></span>Inicio</label>
+      <label class="pestana" for="d2"><span class="icono"></span>Fechas</label>
+      <label class="pestana" for="d3"><span class="icono"></span>Puntos</label>
+      <label class="pestana" for="d4"><span class="icono"></span>Pilotos</label>
+      <label class="pestana" for="d5"><span class="icono"></span>Más</label>
+      <span class="capa" aria-hidden="true">
+        <span class="pestana"><span class="icono"></span>Inicio</span>
+        <span class="pestana"><span class="icono"></span>Fechas</span>
+        <span class="pestana"><span class="icono"></span>Puntos</span>
+        <span class="pestana"><span class="icono"></span>Pilotos</span>
+        <span class="pestana"><span class="icono"></span>Más</span>
+      </span>
+    </div>
+  </nav>
+</div>
+
 <div class="nota">
-  <p><b>Por qué recomiendo la B.</b> El borde nítido va con la forma del realce, que también tiene borde nítido. La C difumina, y al difuminar aparecen dos pestañas medio encendidas a la vez: se lee como un reflejo, no como «esta es la que está marcada».</p>
-  <p>Las dos cuestan lo mismo: una copia de las cinco pestañas por encima, <code>aria-hidden</code> y sin recibir toques. La copia no se anuncia dos veces ni roba área tocable.</p>
-  <p><b>Lo que necesito de ti</b>: A, B o C.</p>
+  <p><b>Por qué recomiendo la C.</b> Tú pediste 720 ms para <i>ver</i> el recorrido. Con la curva de hoy solo 268 de esos 720 son recorrido; el resto es un temblor en el sitio. Sin rebote, cada pestaña que cruza se enciende unos 180 ms, que sí se percibe.</p>
+  <p>La <b>D</b> guarda algo del muelle a cambio de acortar el viaje. Si te gusta el rebote, es el término medio.</p>
+  <p><b>Lo que necesito de ti</b>: A, B, C o D. Y si en la anterior no distinguías nada, aquí deberías distinguir <b>B</b> de <b>C</b> a la primera; si tampoco, dímelo y es que el efecto entero no vale la pena.</p>
 </div>
 
 </body>

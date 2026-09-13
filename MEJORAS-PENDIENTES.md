@@ -664,6 +664,18 @@ aunque la forma si viaje.
 **Lo que hay hoy**: el color lo pone `aria-current="page"`, que es **binario y salta de
 golpe** al llegar la ruta. No sabe nada de por donde va el realce.
 
+**ESTADO 2026-09-13**: maqueta hecha (`/maqueta/realce.html`), **pendiente de que el
+usuario elija**. Y por el camino aparecio lo importante:
+
+> Las tres primeras versiones **le parecieron identicas**, y tenia razon. Medido: con la
+> curva de hoy —`cubic-bezier(0.34, 1.56, 0.64, 1)`— el recorte **cruza la barra entera
+> en 268 ms**, y los otros 450 ms de los 720 son el rebote oscilando ya en el destino
+> (87,7 % -> 80 %). Cada pestaña intermedia se enciende unos **80 ms**: no da tiempo a
+> verla. **Lo que hay que elegir no es la tecnica, es la curva.**
+>
+> Medido en la maqueta nueva, cuanto dura el RECORRIDO de 720 ms:
+> **B (la de hoy) 258 ms · D (rebote suave) 432 ms · C (sin rebote) 609 ms.**
+
 **Por donde iria** (sin decidir, y va a mockup porque es animacion):
 - El realce es un `<li>` con `transform`, asi que **su posicion no se puede consultar
   desde CSS** para teñir lo que tiene debajo. No hay un selector «lo que esta bajo este
@@ -674,6 +686,44 @@ golpe** al llegar la ruta. No sabe nada de por donde va el realce.
   que hacen esto bien, y no necesita JavaScript por fotograma.
 - Coste real: duplicar el marcado de las cinco pestanas. Hay que medir que no rompa la
   accesibilidad —la copia va `aria-hidden`— ni el area tocable.
+
+## 14-ter. BUG · La barra se come toques (2026-09-13)
+
+**Confirmado por el usuario probando lo desplegado**, de los tres sintomas que habia:
+
+1. **Se despega al desplazar: CERRADO.** «Ahora que estoy probando no se esta moviendo,
+   lo cual es raro ya que venia pasando bastante.» Era `env(safe-area-inset-bottom)`, y
+   lo arreglo el 14-bis.
+2. **Toda la barra reacciona al pulsar: NUNCA FUE.** «No, solo el boton.» Medido tambien
+   aqui: pulsando una pestaña cambia su caja (162,762,65,56 -> 165,764,60,52) y la barra
+   y las otras cuatro no se mueven un pixel.
+3. **Se pierden toques: SIGUE ABIERTO.** Y ademas: «click en inicio y pilotos e inicio de
+   nuevo se queda en pilotos».
+
+**Lo que ya se descarto, con medida y no con opinion**:
+
+- **No es el pulsado.** Maqueta `/maqueta/toques.html` con cuatro barras que solo se
+  diferencian en eso —A `scale(.92)` como hoy, B el fondo se aclara, C solo encoge el
+  icono, D sin cristal—. El usuario: «en todas va bien, ninguna se pega». O sea que ni
+  el `transform` bajo el dedo ni el `backdrop-filter` tienen que ver.
+- **No es la zona muerta**, aunque era real: el 25 % de la barra no respondia (el anillo
+  de 6 px de `padding` y borde, mas los 20 px hasta el borde de la pantalla; 43 %
+  contando esa franja). Arreglado y desplegado, y el usuario dice que **sigue igual**.
+- **No es una carrera de navegaciones.** Si un toque se pierde, «inicio, pilotos, inicio
+  se queda en pilotos» se explica sin inventar nada mas.
+- **No se reproduce en Chromium**: nueve intentos con red lenta y toques sin pausa,
+  todos correctos. El WebKit de Playwright de esta maquina **no sirve de control**: ahi
+  no navega NINGUN enlace, ni la barra, ni uno normal, ni un `.click()` por JavaScript,
+  por errores de SSL cargando recursos.
+
+**Donde queda la culpa**: en la navegacion. En la maqueta el toque mueve el realce y
+nunca falla; en la app el toque tiene que pasar por `<Link>` y el router del App Router.
+La diferencia entre las dos es exactamente eso.
+
+**Por donde seguir (2026-09-14)**: instrumentar la barra REAL en el telefono del usuario
+—contar `touchstart` y `click` que llegan de verdad al enlace— en vez de seguir
+adivinando. Si llegan los dos y no navega, es el router; si llega el `touchstart` y no el
+`click`, es iOS descartando el toque por algo que todavia no hemos aislado.
 
 ## 24. DECISION DEL USUARIO · Mandos minimos en vertical, y replay a pantalla completa
 
