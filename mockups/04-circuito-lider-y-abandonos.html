@@ -54,6 +54,27 @@ h1 { margin: 0 0 6px; font-size: clamp(24px,4vw,32px); line-height: 1.1; letter-
   border-radius: 14px; background: var(--fondo); padding: 16px; }
 canvas { width: 100%; max-width: 520px; height: 300px; touch-action: none; }
 .pie { font: 600 12px/1.5 ui-monospace, monospace; color: var(--tinta-2); text-align: center; }
+
+/* El aviso central usa el mismo lenguaje que el «+10 s» de los mandos: una
+   píldora que aparece, se lee y se va. Ya existe en la app y se reconoce. */
+.aviso-dnf {
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%);
+  z-index: 5; pointer-events: none; opacity: 0;
+  padding: 10px 20px; border-radius: 999px; white-space: nowrap;
+  background: var(--roja); color: #fff;
+  font: 700 22px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em;
+}
+.aviso-dnf[data-ver="si"] { animation: dnf 1400ms ease forwards; }
+@keyframes dnf {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.9); }
+  10%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%,-56%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aviso-dnf[data-ver="si"] { animation: dnf-quieto 1400ms steps(1) forwards; }
+  @keyframes dnf-quieto { 0%,75% { opacity: 1; } 100% { opacity: 0; } }
+}
 .pie b { color: var(--tinta); }
 
 .dos { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(300px,100%),1fr)); }
@@ -93,6 +114,20 @@ canvas { width: 100%; max-width: 520px; height: 300px; touch-action: none; }
   </div>
 
   <div class="mandos">
+    <span class="etq">12 · Cuántos pulsos</span>
+    <button type="button" data-g="pulsos" data-v="1" aria-pressed="true">Uno</button>
+    <button type="button" data-g="pulsos" data-v="2">Dos</button>
+    <button type="button" data-g="pulsos" data-v="3">Tres</button>
+  </div>
+
+  <div class="mandos">
+    <span class="etq">12 · Aviso en el centro, como el «+10 s» de los mandos</span>
+    <button type="button" data-g="aviso" data-v="no" aria-pressed="true">Ninguno</button>
+    <button type="button" data-g="aviso" data-v="dnf">«DNF»</button>
+    <button type="button" data-g="aviso" data-v="quien">«LEC · ABANDONA»</button>
+  </div>
+
+  <div class="mandos">
     <span class="etq">12 · Cómo se avisa de una bandera</span>
     <button type="button" data-g="bandera" data-v="hoy" aria-pressed="true">Como hoy (pista pintada)</button>
     <button type="button" data-g="bandera" data-v="latido">Pintada + latido al cambiar</button>
@@ -100,7 +135,8 @@ canvas { width: 100%; max-width: 520px; height: 300px; touch-action: none; }
     <button type="button" class="accion" id="verde">Vuelta a verde</button>
   </div>
 
-  <div class="escena">
+  <div class="escena" style="position:relative">
+    <span id="aviso" class="aviso-dnf"></span>
     <canvas id="lienzo" width="1040" height="600" aria-label="Mapa de ejemplo"></canvas>
     <p class="pie" id="pie">—</p>
   </div>
@@ -149,7 +185,7 @@ canvas { width: 100%; max-width: 520px; height: 300px; touch-action: none; }
     };
   });
 
-  var opciones = { lider: 'nada', fuera: 'hoy', bandera: 'hoy' };
+  var opciones = { lider: 'nada', fuera: 'hoy', bandera: 'hoy', pulsos: '1', aviso: 'no' };
   var estado = 'libre';
   var cambioDeEstado = 0;
 
@@ -218,15 +254,22 @@ canvas { width: 100%; max-width: 520px; height: 300px; touch-action: none; }
         ctx.globalAlpha = 1;
       }
 
-      // --- pulso del abandono ---
+      // --- pulsos del abandono ---
+      //
+      // Anillos escalonados y no uno repetido: salen con un tercio de pulso de
+      // diferencia, así que el ojo lee una onda que se propaga en vez de un
+      // parpadeo que insiste.
       if (c.fuera && opciones.fuera !== 'hoy') {
+        var cuantos = Number(opciones.pulsos);
         var t = ahora - c.salio;
-        if (t < 900) {
+        for (var n = 0; n < cuantos; n++) {
+          var tn = t - n * 320;
+          if (tn < 0 || tn >= 900) continue;
           ctx.beginPath();
-          ctx.arc(x, y, radio + t / 900 * 46, 0, Math.PI * 2);
+          ctx.arc(x, y, radio + (tn / 900) * 46, 0, Math.PI * 2);
           ctx.strokeStyle = color('--roja');
           ctx.lineWidth = 4;
-          ctx.globalAlpha = 1 - t / 900;
+          ctx.globalAlpha = (1 - tn / 900) * 0.9;
           ctx.stroke();
           ctx.globalAlpha = 1;
         }
@@ -301,12 +344,23 @@ canvas { width: 100%; max-width: 520px; height: 300px; touch-action: none; }
     });
   });
 
+  var avisoNodo = $('aviso');
+
+  function avisar(codigo) {
+    if (opciones.aviso === 'no') return;
+    avisoNodo.textContent = opciones.aviso === 'dnf' ? 'DNF' : codigo + ' \u00b7 ABANDONA';
+    avisoNodo.setAttribute('data-ver', 'no');
+    void avisoNodo.offsetWidth;   // reinicia la animacion en abandonos seguidos
+    avisoNodo.setAttribute('data-ver', 'si');
+  }
+
   $('abandona').addEventListener('click', function () {
     var vivos = coches.filter(function (c) { return !c.fuera; });
     if (vivos.length <= 3) return;
     var victima = vivos[3 + Math.floor(Math.random() * (vivos.length - 3))];
     victima.fuera = true;
     victima.salio = performance.now();
+    avisar(victima.codigo);
   });
 
   $('amarilla').addEventListener('click', function () { estado = 'amarilla'; cambioDeEstado = performance.now(); });
