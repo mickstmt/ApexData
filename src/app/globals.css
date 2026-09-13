@@ -289,6 +289,29 @@
     font-family: var(--font-display), system-ui, sans-serif !important;
   }
 
+  /* Tocar dos veces seguidas algo que se pulsa NO amplia la pagina.
+     ------------------------------------------------------------------
+     iOS reserva el doble toque para ampliar, asi que sobre un boton espera
+     ~300 ms por si llega el segundo toque, y si llega, amplia. En una lista
+     larga —la torre del replay, las pestanas, la barra de abajo— eso es
+     justo lo que pasa al ir rapido: la pagina da un salto de escala que
+     nadie pidio, y el segundo toque no llega al boton.
+
+     `manipulation` apaga SOLO ese gesto. El pellizco para ampliar sigue
+     funcionando en toda la app, que es lo que exige WCAG 1.4.4 y por lo que
+     esta app no lleva `user-scalable=no`.
+
+     Los campos de texto se quedan fuera: ahi el navegador no amplia al
+     tocar dos veces, y el deslizador del replay maneja su propio gesto. */
+  button,
+  a,
+  [role="button"],
+  [role="tab"],
+  summary,
+  select {
+    touch-action: manipulation;
+  }
+
 }
 
 /* Quien pide "reducir movimiento" en su sistema deja de recibirlo, incluidas

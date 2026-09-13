@@ -66,6 +66,32 @@ test.describe('zoom (informe 2, punto 3)', () => {
     expect(viewport).not.toContain('maximum-scale=1');
     expect(viewport).not.toContain('user-scalable=no');
   });
+
+  test('tocar dos veces un botón no amplía la página', async ({ page }) => {
+    // Lo reportado por el usuario: la página da un salto de escala al ir
+    // rápido por una lista. iOS reserva el doble toque para ampliar, así que
+    // espera sobre cada botón por si llega el segundo toque. `manipulation`
+    // apaga ese gesto y deja el pellizco, que es lo que pide WCAG 1.4.4.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/results/2026/13');
+
+    const sitios = await page.evaluate(() => {
+      const uno = (sel: string) => {
+        const el = document.querySelector(sel);
+        return el ? getComputedStyle(el).touchAction : null;
+      };
+      return {
+        boton: uno('button'),
+        enlace: uno('a'),
+        // El cuerpo NO: ahí el pellizco tiene que seguir funcionando.
+        cuerpo: getComputedStyle(document.body).touchAction,
+      };
+    });
+
+    expect(sitios.boton).toBe('manipulation');
+    expect(sitios.enlace).toBe('manipulation');
+    expect(sitios.cuerpo).toBe('auto');
+  });
 });
 
 test.describe('reducir movimiento (informe 2, punto 1)', () => {
