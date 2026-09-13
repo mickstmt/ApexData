@@ -1109,3 +1109,39 @@ forma que ya tiene la barra de abajo de la app). Comprobado que **ningun boton
 baja de 44 px** en ninguna familia.
 
 **PENDIENTE**: que el usuario elija una letra.
+
+## 41. BUG · Quien sale desde el pit lane figuraba lider
+
+**Lo que vio el usuario** en la repeticion del GP de España 2026: BEA salio
+desde el pit lane y **el replay lo daba por lider desde el primer segundo**.
+
+**No era un fallo de la proyeccion.** El pit lane esta fisicamente por delante
+de la linea de meta, asi que proyectar ese coche sobre el trazado da un numero
+mayor que el de toda la parrilla. Medido: BEA proyectaba en el metro **549** con
+la parrilla entre el **23 y el 170**, y figuraba primero **doce segundos**,
+hasta que el resto le pasaba por encima.
+
+**Y ya pasaba antes, solo que un instante**, con el coche que arrancaba mas
+tarde: LAW en Italia, PER en Paises Bajos y Hungria. Por eso no se habia notado.
+
+**Lo que se descarto, con medida**:
+
+- **La parrilla oficial no lo dice**: en la base BEA tiene `grid = 22`, no el
+  `0` con el que otras fuentes marcan una salida desde el pit lane.
+- **Lo geometrico separa poco**: BEA estaba a **63 m** de la linea de carrera,
+  pero el peor caso normal de Italia estaba a **24 m**. Demasiado cerca para
+  fiarse de un umbral con una sola muestra.
+
+**Lo que si distingue** a ese coche no es donde esta, es que **no se ha movido**:
+espera en el pit lane a que pase la carrera. Y eso vale igual de bien para el que
+se cala en la parrilla, sin tener que saber de donde salio.
+
+Con una holgura de cinco segundos, porque en el instante cero no se ha movido
+nadie: quien arranca dentro de los cinco segundos del primero esta en la
+carrera, quien tarda veinte no. Medido en España, la parrilla se pone en marcha
+entre **1,3 y 3,0 s** y el del pit lane a los **20**.
+
+**Resultado**: BEA pasa de figurar lider doce segundos a salir **22.º desde el
+instante cero**, y su carrera no cambia — termina 16.º en el replay, que es su
+puesto oficial. En las otras tres carreras desaparece el falso lider del primer
+instante y nada mas cambia.

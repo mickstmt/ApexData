@@ -21,6 +21,7 @@ import {
   calcularProgreso,
   estaFuera,
   huecoEn,
+  arranques,
   ordenEn,
   paradasDeLaCarrera,
   prepararTrazado,
@@ -419,6 +420,13 @@ function Replay({
    */
   const paradas = useMemo(() => paradasDeLaCarrera(relojCarrera), [relojCarrera]);
 
+  /**
+   * Cuando arranca cada coche, para que el que sale del pit lane no figure
+   * lider. Se calcula una vez: recorre la linea de tiempo entera.
+   */
+  const arrancados = useMemo(() => arranques(progreso), [progreso]);
+
+
   const { filas, coches, lider } = useMemo(() => {
     /**
      * Desde que cae la bandera el orden ya no lo dan los metros recorridos.
@@ -429,7 +437,7 @@ function Replay({
      * ANT-RUS-VER-NOR y el último instante del replay daba VER-NOR-ANT-RUS.
      */
     const congelado = final !== null && k >= final.bandera;
-    const enPista = ordenEn(progreso, k);
+    const enPista = ordenEn(progreso, k, arrancados);
     const orden = congelado ? final.orden : enPista;
     const lider = orden[0] ?? 0;
 
@@ -487,7 +495,7 @@ function Replay({
 
     const coches = meta.drivers.map((d, i) => ({ color: colores[i], codigo: d.code, fuera: fuera[i] }));
     return { filas, coches, lider };
-  }, [progreso, k, t, meta.drivers, colores, paso, parada, relojCarrera, paradas, final]);
+  }, [progreso, k, t, meta.drivers, colores, paso, parada, relojCarrera, paradas, arrancados, final]);
 
   /**
    * El riel se reparte sobre `(count - 1) × paso`, no sobre `count × paso`.

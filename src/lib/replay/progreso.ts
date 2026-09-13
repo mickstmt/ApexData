@@ -163,11 +163,100 @@ export function calcularProgreso(bloque: BloqueDePosiciones, trazado: Trazado): 
   });
 }
 
-/** Los pilotos con posición en `k`, del primero al último. */
-export function ordenEn(progreso: Float64Array[], k: number): number[] {
+/**
+ * Cuánto tiene que avanzar un coche para decir que ya arrancó: un metro.
+ *
+ * Las distancias del trazado vienen en decímetros. El progreso ya es monótono,
+ * así que no hay ruido que filtrar; el umbral solo evita contar como arranque
+ * un temblor de la proyección.
+ */
+const ARRANQUE = 10;
+
+/**
+ * El instante en que cada coche se mueve por primera vez, o `-1` si nunca.
+ *
+ * ## Para qué
+ *
+ * Quien sale **desde el pit lane** aparecía **líder desde el primer segundo**.
+ * No es un fallo de la proyección: el pit lane está físicamente por delante de
+ * la línea de meta, así que proyectarlo sobre el trazado da un número mayor que
+ * el de toda la parrilla. Medido en España 2026: BEA salía proyectado en el
+ * metro **549** mientras la parrilla estaba entre el 23 y el 170, y figuraba
+ * primero durante los **doce primeros segundos**, hasta que el resto le pasaba
+ * por encima.
+ *
+ * Lo que sí distingue a ese coche no es dónde está, es que **no se ha movido**:
+ * espera en el pit lane a que pase la carrera. Y eso vale para el que se cala
+ * en la parrilla igual de bien, sin tener que saber de dónde salió.
+ *
+ * ## Por qué no se usó la parrilla oficial
+ *
+ * Porque no lo dice. En la base, BEA tiene `grid = 22`, no el `0` con el que
+ * otras fuentes marcan una salida desde el pit lane. Y lo geométrico —está 63 m
+ * fuera de la línea de carrera— separa, pero el peor caso normal de Italia
+ * estaba a 24 m: demasiado cerca para fiarse de un umbral con una sola muestra.
+ */
+export function arranques(progreso: Float64Array[]): Int32Array {
+  const salida = new Int32Array(progreso.length).fill(-1);
+
+  for (let i = 0; i < progreso.length; i++) {
+    const suyo = progreso[i];
+    let partida = Number.NaN;
+
+    for (let k = 0; k < suyo.length; k++) {
+      const p = suyo[k];
+      if (Number.isNaN(p)) continue;
+      if (Number.isNaN(partida)) {
+        partida = p;
+        continue;
+      }
+      if (p - partida > ARRANQUE) {
+        salida[i] = k;
+        break;
+      }
+    }
+  }
+
+  return salida;
+}
+
+/**
+ * Los pilotos con posición en `k`, del primero al último.
+ *
+ * Con `arranques`, quien todavía no se ha movido va **detrás** de quien sí,
+ * pase lo que pase con los metros. Es lo que impide que el que sale del pit
+ * lane figure líder: está más adelante en el trazado, pero no ha empezado a
+ * correr. Antes de que arranque nadie no cambia nada — están todos igual.
+ */
+export function ordenEn(progreso: Float64Array[], k: number, arrancados?: Int32Array): number[] {
   const orden: number[] = [];
   for (let i = 0; i < progreso.length; i++) if (!Number.isNaN(progreso[i][k])) orden.push(i);
-  orden.sort((a, b) => progreso[b][k] - progreso[a][k]);
+
+  if (!arrancados) {
+    orden.sort((a, b) => progreso[b][k] - progreso[a][k]);
+    return orden;
+  }
+
+  /**
+   * Cuenta como «ya va» quien arranca dentro de los cinco segundos siguientes.
+   *
+   * Sin esta holgura, en el primer instante no se ha movido nadie y el
+   * desempate vuelve a los metros — con el del pit lane otra vez delante.
+   * Medido en España 2026: la parrilla se pone en marcha entre 1,3 y 3,0 s, y
+   * el del pit lane a los **20**. Cinco segundos separa de sobra las dos cosas
+   * y dice lo que hay que decir: quien sale con la parrilla está en la carrera
+   * aunque su coche aún no se haya movido; quien espera en el pit lane, no.
+   */
+  const GRACIA = 20;
+  const yaVa = (i: number) => arrancados[i] >= 0 && arrancados[i] <= k + GRACIA;
+
+  orden.sort((a, b) => {
+    const va = yaVa(a);
+    const vb = yaVa(b);
+    if (va !== vb) return va ? -1 : 1;
+    return progreso[b][k] - progreso[a][k];
+  });
+
   return orden;
 }
 
