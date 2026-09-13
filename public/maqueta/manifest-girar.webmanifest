@@ -1,0 +1,10 @@
+{
+  "name": "MAQUETA · girar",
+  "short_name": "GIRAR",
+  "description": "Maqueta temporal para decidir que pasa al expandir el replay en vertical.",
+  "start_url": "/maqueta/girar.html",
+  "scope": "/maqueta/",
+  "display": "standalone",
+  "background_color": "#0B0B0F",
+  "theme_color": "#0B0B0F"
+}

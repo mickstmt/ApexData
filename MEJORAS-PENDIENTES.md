@@ -971,6 +971,16 @@ girando, texto al lado, **animado** —las flechas parpadean unas cuatro veces y
 el telefono gira—, ocupando la pantalla. Y el boton de expandir **se queda
 visible** en vertical, pero tiene que ser pulsable.
 
+**MAQUETA LISTA (2026-09-13)**: `/maqueta/girar.html`, instalable y sin
+JavaScript. Trae las tres salidas y el aviso ya animado —el telefono con dos
+flechas que parpadean cuatro veces y luego gira—, ademas del replay girado por
+CSS para poder juzgar si se puede usar asi de verdad.
+
+**Hay que probarla DOS VECES**: una con el bloqueo de rotacion apagado y otra
+con el puesto. Con el bloqueo puesto es donde la opcion 1 deja tirado al
+usuario, que es justo lo que hay que decidir. En la opcion 3, «Girar de todos
+modos» aparece a los cuatro segundos de no girar.
+
 **PENDIENTE**: que el usuario elija 1, 2 o 3.
 
 ## 33. BUG · Falta `env(safe-area-inset-top)` en la pantalla completa
