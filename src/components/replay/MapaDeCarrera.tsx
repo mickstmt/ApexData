@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { posicionEn, type BloqueDePosiciones } from '@/lib/replay/bloque';
 import { type ClaseDeEstado } from '@/lib/replay/estados';
 import type { Trazado } from '@/lib/replay/progreso';
@@ -34,6 +34,12 @@ export interface CocheEnElMapa {
   fuera: boolean;
 }
 
+/** Cuánto dura cada anillo del abandono, y cuántos van encadenados. */
+const PULSO_MS = 900;
+const PULSOS = 3;
+/** Lo que tarda el trazado en engordar y volver, al cambiar de bandera. */
+const LATIDO_MS = 900;
+
 const PADDING = 22;
 /** Radio de acierto al tocar, de dedo y no de punto. */
 const RADIO_DE_TOQUE = 22;
@@ -46,6 +52,8 @@ export function MapaDeCarrera({
   estado,
   paleta,
   elegido,
+  lider,
+  reproduciendo,
   onElegir,
   suscribir,
   kRef,
@@ -61,6 +69,24 @@ export function MapaDeCarrera({
   /** Los colores del tema vigente. `null` hasta que hay navegador que leer. */
   paleta: PaletaDelReplay | null;
   elegido: number | null;
+  /**
+   * Quién va primero, para el aro que lo marca.
+   *
+   * Con la carrera avanzada, entre doblados y rezagados no se sabe quién lidera
+   * —«parece que un doblado pelea con el de delante cuando en realidad ya le
+   * sacan más de una vuelta»—. El aro va en el **acento** y no en la tinta
+   * principal a propósito: la tinta ya es el aro del coche elegido, y dos cosas
+   * distintas no pueden tener el mismo dibujo.
+   */
+  lider: number | null;
+  /**
+   * Si el replay está corriendo hacia delante.
+   *
+   * El pulso del abandono y el aviso de DNF solo saltan entonces. Arrastrando
+   * el scrubber se cruzan veinte abandonos en dos segundos, y veinte avisos
+   * seguidos no informan de nada: convierten una señal en ruido.
+   */
+  reproduciendo: boolean;
   onElegir: (piloto: number) => void;
   suscribir: (oyente: (k: number) => void) => () => void;
   kRef: React.MutableRefObject<number>;
@@ -82,11 +108,47 @@ export function MapaDeCarrera({
   const ultimoEstado = useRef(estado);
   const ultimoElegido = useRef(elegido);
   const ultimosCoches = useRef(coches);
+  const ultimoLider = useRef(lider);
+
+  /** Índice del coche → cuándo empezó su pulso, en tiempo de reloj de pared. */
+  const pulsos = useRef(new Map<number, number>());
+  /** Cuándo cambió la bandera, para el latido del trazado. */
+  const cambioDeBandera = useRef(0);
+
+  /**
+   * El aviso de «DNF», con su número de pase.
+   *
+   * El contador no es decorativo: en una salida con varios coches fuera a la
+   * vez el texto es el mismo, y sin algo que cambie la animación no se
+   * reinicia y el segundo abandono se come al primero.
+   */
+  const [aviso, setAviso] = useState<{ texto: string; pase: number } | null>(null);
+
+  useEffect(() => {
+    if (!aviso) return;
+    const temporizador = setTimeout(() => setAviso(null), 1400);
+    return () => clearTimeout(temporizador);
+  }, [aviso]);
   useEffect(() => {
     ultimoEstado.current = estado;
+    // Quién acaba de abandonar: los que pasan de dentro a fuera en este cambio.
+    const antes = ultimosCoches.current;
+    if (reproduciendo && antes.length === coches.length) {
+      for (let i = 0; i < coches.length; i++) {
+        if (coches[i].fuera && !antes[i].fuera) {
+          pulsos.current.set(i, performance.now());
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setAviso((previo) => ({ texto: 'DNF', pase: (previo?.pase ?? 0) + 1 }));
+        }
+      }
+    }
+
+    if (ultimoEstado.current !== estado) cambioDeBandera.current = performance.now();
+
     ultimoElegido.current = elegido;
     ultimosCoches.current = coches;
-  }, [estado, elegido, coches]);
+    ultimoLider.current = lider;
+  }, [estado, elegido, coches, lider, reproduciendo]);
 
   /** Coordenadas ya giradas: FastF1 las graba en la orientación del GPS. */
   const girar = useMemo(() => {
@@ -120,7 +182,21 @@ export function MapaDeCarrera({
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.clearRect(0, 0, w, h);
 
-      ctx.lineWidth = Math.max(6, Math.min(10, w / 60));
+      /**
+       * El latido del trazado al cambiar de bandera.
+       *
+       * El color ya estaba y el usuario dijo que le gusta; lo que faltaba era
+       * notar **el instante** del cambio. Mirando la torre, hoy te lo pierdes.
+       * Engorda y adelgaza una vez, y se acabó.
+       */
+      const base = Math.max(6, Math.min(10, w / 60));
+      const desdeElCambio = performance.now() - cambioDeBandera.current;
+      const latido =
+        cambioDeBandera.current > 0 && desdeElCambio < LATIDO_MS
+          ? Math.sin(Math.PI * (desdeElCambio / LATIDO_MS)) * base * 0.85
+          : 0;
+
+      ctx.lineWidth = base + latido;
       ctx.lineJoin = 'round';
       ctx.strokeStyle = paleta.estados[ultimoEstado.current];
       ctx.stroke(p.pista);
@@ -136,6 +212,31 @@ export function MapaDeCarrera({
         const sx = p.px(x), sy = p.py(y);
         const coche = enPista[i];
 
+        /**
+         * Los pulsos del abandono: tres anillos ENCADENADOS.
+         *
+         * Cada uno empieza cuando el anterior termina. La primera versión los
+         * solapaba y el usuario dijo que «prácticamente salen al mismo tiempo»
+         * — se leían como uno más gordo en vez de como tres.
+         */
+        const empezo = pulsos.current.get(i);
+        if (empezo !== undefined) {
+          const t = performance.now() - empezo;
+          if (t > PULSOS * PULSO_MS) pulsos.current.delete(i);
+
+          for (let n = 0; n < PULSOS; n++) {
+            const tn = t - n * PULSO_MS;
+            if (tn < 0 || tn >= PULSO_MS) continue;
+            ctx.beginPath();
+            ctx.arc(sx, sy, radio + (tn / PULSO_MS) * radio * 7, 0, Math.PI * 2);
+            ctx.strokeStyle = paleta.estados.roja;
+            ctx.lineWidth = 3;
+            ctx.globalAlpha = (1 - tn / PULSO_MS) * 0.9;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+
         ctx.globalAlpha = coche.fuera ? 0.35 : 1;
         ctx.beginPath();
         ctx.arc(sx, sy, resaltado ? radio + 2 : radio, 0, Math.PI * 2);
@@ -147,6 +248,15 @@ export function MapaDeCarrera({
         // solo funcione en uno de los dos temas.
         ctx.strokeStyle = resaltado ? paleta.texto : paleta.fondo;
         ctx.stroke();
+
+        // El aro del líder, por fuera del suyo propio.
+        if (i === ultimoLider.current && !coche.fuera) {
+          ctx.beginPath();
+          ctx.arc(sx, sy, radio + 4, 0, Math.PI * 2);
+          ctx.strokeStyle = paleta.acento;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
 
         if (resaltado) {
           // Sin `var(...)`: un canvas no resuelve variables CSS y la
@@ -237,7 +347,25 @@ export function MapaDeCarrera({
   };
 
   return (
-    <div ref={cajaRef} className={alto === 'relleno' ? 'h-full w-full' : 'w-full'}>
+    <div
+      ref={cajaRef}
+      className={`relative ${alto === 'relleno' ? 'h-full w-full' : 'w-full'}`}
+    >
+      {/* El mismo lenguaje que el «+10 s» de los mandos: una píldora en el
+          centro que dice que acaba de pasar algo. La app ya lo enseña, así que
+          un abandono no necesita inventar una señal nueva. */}
+      {aviso && (
+        <span
+          key={aviso.pase}
+          data-dnf
+          role="status"
+          className="replay-destello pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full px-5 py-2.5 font-mono text-xl font-bold tracking-[.04em] text-white"
+          style={{ background: 'var(--replay-roja)' }}
+        >
+          {aviso.texto}
+        </span>
+      )}
+
       <canvas
         ref={canvasRef}
         role="img"

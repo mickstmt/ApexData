@@ -98,16 +98,16 @@ canvas { width: 100%; max-width: 520px; height: 300px; touch-action: none; }
 
   <div class="mandos">
     <span class="etq">11 · Cómo se marca el líder</span>
-    <button type="button" data-g="lider" data-v="nada" aria-pressed="true">Como hoy (nada)</button>
-    <button type="button" data-g="lider" data-v="aro">Aro de acento</button>
+    <button type="button" data-g="lider" data-v="nada">Como hoy (nada)</button>
+    <button type="button" data-g="lider" data-v="aro" aria-pressed="true">Aro de acento</button>
     <button type="button" data-g="lider" data-v="galon">Galón encima</button>
     <button type="button" data-g="lider" data-v="estela">Estela detrás</button>
   </div>
 
   <div class="mandos">
     <span class="etq">12 · Cómo se abandona</span>
-    <button type="button" data-g="fuera" data-v="hoy" aria-pressed="true">Como hoy (se apaga)</button>
-    <button type="button" data-g="fuera" data-v="pulso">Pulso y se queda apagado</button>
+    <button type="button" data-g="fuera" data-v="hoy">Como hoy (se apaga)</button>
+    <button type="button" data-g="fuera" data-v="pulso" aria-pressed="true">Pulso y se queda apagado</button>
     <button type="button" data-g="fuera" data-v="cruz">Pulso y queda una ✕</button>
     <button type="button" data-g="fuera" data-v="quita">Pulso y desaparece</button>
     <button type="button" class="accion" id="abandona">Abandona un coche</button>
@@ -115,22 +115,22 @@ canvas { width: 100%; max-width: 520px; height: 300px; touch-action: none; }
 
   <div class="mandos">
     <span class="etq">12 · Cuántos pulsos</span>
-    <button type="button" data-g="pulsos" data-v="1" aria-pressed="true">Uno</button>
+    <button type="button" data-g="pulsos" data-v="1">Uno</button>
     <button type="button" data-g="pulsos" data-v="2">Dos</button>
-    <button type="button" data-g="pulsos" data-v="3">Tres</button>
+    <button type="button" data-g="pulsos" data-v="3" aria-pressed="true">Tres</button>
   </div>
 
   <div class="mandos">
     <span class="etq">12 · Aviso en el centro, como el «+10 s» de los mandos</span>
-    <button type="button" data-g="aviso" data-v="no" aria-pressed="true">Ninguno</button>
-    <button type="button" data-g="aviso" data-v="dnf">«DNF»</button>
+    <button type="button" data-g="aviso" data-v="no">Ninguno</button>
+    <button type="button" data-g="aviso" data-v="dnf" aria-pressed="true">«DNF»</button>
     <button type="button" data-g="aviso" data-v="quien">«LEC · ABANDONA»</button>
   </div>
 
   <div class="mandos">
     <span class="etq">12 · Cómo se avisa de una bandera</span>
-    <button type="button" data-g="bandera" data-v="hoy" aria-pressed="true">Como hoy (pista pintada)</button>
-    <button type="button" data-g="bandera" data-v="latido">Pintada + latido al cambiar</button>
+    <button type="button" data-g="bandera" data-v="hoy">Como hoy (pista pintada)</button>
+    <button type="button" data-g="bandera" data-v="latido" aria-pressed="true">Pintada + latido al cambiar</button>
     <button type="button" class="accion" id="amarilla">Bandera amarilla</button>
     <button type="button" class="accion" id="verde">Vuelta a verde</button>
   </div>
@@ -185,7 +185,8 @@ canvas { width: 100%; max-width: 520px; height: 300px; touch-action: none; }
     };
   });
 
-  var opciones = { lider: 'nada', fuera: 'hoy', bandera: 'hoy', pulsos: '1', aviso: 'no' };
+  // Lo elegido por el usuario, ya puesto: así el mockup abre en lo decidido.
+  var opciones = { lider: 'aro', fuera: 'pulso', bandera: 'latido', pulsos: '3', aviso: 'dnf' };
   var estado = 'libre';
   var cambioDeEstado = 0;
 
@@ -256,14 +257,15 @@ canvas { width: 100%; max-width: 520px; height: 300px; touch-action: none; }
 
       // --- pulsos del abandono ---
       //
-      // Anillos escalonados y no uno repetido: salen con un tercio de pulso de
-      // diferencia, así que el ojo lee una onda que se propaga en vez de un
-      // parpadeo que insiste.
+      // ENCADENADOS: cada uno empieza cuando el anterior ha terminado. La
+      // primera versión los solapaba a un tercio de pulso y el usuario dijo que
+      // «prácticamente salen al mismo tiempo» — tenía razón, se leían como uno
+      // solo más gordo en vez de como tres.
       if (c.fuera && opciones.fuera !== 'hoy') {
         var cuantos = Number(opciones.pulsos);
         var t = ahora - c.salio;
         for (var n = 0; n < cuantos; n++) {
-          var tn = t - n * 320;
+          var tn = t - n * 900;
           if (tn < 0 || tn >= 900) continue;
           ctx.beginPath();
           ctx.arc(x, y, radio + (tn / 900) * 46, 0, Math.PI * 2);

@@ -26,6 +26,14 @@ export interface PaletaDelReplay {
   fondo: string;
   /** La tinta principal: el aro y el código del coche elegido. */
   texto: string;
+  /**
+   * El acento: el aro que marca al líder.
+   *
+   * Distinto de `texto` a propósito. La tinta ya es el aro del coche que tú
+   * eliges, y si el líder llevara el mismo dibujo serían dos cosas distintas
+   * contadas igual — que es justo la confusión que el aro venía a quitar.
+   */
+  acento: string;
   /** El color de la pista en cada estado de bandera. */
   estados: Record<ClaseDeEstado, string>;
 }
@@ -61,6 +69,7 @@ function leerTema(oscuro: boolean): TemaDelReplay {
     paleta: {
       fondo: leer('--replay-fondo'),
       texto: leer('--replay-texto'),
+      acento: leer('--replay-acento'),
       estados: {
         libre: leer('--replay-trazado'),
         amarilla: leer('--replay-amarilla'),

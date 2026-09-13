@@ -102,6 +102,47 @@ async function simularCarrera(page: Page) {
   );
 }
 
+/**
+ * Una carrera larga con un coche que se para de verdad.
+ *
+ * `estaFuera` exige **240 instantes quieto** —un minuto a 4 Hz— antes de dar a
+ * alguien por retirado, y la carrera de juguete de arriba solo tiene 120. Sin
+ * un escenario propio, el abandono no puede ocurrir y las pruebas del punto 12
+ * no probarían nada.
+ */
+const COUNT_LARGO = 600;
+const QUIEN_ABANDONA = 3;
+const INSTANTE_EN_QUE_PARA = 100;
+
+function metaLarga() {
+  return { ...meta(), timeline: { start: 0, step: PASO, count: COUNT_LARGO } };
+}
+
+function bloqueConAbandono(): Buffer {
+  const datos = new Int16Array(PILOTOS.length * 2 * COUNT_LARGO);
+
+  PILOTOS.forEach((_, i) => {
+    for (let k = 0; k < COUNT_LARGO; k++) {
+      // El que abandona deja de avanzar; los demás siguen dando vueltas.
+      const avance = i === QUIEN_ABANDONA ? Math.min(k, INSTANTE_EN_QUE_PARA) : k;
+      const d = avance * 40 - i * 150;
+      const a = d / RADIO;
+      datos[i * 2 * COUNT_LARGO + k] = Math.round(Math.cos(a) * RADIO);
+      datos[i * 2 * COUNT_LARGO + COUNT_LARGO + k] = Math.round(Math.sin(a) * RADIO);
+    }
+  });
+
+  return Buffer.from(datos.buffer);
+}
+
+async function simularCarreraConAbandono(page: Page) {
+  await page.route('**/api/positions/**/meta', (route) => route.fulfill({ json: metaLarga() }));
+  await page.route(
+    (url) => /\/api\/positions\/[^/]+\/[^/]+\/[RS]$/.test(url.pathname),
+    (route) => route.fulfill({ body: bloqueConAbandono(), contentType: 'application/octet-stream' })
+  );
+}
+
 const REPLAY = '/results/2026/12/replay';
 
 for (const [nombre, viewport] of [
@@ -525,6 +566,85 @@ test.describe('el replay sigue el tema', () => {
  * el desplazamiento de la torre es la corrección del punto 26 — antes eran la
  * misma acción y se estorbaban.
  */
+test.describe('el mapa cuenta lo que pasa', () => {
+  // Tumbado: desde el punto 24 el scrubber vive en la pantalla completa, y
+  // estas pruebas lo necesitan para colocarse justo antes del abandono.
+  test.use({ viewport: TUMBADO });
+
+  test('avisa con «DNF» cuando alguien abandona, reproduciendo', async ({ page }) => {
+    // Lo reportado: «Leclerc abandona en la vuelta 3 y no se aprecia, el punto
+    // se queda parado y ya». El aviso usa el mismo lenguaje que el «+10 s» de
+    // los mandos, que la app ya enseña.
+    await simularCarreraConAbandono(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    // Justo antes de que se le dé por retirado: 240 instantes quieto desde que
+    // paró en el 100.
+    await moverScrubber(page, INSTANTE_EN_QUE_PARA + 235);
+    await expect(page.locator('[data-dnf]')).toHaveCount(0);
+
+    await visible(page, 'Reproducir').click();
+    await expect(page.locator('[data-dnf]')).toHaveText('DNF', { timeout: 10_000 });
+
+    // Y se va solo: es un aviso, no una etiqueta.
+    await expect(page.locator('[data-dnf]')).toHaveCount(0, { timeout: 5_000 });
+  });
+
+  test('arrastrando el scrubber NO salta el aviso', async ({ page }) => {
+    // Cruzando la carrera con el dedo se pasaría por veinte abandonos en dos
+    // segundos, y veinte avisos seguidos no informan: convierten una señal en
+    // ruido. Por eso solo salta reproduciendo hacia delante.
+    await simularCarreraConAbandono(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    await moverScrubber(page, INSTANTE_EN_QUE_PARA + 235);
+    await moverScrubber(page, INSTANTE_EN_QUE_PARA + 260);
+    await moverScrubber(page, COUNT_LARGO - 1);
+    await page.waitForTimeout(400);
+
+    await expect(page.locator('[data-dnf]')).toHaveCount(0);
+  });
+
+  test('el líder lleva su aro, en el acento y no en la tinta', async ({ page }) => {
+    // Se mira el lienzo: con la carrera avanzada, entre doblados no se sabía
+    // quién iba primero. El aro va en el acento porque la tinta ya es el aro
+    // del coche elegido, y dos cosas distintas no pueden dibujarse igual.
+    await simularCarreraConAbandono(page);
+    await page.goto(REPLAY);
+    await expect(page.locator('canvas[aria-label*="Mapa de la carrera"]').first()).toBeVisible({
+      timeout: 20_000,
+    });
+    await moverScrubber(page, 300);
+    await page.waitForTimeout(300);
+
+    const hayAcento = await page.evaluate(() => {
+      const lienzo = document.querySelector('canvas[aria-label*="Mapa"]') as HTMLCanvasElement;
+      const ctx = lienzo.getContext('2d')!;
+      const { data } = ctx.getImageData(0, 0, lienzo.width, lienzo.height);
+
+      // El acento del replay: #CCFF00 en oscuro, #526600 en claro.
+      const acento = getComputedStyle(document.documentElement)
+        .getPropertyValue('--replay-acento')
+        .trim();
+      const r = parseInt(acento.slice(1, 3), 16);
+      const g = parseInt(acento.slice(3, 5), 16);
+      const b = parseInt(acento.slice(5, 7), 16);
+
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] < 200) continue;
+        if (Math.abs(data[i] - r) < 24 && Math.abs(data[i + 1] - g) < 24 && Math.abs(data[i + 2] - b) < 24) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    expect(hayAcento, 'el líder no lleva aro de acento en el mapa').toBe(true);
+  });
+});
+
 test.describe('el mapa se encoge con su tirador', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

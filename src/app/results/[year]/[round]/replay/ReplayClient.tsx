@@ -680,6 +680,8 @@ function Replay({
       estado={estado}
       paleta={tema?.paleta ?? null}
       elegido={elegido}
+      lider={lider}
+      reproduciendo={reloj.reproduciendo}
       onElegir={elegir}
       suscribir={reloj.suscribir}
       kRef={reloj.kRef}
