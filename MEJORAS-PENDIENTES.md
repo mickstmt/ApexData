@@ -302,8 +302,23 @@ subtitulo; en `src/lib/push/` no aparece la cadena. Todo apunta a que **iOS lo a
 solo** en los avisos web push de una PWA, como fuente del aviso. Si es asi no se puede
 quitar desde el codigo y hay que decirselo al usuario claramente en vez de prometerlo.
 
-**A verificar en el GO**: confirmar que ningun payload nuestro lleva subtitulo y que es
-iOS quien lo pone.
+**VERIFICADO (2026-09-12). NO SE PUEDE QUITAR: no es nuestro.** Comprobado, no supuesto:
+
+1. `public/sw.js:265` llama a `showNotification(aviso.titulo, { body, icon, badge, tag,
+   data })`. **No hay ningun campo de subtitulo**, y el estandar de la Notification API
+   tampoco tiene uno: no existe la opcion.
+2. Lo que sale del servidor es `JSON.stringify(aviso)` (`src/lib/push.ts:117`), y `aviso`
+   solo tiene `titulo`, `cuerpo`, `etiqueta` y `url` (`src/lib/push/redaccion.ts`).
+3. La cadena **«from ApexData» no aparece en NINGUN archivo del repositorio** salvo en
+   esta linea del plan.
+
+Asi que lo pone iOS, como fuente del aviso, igual que hace con las apps nativas. La
+unica palanca que existe es el **nombre de la PWA** (`public/manifest.webmanifest`:
+`"name"` y `"short_name"`, hoy «ApexData»), que es de donde iOS saca ese texto — pero
+cambiarlo cambia tambien el nombre del icono en la pantalla de inicio, asi que no es
+«quitarlo», es «llamarse de otra forma».
+
+**Decision pendiente del usuario**: dejarlo como esta (recomendado) o renombrar la app.
 
 # ---- Tanda del replay en el telefono (iOS y Android) ----
 # Referencias: capturas del usuario, GP de Italia 2026, vuelta 53/53, 8:26-8:30.
