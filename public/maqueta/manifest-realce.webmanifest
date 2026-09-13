@@ -1,0 +1,11 @@
+{
+  "name": "MAQUETA · realce",
+  "short_name": "REALCE",
+  "description": "Maqueta temporal para elegir como enciende el realce las pestañas que cruza.",
+  "start_url": "/maqueta/realce.html",
+  "scope": "/maqueta/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B0B0F",
+  "theme_color": "#0B0B0F"
+}
