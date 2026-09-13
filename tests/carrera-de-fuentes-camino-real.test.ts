@@ -44,7 +44,16 @@ vi.mock('@/services', () => ({
   fastf1Client: {
     getSessionInfo: async () => {
       await new Promise((r) => setTimeout(r, 300)); // lento, como FastF1
-      return { results: [{}] };
+      // Con posición y código: una fila vacía ya NO cuenta como tener datos,
+      // porque en prácticas FastF1 devuelve justo eso —las 22 filas con la
+      // posición a nulo— y contarlas era medir «la sesión carga», no «hay
+      // clasificación».
+      return {
+        results: [
+          { Position: 1, Abbreviation: 'NOR', FullName: 'Lando Norris', Q3: '1:31.824' },
+          { Position: 2, Abbreviation: 'ANT', FullName: 'Kimi Antonelli', Q3: '1:31.835' },
+        ],
+      };
     },
   },
 }));

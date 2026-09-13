@@ -541,6 +541,25 @@ dispositivo.
 >   siguen llegando porque OpenF1 es ajeno. De ahi el respaldo.
 > - Son tres medidas limpias de UN fin de semana y UN circuito.
 >
+> **HECHO A MEDIAS (2026-09-13), y a proposito.** Los avisos preguntan primero
+> a FastF1 y dejan OpenF1 de respaldo, pero **solo para carrera, sprint y
+> clasificacion**. Las practicas siguen por OpenF1, y no por pereza:
+>
+> **Hallazgo que corrige al propio experimento**: comprobado contra el servicio
+> con la FP1 de España, en practicas FastF1 devuelve las 22 filas **con
+> `Position` a nulo y sin tiempos**. No hay clasificacion que leer. La sonda
+> contaba `results.length`, asi que su medida de las practicas decia «la sesion
+> ya carga», no «ya hay clasificacion». La sonda queda corregida para exigir
+> filas clasificadas, y a partir de ahora esa columna mide lo que dice.
+>
+> Verificado levantando el servicio de telemetria en local y pidiendole las tres
+> sesiones de España. El texto que sale por el camino nuevo es **identico** al
+> que le llego al usuario por OpenF1 —«Ganó Antonelli (Mercedes). Detrás,
+> Verstappen y Norris.»— pero 37 minutos antes.
+>
+> Lo que NO se borra todavia: `carrera-de-fuentes.ts` sigue, porque las
+> practicas siguen sin decidir y ahora la sonda por fin mide bien.
+
 > Al cerrarlo se borra `src/lib/push/carrera-de-fuentes.ts` y su tabla, que se
 > escribieron para desaparecer.
 

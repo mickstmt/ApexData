@@ -3,10 +3,22 @@ import { avisarACadaUno, type DestinoDeAviso } from '@/lib/push';
 import { clasificacionDeSesion, sesionesDeTemporada } from '@/services/openf1/client';
 import type { FilaDeSesion, SesionOpenF1 } from '@/services/openf1/tipos';
 
-import { granPremioDe } from './gran-premio';
-import { estaEnPunto } from './ventana';
+import { fastf1Client } from '@/services';
+import { isTelemetryServiceConfigured } from '@/services/fastf1/client';
+import type { SessionType } from '@/types';
 
-export { ESPERA_MINUTOS, NADA_ANTES_DE, VENTANA_HORAS, estaEnPunto } from './ventana';
+import { granPremioDe } from './gran-premio';
+import { filasDeFastF1 } from './clasificacion-fastf1';
+import { sePuedeMirar, ESPERA_MINUTOS as ESPERA_OPENF1 } from './ventana';
+
+export {
+  ESPERA_MINUTOS,
+  ESPERA_FASTF1,
+  NADA_ANTES_DE,
+  VENTANA_HORAS,
+  estaEnPunto,
+  sePuedeMirar,
+} from './ventana';
 
 import {
   SESIONES,
@@ -104,8 +116,10 @@ export async function avisarDeSesionesTerminadas(opciones?: {
 
   const todas = opciones?.sesiones ?? (await sesionesDeTemporada(ahora.getFullYear()));
 
+  // Se mira desde la espera CORTA, que es la que le vale a FastF1. Lo que no
+  // pueda dar FastF1 todavía se dejará para cuando OpenF1 abra su ventana.
   const candidatas = todas.filter(
-    (s) => SESIONES[s.session_name] !== undefined && estaEnPunto(s, ahora)
+    (s) => SESIONES[s.session_name] !== undefined && sePuedeMirar(s, ahora)
   );
 
   if (!candidatas.length) return informe;
@@ -130,14 +144,59 @@ export async function avisarDeSesionesTerminadas(opciones?: {
     const sesion: Sesion = SESIONES[cruda.session_name];
     const etiqueta = `${cruda.location} · ${sesion.nombre}`;
 
-    let filas: FilaDeSesion[];
+    const carreraDeLaBase = await granPremioDe(cruda);
 
-    try {
-      filas = await clasificacionDeSesion(cruda.session_key);
-    } catch (error) {
-      console.error(`[avisos] No se pudo leer ${etiqueta}:`, error);
-      informe.esperando.push(etiqueta);
-      continue;
+    /**
+     * FastF1 primero, OpenF1 de respaldo.
+     *
+     * Medido en el GP de España 2026: la carrera estaba en FastF1 a los
+     * **9m 57s** y en OpenF1 a los **46m 44s**. Y los 35 minutos de espera que
+     * lleva `ventana.ts` son una restricción comercial de OpenF1 —cobran los
+     * datos en directo—, no de FastF1.
+     *
+     * El respaldo no es cortesía: en prácticas FastF1 devuelve las filas
+     * vacías, sin posición, y el servicio de telemetría es nuestro y se puede
+     * caer. Cuando no sirve, esto se comporta exactamente como antes.
+     */
+    let filas: FilaDeSesion[] | null = null;
+
+    // A FastF1 no se le pregunta por prácticas: comprobado contra el servicio,
+    // devuelve las 22 filas con la posición a nulo. Preguntar igualmente le
+    // costaría al servicio cargar la sesión entera —17 segundos medidos, y solo
+    // carga una a la vez— para nada, y encima cada cinco minutos.
+    const fastf1Puede = sesion.tipo !== 'practica';
+
+    if (carreraDeLaBase && fastf1Puede && isTelemetryServiceConfigured) {
+      try {
+        const info = await fastf1Client.getSessionInfo(
+          carreraDeLaBase.year,
+          String(carreraDeLaBase.round),
+          sesion.codigo as SessionType
+        );
+        filas = filasDeFastF1(info.results, sesion.tipo === 'carrera' || sesion.tipo === 'sprint');
+      } catch {
+        // El 404 de una sesión sin publicar es la respuesta esperada, no un
+        // fallo: dice «todavía no». Se sigue por OpenF1.
+        filas = null;
+      }
+    }
+
+    if (!filas) {
+      // Antes de que OpenF1 abra su ventana no hay nada que pedirle: se deja
+      // para la vuelta siguiente en vez de gastar una petición vacía.
+      const minutos = (ahora.getTime() - new Date(cruda.date_end).getTime()) / 60_000;
+      if (minutos < ESPERA_OPENF1) {
+        informe.esperando.push(etiqueta);
+        continue;
+      }
+
+      try {
+        filas = await clasificacionDeSesion(cruda.session_key);
+      } catch (error) {
+        console.error(`[avisos] No se pudo leer ${etiqueta}:`, error);
+        informe.esperando.push(etiqueta);
+        continue;
+      }
     }
 
     // Terminada pero sin publicar todavía. No se marca: la próxima vuelta lo
@@ -147,7 +206,7 @@ export async function avisarDeSesionesTerminadas(opciones?: {
       continue;
     }
 
-    const carrera = await granPremioDe(cruda);
+    const carrera = carreraDeLaBase;
 
     if (!carrera) {
       console.warn(`[avisos] ${etiqueta} no cuadra con ninguna carrera de la base; se salta.`);

@@ -7,6 +7,7 @@ import type { SessionType } from '@/types';
 
 import { granPremioDe } from './gran-premio';
 import { SESIONES } from './redaccion';
+import { filasDeFastF1 } from './clasificacion-fastf1';
 
 /**
  * Quién publica antes: OpenF1 o FastF1.
@@ -178,11 +179,21 @@ async function sondearFastF1(sesion: SesionOpenF1): Promise<Respuesta> {
     const info = await fastf1Client.getSessionInfo(carrera.year, String(carrera.round), tipo, {
       sondeo: true,
     });
+    /**
+     * Filas CON clasificación, no filas a secas.
+     *
+     * Esto contaba `info.results.length`, y ahí estaba el error: en prácticas
+     * FastF1 devuelve las 22 filas con `Position` a nulo y sin tiempos.
+     * Comprobado contra el servicio con la FP1 de España 2026. O sea que la
+     * medida de las prácticas decía «la sesión ya carga», no «ya hay
+     * clasificación», que es la pregunta del experimento.
+     */
+    const utiles = filasDeFastF1(info.results, false);
     const filas = info.results?.length ?? 0;
 
-    return filas > 0
-      ? { hayDatos: true, nota: `${filas} filas` }
-      : { hayDatos: false, nota: 'cargó sin resultados' };
+    return utiles
+      ? { hayDatos: true, nota: `${utiles.length} clasificados` }
+      : { hayDatos: false, nota: filas ? `${filas} filas sin clasificar` : 'cargó sin resultados' };
   } catch (error) {
     // El 404 del servicio es la respuesta esperada mientras no hay datos: dice
     // «todavía no», no «algo se rompió».

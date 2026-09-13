@@ -20,6 +20,24 @@ import type { SesionOpenF1 } from '@/services/openf1/tipos';
 export const ESPERA_MINUTOS = 35;
 
 /**
+ * Y cuánto se espera cuando los datos los puede dar FastF1.
+ *
+ * Cinco minutos. FastF1 no tiene ventana de pago, así que la espera larga de
+ * arriba no le aplica: es una restricción comercial de OpenF1, no una física.
+ *
+ * Medido durante el GP de España 2026, desde la bandera hasta tener los datos:
+ * la carrera, **9m 57s en FastF1 contra 46m 44s en OpenF1**. El aviso de esa
+ * carrera le llegó al usuario cincuenta minutos después de terminar — 35 de
+ * espera, 12 de OpenF1 publicando, y el barrido. Por ese camino habrían sido
+ * unos doce.
+ *
+ * Cinco y no cero: antes de eso no hay nada publicado en ninguna fuente, y cada
+ * sondeo a FastF1 obliga al servicio a cargar la sesión entera —17 segundos
+ * medidos— y solo carga una a la vez.
+ */
+export const ESPERA_FASTF1 = 5;
+
+/**
  * Hasta cuándo se mira atrás.
  *
  * Dos días. Si el servidor estuvo caído todo un domingo, al arrancar todavía
@@ -57,4 +75,21 @@ export function estaEnPunto(sesion: SesionOpenF1, ahora: Date): boolean {
   const minutos = (ahora.getTime() - fin) / 60_000;
 
   return minutos >= ESPERA_MINUTOS && minutos <= VENTANA_HORAS * 60;
+}
+
+/**
+ * ¿Ya se puede siquiera mirar? Con la espera corta, la de FastF1.
+ *
+ * Separado de `estaEnPunto` a propósito: una sesión puede entrar por aquí y
+ * todavía no tener nada que pedirle a OpenF1. Quien llama decide a cuál
+ * pregunta según el minuto que sea.
+ */
+export function sePuedeMirar(sesion: SesionOpenF1, ahora: Date): boolean {
+  const fin = new Date(sesion.date_end).getTime();
+  if (!Number.isFinite(fin)) return false;
+  if (fin < NADA_ANTES_DE.getTime()) return false;
+
+  const minutos = (ahora.getTime() - fin) / 60_000;
+
+  return minutos >= ESPERA_FASTF1 && minutos <= VENTANA_HORAS * 60;
 }
