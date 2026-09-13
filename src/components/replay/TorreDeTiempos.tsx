@@ -28,6 +28,35 @@ export interface FilaDeLaTorre {
   /** `+1.2s`, `líder`, o vacío si está fuera. */
   hueco: string;
   fuera: boolean;
+  /** Si ya tomó la bandera a cuadros: lleva la banderita junto a su tiempo. */
+  cruzo: boolean;
+}
+
+/**
+ * La banderita de «ya cruzó la meta», detrás del tiempo.
+ *
+ * Va detrás y no delante porque la columna de tiempos está alineada a la
+ * derecha: metiéndola antes, cada fila empuja el número a una x distinta según
+ * tenga banderita o no.
+ *
+ * `currentColor` y no un color propio: aquí solo dice un sí o un no, y ya hay
+ * dos colores con significado en la fila —el del equipo y el rojo del OUT—.
+ */
+function BanderaACuadros() {
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" role="img" aria-label="Ha cruzado la meta" className="shrink-0">
+      <rect x="1.6" y="1.4" width="1.3" height="13.2" rx=".5" fill="currentColor" />
+      <rect x="3.4" y="2.2" width="9.8" height="7.4" fill="none" stroke="currentColor" strokeWidth="1" />
+      <g fill="currentColor">
+        <rect x="3.4" y="2.2" width="2.45" height="2.47" />
+        <rect x="8.3" y="2.2" width="2.45" height="2.47" />
+        <rect x="5.85" y="4.67" width="2.45" height="2.47" />
+        <rect x="10.75" y="4.67" width="2.45" height="2.47" />
+        <rect x="3.4" y="7.14" width="2.45" height="2.47" />
+        <rect x="8.3" y="7.14" width="2.45" height="2.47" />
+      </g>
+    </svg>
+  );
 }
 
 export function TorreDeTiempos({
@@ -95,13 +124,16 @@ export function TorreDeTiempos({
                 {fila.codigo}
                 {fila.equipo && <span className="ml-1.5 text-xs font-normal text-[var(--replay-apagado)]">{fila.equipo}</span>}
               </span>
-              {fila.fuera ? (
-                // La tinta y no el bloque: aquí el rojo se lee contra la
-                // página, y eso pide 4,5:1 en cada tema.
-                <span className="font-mono text-xs font-bold tracking-wider text-[var(--replay-roja-texto)]">OUT</span>
-              ) : (
-                <span className="font-mono text-[13px] tabular-nums text-[var(--replay-hueco)]">{fila.hueco}</span>
-              )}
+              <span className="flex items-center justify-end gap-1.5">
+                {fila.fuera ? (
+                  // La tinta y no el bloque: aquí el rojo se lee contra la
+                  // página, y eso pide 4,5:1 en cada tema.
+                  <span className="font-mono text-xs font-bold tracking-wider text-[var(--replay-roja-texto)]">OUT</span>
+                ) : (
+                  <span className="font-mono text-[13px] tabular-nums text-[var(--replay-hueco)]">{fila.hueco}</span>
+                )}
+                {fila.cruzo && <BanderaACuadros />}
+              </span>
             </button>
           </li>
         );

@@ -143,6 +143,80 @@ async function simularCarreraConAbandono(page: Page) {
   );
 }
 
+/**
+ * Una carrera que TERMINA, con vuelta de celebracion.
+ *
+ * Es el escenario del punto 2 y no se puede montar con los de arriba: la
+ * gracia esta en que, despues de la bandera, el orden por metros recorridos
+ * y el orden de llegada digan cosas distintas. Aqui el ganador levanta el pie
+ * al cruzar y el ultimo de la parrilla sigue a tope, asi que en el ultimo
+ * instante lleva mas metros que nadie. Es lo que pasaba de verdad: en Italia
+ * 2026 el oficial daba ANT-RUS-VER-NOR y el replay al final, VER-NOR-ANT-RUS.
+ */
+const COUNT_FINAL = 2080; // 520 s a 4 Hz
+/**
+ * El ganador cruza en el segundo 420 de 520: el 81 % de la linea de tiempo.
+ *
+ * No vale ponerlo antes. `finalDeCarrera` no se cree una bandera que caiga en
+ * la primera parte de los datos —medido, en las carreras de verdad cae en el
+ * 99 %— porque congelar la torre a mitad de replay seria peor que no tocarla.
+ * Y no vale acortar la cola: despues hacen falta 20 s de vuelta de honor y
+ * mas de 60 s aparcado, que es lo que `estaFuera` mira.
+ */
+const BANDERA_S = 420;
+const QUIEN_SIGUE = 21; // el ultimo, que no levanta el pie
+
+function metaConFinal() {
+  return {
+    ...meta(),
+    timeline: { start: 0, step: PASO, count: COUNT_FINAL },
+    // Cada uno cruza 0,8 s despues del anterior; el ultimo, mucho despues,
+    // porque va una vuelta abajo pero tambien recibe la bandera.
+    drivers: PILOTOS.map((p, i) => ({
+      ...p,
+      laps: i === QUIEN_SIGUE ? [30, BANDERA_S + 12] : [30, BANDERA_S + i * 0.8],
+    })),
+  };
+}
+
+/** Instantes de vuelta de honor antes de aparcar: 20 s. */
+const K_BANDERA = BANDERA_S / PASO;
+const K_APARCAN = K_BANDERA + 80;
+
+function bloqueConFinal(): Buffer {
+  const datos = new Int16Array(PILOTOS.length * 2 * COUNT_FINAL);
+
+  PILOTOS.forEach((_, i) => {
+    for (let k = 0; k < COUNT_FINAL; k++) {
+      // Tras la bandera se levanta el pie, se rueda despacio la vuelta de
+      // honor y se aparca en el parque cerrado. El ultimo no: sigue a tope,
+      // y acaba con mas metros que el ganador. El parado importa: son mas de
+      // 240 instantes quietos, que es lo que `estaFuera` mira para dar a
+      // alguien por retirado.
+      const otro = i === QUIEN_SIGUE;
+      const recorrido = otro
+        ? k * 40
+        : k <= K_BANDERA
+          ? k * 40
+          : K_BANDERA * 40 + Math.min(k, K_APARCAN) * 10 - K_BANDERA * 10;
+      const d = recorrido - i * 150;
+      const a = d / RADIO;
+      datos[i * 2 * COUNT_FINAL + k] = Math.round(Math.cos(a) * RADIO);
+      datos[i * 2 * COUNT_FINAL + COUNT_FINAL + k] = Math.round(Math.sin(a) * RADIO);
+    }
+  });
+
+  return Buffer.from(datos.buffer);
+}
+
+async function simularCarreraQueTermina(page: Page) {
+  await page.route('**/api/positions/**/meta', (route) => route.fulfill({ json: metaConFinal() }));
+  await page.route(
+    (url) => /\/api\/positions\/[^/]+\/[^/]+\/[RS]$/.test(url.pathname),
+    (route) => route.fulfill({ body: bloqueConFinal(), contentType: 'application/octet-stream' })
+  );
+}
+
 const REPLAY = '/results/2026/12/replay';
 
 for (const [nombre, viewport] of [
@@ -566,6 +640,85 @@ test.describe('el replay sigue el tema', () => {
  * el desplazamiento de la torre es la corrección del punto 26 — antes eran la
  * misma acción y se estorbaban.
  */
+test.describe('el final de carrera', () => {
+  // Tumbado: en vertical los mandos son cuatro iconos y la barra de progreso
+  // vive en la pantalla completa, que es la que se abre al girar.
+  test.use({ viewport: TUMBADO });
+
+  /** Los codigos de la torre, de arriba abajo. */
+  async function ordenDeLaTorre(page: Page) {
+    return page
+      .getByRole('list', { name: 'Clasificación en este instante' })
+      .filter({ visible: true })
+      .locator('li')
+      .evaluateAll((filas) =>
+        filas.map((f) => (f.textContent ?? '').match(/P\d\d/)?.[0] ?? '?')
+      );
+  }
+
+  const banderitas = (page: Page) =>
+    page
+      .getByRole('list', { name: 'Clasificación en este instante' })
+      .filter({ visible: true })
+      .getByRole('img', { name: 'Ha cruzado la meta' });
+
+  test('el orden se congela: la vuelta de celebración ya no lo cambia', async ({ page }) => {
+    // Sin congelar, en el ultimo instante manda quien mas metros lleva, y ese
+    // es el que no levanto el pie. Medido en produccion, el orden por metros
+    // fallaba en 4 a 8 de los 10 primeros contra el resultado oficial.
+    await simularCarreraQueTermina(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    const justoAntes = await moverScrubber(page, BANDERA_S / PASO - 4).then(() => ordenDeLaTorre(page));
+    await moverScrubber(page, COUNT_FINAL - 1);
+    const alFinal = await ordenDeLaTorre(page);
+
+    expect(alFinal[0]).toBe('P01');
+    expect(alFinal.slice(0, 5)).toEqual(justoAntes.slice(0, 5));
+    // Y el que siguio a tope no se ha colado en el podio por tener mas metros.
+    expect(alFinal.slice(0, 3)).not.toContain(`P${String(QUIEN_SIGUE + 1).padStart(2, '0')}`);
+  });
+
+  test('la banderita sale cuando cada uno cruza, no antes', async ({ page }) => {
+    await simularCarreraQueTermina(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    // A mitad de carrera no ha cruzado nadie.
+    await moverScrubber(page, 200);
+    await expect(banderitas(page)).toHaveCount(0);
+
+    // Cuatro segundos despues de la bandera han cruzado unos pocos, no todos:
+    // cada uno la toma cuando pasa por meta, y eso es lo que se ve llegar.
+    await moverScrubber(page, (BANDERA_S + 4) / PASO);
+    const aMedias = await banderitas(page).count();
+    expect(aMedias).toBeGreaterThan(0);
+    expect(aMedias).toBeLessThan(PILOTOS.length);
+
+    await moverScrubber(page, COUNT_FINAL - 1);
+    await expect(banderitas(page)).toHaveCount(PILOTOS.length);
+  });
+
+  test('quien termina no acaba marcado como retirado', async ({ page }) => {
+    // Tras cruzar, un coche que para en el parque cerrado lleva un minuto
+    // quieto, que es justo lo que `estaFuera` mira. Sin la excepcion, el
+    // replay terminaba con la torre llena de OUT y con el aviso de abandono
+    // saltandole al que acababa de ganar.
+    await simularCarreraQueTermina(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    await moverScrubber(page, COUNT_FINAL - 1);
+    await expect(
+      page
+        .getByRole('list', { name: 'Clasificación en este instante' })
+        .filter({ visible: true })
+        .getByText('OUT', { exact: true })
+    ).toHaveCount(0);
+  });
+});
+
 test.describe('el mapa cuenta lo que pasa', () => {
   // Tumbado: desde el punto 24 el scrubber vive en la pantalla completa, y
   // estas pruebas lo necesitan para colocarse justo antes del abandono.

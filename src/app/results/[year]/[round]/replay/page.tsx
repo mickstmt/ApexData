@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { PRIMERA_TEMPORADA_CON_REPLAY } from '@/components/replay/VerReplay';
+import type { PuestoOficial } from '@/lib/replay/final';
 import { ReplayClient } from './ReplayClient';
 
 /**
@@ -40,6 +41,40 @@ async function carreraDe(year: number, round: number) {
   });
 }
 
+/**
+ * La clasificación oficial: quién va en cada puesto y con qué tiempo.
+ *
+ * El replay ordena por metros recorridos y eso deja de valer en la vuelta de
+ * celebración; al caer la bandera manda esto, que es lo único que sabe de
+ * sanciones. En Hungría 2026 HAM cruzó la meta antes que LEC y sin embargo
+ * LEC es cuarto.
+ *
+ * `positionOrder` y no `position`: incluye a los retirados, que también
+ * ocupan un puesto en la clasificación. Si la carrera todavía no tiene
+ * resultados —acaba de terminar— se devuelve `null` y el replay se apaña con
+ * los cruces de meta.
+ */
+async function ordenOficialDe(
+  year: number,
+  round: number,
+  sesion: 'R' | 'S'
+): Promise<PuestoOficial[] | null> {
+  const where = { race: { year, round } } as const;
+  const select = { time: true, driver: { select: { code: true } } } as const;
+  const orderBy = { positionOrder: 'asc' } as const;
+
+  const filas =
+    sesion === 'S'
+      ? await prisma.sprintResult.findMany({ where, select, orderBy })
+      : await prisma.result.findMany({ where, select, orderBy });
+
+  const puestos = filas
+    .filter((f) => Boolean(f.driver.code))
+    .map((f) => ({ code: f.driver.code as string, tiempo: f.time }));
+
+  return puestos.length ? puestos : null;
+}
+
 export async function generateMetadata({ params }: ReplayPageProps) {
   const { year, round } = await params;
   const carrera = await carreraDe(Number(year), Number(round));
@@ -64,12 +99,14 @@ export default async function ReplayPage({ params, searchParams }: ReplayPagePro
   // El sprint solo si el fin de semana lo tuvo: `?sesion=S` en uno sin sprint
   // abre la carrera, en vez de pedirle al servicio una sesión que no existe.
   const sesionElegida: 'R' | 'S' = sesion === 'S' && carrera.sprintDate ? 'S' : 'R';
+  const ordenOficial = await ordenOficialDe(anio, ronda, sesionElegida);
 
   return (
     <ReplayClient
       year={anio}
       round={ronda}
       sesion={sesionElegida}
+      ordenOficial={ordenOficial}
       nombre={carrera.raceName}
       circuito={carrera.circuit.name}
       disponible={anio >= PRIMERA_TEMPORADA_CON_REPLAY}

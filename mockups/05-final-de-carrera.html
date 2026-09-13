@@ -6,13 +6,18 @@
 <title>El final de carrera — punto 2</title>
 <style>
 /* ---------------------------------------------------------------------------
-   Punto 2: la bandera a cuadros ondea, y en la lista se ve quién ya cruzó.
+   Punto 2, tal y como quedo decidido por el usuario:
 
-   MEDIDO en produccion antes de dibujar nada, en tres carreras de 2026:
-   el orden del replay en el ultimo instante falla en 4 a 8 de los 10
-   primeros; ordenando por cruces de meta falla en 0 a 2. La bandera cae
-   66-79 s ANTES del final de los datos: ese minuto es la vuelta de
-   celebracion, y es donde el orden por metros recorridos se descuadra.
+     - sin animacion de bandera (se ofrecio una y la descarto)
+     - sin tarjeta de ganador ni de podio: esto es una repeticion, no una gala
+     - el orden se congela al caer la bandera
+     - una banderita DETRAS del tiempo para quien ya cruzo la meta
+
+   MEDIDO en produccion antes de tocar nada, en tres carreras de 2026: el orden
+   del replay en el ultimo instante fallaba en 4 a 8 de los 10 primeros contra
+   el resultado oficial; ordenando por cruces de meta, en 0 a 2. La bandera cae
+   66-79 s ANTES del final de los datos, y ese minuto es la vuelta de
+   celebracion, donde el ganador levanta el pie y le comen metros.
 --------------------------------------------------------------------------- */
 :root {
   color-scheme: light dark;
@@ -43,21 +48,16 @@ h1 { margin:0 0 6px; font-size:clamp(24px,4vw,32px); line-height:1.1; letter-spa
   border-radius:12px; background:var(--tarjeta); padding:10px 12px; }
 .mandos .etq { width:100%; font:600 10.5px/1 ui-monospace,monospace; letter-spacing:.13em;
   text-transform:uppercase; color:var(--tinta-2); }
-.mandos button { min-height:40px; padding:0 12px; border:1px solid var(--linea); border-radius:9px;
-  background:transparent; color:var(--tinta-2); font:500 13.5px/1.2 inherit; cursor:pointer; }
-.mandos button[aria-pressed="true"] { background:var(--acento); border-color:var(--acento);
-  color:var(--acento-tinta); font-weight:600; }
-.mandos button.accion { border-color:var(--tinta-2); color:var(--tinta); font-weight:600; }
+.mandos button { min-height:40px; padding:0 12px; border:1px solid var(--tinta-2); border-radius:9px;
+  background:transparent; color:var(--tinta); font:600 13.5px/1.2 inherit; cursor:pointer; }
 
 .escena { display:grid; grid-template-columns:minmax(0,1fr); justify-items:center; gap:12px; }
-.tel { position:relative; width:390px; max-width:100%; height:540px; border:1px solid var(--linea);
+.tel { width:390px; max-width:100%; height:520px; border:1px solid var(--linea);
   border-radius:18px; overflow:hidden; background:var(--fondo); color:var(--texto);
-  display:grid; grid-template-rows:42px 186px 1fr; }
+  display:grid; grid-template-rows:42px 1fr; }
 .t-cab { display:flex; align-items:center; gap:8px; padding:0 12px; border-bottom:1px solid var(--borde);
   font:700 15px/1 inherit; }
 .t-cab .rel { margin-left:auto; font:400 12px/1 ui-monospace,monospace; color:var(--apagado); }
-.t-mapa { position:relative; display:grid; place-items:center; border-bottom:1px solid var(--borde); overflow:hidden; }
-.t-mapa svg.circuito { width:74%; height:148px; }
 .t-torre { overflow:hidden; }
 
 .t-fila { display:grid; grid-template-columns:22px 4px 1fr auto; align-items:center; gap:10px; height:44px;
@@ -65,47 +65,14 @@ h1 { margin:0 0 6px; font-size:clamp(24px,4vw,32px); line-height:1.1; letter-spa
 .t-fila .pos { font:600 13px/1 ui-monospace,monospace; color:var(--apagado); text-align:center; }
 .t-fila .tira { height:24px; border-radius:2px; }
 .t-fila b { font-size:14px; }
-.t-fila .cola { display:flex; align-items:center; gap:7px; }
-.t-fila .h { font:400 12px/1 ui-monospace,monospace; color:var(--apagado); }
-/* La banderita de «ya cruzo»: aparece cuando ese piloto pasa por meta. */
+.t-fila .eq { margin-left:6px; font-size:12px; font-weight:400; color:var(--apagado); }
+.t-fila .cola { display:flex; align-items:center; justify-content:flex-end; gap:6px; }
+.t-fila .h { font:400 13px/1 ui-monospace,monospace; color:var(--apagado); }
+.t-fila .out { font:700 12px/1 ui-monospace,monospace; letter-spacing:.08em; color:#C02020; }
+@media (prefers-color-scheme: dark) { .t-fila .out { color:#FF6B6B; } }
 .marca { display:inline-flex; color:var(--texto); animation:marca 320ms ease both; }
 .marca svg { display:block; }
 @keyframes marca { from { opacity:0; transform:scale(.6) } to { opacity:1; transform:none } }
-
-/* --- la bandera a cuadros, ondeando ------------------------------------- */
-.telon { position:absolute; inset:0; z-index:6; display:grid; place-items:center;
-  pointer-events:none; opacity:0; }
-.telon[data-ver="si"] { animation:telon 3000ms ease forwards; }
-@keyframes telon { 0%{opacity:0} 8%{opacity:1} 82%{opacity:1} 100%{opacity:0} }
-
-.grupo { display:flex; align-items:stretch; transform-origin:left bottom; }
-.mastil { width:6px; border-radius:3px; background:linear-gradient(180deg,#9A9AA4,#5A5A64); display:none; }
-.telon[data-forma="mastil"] .mastil { display:block; }
-.telon[data-forma="mastil"] .grupo { animation:sacude 760ms ease-in-out infinite alternate; }
-@keyframes sacude { from { transform:rotate(-7deg) } to { transform:rotate(7deg) } }
-.telon[data-forma="barrido"] .grupo { animation:barre 2400ms ease-in-out both; }
-@keyframes barre { 0%{transform:translateX(-135%)} 100%{transform:translateX(135%)} }
-
-/* El paño: tiras verticales con la misma cuadricula desplazada, cada una con
-   su retardo. Eso es lo que se lee como tela y no como un dibujo temblando. */
-.pano { display:flex; width:210px; height:132px; }
-.tira { flex:1 1 0; min-width:0;
-  background-image:
-    linear-gradient(45deg,#111 25%,transparent 25%,transparent 75%,#111 75%),
-    linear-gradient(45deg,#111 25%,#FAFAFA 25%,#FAFAFA 75%,transparent 75%);
-  background-size:34px 34px;
-  background-position:var(--dx) 0, calc(var(--dx) + 17px) 17px;
-  animation:onda 1150ms ease-in-out infinite;
-  animation-delay:var(--dt);
-}
-@keyframes onda {
-  0%,100% { transform:translateY(-9px) scaleY(.90); filter:brightness(.82); }
-  50%     { transform:translateY(9px)  scaleY(1.10); filter:brightness(1.12); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .tira, .telon[data-forma="mastil"] .grupo { animation:none; }
-  .telon[data-forma="barrido"] .grupo { animation:none; transform:none; }
-}
 
 .pie { font:600 12px/1.5 ui-monospace,monospace; color:var(--tinta-2); text-align:center; }
 .pie b { color:var(--tinta); }
@@ -113,9 +80,6 @@ h1 { margin:0 0 6px; font-size:clamp(24px,4vw,32px); line-height:1.1; letter-spa
 .panel { border:1px solid var(--linea); border-radius:14px; background:var(--tarjeta); padding:15px; min-width:0; }
 .panel h2 { margin:0 0 4px; font-size:15px; } .panel p { margin:0 0 8px; font-size:13.5px; color:var(--tinta-2); }
 .panel p:last-child { margin:0; } .panel b { color:var(--tinta); }
-.recomendada { border-color:var(--acento); box-shadow:inset 0 0 0 1px var(--acento); }
-.sello { display:inline-block; margin-left:6px; padding:3px 7px; border-radius:5px; background:var(--acento);
-  color:var(--acento-tinta); font:600 9.5px/1 ui-monospace,monospace; letter-spacing:.08em; text-transform:uppercase; }
 </style>
 </head>
 <body>
@@ -123,7 +87,7 @@ h1 { margin:0 0 6px; font-size:clamp(24px,4vw,32px); line-height:1.1; letter-spa
 
   <header>
     <h1>El final de carrera</h1>
-    <p class="sub">Punto 2. Pulsa <b>«Cae la bandera»</b>: ondea, y luego cada piloto que pasa por meta se marca en la lista. El orden se congela ahí, aunque los coches sigan rodando la vuelta de celebración.</p>
+    <p class="sub">Punto 2, como quedó: <b>sin animación de bandera y sin tarjeta de podio</b>. Pulsa «Cae la bandera»: el orden se congela y cada piloto se marca con una banderita cuando pasa por meta.</p>
   </header>
 
   <div class="medido">
@@ -139,56 +103,34 @@ medido en produccion, orden del replay contra el oficial:
   </div>
 
   <div class="mandos">
-    <span class="etq">Cómo ondea la bandera</span>
-    <button type="button" data-g="forma" data-v="pano" aria-pressed="true">El paño, sin mástil</button>
-    <button type="button" data-g="forma" data-v="mastil">Con mástil, sacudida</button>
-    <button type="button" data-g="forma" data-v="barrido">Cruzando la pantalla</button>
-  </div>
-
-  <div class="mandos">
-    <span class="etq">Dónde ondea · la marca en la lista</span>
-    <button type="button" data-g="donde" data-v="mapa" aria-pressed="true">Sobre el circuito</button>
-    <button type="button" data-g="donde" data-v="todo">Sobre todo el replay</button>
-    <button type="button" data-g="marca" data-v="antes" aria-pressed="true">Banderita antes del tiempo</button>
-    <button type="button" data-g="marca" data-v="despues">Banderita después</button>
-    <button type="button" class="accion" id="lanzar">Cae la bandera</button>
-    <button type="button" class="accion" id="reiniciar">Reiniciar</button>
+    <span class="etq">La secuencia</span>
+    <button type="button" id="lanzar">Cae la bandera</button>
+    <button type="button" id="reiniciar">Reiniciar</button>
   </div>
 
   <div class="escena">
-    <div class="tel" id="tel">
+    <div class="tel">
       <div class="t-cab">GP de Italia <span class="rel" id="reloj">Vuelta 53/53</span></div>
-      <div class="t-mapa">
-        <svg class="circuito" viewBox="0 0 300 150" aria-hidden="true">
-          <path d="M40 124 L196 124 C232 124 246 108 234 92 L180 30 C172 20 158 20 150 28 L120 56 C112 64 100 64 93 56 L76 38 C66 28 50 32 44 44 L26 84 C18 100 24 118 40 124 Z"
-            fill="none" stroke="var(--trazado)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-          <circle cx="150" cy="124" r="7" fill="#00A19B"/>
-          <circle cx="126" cy="124" r="6" fill="#00A19B"/>
-          <circle cx="104" cy="124" r="6" fill="#3671C6"/>
-        </svg>
-        <div class="telon" id="telon-mapa"><div class="grupo"><span class="mastil"></span><span class="pano"></span></div></div>
-      </div>
       <div class="t-torre" id="torre"></div>
-      <div class="telon" id="telon-todo"><div class="grupo"><span class="mastil"></span><span class="pano"></span></div></div>
     </div>
     <p class="pie" id="pie">—</p>
   </div>
 
   <div class="dos">
-    <div class="panel recomendada">
-      <h2>El paño, sobre el circuito <span class="sello">Recomendada</span></h2>
-      <p>Sin mástil el paño ocupa todo el ancho útil y <b>se lee a 390 px</b>; con mástil, la bandera tiene que encoger para que quepa el palo y a tamaño de móvil parece un icono temblando.</p>
-      <p>Sobre el circuito y no sobre todo: la lista sigue visible mientras ondea, que es donde van apareciendo las banderitas.</p>
-    </div>
-    <div class="panel recomendada">
-      <h2>La banderita antes del tiempo <span class="sello">Recomendada</span></h2>
-      <p>Los tiempos están alineados a la derecha y hacen columna. Metiendo la banderita <b>después</b>, esa columna se rompe y los números dejan de compararse de un vistazo.</p>
-      <p>Aparece por piloto <b>cuando ese piloto cruza</b>, no todas de golpe: así se ve llegar a la gente.</p>
+    <div class="panel">
+      <h2>El orden lo manda el oficial</h2>
+      <p>Al caer la bandera la clasificación se congela en <b>el resultado oficial</b>, que es el único que sabe de sanciones: en Hungría HAM cruzó 4,3 s antes que LEC y aun así es quinto.</p>
+      <p>Si la base todavía no tiene resultados —una carrera recién terminada— mandan los <b>cruces de meta</b>, que fallan en 0 a 2 de 10 en vez de en 4 a 8.</p>
     </div>
     <div class="panel">
-      <h2>Lo que pasa con el orden</h2>
-      <p>Al caer la bandera <b>la clasificación se congela</b>. Los coches siguen rodando su vuelta de celebración —los puntos se mueven— pero la lista ya no cambia.</p>
-      <p>Sin eso, el replay termina con un orden que no es el de la carrera: medido, hoy se equivoca en <b>4 a 8 de los 10 primeros</b>.</p>
+      <h2>El tiempo se queda quieto</h2>
+      <p>Quien ya cruzó enseña <b>el tiempo con el que terminó</b>, no el hueco en vivo: siguiendo la vuelta de celebración, ese hueco se hincharía hasta el minuto.</p>
+      <p>A un doblado se le dicen <b>vueltas</b>, no segundos. El oficial le pone «+28.033», que es su hueco en su propia vuelta, y dejaría al octavo con menos hueco que el séptimo.</p>
+    </div>
+    <div class="panel">
+      <h2>La banderita, detrás del tiempo</h2>
+      <p>Elección del usuario. Aparece <b>por piloto, cuando ese piloto cruza</b>, no todas de golpe: así se ve llegar a la gente.</p>
+      <p>Quien no llegó a cruzar sigue con su <b>OUT</b>: lo que marca la banderita es haber terminado, no haber estado.</p>
     </div>
   </div>
 </div>
@@ -198,14 +140,18 @@ medido en produccion, orden del replay contra el oficial:
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
 
+  // Italia 2026, tal y como queda en la torre al terminar.
   var PILOTOS = [
-    ['ANT','#00A19B'],['RUS','#00A19B'],['VER','#3671C6'],['NOR','#FF8000'],
-    ['PIA','#FF8000'],['HAM','#E8002D'],['GAS','#0093CC'],['LIN','#00E701'],
-    ['COL','#0093CC'],['TSU','#6692FF']
+    ['ANT','Mercedes','#00A19B','líder'], ['RUS','Mercedes','#00A19B','+3.9s'],
+    ['VER','Red Bull','#3671C6','+14.7s'], ['NOR','McLaren','#FF8000','+19.1s'],
+    ['PIA','McLaren','#FF8000','+19.3s'], ['HAM','Ferrari','#E8002D','+24.7s'],
+    ['GAS','Alpine','#0093CC','+27.4s'], ['LIN','Audi','#00E701','+45.1s'],
+    ['COL','Alpine','#0093CC','+47.4s'], ['TSU','Racing Bulls','#6692FF','+58.2s'],
+    ['OCO','Haas','#B6BABD','+1 vuelta'], ['LEC','Ferrari','#E8002D','OUT']
   ];
 
   var BANDERITA =
-    '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">' +
+    '<svg viewBox="0 0 16 16" width="12" height="12" role="img" aria-label="Ha cruzado la meta">' +
     '<rect x="1.6" y="1.4" width="1.3" height="13.2" rx=".5" fill="currentColor"/>' +
     '<rect x="3.4" y="2.2" width="9.8" height="7.4" fill="none" stroke="currentColor" stroke-width="1"/>' +
     '<g fill="currentColor">' +
@@ -214,97 +160,65 @@ medido en produccion, orden del replay contra el oficial:
     '<rect x="3.4" y="7.14" width="2.45" height="2.47"/><rect x="8.3" y="7.14" width="2.45" height="2.47"/>' +
     '</g></svg>';
 
-  var TIRAS = 21;
-  document.querySelectorAll('.pano').forEach(function (pano) {
-    var html = '';
-    for (var i = 0; i < TIRAS; i++) {
-      // La cuadricula se desplaza tira a tira para que las casillas encajen,
-      // y el retardo negativo escalonado es lo que hace la onda de tela.
-      html += '<span class="tira" style="--dx:' + (-i * 10) + 'px; --dt:' + (-i * 58) + 'ms"></span>';
-    }
-    pano.innerHTML = html;
-  });
-
-  var opciones = { forma: 'pano', donde: 'mapa', marca: 'antes' };
   var congelado = false;
   var cruzados = [];
   var orden = PILOTOS.map(function (_, i) { return i; });
-  var temporizadores = [];
+  var relojes = [];
 
-  function pintarTorre() {
+  function pintar() {
     $('torre').innerHTML = orden.map(function (idx, pos) {
       var p = PILOTOS[idx];
-      var hora = '<span class="h">' + (pos === 0 ? 'líder' : '+' + (pos * 1.7).toFixed(1)) + '</span>';
-      var marca = cruzados.indexOf(idx) >= 0
-        ? '<span class="marca" role="img" aria-label="Ha cruzado la meta">' + BANDERITA + '</span>'
-        : '';
-      var cola = opciones.marca === 'antes' ? marca + hora : hora + marca;
+      var fuera = p[3] === 'OUT';
+      var valor = congelado
+        ? (fuera ? '<span class="out">OUT</span>' : '<span class="h">' + p[3] + '</span>')
+        : '<span class="h">' + (pos === 0 ? 'líder' : '+' + (pos * 1.6 + 0.4).toFixed(1) + 's') + '</span>';
+      var marca = cruzados.indexOf(idx) >= 0 ? '<span class="marca">' + BANDERITA + '</span>' : '';
       return '<div class="t-fila">' +
         '<span class="pos">' + (pos + 1) + '</span>' +
-        '<span class="tira" style="background:' + p[1] + '"></span>' +
-        '<span><b>' + p[0] + '</b></span>' +
-        '<span class="cola">' + cola + '</span></div>';
+        '<span class="tira" style="background:' + p[2] + '"></span>' +
+        '<span><b>' + p[0] + '</b><span class="eq">' + p[1] + '</span></span>' +
+        '<span class="cola">' + valor + marca + '</span></div>';
     }).join('');
+
     $('pie').innerHTML = congelado
-      ? 'orden <b>congelado</b> · han cruzado <b>' + cruzados.length + ' de 10</b>'
-      : 'orden <b>en vivo</b> · líder <b>' + PILOTOS[orden[0]][0] + '</b>';
+      ? 'orden <b>congelado</b> · han cruzado <b>' + cruzados.length + ' de 11</b>'
+      : 'orden <b>en vivo</b>, por metros recorridos · líder <b>' + PILOTOS[orden[0]][0] + '</b>';
   }
 
-  /** Mientras no está congelado el orden baila: es lo que pasa hoy. */
+  // Sin congelar el orden baila, que es lo que pasaba en la vuelta de celebración.
   setInterval(function () {
     if (congelado) return;
     var i = Math.floor(Math.random() * 4);
     var t = orden[i]; orden[i] = orden[i + 1]; orden[i + 1] = t;
-    pintarTorre();
+    pintar();
   }, 900);
 
-  function lanzar() {
+  $('lanzar').addEventListener('click', function () {
     if (congelado) return;
     congelado = true;
-    orden = PILOTOS.map(function (_, i) { return i; }); // el orden bueno
-    pintarTorre();
+    orden = PILOTOS.map(function (_, i) { return i; });
     $('reloj').textContent = 'Final';
+    pintar();
 
-    var telon = opciones.donde === 'mapa' ? $('telon-mapa') : $('telon-todo');
-    telon.setAttribute('data-forma', opciones.forma);
-    telon.removeAttribute('data-ver');
-    void telon.offsetWidth;
-    telon.setAttribute('data-ver', 'si');
-
-    // Van cruzando uno a uno, no todos de golpe.
     orden.forEach(function (idx, pos) {
-      temporizadores.push(setTimeout(function () {
+      if (PILOTOS[idx][3] === 'OUT') return; // el retirado no cruza
+      relojes.push(setTimeout(function () {
         cruzados.push(idx);
-        pintarTorre();
-      }, 700 + pos * 420));
+        pintar();
+      }, 300 + pos * 430));
     });
-  }
+  });
 
-  $('lanzar').addEventListener('click', lanzar);
   $('reiniciar').addEventListener('click', function () {
-    temporizadores.forEach(clearTimeout);
-    temporizadores = [];
+    relojes.forEach(clearTimeout);
+    relojes = [];
     congelado = false;
     cruzados = [];
     $('reloj').textContent = 'Vuelta 53/53';
-    $('telon-mapa').removeAttribute('data-ver');
-    $('telon-todo').removeAttribute('data-ver');
-    pintarTorre();
+    pintar();
   });
 
-  document.querySelectorAll('.mandos').forEach(function (caja) {
-    caja.addEventListener('click', function (e) {
-      var b = e.target.closest('button[data-g]');
-      if (!b) return;
-      caja.querySelectorAll('button[data-g="' + b.dataset.g + '"]').forEach(function (o) {
-        o.setAttribute('aria-pressed', String(o === b));
-      });
-      opciones[b.dataset.g] = b.dataset.v;
-      if (b.dataset.g === 'marca') pintarTorre();
-    });
-  });
-
-  pintarTorre();
+  pintar();
 })();
 </script>
 </body>

@@ -26,6 +26,7 @@ import {
   vueltaEn,
   type Trazado,
 } from '@/lib/replay/progreso';
+import { finalDeCarrera, type PuestoOficial } from '@/lib/replay/final';
 import { formatoReloj } from '@/lib/replay/reloj';
 import { cn } from '@/lib/utils';
 import { useTemaDelReplay, type TemaDelReplay } from '@/components/replay/tema';
@@ -74,6 +75,7 @@ export function ReplayClient({
   nombre,
   circuito,
   disponible,
+  ordenOficial,
 }: {
   year: number;
   round: number;
@@ -81,6 +83,11 @@ export function ReplayClient({
   nombre: string;
   circuito: string;
   disponible: boolean;
+  /**
+   * La clasificación oficial, o `null` si la base aún no la tiene. Manda al
+   * caer la bandera: es lo único que sabe de sanciones.
+   */
+  ordenOficial: PuestoOficial[] | null;
 }) {
   const [fase, setFase] = useState<Fase>(
     disponible ? { tipo: 'cargando', fraccion: null, mensaje: 'Pidiendo la carrera…' } : { tipo: 'no-disponible' }
@@ -181,7 +188,15 @@ export function ReplayClient({
   return (
     <div className="bg-[var(--replay-fondo)] text-[var(--replay-texto)]">
       {fase.tipo === 'listo' ? (
-        <Replay datos={fase.datos} year={year} round={round} nombre={nombre} titulo={titulo} tema={tema} />
+        <Replay
+          datos={fase.datos}
+          year={year}
+          round={round}
+          nombre={nombre}
+          titulo={titulo}
+          tema={tema}
+          ordenOficial={ordenOficial}
+        />
       ) : (
         <div className="flex flex-col md:h-[calc(100dvh-4rem)]">
           <Cabecera year={year} round={round} nombre={nombre} titulo={titulo} />
@@ -347,6 +362,7 @@ function Replay({
   nombre,
   titulo,
   tema,
+  ordenOficial,
 }: {
   datos: DatosDelReplay;
   year: number;
@@ -354,6 +370,7 @@ function Replay({
   nombre: string;
   titulo: string;
   tema: TemaDelReplay | null;
+  ordenOficial: PuestoOficial[] | null;
 }) {
   const { meta, bloque, trazado, progreso } = datos;
   const { count, step: paso } = meta.timeline;
@@ -382,10 +399,48 @@ function Replay({
     [meta.trackStatus, count, paso, progreso]
   );
 
+  /**
+   * Cuándo cae la bandera a cuadros y cómo queda la clasificación.
+   *
+   * Se calcula una vez: sale de los cruces de meta, que ya vienen en el meta,
+   * y del resultado oficial cuando la base lo tiene.
+   */
+  const final = useMemo(
+    () => finalDeCarrera(meta.drivers, meta.timeline, ordenOficial),
+    [meta.drivers, meta.timeline, ordenOficial]
+  );
+
   const { filas, coches, lider } = useMemo(() => {
-    const orden = ordenEn(progreso, k);
+    /**
+     * Desde que cae la bandera el orden ya no lo dan los metros recorridos.
+     *
+     * Lo que queda de datos es la vuelta de celebración: el ganador levanta el
+     * pie y los de atrás le comen metros, así que el replay terminaba
+     * enseñando un podio que no era. Medido en Italia 2026, el oficial decía
+     * ANT-RUS-VER-NOR y el último instante del replay daba VER-NOR-ANT-RUS.
+     */
+    const congelado = final !== null && k >= final.bandera;
+    const enPista = ordenEn(progreso, k);
+    const orden = congelado ? final.orden : enPista;
     const lider = orden[0] ?? 0;
-    const fuera = meta.drivers.map((_, i) => estaFuera(progreso, i, k, lider));
+
+    /**
+     * Quién va delante EN METROS, que no es lo mismo que quién va primero.
+     *
+     * Después de la bandera el primero es el ganador, pero está aparcado. Los
+     * huecos y el «lleva un minuto sin avanzar» se miden contra quien de verdad
+     * sigue rodando; midiéndolos contra el ganador salían huecos negativos y
+     * ningún abandono se sostenía.
+     */
+    const liderEnPista = enPista[0] ?? lider;
+
+    /** Quién ha tomado ya la bandera a cuadros, a estas alturas del replay. */
+    const cruzo = meta.drivers.map((_, i) => final !== null && t >= final.cruce[i]);
+
+    // Quien ha terminado no está retirado, aunque lleve un minuto parado en el
+    // parque cerrado: sin esto el final de los datos llenaba la torre de OUT
+    // y disparaba el aviso de abandono de los que acababan de ganar.
+    const fuera = meta.drivers.map((_, i) => (cruzo[i] ? false : estaFuera(progreso, i, k, liderEnPista)));
 
     // Los que tienen posición, por orden; los que no, al final, como fuera.
     const conPosicion = new Set(orden);
@@ -401,20 +456,27 @@ function Replay({
       // Con la carrera parada no hay hueco en pista que medir: todos están
       // quietos y la cuenta daría lo que lleve durando la parada. Y el de
       // quien está fuera tampoco se calcula: su fila enseña OUT.
+      //
+      // Quien ya cruzó enseña el tiempo con el que TERMINÓ y ya no se mueve:
+      // siguiendo en vivo, la vuelta de celebración lo hincharía hasta el
+      // minuto.
       hueco:
-        idx === 0
-          ? 'líder'
-          : fuera[i]
-            ? ''
-            : parada
-              ? '—'
-              : `+${huecoEn(progreso, k, lider, i, paso, relojCarrera).toFixed(1)}s`,
+        cruzo[i]
+          ? final!.llegada[i]
+          : idx === 0
+            ? 'líder'
+            : fuera[i]
+              ? ''
+              : parada
+                ? '—'
+                : `+${huecoEn(progreso, k, liderEnPista, i, paso, relojCarrera).toFixed(1)}s`,
       fuera: fuera[i],
+      cruzo: cruzo[i],
     }));
 
     const coches = meta.drivers.map((d, i) => ({ color: colores[i], codigo: d.code, fuera: fuera[i] }));
     return { filas, coches, lider };
-  }, [progreso, k, meta.drivers, colores, paso, parada, relojCarrera]);
+  }, [progreso, k, t, meta.drivers, colores, paso, parada, relojCarrera, final]);
 
   /**
    * El riel se reparte sobre `(count - 1) × paso`, no sobre `count × paso`.
