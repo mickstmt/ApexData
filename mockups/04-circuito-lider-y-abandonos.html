@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El líder y los abandonos — puntos 11 y 12</title>
+<style>
+/* ---------------------------------------------------------------------------
+   Puntos 11 y 12, sobre el mapa del replay.
+
+   11 · Con la carrera avanzada, entre doblados y rezagados no se sabe quién va
+        primero: «parece que un doblado pelea con el de delante cuando en
+        realidad ya le sacan más de una vuelta».
+   12 · Leclerc abandona en la vuelta 3 y no se aprecia — hoy el punto solo baja
+        a opacidad 0,35 y se queda ahí. Y las banderas podrían notarse más, sin
+        quitar lo de pintar el circuito, que es lo que más gusta.
+
+   El lienzo reproduce el del replay: mismo grosor de trazado, mismo radio de
+   coche (5 px por debajo de 480 de ancho), mismos colores.
+--------------------------------------------------------------------------- */
+:root {
+  color-scheme: light dark;
+  --fondo: #F7F7F8; --superficie: #F0F0F2; --borde: #DEDEE3;
+  --texto: #151519; --apagado: #55555E; --acento: #526600; --acento-tinta: #FFFFFF;
+  --trazado: #8A8A94; --amarilla: #B08519; --naranja: #CC7121; --roja: #D93830;
+  --papel: #EDEFEA; --tarjeta: #FFFFFF; --linea: #D8DCD2; --tinta: #191C17; --tinta-2: #565C52;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #0B0B0F; --superficie: #151519; --borde: #26262E;
+    --texto: #F5F5F7; --apagado: #A2A2AC; --acento: #CCFF00; --acento-tinta: #000000;
+    --trazado: #6B6B78; --amarilla: #FBBE23; --naranja: #FF8D29; --roja: #D93830;
+    --papel: #0F110E; --tarjeta: #171A15; --linea: #272B23; --tinta: #E9EDE4; --tinta-2: #9AA292;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 22px 16px 60px; background: var(--papel); color: var(--tinta);
+  font: 400 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif; }
+.envoltura { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; min-width: 0; }
+h1 { margin: 0 0 6px; font-size: clamp(24px,4vw,32px); line-height: 1.1; letter-spacing: -.01em; }
+.sub { margin: 0; max-width: 64ch; color: var(--tinta-2); }
+.sub b { color: var(--tinta); }
+
+.mandos { display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  border: 1px solid var(--linea); border-radius: 12px; background: var(--tarjeta); padding: 10px 12px; }
+.mandos .etq { font: 600 10.5px/1 ui-monospace, monospace; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--tinta-2); margin-right: 4px; width: 100%; }
+.mandos button { min-height: 40px; padding: 0 12px; border: 1px solid var(--linea); border-radius: 9px;
+  background: transparent; color: var(--tinta-2); font: 500 13.5px/1.2 inherit; cursor: pointer; }
+.mandos button[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: var(--acento-tinta); font-weight: 600; }
+.mandos button.accion { border-color: var(--tinta-2); color: var(--tinta); }
+
+.escena { display: grid; gap: 14px; justify-items: center; border: 1px solid var(--linea);
+  border-radius: 14px; background: var(--fondo); padding: 16px; }
+canvas { width: 100%; max-width: 520px; height: 300px; touch-action: none; }
+.pie { font: 600 12px/1.5 ui-monospace, monospace; color: var(--tinta-2); text-align: center; }
+.pie b { color: var(--tinta); }
+
+.dos { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(300px,100%),1fr)); }
+.panel { border: 1px solid var(--linea); border-radius: 14px; background: var(--tarjeta); padding: 15px; min-width: 0; }
+.panel h2 { margin: 0 0 4px; font-size: 15px; }
+.panel p { margin: 0 0 8px; font-size: 13.5px; color: var(--tinta-2); }
+.panel p:last-child { margin: 0; }
+.panel b { color: var(--tinta); }
+.recomendada { border-color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
+.sello { display: inline-block; margin-left: 6px; padding: 3px 7px; border-radius: 5px; background: var(--acento);
+  color: var(--acento-tinta); font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="envoltura">
+
+  <header>
+    <h1>El líder y los abandonos</h1>
+    <p class="sub">Puntos 11 y 12. Los coches dan vueltas de verdad y hay <b>doblados</b>, que es cuando se pierde de vista quién va primero. Usa los botones para provocar un abandono o una bandera.</p>
+  </header>
+
+  <div class="mandos">
+    <span class="etq">11 · Cómo se marca el líder</span>
+    <button type="button" data-g="lider" data-v="nada" aria-pressed="true">Como hoy (nada)</button>
+    <button type="button" data-g="lider" data-v="aro">Aro de acento</button>
+    <button type="button" data-g="lider" data-v="galon">Galón encima</button>
+    <button type="button" data-g="lider" data-v="estela">Estela detrás</button>
+  </div>
+
+  <div class="mandos">
+    <span class="etq">12 · Cómo se abandona</span>
+    <button type="button" data-g="fuera" data-v="hoy" aria-pressed="true">Como hoy (se apaga)</button>
+    <button type="button" data-g="fuera" data-v="pulso">Pulso y se queda apagado</button>
+    <button type="button" data-g="fuera" data-v="cruz">Pulso y queda una ✕</button>
+    <button type="button" data-g="fuera" data-v="quita">Pulso y desaparece</button>
+    <button type="button" class="accion" id="abandona">Abandona un coche</button>
+  </div>
+
+  <div class="mandos">
+    <span class="etq">12 · Cómo se avisa de una bandera</span>
+    <button type="button" data-g="bandera" data-v="hoy" aria-pressed="true">Como hoy (pista pintada)</button>
+    <button type="button" data-g="bandera" data-v="latido">Pintada + latido al cambiar</button>
+    <button type="button" class="accion" id="amarilla">Bandera amarilla</button>
+    <button type="button" class="accion" id="verde">Vuelta a verde</button>
+  </div>
+
+  <div class="escena">
+    <canvas id="lienzo" width="1040" height="600" aria-label="Mapa de ejemplo"></canvas>
+    <p class="pie" id="pie">—</p>
+  </div>
+
+  <div class="dos">
+    <div class="panel recomendada" id="p-aro">
+      <h2>Aro de acento para el líder <span class="sello">Recomendada</span></h2>
+      <p>Un aro fino en el color de acento alrededor del punto. No se mueve, no parpadea y no crece: se ve de un vistazo y desaparece del pensamiento en cuanto lo has localizado.</p>
+      <p>Usa el <b>acento</b> y no la tinta principal a propósito: la tinta ya es el aro del coche que tú eliges, y dos aros iguales serían dos cosas distintas con el mismo dibujo.</p>
+    </div>
+    <div class="panel recomendada" id="p-pulso">
+      <h2>Pulso al abandonar <span class="sello">Recomendada</span></h2>
+      <p>Un anillo rojo se expande una vez en el momento del abandono y el punto se queda apagado donde paró. Llama la atención cuando pasa —que es lo que falta— y <b>deja el dato</b>: dónde se quedó.</p>
+      <p>Quitarlo del mapa haría desaparecer esa información, y una ✕ permanente añade un símbolo más a una pantalla que ya tiene veinte puntos.</p>
+    </div>
+    <div class="panel recomendada" id="p-latido">
+      <h2>Latido al cambiar de bandera <span class="sello">Recomendada</span></h2>
+      <p>El trazado sigue pintándose como hoy —dijiste que eso te gusta y no se toca— y además <b>engorda y adelgaza una vez</b> al cambiar de estado.</p>
+      <p>Lo que faltaba no era el color, que ya está: era notar <b>el instante</b> en que cambia. Si estás mirando la torre, hoy te lo pierdes.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var lienzo = $('lienzo'), ctx = lienzo.getContext('2d');
+
+  var css = getComputedStyle(document.documentElement);
+  function color(n) { return css.getPropertyValue(n).trim(); }
+
+  var EQUIPOS = ['#00A19B','#FF8000','#E8002D','#3671C6','#229971','#0093CC','#B6BABD','#00E701','#1868DB','#6692FF'];
+  var CODIGOS = ['ANT','NOR','LEC','VER','RUS','PIA','HAM','ALO','GAS','OCO','HUL','STR','ALB','SAI','TSU','LAW','BEA','COL','BOR','BOT'];
+
+  // Veinte coches repartidos, con doblados: los de atrás van una vuelta menos.
+  var coches = CODIGOS.map(function (c, i) {
+    return {
+      codigo: c,
+      color: EQUIPOS[i % EQUIPOS.length],
+      // El avance total en "vueltas": el líder va por delante de verdad.
+      avance: 3.0 - i * 0.085,
+      velocidad: 0.00042 - i * 0.0000035,
+      fuera: false,
+      salio: 0
+    };
+  });
+
+  var opciones = { lider: 'nada', fuera: 'hoy', bandera: 'hoy' };
+  var estado = 'libre';
+  var cambioDeEstado = 0;
+
+  /** El trazado, como una elipse deformada: sirve para ver el reparto. */
+  function punto(t) {
+    var a = t * Math.PI * 2;
+    var rx = 380 + 60 * Math.cos(a * 2);
+    var ry = 180 + 40 * Math.sin(a * 3);
+    return [520 + rx * Math.cos(a), 300 + ry * Math.sin(a)];
+  }
+
+  function pista() {
+    var p = new Path2D();
+    for (var i = 0; i <= 240; i++) {
+      var q = punto(i / 240);
+      if (i === 0) p.moveTo(q[0], q[1]); else p.lineTo(q[0], q[1]);
+    }
+    p.closePath();
+    return p;
+  }
+  var TRAZADO = pista();
+
+  var COLOR_ESTADO = { libre: '--trazado', amarilla: '--amarilla', roja: '--roja' };
+
+  function pintar(ahora) {
+    var w = lienzo.width, h = lienzo.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // --- el trazado, con su latido al cambiar ---
+    var desde = ahora - cambioDeEstado;
+    var grosor = 14;
+    if (opciones.bandera === 'latido' && desde < 900) {
+      grosor = 14 + 12 * Math.sin(Math.PI * (desde / 900)) * Math.exp(-desde / 700);
+    }
+    ctx.lineWidth = grosor;
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = color(COLOR_ESTADO[estado]);
+    ctx.stroke(TRAZADO);
+
+    // --- quién va primero ---
+    var lider = 0;
+    for (var i = 1; i < coches.length; i++) {
+      if (!coches[i].fuera && coches[i].avance > coches[lider].avance) lider = i;
+    }
+    if (coches[lider].fuera) for (var j = 0; j < coches.length; j++) if (!coches[j].fuera) { lider = j; break; }
+
+    var radio = 10;
+
+    coches.forEach(function (c, i) {
+      if (c.fuera && opciones.fuera === 'quita' && ahora - c.salio > 900) return;
+
+      var q = punto(c.avance % 1);
+      var x = q[0], y = q[1];
+
+      // --- estela del líder ---
+      if (i === lider && opciones.lider === 'estela' && !c.fuera) {
+        ctx.beginPath();
+        for (var s = 0; s <= 14; s++) {
+          var r = punto((c.avance - s * 0.004) % 1);
+          if (s === 0) ctx.moveTo(r[0], r[1]); else ctx.lineTo(r[0], r[1]);
+        }
+        ctx.strokeStyle = color('--acento');
+        ctx.lineWidth = 5;
+        ctx.globalAlpha = 0.55;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      // --- pulso del abandono ---
+      if (c.fuera && opciones.fuera !== 'hoy') {
+        var t = ahora - c.salio;
+        if (t < 900) {
+          ctx.beginPath();
+          ctx.arc(x, y, radio + t / 900 * 46, 0, Math.PI * 2);
+          ctx.strokeStyle = color('--roja');
+          ctx.lineWidth = 4;
+          ctx.globalAlpha = 1 - t / 900;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      if (c.fuera && opciones.fuera === 'cruz' && ahora - c.salio > 500) {
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = color('--apagado');
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y - 8); ctx.lineTo(x + 8, y + 8);
+        ctx.moveTo(x + 8, y - 8); ctx.lineTo(x - 8, y + 8);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        return;
+      }
+
+      ctx.globalAlpha = c.fuera ? 0.35 : 1;
+      ctx.beginPath();
+      ctx.arc(x, y, radio, 0, Math.PI * 2);
+      ctx.fillStyle = c.color;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = color('--fondo');
+      ctx.stroke();
+
+      // --- marcas del líder ---
+      if (i === lider && !c.fuera) {
+        if (opciones.lider === 'aro') {
+          ctx.beginPath();
+          ctx.arc(x, y, radio + 6, 0, Math.PI * 2);
+          ctx.strokeStyle = color('--acento');
+          ctx.lineWidth = 3.5;
+          ctx.stroke();
+        } else if (opciones.lider === 'galon') {
+          ctx.beginPath();
+          ctx.moveTo(x - 9, y - radio - 8);
+          ctx.lineTo(x, y - radio - 18);
+          ctx.lineTo(x + 9, y - radio - 8);
+          ctx.closePath();
+          ctx.fillStyle = color('--acento');
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+    });
+
+    $('pie').innerHTML = 'líder <b>' + coches[lider].codigo + '</b> · ' +
+      coches.filter(function (c) { return c.fuera; }).length + ' fuera · pista <b>' + estado + '</b>';
+  }
+
+  var anterior = 0;
+  function bucle(ahora) {
+    var dt = anterior ? ahora - anterior : 16;
+    anterior = ahora;
+    var factor = estado === 'roja' ? 0 : estado === 'amarilla' ? 0.45 : 1;
+    coches.forEach(function (c) { if (!c.fuera) c.avance += c.velocidad * dt * factor; });
+    pintar(ahora);
+    requestAnimationFrame(bucle);
+  }
+  requestAnimationFrame(bucle);
+
+  // --- mandos ---
+  document.querySelectorAll('.mandos').forEach(function (caja) {
+    caja.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-g]');
+      if (!b) return;
+      caja.querySelectorAll('button[data-g]').forEach(function (o) {
+        o.setAttribute('aria-pressed', String(o === b));
+      });
+      opciones[b.dataset.g] = b.dataset.v;
+    });
+  });
+
+  $('abandona').addEventListener('click', function () {
+    var vivos = coches.filter(function (c) { return !c.fuera; });
+    if (vivos.length <= 3) return;
+    var victima = vivos[3 + Math.floor(Math.random() * (vivos.length - 3))];
+    victima.fuera = true;
+    victima.salio = performance.now();
+  });
+
+  $('amarilla').addEventListener('click', function () { estado = 'amarilla'; cambioDeEstado = performance.now(); });
+  $('verde').addEventListener('click', function () { estado = 'libre'; cambioDeEstado = performance.now(); });
+})();
+</script>
+</body>
+</html>
