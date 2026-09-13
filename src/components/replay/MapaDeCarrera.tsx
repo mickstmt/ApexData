@@ -137,8 +137,12 @@ export function MapaDeCarrera({
       for (let i = 0; i < coches.length; i++) {
         if (coches[i].fuera && !antes[i].fuera) {
           pulsos.current.set(i, performance.now());
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setAviso((previo) => ({ texto: 'DNF', pase: (previo?.pase ?? 0) + 1 }));
+          // Con el código del piloto: «DNF» a secas no dice QUIÉN, y en una
+          // salida con varios coches fuera es justo lo que hace falta saber.
+          setAviso((previo) => ({
+            texto: `DNF · ${coches[i].codigo}`,
+            pase: (previo?.pase ?? 0) + 1,
+          }));
         }
       }
     }

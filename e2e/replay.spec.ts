@@ -114,8 +114,35 @@ const COUNT_LARGO = 600;
 const QUIEN_ABANDONA = 3;
 const INSTANTE_EN_QUE_PARA = 100;
 
+/**
+ * Seiscientos puntos de trazado, y solo en este escenario.
+ *
+ * Con los sesenta del circuito de juguete general, el progreso proyectado
+ * avanza a saltos de un punto cada dos o tres instantes. El reloj de carrera
+ * —que cuenta como parada los instantes en que nadie avanza— contaba entonces
+ * 226 instantes de los 599, y el minuto de carrera que hace falta para dar a
+ * alguien por retirado no se alcanzaba NUNCA: el aviso de abandono no salía.
+ *
+ * No es un problema del producto: medido en Italia 2026, con el trazado real
+ * el reloj corre 1:1. Era este escenario el que no se parecía a una carrera.
+ * Se afina aquí y no en `meta()` para no mover lo que miden las demás pruebas.
+ */
+const PUNTOS_FINOS = 600;
+
 function metaLarga() {
-  return { ...meta(), timeline: { start: 0, step: PASO, count: COUNT_LARGO } };
+  return {
+    ...meta(),
+    timeline: { start: 0, step: PASO, count: COUNT_LARGO },
+    track: Array.from({ length: PUNTOS_FINOS }, (_, i) => {
+      const a = (i / PUNTOS_FINOS) * Math.PI * 2;
+      return {
+        x: Math.cos(a) * RADIO,
+        y: Math.sin(a) * RADIO,
+        speed: 200,
+        distance: (i / PUNTOS_FINOS) * 2 * Math.PI * RADIO,
+      };
+    }),
+  };
 }
 
 function bloqueConAbandono(): Buffer {
@@ -738,7 +765,12 @@ test.describe('el mapa cuenta lo que pasa', () => {
     await expect(page.locator('[data-dnf]')).toHaveCount(0);
 
     await visible(page, 'Reproducir').click();
-    await expect(page.locator('[data-dnf]')).toHaveText('DNF', { timeout: 10_000 });
+    // Con el código del piloto: «DNF» a secas no dice QUIÉN abandona, y en una
+    // salida con varios coches fuera es justo lo que hace falta saber.
+    await expect(page.locator('[data-dnf]')).toHaveText(
+      `DNF · ${PILOTOS[QUIEN_ABANDONA].code}`,
+      { timeout: 10_000 }
+    );
 
     // Y se va solo: es un aviso, no una etiqueta.
     await expect(page.locator('[data-dnf]')).toHaveCount(0, { timeout: 5_000 });

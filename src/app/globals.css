@@ -192,14 +192,32 @@
   li:first-child > .barra-toque::after { left: -6px; }
   li:last-child > .barra-toque::after { right: -6px; }
 
-  .barra-realce {
+  /* El realce viaja, y ademas ENCIENDE lo que pisa (punto 23).
+     ------------------------------------------------------------------
+     La capa de encima lleva las mismas pestañas ya pintadas, recortada a
+     la caja del realce y con su misma curva y duracion, asi que cada
+     pestaña se enciende mientras el realce la cruza. En CSS no existe un
+     selector de «lo que esta debajo de este elemento», asi que esta es la
+     unica via sin pintar fotograma a fotograma con JavaScript.
+
+     La curva la eligio el usuario: **rebote suave**. La anterior
+     —`cubic-bezier(0.34, 1.56, 0.64, 1)`— cruzaba la barra entera en
+     268 ms y se pasaba los otros 450 de los 720 oscilando ya en el
+     destino, asi que cada pestaña intermedia se encendia unos 80 ms y no
+     daba tiempo a verla. Medido en la maqueta cuanto de los 720 ms es
+     recorrido de verdad: la de antes 258 ms, esta 432, y una sin rebote
+     609. Con esta se conserva el muelle y el viaje dura casi el doble. */
+  .barra-realce,
+  .barra-encendida {
     transition:
-      transform 720ms cubic-bezier(0.34, 1.56, 0.64, 1),
-      width 720ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform 720ms cubic-bezier(0.34, 1.15, 0.64, 1),
+      clip-path 720ms cubic-bezier(0.34, 1.15, 0.64, 1),
+      width 720ms cubic-bezier(0.34, 1.15, 0.64, 1);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .barra-realce {
+    .barra-realce,
+    .barra-encendida {
       transition: none;
     }
   }

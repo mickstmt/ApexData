@@ -22,6 +22,7 @@ import {
   estaFuera,
   huecoEn,
   ordenEn,
+  paradasDeLaCarrera,
   prepararTrazado,
   vueltaEn,
   type Trazado,
@@ -410,6 +411,14 @@ function Replay({
     [meta.drivers, meta.timeline, ordenOficial]
   );
 
+  /**
+   * Cuando empezo la ultima detencion de carrera, por instante.
+   *
+   * Sale del reloj, asi que se calcula con el: quien ya estaba parado al
+   * detenerse la carrera sigue estandolo despues del relanzamiento.
+   */
+  const paradas = useMemo(() => paradasDeLaCarrera(relojCarrera), [relojCarrera]);
+
   const { filas, coches, lider } = useMemo(() => {
     /**
      * Desde que cae la bandera el orden ya no lo dan los metros recorridos.
@@ -440,7 +449,9 @@ function Replay({
     // Quien ha terminado no está retirado, aunque lleve un minuto parado en el
     // parque cerrado: sin esto el final de los datos llenaba la torre de OUT
     // y disparaba el aviso de abandono de los que acababan de ganar.
-    const fuera = meta.drivers.map((_, i) => (cruzo[i] ? false : estaFuera(progreso, i, k, liderEnPista)));
+    const fuera = meta.drivers.map((_, i) =>
+      cruzo[i] ? false : estaFuera(progreso, i, k, liderEnPista, relojCarrera, paradas)
+    );
 
     // Los que tienen posición, por orden; los que no, al final, como fuera.
     const conPosicion = new Set(orden);
@@ -476,7 +487,7 @@ function Replay({
 
     const coches = meta.drivers.map((d, i) => ({ color: colores[i], codigo: d.code, fuera: fuera[i] }));
     return { filas, coches, lider };
-  }, [progreso, k, t, meta.drivers, colores, paso, parada, relojCarrera, final]);
+  }, [progreso, k, t, meta.drivers, colores, paso, parada, relojCarrera, paradas, final]);
 
   /**
    * El riel se reparte sobre `(count - 1) × paso`, no sobre `count × paso`.
@@ -769,7 +780,7 @@ function Replay({
    */
   if (pantallaCompleta) {
     return (
-      <div className="fixed inset-0 z-50 grid grid-cols-[64px_1fr_minmax(0,300px)] grid-rows-[40px_1fr_auto] bg-[var(--replay-fondo)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+      <div className="fixed inset-0 z-[60] grid grid-cols-[64px_1fr_minmax(0,300px)] grid-rows-[40px_1fr_auto] bg-[var(--replay-fondo)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
         <div className="col-span-3 flex items-center gap-3 border-b border-[var(--replay-borde)] px-3">
           <h1 className="min-w-0 truncate font-display text-base font-bold leading-none">
             Vuelta {vuelta}

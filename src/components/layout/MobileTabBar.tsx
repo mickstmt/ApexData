@@ -104,6 +104,19 @@ export function MobileTabBar() {
   const lista = useRef<HTMLUListElement>(null);
   const barra = useRef<HTMLElement>(null);
   const [pildora, setPildora] = useState<React.CSSProperties>({ opacity: 0 });
+  /**
+   * El recorte de la capa encendida, que viaja con el realce.
+   *
+   * El color de una pestaña lo pone `aria-current`, que es binario y salta de
+   * golpe al llegar la ruta: no sabe nada de por dónde va el realce. Y en CSS
+   * no existe un selector de «lo que está debajo de este elemento».
+   *
+   * Lo que sí funciona son dos capas: abajo las pestañas en gris, encima las
+   * mismas ya pintadas, recortadas a la caja del realce. Lo que cae dentro del
+   * recorte se ve pintado, y como el recorte lleva la misma curva y la misma
+   * duración, cada pestaña se enciende justo mientras el realce la cruza.
+   */
+  const [encendida, setEncendida] = useState<React.CSSProperties>({ opacity: 0 });
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   // La barra dice cuánto tapa, y así nadie más tiene que adivinarlo.
@@ -150,10 +163,17 @@ export function MobileTabBar() {
 
     const caja = casilla.getBoundingClientRect();
     const contenedor = nodo.getBoundingClientRect();
+    const izquierda = caja.left - contenedor.left;
+    const derecha = contenedor.width - (izquierda + caja.width);
+
     setPildora({
       opacity: 1,
       width: `${caja.width}px`,
-      transform: `translateX(${caja.left - contenedor.left}px)`,
+      transform: `translateX(${izquierda}px)`,
+    });
+    setEncendida({
+      opacity: 1,
+      clipPath: `inset(0 ${derecha}px 0 ${izquierda}px)`,
     });
   }, []);
 
@@ -163,13 +183,31 @@ export function MobileTabBar() {
 
     const medir = () => {
       const activa = nodo.querySelector<HTMLElement>('[aria-current="page"]');
-      if (!activa) return setPildora({ opacity: 0 });
+      if (!activa) {
+        setPildora({ opacity: 0 });
+        setEncendida({ opacity: 0 });
+        return;
+      }
       colocarPildora(activa);
     };
 
     medir();
+
+    // Se vuelve a medir si la lista cambia de tamaño, no solo al cambiar de
+    // ruta o de ventana.
+    //
+    // Medido: el realce se quedaba en 67,2 px de ancho cuando la casilla mide
+    // 65,2, porque la primera medida cogia la lista antes de que acabara de
+    // asentarse y nunca se repetia. Con un fondo suave eso no se ve; en cuanto
+    // el realce recorta la capa encendida, ese desajuste enciende una tira de
+    // la pestaña de al lado.
+    const observador = new ResizeObserver(medir);
+    observador.observe(nodo);
     window.addEventListener('resize', medir);
-    return () => window.removeEventListener('resize', medir);
+    return () => {
+      observador.disconnect();
+      window.removeEventListener('resize', medir);
+    };
   }, [pathname, colocarPildora]);
 
   /**
@@ -311,6 +349,24 @@ export function MobileTabBar() {
             <LayoutGrid className="h-[26px] w-[26px]" aria-hidden />
             {ETIQUETA_MAS}
           </button>
+        </li>
+
+        {/* La copia pintada. `aria-hidden` y sin recibir toques: no se anuncia
+            dos veces ni roba área tocable a los enlaces de debajo. */}
+        <li
+          aria-hidden
+          className="barra-encendida pointer-events-none absolute inset-0 flex items-stretch text-primary"
+          style={encendida}
+        >
+          {[...TABS, { label: ETIQUETA_MAS, icon: LayoutGrid }].map(({ label, icon: Icon }) => (
+            <span
+              key={label}
+              className="flex flex-1 flex-col items-center justify-center gap-[3px] text-[11.5px] font-medium leading-none"
+            >
+              <Icon className="h-[26px] w-[26px]" aria-hidden />
+              {label}
+            </span>
+          ))}
         </li>
         </ul>
       </nav>

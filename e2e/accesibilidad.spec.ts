@@ -1660,7 +1660,7 @@ test.describe('márgenes en móvil', () => {
     await page.goto('/');
 
     const barra = page.locator('nav[aria-label="Navegación principal"]');
-    const pildora = (await barra.locator('li[aria-hidden]').boundingBox())!;
+    const pildora = (await barra.locator('.barra-realce').boundingBox())!;
     const icono = (await barra.locator('a[aria-current="page"] svg').first().boundingBox())!;
 
     // Antes el borde de la píldora caía justo en el icono y parecía que se
@@ -1694,7 +1694,7 @@ test.describe('márgenes en móvil', () => {
     await page.goto('/');
 
     const barra = page.locator('nav[aria-label="Navegación principal"]');
-    const pildora = barra.locator('li[aria-hidden]');
+    const pildora = barra.locator('.barra-realce');
     // La matriz se lee EN el navegador: `DOMMatrixReadOnly` no existe en Node.
     const donde = () =>
       pildora.evaluate((el) => Math.round(new DOMMatrixReadOnly(getComputedStyle(el).transform).m41));
@@ -1760,6 +1760,68 @@ test.describe('márgenes en móvil', () => {
     });
 
     expect(sordo, 'parte de la barra no responde al toque').toBeLessThanOrEqual(5);
+  });
+
+  test('el realce enciende las pestañas que va cruzando', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    const barra = page.locator('nav[aria-label="Navegación principal"]');
+    await expect(barra).toBeVisible();
+
+    /**
+     * Cuánto de cada pestaña queda dentro del recorte de la capa encendida,
+     * en tanto por ciento. Es lo único que dice de verdad si una pestaña se ve
+     * pintada: el color lo pone una copia recortada, no una clase.
+     */
+    const encendido = () =>
+      page.evaluate(() => {
+        const capa = document.querySelector('.barra-encendida');
+        if (!capa) return null;
+        const caja = capa.getBoundingClientRect();
+        // El navegador colapsa `inset(0px 0px 0px 0px)` a `inset(0px)`, así que
+        // hay que aceptar las formas cortas en vez de exigir las cuatro.
+        const recorte = getComputedStyle(capa).clipPath;
+        const dentroDelParentesis = /inset\(([^)]+)\)/.exec(recorte);
+        if (!dentroDelParentesis) return null;
+
+        const valores = dentroDelParentesis[1].trim().split(/\s+/).map(parseFloat);
+        if (valores.some(Number.isNaN)) return null;
+        const [arriba, derechaPx = arriba, , izquierdaPx = derechaPx] =
+          valores.length === 1
+            ? [valores[0], valores[0], valores[0], valores[0]]
+            : valores.length === 2
+              ? [valores[0], valores[1], valores[0], valores[1]]
+              : valores.length === 3
+                ? [valores[0], valores[1], valores[2], valores[1]]
+                : valores;
+        void arriba;
+
+        const izquierda = caja.left + izquierdaPx;
+        const derecha = caja.right - derechaPx;
+
+        return [...capa.children].map((hijo) => {
+          const h = hijo.getBoundingClientRect();
+          const dentro = Math.max(0, Math.min(derecha, h.right) - Math.max(izquierda, h.left));
+          return Math.round((dentro / h.width) * 100);
+        });
+      });
+
+    // En reposo, la marcada entera y ninguna otra. El recorte tiene que casar
+    // con la casilla al píxel: se medía una sola vez y se quedaba 2 px ancho,
+    // que con un fondo suave no se ve pero recortando enciende a la vecina.
+    await expect.poll(encendido, { timeout: 5000 }).toEqual([100, 0, 0, 0, 0]);
+
+    // A mitad del viaje hacia Pilotos, las de en medio están encendidas a
+    // medias: eso es exactamente lo que se pedía y lo que no pasaba antes.
+    await barra.getByRole('link', { name: 'Pilotos' }).click();
+    await page.waitForTimeout(300);
+    const medio = (await encendido())!;
+    const aMedias = medio.filter((v) => v > 10 && v < 90).length;
+    expect(aMedias, `el realce no está cruzando nada: ${medio.join(', ')}`).toBeGreaterThan(0);
+
+    // Y al llegar, la de destino entera.
+    await expect.poll(encendido, { timeout: 5000 }).toEqual([0, 0, 0, 100, 0]);
   });
 
   test('las etiquetas caben, y su nombre completo sigue anunciándose', async ({ page }) => {

@@ -238,17 +238,158 @@ export function vueltaEn(progreso: Float64Array[], piloto: number, k: number, lo
 export const INSTANTES_QUIETO = 240;
 
 /**
- * Si un coche se quedó fuera: lleva un minuto sin avanzar mientras el líder
- * sí avanza. Con bandera roja se paran todos, líder incluido, y nadie está
- * fuera; una parada en boxes son veinte o treinta segundos, no sesenta.
+ * Cuánto tiene que durar un parón para considerarlo una detención de carrera.
+ *
+ * Treinta segundos. El reloj de carrera se queda plano también en instantes
+ * sueltos —ruido de la proyección—, y eso no es una bandera roja. La de Italia
+ * duró 1819 segundos.
  */
-export function estaFuera(progreso: Float64Array[], piloto: number, k: number, lider: number): boolean {
+const PARADA_MINIMA = 120;
+
+/**
+ * Cuánto tiene que llevar parado un coche, al detenerse la carrera, para darlo
+ * por retirado ya.
+ *
+ * Diez segundos, y el número no es de pulgar. Medido en Italia 2026 en el
+ * instante exacto en que la carrera se detiene: **LEC llevaba 23,3 s sin
+ * moverse y todos los demás 0,0 o 0,3**. Diez cae en mitad de ese hueco, muy
+ * por encima del ruido y muy por debajo del único coche que de verdad estaba
+ * fuera. También es más de lo que dura cualquier parada en boxes normal.
+ */
+const QUIETO_ANTES_DE_PARAR = 40;
+
+/**
+ * Para cada instante, cuándo empezó la última detención de carrera, o `-1`.
+ *
+ * Se calcula una vez y **sigue valiendo después del relanzamiento**: eso es lo
+ * que permite que quien se quedó fuera antes de la roja siga fuera cuando los
+ * demás arrancan, en vez de parpadear.
+ */
+export function paradasDeLaCarrera(reloj: Int32Array): Int32Array {
+  const n = reloj.length;
+  const paradas = new Int32Array(n).fill(-1);
+
+  /**
+   * Cada parada larga, con el instante en que se SABE que lo es.
+   *
+   * No se puede saber al empezar —un parón de dos segundos es ruido— ni hay que
+   * esperar a que acabe, que es lo que hacía la primera versión y dejaba a LEC
+   * sin declarar hasta el minuto 35. Se sabe a los treinta segundos de empezar.
+   */
+  const hitos: { inicio: number; sabido: number }[] = [];
+
+  let k = 1;
+  while (k < n) {
+    if (reloj[k] === reloj[k - 1]) {
+      const inicio = k - 1;
+      while (k < n && reloj[k] === reloj[inicio]) k++;
+      if (k - inicio >= PARADA_MINIMA) hitos.push({ inicio, sabido: inicio + PARADA_MINIMA });
+    } else {
+      k++;
+    }
+  }
+
+  let vigente = -1;
+  let h = 0;
+  for (let i = 0; i < n; i++) {
+    while (h < hitos.length && hitos[h].sabido <= i) vigente = hitos[h++].inicio;
+    paradas[i] = vigente;
+  }
+
+  return paradas;
+}
+
+/**
+ * Si un coche se quedó fuera: lleva un minuto de CARRERA sin avanzar mientras
+ * el líder sí avanza. Una parada en boxes son veinte o treinta segundos, no
+ * sesenta.
+ *
+ * ## Por qué el minuto se cuenta en tiempo de carrera y no de reloj
+ *
+ * Sin el reloj, la ventana son los 240 instantes anteriores pase lo que pase.
+ * Con una bandera roja eso es catastrófico: durante la parada no se mueve
+ * nadie —líder incluido— así que no salta nada, pero **en cuanto el líder
+ * arranca la vuelta de formación él ya avanza y los demás siguen con el
+ * progreso plano de la parada**. Todos cumplen la condición a la vez.
+ *
+ * Medido en Italia 2026, contando quién pasa de dentro a fuera en cada
+ * instante: en el minuto 35:32 salían **veintiún pilotos de golpe** —la
+ * parrilla entera— y otros cinco en la parada de la parrilla del
+ * relanzamiento. La torre se llenaba de OUT y el mapa disparaba veintiún
+ * avisos de abandono con sus ondas. El usuario lo describió como «rarísimo».
+ *
+ * Con el reloj de carrera la ventana se salta la parada entera y mira a
+ * cuando de verdad estaban rodando, donde los coches sí se movían. Quedan los
+ * abandonos de verdad: LEC, ALO y STR.
+ *
+ * Es el tercer fallo de la misma familia —el delta que se inflaba con la roja
+ * y el reloj que seguía corriendo con todos parados— y siempre por lo mismo:
+ * medir tiempo de pared donde había que medir tiempo de carrera. El reloj es
+ * opcional para no romper a quien no lo tenga; sin él se comporta como antes.
+ */
+export function estaFuera(
+  progreso: Float64Array[],
+  piloto: number,
+  k: number,
+  lider: number,
+  reloj?: Int32Array,
+  paradas?: Int32Array
+): boolean {
   const p = progreso[piloto][k];
   if (Number.isNaN(p)) return true;
-  if (k < INSTANTES_QUIETO || piloto === lider) return false;
+  if (piloto === lider) return false;
 
-  const antes = k - INSTANTES_QUIETO;
+  /**
+   * El que ya estaba parado cuando la carrera se detuvo.
+   *
+   * Sin esto, el minuto de carrera que exige la regla de abajo no se completa
+   * hasta bastante después del relanzamiento: en Italia, LEC se paraba en el
+   * minuto 4 y no se daba por retirado hasta el 36. El usuario lo dijo bien:
+   * «estaría mal mostrar el DNF al minuto 36 ya que en realidad es al 5».
+   *
+   * Durante la detención no se mueve nadie, así que ahí no hay nada que
+   * distinguir. Lo que sí distingue es **cuánto llevaba parado cada uno justo
+   * antes**: 23,3 s LEC contra 0,0 de los demás.
+   */
+  if (paradas) {
+    const inicio = paradas[k];
+    const antesDeParar = inicio - QUIETO_ANTES_DE_PARAR;
+    if (
+      inicio >= 0 &&
+      antesDeParar >= 0 &&
+      progreso[piloto][k] === progreso[piloto][inicio] &&
+      progreso[piloto][inicio] === progreso[piloto][antesDeParar]
+    ) {
+      return true;
+    }
+  }
+
+  const antes = reloj ? instanteHaceUnMinutoDeCarrera(reloj, k) : k - INSTANTES_QUIETO;
+  if (antes < 0) return false;
+
   const quieto = p === progreso[piloto][antes];
   const liderAvanza = progreso[lider][k] - progreso[lider][antes] > 0;
   return quieto && liderAvanza;
+}
+
+/**
+ * El instante en que el reloj de carrera marcaba un minuto menos que ahora, o
+ * `-1` si todavía no se ha corrido tanto.
+ *
+ * Por bisección y no barriendo hacia atrás: el reloj es monótono, así que se
+ * encuentra en unos veinte pasos en vez de doscientos cuarenta, y esto se
+ * llama por cada piloto y por cada instante que se pinta.
+ */
+function instanteHaceUnMinutoDeCarrera(reloj: Int32Array, k: number): number {
+  const objetivo = reloj[k] - INSTANTES_QUIETO;
+  if (objetivo < 0) return -1;
+
+  let bajo = 0;
+  let alto = k;
+  while (bajo < alto) {
+    const medio = (bajo + alto + 1) >> 1;
+    if (reloj[medio] <= objetivo) bajo = medio;
+    else alto = medio - 1;
+  }
+  return bajo;
 }
