@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowRight, CalendarDays, Flag } from 'lucide-react';
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import { esperandoResultados } from '@/lib/ultimo-resultado';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TimingRow } from '@/components/ui/TimingRow';
@@ -72,7 +73,7 @@ const getHubDataCacheada = unstable_cache(
       select: { name: true, location: true, country: true, imageUrl: true },
     } as const;
 
-    const [upcoming, lastRace] = await Promise.all([
+    const [upcoming, lastRace, ultimaCorrida] = await Promise.all([
       prisma.race.findMany({
         where: { date: { gte: yesterday } },
         orderBy: { date: 'asc' },
@@ -116,9 +117,32 @@ const getHubDataCacheada = unstable_cache(
           },
         },
       }),
+      /**
+       * La última que ya corrió, tenga resultados o no.
+       *
+       * Sin esto la portada se contradecía con nuestro propio aviso: a las
+       * cuatro horas del GP de España 2026 decía «próxima: Azerbaiyán» y
+       * debajo «último resultado: Italian Grand Prix», mientras el usuario ya
+       * tenía en el teléfono quién había ganado en España. La ronda 14 estaba
+       * en la base con 0 resultados porque Jolpica todavía no publicaba nada
+       * —con Italia tardó entre seis y ocho horas—.
+       */
+      prisma.race.findFirst({
+        where: { date: { lte: now } },
+        orderBy: { date: 'desc' },
+        select: {
+          year: true,
+          round: true,
+          raceName: true,
+          date: true,
+          time: true,
+          circuit: circuito,
+          _count: { select: { results: true } },
+        },
+      }),
     ]);
 
-    return { upcoming, lastRace };
+    return { upcoming, lastRace, ultimaCorrida };
   },
   ['portada-carreras'],
   { revalidate: 300, tags: ['portada'] }
@@ -160,6 +184,7 @@ async function getHubData() {
     const cacheada = await getHubDataCacheada();
     const upcoming = cacheada.upcoming.map(conFechasDeVerdad);
     const lastRace = cacheada.lastRace;
+    const ultimaCorrida = cacheada.ultimaCorrida;
 
     // Se resuelve fuera de la caché: depende de la hora actual, y meterlo
     // dentro congelaría durante cinco minutos cuál es la próxima carrera justo
@@ -168,7 +193,7 @@ async function getHubData() {
 
     const year = lastRace?.year ?? nextRace?.year ?? now.getFullYear();
 
-    return { nextRace, lastRace, year };
+    return { nextRace, lastRace, ultimaCorrida, year };
   } catch (error) {
     console.error('Error loading race hub:', error);
     return null;
@@ -189,7 +214,21 @@ export default async function Home() {
     );
   }
 
-  const { nextRace, lastRace, year } = data;
+  const { nextRace, lastRace, ultimaCorrida, year } = data;
+
+  /**
+   * Si la carrera más nueva ya corrió y sus resultados no han llegado.
+   *
+   * Enseñar la anterior como «último resultado» es contradecir al aviso que ya
+   * le llegó al usuario al teléfono. Decirlo no cuesta nada y deja de mentir.
+   */
+  const enCamino =
+    ultimaCorrida !== null &&
+    esperandoResultados(
+      { ...ultimaCorrida, resultados: ultimaCorrida._count.results },
+      lastRace,
+      new Date()
+    );
 
   const nextSessions = nextRace ? sesionesOrdenadas(nextRace, raceStart(nextRace)) : [];
 
@@ -267,8 +306,41 @@ export default async function Home() {
           allá de la pantalla. Se veía como un «Ver todo» pegado al borde y una
           barra de desplazamiento horizontal que nadie había pedido. */}
       <div className="grid gap-8 lg:grid-cols-2 [&>*]:min-w-0">
+        {/* Los resultados que aún no han llegado, antes que el anterior. */}
+        {enCamino && ultimaCorrida && (
+          <section>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 font-display text-xl font-semibold">
+                <Flag className="h-5 w-5 text-primary" aria-hidden />
+                Último resultado
+              </h2>
+              <Link
+                href={`/results/${ultimaCorrida.year}/${ultimaCorrida.round}`}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Ver todo
+              </Link>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CountryFlag country={ultimaCorrida.circuit.country} size={18} />
+                  {ultimaCorrida.raceName}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Ya se corrió. Los resultados oficiales todavía no han llegado; en cuanto
+                  estén aparecen aquí.
+                </p>
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
         {/* Last result */}
-        {lastRace && lastRace.results.length > 0 && (
+        {!enCamino && lastRace && lastRace.results.length > 0 && (
           <section>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-display text-xl font-semibold">

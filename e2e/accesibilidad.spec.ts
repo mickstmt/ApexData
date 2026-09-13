@@ -2318,6 +2318,22 @@ test.describe('acento por equipo favorito', () => {
 
 test.describe('ficha de circuito', () => {
   test('se llega desde la lista y cuenta desde dónde se gana aquí', async ({ page }) => {
+    /**
+     * El doble de tiempo, y no por comodidad.
+     *
+     * Esta prueba ya se endureció dos veces —`waitUntil: 'commit'` para no
+     * esperar a las imágenes del destino, y 30 s para el encabezado— y siguió
+     * tumbando despliegues: el 2026-09-13 se comió los 60 s del límite dos
+     * veces seguidas, con reintento incluido, en el `waitForURL`.
+     *
+     * La causa está medida en el comentario de abajo y no es del destino sino
+     * del ORIGEN: `/circuits` pinta 36 tarjetas y su cola de optimización de
+     * imágenes deja al servidor —dos núcleos en CI— sin turno para servir el
+     * documento siguiente. Subir el límite ataca eso; bajar lo que la prueba
+     * comprueba sería fingir que pasa.
+     */
+    test.setTimeout(120_000);
+
     await page.goto('/circuits');
 
     // El enlace del título se estira sobre la tarjeta entera: se pulsa el
