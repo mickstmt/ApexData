@@ -454,6 +454,34 @@ function Replay({
   const tiradorRef = useRef<HTMLDivElement>(null);
 
   /**
+   * La pantalla completa en horizontal.
+   *
+   * Se entra de dos maneras —girando el teléfono y con el botón— y se sale de
+   * las mismas dos. El botón no es un adorno: **mucha gente lleva el giro
+   * bloqueado**, y iOS no deja forzar la orientación desde la web. Sin él, con
+   * el giro bloqueado esta función no existiría; y al revés, quien entrara por
+   * el botón se quedaría atrapado sin forma de salir.
+   */
+  const [pantallaCompleta, setPantallaCompleta] = useState(false);
+
+  useEffect(() => {
+    /**
+     * «Un teléfono tumbado», y no «una pantalla ancha».
+     *
+     * El alto máximo es lo que separa un móvil en horizontal de un portátil:
+     * los dos son anchos, pero solo el primero se queda en 390 px de alto. Sin
+     * esa condición, el escritorio entraría en pantalla completa nada más
+     * abrir, que no es lo que se pidió.
+     */
+    const tumbado = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
+    const alGirar = (e: MediaQueryList | MediaQueryListEvent) => setPantallaCompleta(e.matches);
+
+    alGirar(tumbado);
+    tumbado.addEventListener('change', alGirar);
+    return () => tumbado.removeEventListener('change', alGirar);
+  }, []);
+
+  /**
    * Cuánto está encogido el mapa, entre 0,36 y 1.
    *
    * En una referencia y no en estado: el arrastre lo cambia sesenta veces por
@@ -604,6 +632,24 @@ function Replay({
     };
   }, []);
 
+  const controlesConForma = (forma: 'minima' | 'completa' | 'rail' | 'barra') => (
+    <ControlesDeReplay
+      k={reloj.kEntero}
+      count={count}
+      paso={paso}
+      reproduciendo={reloj.reproduciendo}
+      velocidad={reloj.velocidad}
+      tramos={tramos}
+      vueltas={marcasDeVuelta}
+      onAlternar={reloj.alternar}
+      onVelocidad={reloj.cambiarVelocidad}
+      onBuscar={reloj.buscar}
+      vuelta={vuelta}
+      totalVueltas={meta.totalLaps}
+      forma={forma}
+    />
+  );
+
   const controles = (conReloj: boolean) => (
     <ControlesDeReplay
       k={reloj.kEntero}
@@ -619,6 +665,9 @@ function Replay({
       vuelta={vuelta}
       totalVueltas={meta.totalLaps}
       conReloj={conReloj}
+      // En el teléfono, en vertical, solo los cuatro botones. La barra vive en
+      // la pantalla completa; el escritorio la conserva porque ahí sobra sitio.
+      forma={conReloj ? 'completa' : 'minima'}
     />
   );
 
@@ -638,6 +687,73 @@ function Replay({
       ariaLabel={`Mapa de la carrera con ${meta.drivers.length} coches sobre el circuito. Toca un coche para seguirlo; la clasificación está en la lista.`}
     />
   );
+
+  /**
+   * Pantalla completa: la columna de botones a la izquierda, el circuito en
+   * medio, la torre a la derecha y la barra sola abajo.
+   *
+   * El reparto lo propuso el usuario y **salió mejor que el que yo
+   * recomendaba**, que era copiar el de escritorio. Medido sobre maqueta a
+   * 844×390: con un circuito ancho tipo Monza los dos dibujan el trazado igual
+   * (443×221), pero con uno cuadrado tipo Hungaroring este da 346×266 frente a
+   * 288×221 — **un 44 % más**, porque dejar la fila de botones abajo aplastaba
+   * el mapa a 241 px de alto. Y los botones pasan de 40 a 44 px.
+   *
+   * De paso quedó descartada con datos la tercera opción, la torre flotando
+   * encima del circuito: su caja de 842 px de ancho no servía de nada, porque
+   * el trazado lo limita el ALTO y ese era el mismo; y encima perdía tres filas.
+   */
+  if (pantallaCompleta) {
+    return (
+      <div className="fixed inset-0 z-50 grid grid-cols-[64px_1fr_minmax(0,300px)] grid-rows-[40px_1fr_auto] bg-[var(--replay-fondo)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+        <div className="col-span-3 flex items-center gap-3 border-b border-[var(--replay-borde)] px-3">
+          <h1 className="min-w-0 truncate font-display text-base font-bold leading-none">
+            Vuelta {vuelta}
+            <span className="text-xs text-[var(--replay-apagado)]">/{meta.totalLaps}</span>
+          </h1>
+          <span
+            className="shrink-0 font-mono text-xs tabular-nums text-[var(--replay-apagado)]"
+            aria-label="Minuto de carrera"
+          >
+            {formatoReloj(t)}
+          </span>
+          <span
+            role="status"
+            className={cn(
+              'ml-auto shrink-0 rounded px-2 py-1 font-display text-[10px] font-semibold uppercase tracking-[.1em]',
+              PILDORA[estado]
+            )}
+          >
+            {nombreDeEstado(estado)}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPantallaCompleta(false)}
+            aria-label="Salir de pantalla completa"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[var(--replay-apagado)] hover:text-[var(--replay-texto)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
+              <path d="M4 8h5V3M20 8h-5V3M4 16h5v5M20 16h-5v5" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="col-start-1 row-start-2 border-r border-[var(--replay-borde)]">
+          {controlesConForma('rail')}
+        </div>
+
+        <div className="col-start-2 row-start-2 min-h-0">{mapa('relleno')}</div>
+
+        <div className="col-start-3 row-span-2 row-start-2 min-h-0 overflow-y-auto border-l border-[var(--replay-borde)]">
+          <TorreDeTiempos filas={filas} elegido={elegido} onElegir={elegir} tapadoAbajo={0} />
+        </div>
+
+        <div className="col-span-2 col-start-1 row-start-3 border-t border-[var(--replay-borde)] pb-[env(safe-area-inset-bottom)]">
+          {controlesConForma('barra')}
+        </div>
+      </div>
+    );
+  }
 
   return (
     // Dos mundos, un solo árbol.
@@ -670,11 +786,22 @@ function Replay({
             nunca cambia de tamaño y el encogido no cuesta nada. */}
         <div
           ref={recorteRef}
-          className="overflow-hidden border-b border-[var(--replay-borde)] md:hidden"
+          className="relative overflow-hidden border-b border-[var(--replay-borde)] md:hidden"
         >
           <div ref={escalaRef} className="origin-top will-change-transform">
             {mapa('proporcion')}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setPantallaCompleta(true)}
+            aria-label="Ver a pantalla completa"
+            className="absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-[10px] border border-[var(--replay-borde)] bg-[var(--replay-superficie)] text-[var(--replay-texto)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
+              <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+            </svg>
+          </button>
         </div>
 
         {/* El tirador va en su propia franja, entre el mapa y la torre, y no

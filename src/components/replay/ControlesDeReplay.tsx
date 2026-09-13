@@ -84,6 +84,7 @@ export function ControlesDeReplay({
   onVelocidad,
   onBuscar,
   conReloj = false,
+  forma = 'completa',
 }: {
   k: number;
   count: number;
@@ -101,6 +102,25 @@ export function ControlesDeReplay({
   onBuscar: (k: number) => void;
   /** En escritorio los mandos se centran; en el móvil ocupan el ancho. */
   conReloj?: boolean;
+  /**
+   * Cuánto de los mandos se enseña.
+   *
+   * `minima` es el vertical del teléfono: **solo los cuatro botones**, sin
+   * barra de progreso ni reloj. Lo decidió el usuario porque el cuadro ocupaba
+   * demasiada pantalla, y la barra no se pierde: se muda a la pantalla
+   * completa, donde va «tal cual la tenemos ahora».
+   *
+   * El reloj y la vuelta salen también, y eso no quita ningún dato: la cabecera
+   * del replay ya lleva «Vuelta 33/53» y la hora.
+   *
+   * `rail` y `barra` son las dos mitades de la pantalla completa en horizontal,
+   * y van en celdas distintas de la rejilla: los botones en una columna a la
+   * izquierda, la barra sola abajo. Ese reparto lo propuso el usuario y salió
+   * mejor que el que yo recomendaba — medido sobre maqueta, con un circuito
+   * cuadrado tipo Hungaroring el trazado se dibuja un 44 % más grande, y los
+   * botones suben de 40 a 44 px, que es el mínimo que el proyecto no negocia.
+   */
+  forma?: 'minima' | 'completa' | 'rail' | 'barra';
 }) {
   const segundos = k * paso;
   const salto = saltoDe(10, paso);
@@ -177,132 +197,241 @@ export function ControlesDeReplay({
   // cursor en vez de a él.
   const avance = count > 1 ? Math.min(1, Math.max(0, k / (count - 1))) : 0;
 
-  return (
-    <div className="grid gap-2 px-4 pb-2.5 pt-2">
-      <div
-        data-tiempos
-        className="flex items-baseline justify-between font-mono text-[12px] tabular-nums text-[var(--replay-apagado)]"
+  /**
+   * El botón de reproducir, en icono.
+   *
+   * Sin la palabra, porque el usuario la quitó: «sin necesidad de que diga
+   * reproducir o pausa». Un triángulo y dos barras son de los pocos símbolos
+   * que no hacen falta explicar en ningún idioma.
+   *
+   * Lo que la palabra sí hacía era dar nombre al botón, y eso ahora lo da
+   * `aria-label`: sin él, quien va con lector de pantalla oiría «botón» y nada
+   * más, que es la forma más silenciosa de romper algo.
+   */
+  const play = (
+    <button
+      type="button"
+      onClick={onAlternar}
+      aria-pressed={reproduciendo}
+      aria-label={reproduciendo ? 'Pausa' : 'Reproducir'}
+      className="grid h-12 place-items-center rounded-[10px] bg-[var(--replay-acento)] text-[var(--replay-acento-tinta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-texto)]"
+    >
+      {reproduciendo ? (
+        <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden>
+          <path d="M7 5h4v14H7zM13 5h4v14h-4z" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden>
+          <path d="M8 5l12 7-12 7z" />
+        </svg>
+      )}
+    </button>
+  );
+
+  const atras = (
+    <button
+      type="button"
+      onClick={() => !sinAtras && saltar(-1)}
+      aria-disabled={sinAtras}
+      aria-label="Retroceder 10 s"
+      className={BOTON}
+    >
+      <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden><path d="M11 6 3 12l8 6zM20 6l-8 6 8 6z" /></svg>
+      <span aria-hidden className="font-mono text-[8.5px] font-semibold leading-none text-[var(--replay-apagado)]">10 s</span>
+    </button>
+  );
+
+  const adelante = (
+    <button
+      type="button"
+      onClick={() => !sinAdelante && saltar(1)}
+      aria-disabled={sinAdelante}
+      aria-label="Avanzar 10 s"
+      className={BOTON}
+    >
+      <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden><path d="M13 6l8 6-8 6zM4 6l8 6-8 6z" /></svg>
+      <span aria-hidden className="font-mono text-[8.5px] font-semibold leading-none text-[var(--replay-apagado)]">10 s</span>
+    </button>
+  );
+
+  const cambioDeVelocidad = (
+    <button type="button" onClick={onVelocidad} aria-label={`Velocidad: ${velocidad} por uno`} className={BOTON}>
+      {velocidad}×
+    </button>
+  );
+
+  const filaDeTiempos = (
+    <div
+      data-tiempos
+      className="flex items-baseline justify-between font-mono text-[12px] tabular-nums text-[var(--replay-apagado)]"
+    >
+      <span
+        className="inline-block text-sm font-semibold text-[var(--replay-texto)]"
+        style={{ minWidth: huecoDelReloj }}
       >
+        {formatoReloj(segundos)}
+      </span>
+      <span>{formatoReloj(duracion)}</span>
+    </div>
+  );
+
+  const pista = (
+    <div className="relative flex h-11 items-center">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-[18px] h-2 rounded"
+        style={{ background: degradadoDelScrubber(tramos, 'var(--replay-superficie-2)', TINTA_CSS) }}
+      />
+      {vueltas.map((pct, i) => (
         <span
-          className="inline-block text-sm font-semibold text-[var(--replay-texto)]"
-          style={{ minWidth: huecoDelReloj }}
+          key={i}
+          aria-hidden
+          className="pointer-events-none absolute top-[14px] h-4 w-px bg-[var(--replay-tenue)]"
+          style={{ left: `${pct}%` }}
+        />
+      ))}
+      <input
+        type="range"
+        min={0}
+        max={count - 1}
+        step={1}
+        value={Math.floor(k)}
+        aria-label="Minuto de la carrera"
+        aria-valuetext={
+          vuelta !== undefined && totalVueltas !== undefined
+            ? `${formatoReloj(segundos)}, vuelta ${vuelta} de ${totalVueltas}`
+            : formatoReloj(segundos)
+        }
+        onChange={(e) => onBuscar(Number(e.target.value))}
+        onPointerDown={() => setPunteroAbajo(true)}
+        onPointerUp={() => setPunteroAbajo(false)}
+        onPointerCancel={() => setPunteroAbajo(false)}
+        // Soltar fuera del control: un `range` captura el puntero, así que el
+        // `pointerup` llega igual, pero si la captura se pierde antes hay que
+        // enterarse o la burbuja se queda pegada hasta el siguiente clic.
+        onLostPointerCapture={() => setPunteroAbajo(false)}
+        // También con el teclado: quien mueve el scrubber con las flechas
+        // necesita el mismo destino a la vista que quien lo arrastra.
+        onFocus={() => setConFoco(true)}
+        onBlur={() => setConFoco(false)}
+        // `relative` no es decorativo: el riel y las marcas de vuelta son
+        // `absolute` y el `input` era estático, así que pintaban ENCIMA del
+        // pulgar —lo posicionado va por delante de lo que no lo está— y el
+        // cursor salía partido por una franja. Se veía igual en los dos
+        // temas; con el riel claro se nota más. Posicionarlo lo devuelve
+        // delante sin tocar el orden del DOM ni inventar una capa.
+        className="replay-scrubber relative h-11 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]"
+      />
+
+      {arrastrando && (
+        <span
+          aria-hidden
+          data-burbuja
+          className="pointer-events-none absolute bottom-[38px] z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[var(--replay-texto)] px-2 py-1 font-mono text-[12.5px] font-semibold tabular-nums text-[var(--replay-fondo)]"
+          style={{ left: `calc(11px + ${avance} * (100% - 22px))` }}
         >
+          {vuelta !== undefined ? `V${vuelta} · ` : ''}
           {formatoReloj(segundos)}
         </span>
-        <span>{formatoReloj(duracion)}</span>
-      </div>
+      )}
 
-      <div className="relative flex h-11 items-center">
-        <div
+      {/* Por encima de la fila del reloj, no sobre ella: a 58 px la píldora
+          se le montaba encima y tapaba el número que el propio salto acaba
+          de cambiar. Medido a 390 px antes de subirla. */}
+      {destello && (
+        <span
+          key={destello.pase}
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-[18px] h-2 rounded"
-          style={{ background: degradadoDelScrubber(tramos, 'var(--replay-superficie-2)', TINTA_CSS) }}
-        />
-        {vueltas.map((pct, i) => (
-          <span
-            key={i}
-            aria-hidden
-            className="pointer-events-none absolute top-[14px] h-4 w-px bg-[var(--replay-tenue)]"
-            style={{ left: `${pct}%` }}
-          />
-        ))}
-        <input
-          type="range"
-          min={0}
-          max={count - 1}
-          step={1}
-          value={Math.floor(k)}
-          aria-label="Minuto de la carrera"
-          aria-valuetext={
-            vuelta !== undefined && totalVueltas !== undefined
-              ? `${formatoReloj(segundos)}, vuelta ${vuelta} de ${totalVueltas}`
-              : formatoReloj(segundos)
-          }
-          onChange={(e) => onBuscar(Number(e.target.value))}
-          onPointerDown={() => setPunteroAbajo(true)}
-          onPointerUp={() => setPunteroAbajo(false)}
-          onPointerCancel={() => setPunteroAbajo(false)}
-          // Soltar fuera del control: un `range` captura el puntero, así que el
-          // `pointerup` llega igual, pero si la captura se pierde antes hay que
-          // enterarse o la burbuja se queda pegada hasta el siguiente clic.
-          onLostPointerCapture={() => setPunteroAbajo(false)}
-          // También con el teclado: quien mueve el scrubber con las flechas
-          // necesita el mismo destino a la vista que quien lo arrastra.
-          onFocus={() => setConFoco(true)}
-          onBlur={() => setConFoco(false)}
-          // `relative` no es decorativo: el riel y las marcas de vuelta son
-          // `absolute` y el `input` era estático, así que pintaban ENCIMA del
-          // pulgar —lo posicionado va por delante de lo que no lo está— y el
-          // cursor salía partido por una franja. Se veía igual en los dos
-          // temas; con el riel claro se nota más. Posicionarlo lo devuelve
-          // delante sin tocar el orden del DOM ni inventar una capa.
-          className="replay-scrubber relative h-11 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]"
-        />
+          data-destello
+          className="replay-destello pointer-events-none absolute bottom-[80px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--replay-texto)] px-3.5 py-1.5 font-mono text-sm font-bold tabular-nums text-[var(--replay-fondo)]"
+        >
+          {destello.texto}
+        </span>
+      )}
+    </div>
+  );
 
-        {arrastrando && (
-          <span
-            aria-hidden
-            data-burbuja
-            className="pointer-events-none absolute bottom-[38px] z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[var(--replay-texto)] px-2 py-1 font-mono text-[12.5px] font-semibold tabular-nums text-[var(--replay-fondo)]"
-            style={{ left: `calc(11px + ${avance} * (100% - 22px))` }}
-          >
-            {vuelta !== undefined ? `V${vuelta} · ` : ''}
-            {formatoReloj(segundos)}
-          </span>
-        )}
-
-        {/* Por encima de la fila del reloj, no sobre ella: a 58 px la píldora
-            se le montaba encima y tapaba el número que el propio salto acaba
-            de cambiar. Medido a 390 px antes de subirla. */}
+  if (forma === 'rail') {
+    return (
+      <div className="relative grid h-full content-center justify-items-center px-2">
+        {/* El destello sale AL LADO y no encima: en la columna no hay sitio por
+            arriba, y tapando un botón escondería justo el que se acaba de
+            pulsar. */}
         {destello && (
           <span
             key={destello.pase}
             aria-hidden
             data-destello
-            className="replay-destello pointer-events-none absolute bottom-[80px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--replay-texto)] px-3.5 py-1.5 font-mono text-sm font-bold tabular-nums text-[var(--replay-fondo)]"
+            className="replay-destello pointer-events-none absolute left-full top-1/2 z-10 ml-2 -translate-y-1/2 whitespace-nowrap rounded-full bg-[var(--replay-texto)] px-3.5 py-1.5 font-mono text-sm font-bold tabular-nums text-[var(--replay-fondo)]"
           >
             {destello.texto}
           </span>
         )}
+        <div data-botonera className="grid justify-items-center gap-2.5">
+          {atras}
+          {play}
+          {adelante}
+          {cambioDeVelocidad}
+        </div>
       </div>
+    );
+  }
+
+  if (forma === 'barra') {
+    return (
+      <div className="grid gap-1 px-4 pb-1.5 pt-1">
+        {filaDeTiempos}
+        {pista}
+      </div>
+    );
+  }
+
+  if (forma === 'minima') {
+    return (
+      <div className="px-4 pb-2.5 pt-2">
+        <div className="relative">
+          {/* El destello se queda: sin barra de progreso es la única señal de
+              que el salto ocurrió, y de cuánto fue. */}
+          {destello && (
+            <span
+              key={destello.pase}
+              aria-hidden
+              data-destello
+              className="replay-destello pointer-events-none absolute bottom-[54px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--replay-texto)] px-3.5 py-1.5 font-mono text-sm font-bold tabular-nums text-[var(--replay-fondo)]"
+            >
+              {destello.texto}
+            </span>
+          )}
+
+          <div
+            data-botonera
+            className="grid grid-cols-[44px_56px_44px_56px] items-center justify-center gap-3"
+          >
+            {atras}
+            {play}
+            {adelante}
+            {cambioDeVelocidad}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-2 px-4 pb-2.5 pt-2">
+      {filaDeTiempos}
+      {pista}
 
       <div
         data-botonera
         className={`grid items-center gap-2.5 ${
-          conReloj ? 'grid-cols-[44px_200px_44px_56px] justify-center' : 'grid-cols-[44px_1fr_44px_56px]'
+          conReloj ? 'grid-cols-[44px_56px_44px_56px] justify-center' : 'grid-cols-[44px_1fr_44px_56px]'
         }`}
       >
-        <button
-          type="button"
-          onClick={() => !sinAtras && saltar(-1)}
-          aria-disabled={sinAtras}
-          aria-label="Retroceder 10 s"
-          className={BOTON}
-        >
-          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden><path d="M11 6 3 12l8 6zM20 6l-8 6 8 6z" /></svg>
-          <span aria-hidden className="font-mono text-[8.5px] font-semibold leading-none text-[var(--replay-apagado)]">10 s</span>
-        </button>
-        <button
-          type="button"
-          onClick={onAlternar}
-          aria-pressed={reproduciendo}
-          className="h-12 rounded-[10px] bg-[var(--replay-acento)] font-display text-sm font-bold tracking-[.06em] text-[var(--replay-acento-tinta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-texto)]"
-        >
-          {reproduciendo ? 'PAUSA' : 'REPRODUCIR'}
-        </button>
-        <button
-          type="button"
-          onClick={() => !sinAdelante && saltar(1)}
-          aria-disabled={sinAdelante}
-          aria-label="Avanzar 10 s"
-          className={BOTON}
-        >
-          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden><path d="M13 6l8 6-8 6zM4 6l8 6-8 6z" /></svg>
-          <span aria-hidden className="font-mono text-[8.5px] font-semibold leading-none text-[var(--replay-apagado)]">10 s</span>
-        </button>
-        <button type="button" onClick={onVelocidad} aria-label={`Velocidad: ${velocidad} por uno`} className={BOTON}>
-          {velocidad}×
-        </button>
+        {atras}
+        {play}
+        {adelante}
+        {cambioDeVelocidad}
       </div>
     </div>
   );

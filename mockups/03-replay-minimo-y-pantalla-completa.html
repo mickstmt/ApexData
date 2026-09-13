@@ -82,7 +82,7 @@ h1 { margin: 0 0 6px; font-size: clamp(24px, 4vw, 32px); line-height: 1.1; lette
 .r-cab .rel { margin-left: auto; font: 400 12px/1 ui-monospace, monospace; color: var(--apagado); }
 
 .r-mapa { position: relative; display: grid; place-items: center; overflow: hidden; }
-.r-mapa svg { width: 70%; }
+.r-mapa svg { max-width: 92%; max-height: 92%; width: auto; height: auto; aspect-ratio: 2 / 1; }
 .r-expandir {
   position: absolute; right: 6px; top: 6px; width: 30px; height: 30px;
   display: grid; place-items: center; border: 1px solid var(--borde); border-radius: 8px;
@@ -123,6 +123,16 @@ h1 { margin: 0 0 6px; font-size: clamp(24px, 4vw, 32px); line-height: 1.1; lette
 .panel b { color: var(--tinta); }
 .recomendada { border-color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
 .sello { display: inline-block; margin-left: 6px; padding: 3px 7px; border-radius: 5px; background: var(--acento); color: var(--acento-tinta); font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
+.r-columna {
+  display: grid; align-content: center; justify-items: center; gap: 10px;
+  border-right: 1px solid var(--borde); padding: 0 8px;
+}
+.r-columna .r-bt { width: 44px; height: 44px; }
+.r-columna .r-play {
+  width: 44px; height: 48px; display: grid; place-items: center;
+  font-size: 16px; letter-spacing: 0;
+}
+
 .dos { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(320px,100%), 1fr)); }
 </style>
 </head>
@@ -160,6 +170,7 @@ h1 { margin: 0 0 6px; font-size: clamp(24px, 4vw, 32px); line-height: 1.1; lette
     <span class="etq">Horizontal</span>
     <button type="button" data-v="lado" aria-pressed="true">A · Circuito y torre lado a lado</button>
     <button type="button" data-v="encima" aria-pressed="false">B · Circuito entero, torre encima</button>
+    <button type="button" data-v="columna" aria-pressed="false">C · Botones a la izquierda</button>
   </div>
 
   <div class="pieza" style="justify-items:center">
@@ -172,6 +183,11 @@ h1 { margin: 0 0 6px; font-size: clamp(24px, 4vw, 32px); line-height: 1.1; lette
       <h2>A · Circuito y torre lado a lado <span class="sello">Recomendada</span></h2>
       <p>El circuito a la izquierda, la lista a la derecha, y los mandos completos abajo a lo ancho. Es <b>el reparto que ya usa el escritorio</b>, así que no hay que inventar nada ni mantener un tercer diseño.</p>
       <p>Se leen las dos cosas a la vez sin que ninguna tape a la otra, y la barra de progreso recupera todo el ancho de la pantalla — que es donde más falta hace para saltar fino.</p>
+    </div>
+    <div class="panel" id="p-columna">
+      <h2>C · Botones a la izquierda</h2>
+      <p>Tu propuesta. Los cuatro mandos en una columna a la izquierda, el circuito en medio, la lista a la derecha, y <b>la barra de progreso sola abajo</b>.</p>
+      <p>Al sacar los botones de la fila de abajo, la barra se queda con todo el ancho — que es donde más falta hace para saltar fino en una carrera de hora y media. Y en horizontal el pulgar izquierdo cae justo en la columna mientras el derecho arrastra.</p>
     </div>
     <div class="panel" id="p-encima">
       <h2>B · Circuito entero, torre encima</h2>
@@ -250,6 +266,24 @@ h1 { margin: 0 0 6px; font-size: clamp(24px, 4vw, 32px); line-height: 1.1; lette
         '<div class="r-mapa" style="grid-column:1;grid-row:2">' + TRAZADO + '</div>' +
         '<div class="r-torre" style="grid-column:2;grid-row:2/4;border-left:1px solid var(--borde);overflow:hidden">' + filas(9) + '</div>' +
         '<div class="r-mandos" style="grid-column:1;grid-row:3">' + TIEMPOS + PISTA + BOTONES + '</div>';
+    } else if (variante === 'columna') {
+      // La propuesta del usuario: los botones en una columna a la izquierda,
+      // y la barra de progreso sola abajo, con todo el ancho para ella.
+      caja.style.gridTemplateColumns = '60px 1fr 300px';
+      caja.style.gridTemplateRows = '30px 1fr auto';
+      caja.innerHTML =
+        '<div class="r-cab" style="grid-column:1/4">GP de Italia <span class="rel">Vuelta 33/53 · 48:20</span></div>' +
+        '<div class="r-columna" style="grid-column:1;grid-row:2">' +
+          '<button class="r-bt">&#9664;&#9664;</button>' +
+          '<button class="r-play">&#9654;</button>' +
+          '<button class="r-bt">&#9654;&#9654;</button>' +
+          '<button class="r-bt">1&times;</button>' +
+        '</div>' +
+        '<div class="r-mapa" style="grid-column:2;grid-row:2">' + TRAZADO + '</div>' +
+        '<div class="r-torre" style="grid-column:3;grid-row:2/4;border-left:1px solid var(--borde);overflow:hidden">' + filas(9) + '</div>' +
+        // La fila de la barra arranca del borde izquierdo, por debajo de los
+        // botones, como en el boceto del usuario.
+        '<div class="r-mandos" style="grid-column:1/3;grid-row:3">' + TIEMPOS + PISTA + '</div>';
     } else {
       caja.style.gridTemplateColumns = '1fr';
       caja.style.gridTemplateRows = '30px 1fr auto';

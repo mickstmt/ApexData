@@ -10,6 +10,16 @@ import { expect, test, type Page } from '@playwright/test';
  * en vez de romperse.
  */
 
+/**
+ * El teléfono tumbado: 844×390.
+ *
+ * Es donde vive ahora la barra de progreso. En vertical los mandos son solo
+ * cuatro botones —decisión del usuario en el punto 24— y la barra se mudó a la
+ * pantalla completa, que se abre al girar. Las pruebas que la tocan se mudan
+ * con ella; las que solo usan los botones se quedan en vertical.
+ */
+const TUMBADO = { width: 844, height: 390 };
+
 const RADIO = 1000;
 const PUNTOS = 60;
 const COUNT = 120; // 30 s a 4 Hz
@@ -121,7 +131,7 @@ for (const [nombre, viewport] of [
 
       // Los mandos, fijos: el botón grande está dentro de la pantalla sin
       // desplazar, por encima de la barra de pestañas de la app.
-      const reproducir = visible(page, 'REPRODUCIR');
+      const reproducir = visible(page, 'Reproducir');
       const cajaPlay = (await reproducir.boundingBox())!;
       expect(cajaPlay.height).toBeGreaterThanOrEqual(44);
       expect(cajaPlay.y + cajaPlay.height).toBeLessThan(viewport.height - 60);
@@ -208,7 +218,7 @@ for (const [nombre, viewport] of [
  * exactamente los que estaban escritos a fuego antes.
  */
 test.describe('los mandos dicen lo que hacen', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
+  test.use({ viewport: TUMBADO });
 
   const mandos = (page: Page) => page.locator('[data-botonera]').filter({ visible: true });
   const tiempos = (page: Page) => page.locator('[data-tiempos]').filter({ visible: true });
@@ -216,7 +226,7 @@ test.describe('los mandos dicen lo que hacen', () => {
   test('los botones de salto dicen «10 s» antes de pulsarlos', async ({ page }) => {
     await simularCarrera(page);
     await page.goto(REPLAY);
-    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
     // El hueco reportado: dos dobles flechas sin decir cuánto mueven. La marca
     // contesta antes de pulsar; el destello, después. Aquí va la primera.
@@ -228,7 +238,7 @@ test.describe('los mandos dicen lo que hacen', () => {
   test('el reloj y la vuelta van pegados al scrubber, no solo en la cabecera', async ({ page }) => {
     await simularCarrera(page);
     await page.goto(REPLAY);
-    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
     // La duración es (count - 1) × paso y no count × paso: es el tope al que
     // llega el scrubber, y tiene que ser alcanzable arrastrando.
@@ -244,7 +254,7 @@ test.describe('los mandos dicen lo que hacen', () => {
     // Y está donde se toca: por debajo del mapa y a menos de una fila de los
     // botones. Repetir el reloj de la cabecera solo se justifica por eso.
     const caja = (await tiempos(page).boundingBox())!;
-    const play = (await visible(page, 'REPRODUCIR').boundingBox())!;
+    const play = (await visible(page, 'Reproducir').boundingBox())!;
     expect(play.y - (caja.y + caja.height)).toBeLessThan(80);
   });
 
@@ -279,7 +289,7 @@ test.describe('los mandos dicen lo que hacen', () => {
   test('el destello dice el salto que de verdad ocurrió, no siempre diez', async ({ page }) => {
     await simularCarrera(page);
     await page.goto(REPLAY);
-    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
     // En medio de la carrera, diez son diez.
     await moverScrubber(page, 60);
@@ -304,7 +314,7 @@ test.describe('los mandos dicen lo que hacen', () => {
   test('en los topes el botón se apaga sin llevarse el foco', async ({ page }) => {
     await simularCarrera(page);
     await page.goto(REPLAY);
-    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
     // El replay abre en el instante cero: atrás no hay nada.
     await expect(visible(page, 'Retroceder 10 s')).toHaveAttribute('aria-disabled', 'true');
@@ -326,7 +336,7 @@ test.describe('los mandos dicen lo que hacen', () => {
   test('a medio paso del inicio todavía se puede volver atrás', async ({ page }) => {
     await simularCarrera(page);
     await page.goto(REPLAY);
-    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
     // La zona muerta que tenía: `Math.round(-0.5)` da `-0`, que es igual a 0,
     // así que el botón se apagaba a dos instantes del principio y esos últimos
@@ -345,7 +355,7 @@ test.describe('los mandos dicen lo que hacen', () => {
   test('al mover el scrubber sale a dónde vas, y se va al soltar', async ({ page }) => {
     await simularCarrera(page);
     await page.goto(REPLAY);
-    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
     const burbuja = page.locator('[data-burbuja]').filter({ visible: true });
     await expect(burbuja).toHaveCount(0);
@@ -373,7 +383,7 @@ test.describe('los mandos dicen lo que hacen', () => {
     await page.setViewportSize({ width: 360, height: 800 });
     await simularCarrera(page);
     await page.goto(REPLAY);
-    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
     const fila = page.locator('[data-botonera]').filter({ visible: true });
 
@@ -388,7 +398,7 @@ test.describe('los mandos dicen lo que hacen', () => {
       return { izq: r.x, der: r.right };
     }))!;
 
-    for (const nombre of ['Retroceder 10 s', 'REPRODUCIR', 'Avanzar 10 s', /Velocidad/]) {
+    for (const nombre of ['Retroceder 10 s', 'Reproducir', 'Avanzar 10 s', /Velocidad/]) {
       const caja = (await visible(page, nombre).boundingBox())!;
       expect(caja.x, `«${nombre}» se sale por la izquierda`).toBeGreaterThanOrEqual(cristal.izq - 1);
       expect(caja.x + caja.width, `«${nombre}» se sale por la derecha`).toBeLessThanOrEqual(cristal.der + 1);
@@ -399,7 +409,7 @@ test.describe('los mandos dicen lo que hacen', () => {
   test('tras tocar y soltar, las flechas siguen enseñando a dónde vas', async ({ page }) => {
     await simularCarrera(page);
     await page.goto(REPLAY);
-    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
     // El fallo que vigila: con un solo interruptor para el dedo y el foco,
     // soltar el dedo lo apagaba con el control TODAVÍA enfocado, y a partir de
@@ -423,7 +433,7 @@ test.describe('los mandos en escritorio', () => {
   test('los cuatro van centrados, y el reloj ya no se dice dos veces', async ({ page }) => {
     await simularCarrera(page);
     await page.goto(REPLAY);
-    await expect(visible(page, 'REPRODUCIR')).toBeVisible({ timeout: 20_000 });
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
     const botonera = page.locator('[data-botonera]').filter({ visible: true });
     const fila = (await botonera.boundingBox())!;
@@ -451,7 +461,7 @@ test.describe('el replay sigue el tema', () => {
     page.evaluate(() => {
       const fila = document.querySelector('ol[aria-label="Clasificación en este instante"] button')!;
       const celdas = fila.querySelectorAll('span');
-      const play = [...document.querySelectorAll('button')].find((b) => /REPRODUCIR|PAUSA/.test(b.textContent || ''))!;
+      const play = document.querySelector('button[aria-label="Reproducir"], button[aria-label="Pausa"]')!;
       return {
         body: getComputedStyle(document.body).backgroundColor,
         replay: getComputedStyle(document.querySelector('main > div > div')!).backgroundColor,
@@ -671,8 +681,85 @@ test.describe('el mapa se encoge con su tirador', () => {
   });
 });
 
-test.describe('el cursor del scrubber', () => {
+test.describe('los mandos mínimos y la pantalla completa', () => {
   test.use({ viewport: { width: 390, height: 844 } });
+
+  test('en vertical solo están los cuatro botones', async ({ page }) => {
+    // Decisión del usuario en el punto 24: el cuadro de mandos ocupaba
+    // demasiada pantalla. La barra de progreso no se pierde — se muda a la
+    // pantalla completa— y el reloj sale porque la cabecera ya lo lleva.
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    const botonera = page.locator('[data-botonera]').filter({ visible: true });
+    await expect(botonera.getByRole('button')).toHaveCount(4);
+
+    // Ni barra ni fila de tiempos en vertical.
+    await expect(page.getByLabel('Minuto de la carrera').filter({ visible: true })).toHaveCount(0);
+    await expect(page.locator('[data-tiempos]').filter({ visible: true })).toHaveCount(0);
+
+    // Y el reloj sigue estando: en la cabecera, que es de donde no se movió.
+    await expect(page.getByLabel('Minuto de carrera')).toBeVisible();
+
+    // El botón de reproducir ya no dice la palabra, pero sí la tiene de nombre.
+    await expect(visible(page, 'Reproducir')).not.toContainText(/reproducir/i);
+  });
+
+  test('el botón de expandir abre la pantalla completa, y se puede salir', async ({ page }) => {
+    // El botón no es un adorno: con el giro bloqueado —que mucha gente lleva—
+    // es la única puerta. Y el de salir tampoco: quien entrara por el botón se
+    // quedaría atrapado si la única salida fuese girar.
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole('button', { name: 'Ver a pantalla completa' }).click();
+
+    // Dentro: la barra vuelve, y los botones están en su columna.
+    await expect(page.getByLabel('Minuto de la carrera')).toBeVisible();
+    await expect(page.locator('[data-tiempos]')).toBeVisible();
+    const salir = page.getByRole('button', { name: 'Salir de pantalla completa' });
+    await expect(salir).toBeVisible();
+
+    // Los cuatro mandos, uno encima de otro y no en fila.
+    const caja = (await page.locator('[data-botonera]').boundingBox())!;
+    expect(caja.height, 'los botones no están en columna').toBeGreaterThan(caja.width);
+
+    await salir.click();
+    // Por visibles: los mandos de escritorio siguen en el DOM, ocultos con
+    // `md:`, así que contarlos todos daría uno aunque no se vea ninguno.
+    await expect(page.getByLabel('Minuto de la carrera').filter({ visible: true })).toHaveCount(0);
+    await expect(visible(page, 'Reproducir')).toBeVisible();
+  });
+
+  test('girar el teléfono entra y sale solo', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('button', { name: 'Salir de pantalla completa' })).toHaveCount(0);
+
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect(page.getByRole('button', { name: 'Salir de pantalla completa' })).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole('button', { name: 'Salir de pantalla completa' })).toHaveCount(0);
+  });
+
+  test('en escritorio no se entra en pantalla completa al abrir', async ({ page }) => {
+    // Un portátil también es «ancho». Lo que separa un teléfono tumbado es el
+    // alto, y sin esa condición el escritorio entraría nada más abrir.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    await expect(page.getByRole('button', { name: 'Salir de pantalla completa' })).toHaveCount(0);
+  });
+});
+
+test.describe('el cursor del scrubber', () => {
+  test.use({ viewport: TUMBADO });
 
   test('se pinta por delante del riel, no por detrás', async ({ page }) => {
     await simularCarrera(page);
@@ -726,14 +813,14 @@ test.describe('la torre en escritorio', () => {
       expect(alto).toBeLessThan(44);
     }
 
-    const reproducir = visible(page, 'REPRODUCIR');
+    const reproducir = visible(page, 'Reproducir');
     const cajaPlay = (await reproducir.boundingBox())!;
     expect(cajaPlay.y).toBeGreaterThan(cajaMapa.y + cajaMapa.height - 1);
   });
 });
 
 test.describe('reproducir y elegir', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
+  test.use({ viewport: TUMBADO });
 
   test('reproducir mueve el reloj; pausa lo para; el scrubber salta', async ({ page }) => {
     await simularCarrera(page);
@@ -743,11 +830,11 @@ test.describe('reproducir y elegir', () => {
     const reloj = page.getByLabel('Minuto de carrera');
     await expect(reloj).toHaveText('0:00');
 
-    await visible(page, 'REPRODUCIR').click();
-    await expect(visible(page, 'PAUSA')).toBeVisible();
+    await visible(page, 'Reproducir').click();
+    await expect(visible(page, 'Pausa')).toBeVisible();
     await expect(reloj).not.toHaveText('0:00', { timeout: 5_000 });
 
-    await visible(page, 'PAUSA').click();
+    await visible(page, 'Pausa').click();
     const parado = await reloj.textContent();
     await page.waitForTimeout(600);
     expect(await reloj.textContent()).toBe(parado);
@@ -768,7 +855,7 @@ test.describe('reproducir y elegir', () => {
     await page.goto(REPLAY);
     await expect(page.locator('canvas[aria-label*="Mapa de la carrera"]').first()).toBeVisible({ timeout: 20_000 });
 
-    await visible(page, 'REPRODUCIR').click();
+    await visible(page, 'Reproducir').click();
     await moverScrubber(page, 80); // 0:20
     await page.waitForTimeout(500);
 
@@ -779,7 +866,7 @@ test.describe('reproducir y elegir', () => {
     expect(segundos).toBeGreaterThanOrEqual(20);
     expect(segundos).toBeLessThan(24);
 
-    await visible(page, 'PAUSA').click();
+    await visible(page, 'Pausa').click();
   });
 
   test('elegir una fila la marca, y el estado de pista se lee con palabras', async ({ page }) => {
