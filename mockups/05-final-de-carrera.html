@@ -6,37 +6,24 @@
 <title>El final de carrera — punto 2</title>
 <style>
 /* ---------------------------------------------------------------------------
-   Punto 2: bandera a cuadros, celebración y parrilla congelada.
+   Punto 2: la bandera a cuadros ondea, y en la lista se ve quién ya cruzó.
 
-   MEDIDO en producción antes de dibujar nada, en tres carreras de 2026:
-
-     orden del replay en el ÚLTIMO instante, contra el oficial
-       Hungría  8 discrepancias de 10
-       P. Bajos 5 de 10
-       Italia   4 de 10
-
-     el mismo orden, calculado por CRUCES DE META
-       Hungría  2 de 10   (HAM cruzó antes que LEC: sanción posterior)
-       P. Bajos 0
-       Italia   0
-
-   Y la bandera a cuadros cae entre 66 y 79 segundos ANTES del final de los
-   datos: todo ese minuto es la vuelta de celebración, que es donde el orden
-   por metros recorridos se descuadra. El ganador levanta el pie y los que
-   siguen rodando le pasan.
+   MEDIDO en produccion antes de dibujar nada, en tres carreras de 2026:
+   el orden del replay en el ultimo instante falla en 4 a 8 de los 10
+   primeros; ordenando por cruces de meta falla en 0 a 2. La bandera cae
+   66-79 s ANTES del final de los datos: ese minuto es la vuelta de
+   celebracion, y es donde el orden por metros recorridos se descuadra.
 --------------------------------------------------------------------------- */
 :root {
   color-scheme: light dark;
   --fondo:#F7F7F8; --superficie:#F0F0F2; --borde:#DEDEE3; --borde-fila:#E8E8EC;
   --texto:#151519; --apagado:#55555E; --acento:#526600; --acento-tinta:#FFFFFF; --trazado:#8A8A94;
-  --oro:#C8A02A;
   --papel:#EDEFEA; --tarjeta:#FFFFFF; --linea:#D8DCD2; --tinta:#191C17; --tinta-2:#565C52;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --fondo:#0B0B0F; --superficie:#151519; --borde:#26262E; --borde-fila:#16161C;
     --texto:#F5F5F7; --apagado:#A2A2AC; --acento:#CCFF00; --acento-tinta:#000000; --trazado:#6B6B78;
-    --oro:#F5C542;
     --papel:#0F110E; --tarjeta:#171A15; --linea:#272B23; --tinta:#E9EDE4; --tinta-2:#9AA292;
   }
 }
@@ -48,7 +35,8 @@ h1 { margin:0 0 6px; font-size:clamp(24px,4vw,32px); line-height:1.1; letter-spa
 .sub { margin:0; max-width:64ch; color:var(--tinta-2); } .sub b { color:var(--tinta); }
 
 .medido { border:1px solid var(--linea); border-left:3px solid #A33B00; border-radius:12px;
-  background:var(--tarjeta); padding:14px 16px; font:400 13px/1.6 ui-monospace, Menlo, monospace; white-space:pre; overflow-x:auto; }
+  background:var(--tarjeta); padding:14px 16px; font:400 12.5px/1.6 ui-monospace, Menlo, monospace;
+  white-space:pre; overflow-x:auto; }
 @media (prefers-color-scheme: dark) { .medido { border-left-color:#FFA94D; } }
 
 .mandos { display:flex; flex-wrap:wrap; gap:8px; align-items:center; border:1px solid var(--linea);
@@ -57,57 +45,67 @@ h1 { margin:0 0 6px; font-size:clamp(24px,4vw,32px); line-height:1.1; letter-spa
   text-transform:uppercase; color:var(--tinta-2); }
 .mandos button { min-height:40px; padding:0 12px; border:1px solid var(--linea); border-radius:9px;
   background:transparent; color:var(--tinta-2); font:500 13.5px/1.2 inherit; cursor:pointer; }
-.mandos button[aria-pressed="true"] { background:var(--acento); border-color:var(--acento); color:var(--acento-tinta); font-weight:600; }
-.mandos button.accion { border-color:var(--tinta-2); color:var(--tinta); }
+.mandos button[aria-pressed="true"] { background:var(--acento); border-color:var(--acento);
+  color:var(--acento-tinta); font-weight:600; }
+.mandos button.accion { border-color:var(--tinta-2); color:var(--tinta); font-weight:600; }
 
 .escena { display:grid; grid-template-columns:minmax(0,1fr); justify-items:center; gap:12px; }
-.tel { position:relative; width:390px; max-width:100%; height:560px; border:1px solid var(--linea);
+.tel { position:relative; width:390px; max-width:100%; height:540px; border:1px solid var(--linea);
   border-radius:18px; overflow:hidden; background:var(--fondo); color:var(--texto);
-  display:grid; grid-template-rows:42px 190px 1fr; }
+  display:grid; grid-template-rows:42px 186px 1fr; }
 .t-cab { display:flex; align-items:center; gap:8px; padding:0 12px; border-bottom:1px solid var(--borde);
   font:700 15px/1 inherit; }
 .t-cab .rel { margin-left:auto; font:400 12px/1 ui-monospace,monospace; color:var(--apagado); }
 .t-mapa { position:relative; display:grid; place-items:center; border-bottom:1px solid var(--borde); overflow:hidden; }
-.t-mapa svg { width:74%; height:150px; }
+.t-mapa svg.circuito { width:74%; height:148px; }
 .t-torre { overflow:hidden; }
+
 .t-fila { display:grid; grid-template-columns:22px 4px 1fr auto; align-items:center; gap:10px; height:44px;
-  padding:0 12px; border-bottom:1px solid var(--borde-fila); transition:background 300ms ease; }
+  padding:0 12px; border-bottom:1px solid var(--borde-fila); }
 .t-fila .pos { font:600 13px/1 ui-monospace,monospace; color:var(--apagado); text-align:center; }
 .t-fila .tira { height:24px; border-radius:2px; }
-.t-fila b { font-size:14px; } .t-fila .h { font:400 12px/1 ui-monospace,monospace; color:var(--apagado); }
-.t-fila[data-podio="si"] { background:color-mix(in srgb, var(--oro) 14%, transparent); }
+.t-fila b { font-size:14px; }
+.t-fila .cola { display:flex; align-items:center; gap:7px; }
+.t-fila .h { font:400 12px/1 ui-monospace,monospace; color:var(--apagado); }
+/* La banderita de «ya cruzo»: aparece cuando ese piloto pasa por meta. */
+.marca { display:inline-flex; color:var(--texto); animation:marca 320ms ease both; }
+.marca svg { display:block; }
+@keyframes marca { from { opacity:0; transform:scale(.6) } to { opacity:1; transform:none } }
 
-/* --- la bandera a cuadros --- */
-.cuadros { position:absolute; inset:0; z-index:4; pointer-events:none; opacity:0;
+/* --- la bandera a cuadros, ondeando ------------------------------------- */
+.telon { position:absolute; inset:0; z-index:6; display:grid; place-items:center;
+  pointer-events:none; opacity:0; }
+.telon[data-ver="si"] { animation:telon 3000ms ease forwards; }
+@keyframes telon { 0%{opacity:0} 8%{opacity:1} 82%{opacity:1} 100%{opacity:0} }
+
+.grupo { display:flex; align-items:stretch; transform-origin:left bottom; }
+.mastil { width:6px; border-radius:3px; background:linear-gradient(180deg,#9A9AA4,#5A5A64); display:none; }
+.telon[data-forma="mastil"] .mastil { display:block; }
+.telon[data-forma="mastil"] .grupo { animation:sacude 760ms ease-in-out infinite alternate; }
+@keyframes sacude { from { transform:rotate(-7deg) } to { transform:rotate(7deg) } }
+.telon[data-forma="barrido"] .grupo { animation:barre 2400ms ease-in-out both; }
+@keyframes barre { 0%{transform:translateX(-135%)} 100%{transform:translateX(135%)} }
+
+/* El paño: tiras verticales con la misma cuadricula desplazada, cada una con
+   su retardo. Eso es lo que se lee como tela y no como un dibujo temblando. */
+.pano { display:flex; width:210px; height:132px; }
+.tira { flex:1 1 0; min-width:0;
   background-image:
-    linear-gradient(45deg,#000 25%,transparent 25%,transparent 75%,#000 75%),
-    linear-gradient(45deg,#000 25%,#fff 25%,#fff 75%,transparent 75%);
-  background-size:30px 30px; background-position:0 0,15px 15px; }
-.cuadros[data-ver="si"] { animation:cuadros 1600ms ease forwards; }
-@keyframes cuadros { 0%{opacity:0} 12%{opacity:.92} 62%{opacity:.92} 100%{opacity:0} }
-
-.pildora { position:absolute; left:50%; top:50%; z-index:5; transform:translate(-50%,-50%);
-  pointer-events:none; opacity:0; padding:10px 18px; border-radius:999px; white-space:nowrap;
-  background:var(--texto); color:var(--fondo); font:700 17px/1 ui-monospace,monospace; letter-spacing:.05em; }
-.pildora[data-ver="si"] { animation:pil 1600ms ease forwards; }
-@keyframes pil { 0%{opacity:0;transform:translate(-50%,-50%) scale(.92)} 12%{opacity:1;transform:translate(-50%,-50%) scale(1)}
-  70%{opacity:1} 100%{opacity:0;transform:translate(-50%,-58%)} }
-
-/* --- la tarjeta del ganador y el podio --- */
-.tarjeta { position:absolute; inset:auto 12px 12px; z-index:6; border-radius:16px; border:1px solid var(--borde);
-  background:var(--superficie); padding:14px; opacity:0; transform:translateY(14px); pointer-events:none; }
-.tarjeta[data-ver="si"] { animation:sube 420ms ease forwards; }
-@keyframes sube { to { opacity:1; transform:translateY(0); } }
-.tarjeta h3 { margin:0 0 2px; font:600 10.5px/1 ui-monospace,monospace; letter-spacing:.14em;
-  text-transform:uppercase; color:var(--oro); }
-.tarjeta .quien { display:flex; align-items:center; gap:10px; }
-.tarjeta .dorsal { width:40px; height:40px; border-radius:10px; display:grid; place-items:center;
-  font:700 16px/1 ui-monospace,monospace; color:#fff; }
-.tarjeta .nombre { display:block; font:700 18px/1.1 inherit; }
-.tarjeta .eq { display:block; font-size:12.5px; color:var(--apagado); }
-.tarjeta ol { margin:10px 0 0; padding:0; list-style:none; display:grid; gap:6px; }
-.tarjeta li { display:flex; align-items:center; gap:9px; font-size:13.5px; }
-.tarjeta li span.p { width:16px; font:700 12px/1 ui-monospace,monospace; color:var(--oro); }
+    linear-gradient(45deg,#111 25%,transparent 25%,transparent 75%,#111 75%),
+    linear-gradient(45deg,#111 25%,#FAFAFA 25%,#FAFAFA 75%,transparent 75%);
+  background-size:34px 34px;
+  background-position:var(--dx) 0, calc(var(--dx) + 17px) 17px;
+  animation:onda 1150ms ease-in-out infinite;
+  animation-delay:var(--dt);
+}
+@keyframes onda {
+  0%,100% { transform:translateY(-9px) scaleY(.90); filter:brightness(.82); }
+  50%     { transform:translateY(9px)  scaleY(1.10); filter:brightness(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tira, .telon[data-forma="mastil"] .grupo { animation:none; }
+  .telon[data-forma="barrido"] .grupo { animation:none; transform:none; }
+}
 
 .pie { font:600 12px/1.5 ui-monospace,monospace; color:var(--tinta-2); text-align:center; }
 .pie b { color:var(--tinta); }
@@ -125,7 +123,7 @@ h1 { margin:0 0 6px; font-size:clamp(24px,4vw,32px); line-height:1.1; letter-spa
 
   <header>
     <h1>El final de carrera</h1>
-    <p class="sub">Punto 2. Pulsa <b>«Cae la bandera»</b> para ver la secuencia entera. El orden se congela ahí y ya no vuelve a cambiar, aunque los coches sigan rodando la vuelta de celebración.</p>
+    <p class="sub">Punto 2. Pulsa <b>«Cae la bandera»</b>: ondea, y luego cada piloto que pasa por meta se marca en la lista. El orden se congela ahí, aunque los coches sigan rodando la vuelta de celebración.</p>
   </header>
 
   <div class="medido">
@@ -141,55 +139,55 @@ medido en produccion, orden del replay contra el oficial:
   </div>
 
   <div class="mandos">
-    <span class="etq">Cómo se anuncia la bandera</span>
-    <button type="button" data-g="bandera" data-v="pildora">Solo la píldora</button>
-    <button type="button" data-g="bandera" data-v="cuadros">Solo los cuadros sobre el mapa</button>
-    <button type="button" data-g="bandera" data-v="ambas" aria-pressed="true">Las dos</button>
+    <span class="etq">Cómo ondea la bandera</span>
+    <button type="button" data-g="forma" data-v="pano" aria-pressed="true">El paño, sin mástil</button>
+    <button type="button" data-g="forma" data-v="mastil">Con mástil, sacudida</button>
+    <button type="button" data-g="forma" data-v="barrido">Cruzando la pantalla</button>
   </div>
 
   <div class="mandos">
-    <span class="etq">Qué se enseña después</span>
-    <button type="button" data-g="final" data-v="nada">Nada más</button>
-    <button type="button" data-g="final" data-v="ganador">Solo el ganador</button>
-    <button type="button" data-g="final" data-v="podio" aria-pressed="true">El ganador y luego el podio</button>
+    <span class="etq">Dónde ondea · la marca en la lista</span>
+    <button type="button" data-g="donde" data-v="mapa" aria-pressed="true">Sobre el circuito</button>
+    <button type="button" data-g="donde" data-v="todo">Sobre todo el replay</button>
+    <button type="button" data-g="marca" data-v="antes" aria-pressed="true">Banderita antes del tiempo</button>
+    <button type="button" data-g="marca" data-v="despues">Banderita después</button>
     <button type="button" class="accion" id="lanzar">Cae la bandera</button>
     <button type="button" class="accion" id="reiniciar">Reiniciar</button>
   </div>
 
   <div class="escena">
-    <div class="tel">
+    <div class="tel" id="tel">
       <div class="t-cab">GP de Italia <span class="rel" id="reloj">Vuelta 53/53</span></div>
       <div class="t-mapa">
-        <svg viewBox="0 0 300 150" aria-hidden>
+        <svg class="circuito" viewBox="0 0 300 150" aria-hidden="true">
           <path d="M40 124 L196 124 C232 124 246 108 234 92 L180 30 C172 20 158 20 150 28 L120 56 C112 64 100 64 93 56 L76 38 C66 28 50 32 44 44 L26 84 C18 100 24 118 40 124 Z"
             fill="none" stroke="var(--trazado)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-          <circle id="c1" cx="150" cy="124" r="7" fill="#00A19B"/>
-          <circle id="c2" cx="126" cy="124" r="6" fill="#00A19B"/>
-          <circle id="c3" cx="104" cy="124" r="6" fill="#3671C6"/>
+          <circle cx="150" cy="124" r="7" fill="#00A19B"/>
+          <circle cx="126" cy="124" r="6" fill="#00A19B"/>
+          <circle cx="104" cy="124" r="6" fill="#3671C6"/>
         </svg>
-        <div class="cuadros" id="cuadros"></div>
-        <div class="pildora" id="pildora">BANDERA A CUADROS</div>
+        <div class="telon" id="telon-mapa"><div class="grupo"><span class="mastil"></span><span class="pano"></span></div></div>
       </div>
       <div class="t-torre" id="torre"></div>
-      <div class="tarjeta" id="tarjeta"></div>
+      <div class="telon" id="telon-todo"><div class="grupo"><span class="mastil"></span><span class="pano"></span></div></div>
     </div>
     <p class="pie" id="pie">—</p>
   </div>
 
   <div class="dos">
     <div class="panel recomendada">
-      <h2>Las dos señales <span class="sello">Recomendada</span></h2>
-      <p>Los cuadros sobre el circuito dicen <b>qué ha pasado</b> sin leer nada, y la píldora lo nombra para quien esté mirando la lista y no el mapa. Es el mismo par que ya funciona con el «+10 s» y el «DNF».</p>
-      <p>Los cuadros solos son bonitos pero mudos si no miras arriba; la píldora sola no celebra nada.</p>
+      <h2>El paño, sobre el circuito <span class="sello">Recomendada</span></h2>
+      <p>Sin mástil el paño ocupa todo el ancho útil y <b>se lee a 390 px</b>; con mástil, la bandera tiene que encoger para que quepa el palo y a tamaño de móvil parece un icono temblando.</p>
+      <p>Sobre el circuito y no sobre todo: la lista sigue visible mientras ondea, que es donde van apareciendo las banderitas.</p>
     </div>
     <div class="panel recomendada">
-      <h2>Ganador y luego podio <span class="sello">Recomendada</span></h2>
-      <p>Primero el ganador solo, con su color de equipo, y un segundo después los otros dos. Es el orden en que se cuenta un podio y da tiempo a leer cada cosa.</p>
-      <p>La tarjeta <b>no tapa la lista entera</b>: se queda abajo y se puede cerrar. Al final de una carrera lo que se quiere ver suele ser el top 10, no solo los tres.</p>
+      <h2>La banderita antes del tiempo <span class="sello">Recomendada</span></h2>
+      <p>Los tiempos están alineados a la derecha y hacen columna. Metiendo la banderita <b>después</b>, esa columna se rompe y los números dejan de compararse de un vistazo.</p>
+      <p>Aparece por piloto <b>cuando ese piloto cruza</b>, no todas de golpe: así se ve llegar a la gente.</p>
     </div>
     <div class="panel">
       <h2>Lo que pasa con el orden</h2>
-      <p>Al caer la bandera, <b>la clasificación se congela</b>. Los coches siguen rodando su vuelta de celebración —los puntos se mueven— pero la lista ya no cambia.</p>
+      <p>Al caer la bandera <b>la clasificación se congela</b>. Los coches siguen rodando su vuelta de celebración —los puntos se mueven— pero la lista ya no cambia.</p>
       <p>Sin eso, el replay termina con un orden que no es el de la carrera: medido, hoy se equivoca en <b>4 a 8 de los 10 primeros</b>.</p>
     </div>
   </div>
@@ -201,34 +199,59 @@ medido en produccion, orden del replay contra el oficial:
   var $ = function (id) { return document.getElementById(id); };
 
   var PILOTOS = [
-    ['ANT','Mercedes','#00A19B','12'],['RUS','Mercedes','#00A19B','63'],
-    ['VER','Red Bull','#3671C6','1'],['NOR','McLaren','#FF8000','4'],
-    ['PIA','McLaren','#FF8000','81'],['HAM','Ferrari','#E8002D','44'],
-    ['GAS','Alpine','#0093CC','10'],['LIN','Audi','#00E701','5'],
-    ['COL','Alpine','#0093CC','43'],['TSU','Racing Bulls','#6692FF','22']
+    ['ANT','#00A19B'],['RUS','#00A19B'],['VER','#3671C6'],['NOR','#FF8000'],
+    ['PIA','#FF8000'],['HAM','#E8002D'],['GAS','#0093CC'],['LIN','#00E701'],
+    ['COL','#0093CC'],['TSU','#6692FF']
   ];
 
-  var opciones = { bandera: 'ambas', final: 'podio' };
+  var BANDERITA =
+    '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">' +
+    '<rect x="1.6" y="1.4" width="1.3" height="13.2" rx=".5" fill="currentColor"/>' +
+    '<rect x="3.4" y="2.2" width="9.8" height="7.4" fill="none" stroke="currentColor" stroke-width="1"/>' +
+    '<g fill="currentColor">' +
+    '<rect x="3.4" y="2.2" width="2.45" height="2.47"/><rect x="8.3" y="2.2" width="2.45" height="2.47"/>' +
+    '<rect x="5.85" y="4.67" width="2.45" height="2.47"/><rect x="10.75" y="4.67" width="2.45" height="2.47"/>' +
+    '<rect x="3.4" y="7.14" width="2.45" height="2.47"/><rect x="8.3" y="7.14" width="2.45" height="2.47"/>' +
+    '</g></svg>';
+
+  var TIRAS = 21;
+  document.querySelectorAll('.pano').forEach(function (pano) {
+    var html = '';
+    for (var i = 0; i < TIRAS; i++) {
+      // La cuadricula se desplaza tira a tira para que las casillas encajen,
+      // y el retardo negativo escalonado es lo que hace la onda de tela.
+      html += '<span class="tira" style="--dx:' + (-i * 10) + 'px; --dt:' + (-i * 58) + 'ms"></span>';
+    }
+    pano.innerHTML = html;
+  });
+
+  var opciones = { forma: 'pano', donde: 'mapa', marca: 'antes' };
   var congelado = false;
+  var cruzados = [];
   var orden = PILOTOS.map(function (_, i) { return i; });
+  var temporizadores = [];
 
   function pintarTorre() {
     $('torre').innerHTML = orden.map(function (idx, pos) {
       var p = PILOTOS[idx];
-      var esPodio = congelado && pos < 3;
-      return '<div class="t-fila" data-podio="' + (esPodio ? 'si' : 'no') + '">' +
+      var hora = '<span class="h">' + (pos === 0 ? 'líder' : '+' + (pos * 1.7).toFixed(1)) + '</span>';
+      var marca = cruzados.indexOf(idx) >= 0
+        ? '<span class="marca" role="img" aria-label="Ha cruzado la meta">' + BANDERITA + '</span>'
+        : '';
+      var cola = opciones.marca === 'antes' ? marca + hora : hora + marca;
+      return '<div class="t-fila">' +
         '<span class="pos">' + (pos + 1) + '</span>' +
-        '<span class="tira" style="background:' + p[2] + '"></span>' +
+        '<span class="tira" style="background:' + p[1] + '"></span>' +
         '<span><b>' + p[0] + '</b></span>' +
-        '<span class="h">' + (pos === 0 ? 'líder' : '+' + (pos * 1.7).toFixed(1)) + '</span></div>';
+        '<span class="cola">' + cola + '</span></div>';
     }).join('');
     $('pie').innerHTML = congelado
-      ? 'orden <b>congelado</b> · ganador <b>' + PILOTOS[orden[0]][0] + '</b>'
+      ? 'orden <b>congelado</b> · han cruzado <b>' + cruzados.length + ' de 10</b>'
       : 'orden <b>en vivo</b> · líder <b>' + PILOTOS[orden[0]][0] + '</b>';
   }
 
-  /** Mientras no está congelado, el orden baila: es lo que pasa hoy. */
-  var baile = setInterval(function () {
+  /** Mientras no está congelado el orden baila: es lo que pasa hoy. */
+  setInterval(function () {
     if (congelado) return;
     var i = Math.floor(Math.random() * 4);
     var t = orden[i]; orden[i] = orden[i + 1]; orden[i + 1] = t;
@@ -238,54 +261,34 @@ medido en produccion, orden del replay contra el oficial:
   function lanzar() {
     if (congelado) return;
     congelado = true;
-    // Al congelar, el orden pasa a ser el bueno: ANT, RUS, VER, NOR…
-    orden = PILOTOS.map(function (_, i) { return i; });
+    orden = PILOTOS.map(function (_, i) { return i; }); // el orden bueno
     pintarTorre();
     $('reloj').textContent = 'Final';
 
-    if (opciones.bandera !== 'pildora') reanimar($('cuadros'));
-    if (opciones.bandera !== 'cuadros') reanimar($('pildora'));
+    var telon = opciones.donde === 'mapa' ? $('telon-mapa') : $('telon-todo');
+    telon.setAttribute('data-forma', opciones.forma);
+    telon.removeAttribute('data-ver');
+    void telon.offsetWidth;
+    telon.setAttribute('data-ver', 'si');
 
-    if (opciones.final === 'nada') return;
-
-    setTimeout(function () {
-      var g = PILOTOS[orden[0]];
-      $('tarjeta').innerHTML =
-        '<h3>Gana la carrera</h3>' +
-        '<div class="quien"><span class="dorsal" style="background:' + g[2] + '">' + g[3] + '</span>' +
-        '<span><span class="nombre">' + g[0] + '</span><span class="eq">' + g[1] + '</span></span></div>' +
-        (opciones.final === 'podio' ? '<ol id="resto"></ol>' : '');
-      reanimar($('tarjeta'));
-
-      if (opciones.final === 'podio') {
-        setTimeout(function () {
-          var resto = $('resto');
-          if (!resto) return;
-          resto.innerHTML = [1, 2].map(function (n) {
-            var p = PILOTOS[orden[n]];
-            return '<li><span class="p">' + (n + 1) + '</span>' +
-              '<span class="tira" style="background:' + p[2] + ';width:4px;height:18px;border-radius:2px"></span>' +
-              '<b>' + p[0] + '</b> <span style="color:var(--apagado)">' + p[1] + '</span></li>';
-          }).join('');
-        }, 1000);
-      }
-    }, 1200);
-  }
-
-  function reanimar(nodo) {
-    nodo.setAttribute('data-ver', 'no');
-    void nodo.offsetWidth;
-    nodo.setAttribute('data-ver', 'si');
+    // Van cruzando uno a uno, no todos de golpe.
+    orden.forEach(function (idx, pos) {
+      temporizadores.push(setTimeout(function () {
+        cruzados.push(idx);
+        pintarTorre();
+      }, 700 + pos * 420));
+    });
   }
 
   $('lanzar').addEventListener('click', lanzar);
   $('reiniciar').addEventListener('click', function () {
+    temporizadores.forEach(clearTimeout);
+    temporizadores = [];
     congelado = false;
+    cruzados = [];
     $('reloj').textContent = 'Vuelta 53/53';
-    $('tarjeta').removeAttribute('data-ver');
-    $('tarjeta').innerHTML = '';
-    $('cuadros').removeAttribute('data-ver');
-    $('pildora').removeAttribute('data-ver');
+    $('telon-mapa').removeAttribute('data-ver');
+    $('telon-todo').removeAttribute('data-ver');
     pintarTorre();
   });
 
@@ -293,14 +296,14 @@ medido en produccion, orden del replay contra el oficial:
     caja.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-g]');
       if (!b) return;
-      caja.querySelectorAll('button[data-g]').forEach(function (o) {
+      caja.querySelectorAll('button[data-g="' + b.dataset.g + '"]').forEach(function (o) {
         o.setAttribute('aria-pressed', String(o === b));
       });
       opciones[b.dataset.g] = b.dataset.v;
+      if (b.dataset.g === 'marca') pintarTorre();
     });
   });
 
-  void baile;
   pintarTorre();
 })();
 </script>
