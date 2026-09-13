@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0B0B0F">
+<link rel="manifest" href="/maqueta/manifest-toques.webmanifest">
+<title>MAQUETA · el toque que se pierde</title>
+<style>
+/* ---------------------------------------------------------------------------
+   POR QUE ESTA MAQUETA
+
+   El usuario reporta que la barra pierde toques cuando se va rapido: se ve el
+   boton encenderse pero el realce no se mueve y no navega. En Chromium no se
+   reproduce en nueve intentos, asi que es de iOS — como lo era el `env()`.
+
+   La sospecha: el feedback de pulsado es `transform: scale(.92)`. En iOS, si
+   lo que esta debajo del dedo SE MUEVE, el navegador puede descartar el toque
+   porque al levantar el dedo ya no esta sobre el mismo sitio. Yendo rapido,
+   una pestaña todavia esta encogiendose cuando cae el toque siguiente.
+
+   SIN JAVASCRIPT: la CSP de la app (`script-src 'self' 'nonce-...'`) bloquea
+   cualquier script de un archivo estatico. El estado va con radios y
+   selectores de hermano, que es como funcionaba la maqueta de la barra.
+
+   COMO SE USA
+   1. Instalar en la pantalla de inicio (Compartir -> Añadir a inicio).
+   2. Abrirla DESDE EL ICONO, no desde Safari.
+   3. En cada barra, tocar las cinco pestañas lo mas rapido que se pueda,
+      varias pasadas.
+   4. Mirar si el realce sigue al dedo o si se queda atras.
+--------------------------------------------------------------------------- */
+:root {
+  color-scheme: dark;
+  --fondo: #0B0B0F;
+  --texto: #F5F5F7;
+  --apagado: #A2A2AC;
+  --linea: #26262E;
+  --primario: #CCFF00;
+  --cristal: rgba(28, 28, 34, .34);
+  --borde-barra: rgba(255, 255, 255, .10);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; padding: 20px 16px 40px;
+  background: var(--fondo); color: var(--texto);
+  font: 400 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+h1 { margin: 0 0 4px; font-size: 21px; line-height: 1.15; }
+.sub { margin: 0 0 18px; color: var(--apagado); font-size: 13.5px; }
+.sub b { color: var(--texto); }
+
+.bloque { margin: 0 0 26px; }
+.titulo {
+  display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px;
+  font: 600 11px/1 ui-monospace, Menlo, monospace; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--primario);
+}
+.titulo span { font: 400 12px/1.4 inherit; letter-spacing: 0; text-transform: none; color: var(--apagado); }
+
+/* --- la barra, igual que la de la app ---------------------------------- */
+.barra {
+  position: relative; height: 68px; padding: 5px; border-radius: 34px;
+  border: 1px solid var(--borde-barra);
+  background: var(--cristal);
+  -webkit-backdrop-filter: blur(2px) saturate(1.8);
+  backdrop-filter: blur(2px) saturate(1.8);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .45);
+}
+.barra .fila { position: relative; display: flex; height: 100%; align-items: stretch; }
+.barra input { position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; }
+
+.realce {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 20%;
+  border-radius: 20px; background: rgba(204, 255, 0, .13);
+  pointer-events: none;
+  transition: transform 720ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.barra label {
+  position: relative; flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  min-height: 44px; border-radius: 20px;
+  font: 500 11.5px/1 inherit; color: var(--apagado);
+  cursor: pointer; user-select: none; -webkit-user-select: none;
+}
+.barra label .icono {
+  width: 26px; height: 26px; border-radius: 8px;
+  border: 2px solid currentColor;
+}
+
+/* El realce se coloca con el radio marcado: cinco posiciones, sin JS. */
+.fila input:nth-of-type(1):checked ~ .realce { transform: translateX(0%); }
+.fila input:nth-of-type(2):checked ~ .realce { transform: translateX(100%); }
+.fila input:nth-of-type(3):checked ~ .realce { transform: translateX(200%); }
+.fila input:nth-of-type(4):checked ~ .realce { transform: translateX(300%); }
+.fila input:nth-of-type(5):checked ~ .realce { transform: translateX(400%); }
+
+.fila input:nth-of-type(1):checked ~ label:nth-of-type(1),
+.fila input:nth-of-type(2):checked ~ label:nth-of-type(2),
+.fila input:nth-of-type(3):checked ~ label:nth-of-type(3),
+.fila input:nth-of-type(4):checked ~ label:nth-of-type(4),
+.fila input:nth-of-type(5):checked ~ label:nth-of-type(5) { color: var(--primario); }
+
+/* --- A: como esta hoy. El boton se ENCOGE bajo el dedo. ----------------- */
+.a label { transition: transform 120ms; }
+.a label:active { transform: scale(.92); }
+
+/* --- B: sin mover nada. El fondo se aclara. ----------------------------- */
+.b label:active { background: rgba(255, 255, 255, .10); }
+
+/* --- C: sin mover nada. Solo el icono se encoge, no la casilla. --------- */
+.c label .icono { transition: transform 120ms; }
+.c label:active .icono { transform: scale(.86); }
+
+/* --- D: como A pero SIN cristal, por si el desenfoque es el que estorba. */
+.d { background: #17171C; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.d label { transition: transform 120ms; }
+.d label:active { transform: scale(.92); }
+
+.nota {
+  margin: 22px 0 0; padding: 12px 14px; border: 1px solid var(--linea); border-radius: 12px;
+  font-size: 13px; color: var(--apagado);
+}
+.nota b { color: var(--texto); }
+.nota ol { margin: 8px 0 0; padding-left: 20px; }
+.nota li { margin: 0 0 5px; }
+
+.instalada { display: none; }
+@media (display-mode: standalone) {
+  .navegador { display: none; }
+  .instalada { display: block; }
+}
+.aviso {
+  margin: 0 0 16px; padding: 10px 12px; border-radius: 10px; font-size: 13px;
+  border: 1px solid #7A3A00; background: rgba(122, 58, 0, .25); color: #FFD9A8;
+}
+.aviso.ok { border-color: #3A6B00; background: rgba(58, 107, 0, .25); color: #D6FFA8; }
+</style>
+</head>
+<body>
+
+<h1>El toque que se pierde</h1>
+<p class="sub">Cuatro barras iguales. Lo único que cambia es <b>qué hace el botón mientras el dedo está encima</b>. Toca las cinco pestañas de cada una lo más rápido que puedas, varias pasadas, y mira si el realce te sigue.</p>
+
+<p class="aviso navegador">Estás en Safari. <b>No vale</b>: instálala en la pantalla de inicio (Compartir → Añadir a inicio) y ábrela desde el icono.</p>
+<p class="aviso ok instalada">Instalada. Así sí.</p>
+
+<div class="bloque">
+  <p class="titulo">A · como está hoy <span>el botón entero se encoge</span></p>
+  <nav class="barra a">
+    <div class="fila">
+      <input type="radio" name="a" id="a1" checked>
+      <input type="radio" name="a" id="a2">
+      <input type="radio" name="a" id="a3">
+      <input type="radio" name="a" id="a4">
+      <input type="radio" name="a" id="a5">
+      <span class="realce"></span>
+      <label for="a1"><span class="icono"></span>Inicio</label>
+      <label for="a2"><span class="icono"></span>Fechas</label>
+      <label for="a3"><span class="icono"></span>Puntos</label>
+      <label for="a4"><span class="icono"></span>Pilotos</label>
+      <label for="a5"><span class="icono"></span>Más</label>
+    </div>
+  </nav>
+</div>
+
+<div class="bloque">
+  <p class="titulo">B · el fondo se aclara <span>no se mueve nada</span></p>
+  <nav class="barra b">
+    <div class="fila">
+      <input type="radio" name="b" id="b1" checked>
+      <input type="radio" name="b" id="b2">
+      <input type="radio" name="b" id="b3">
+      <input type="radio" name="b" id="b4">
+      <input type="radio" name="b" id="b5">
+      <span class="realce"></span>
+      <label for="b1"><span class="icono"></span>Inicio</label>
+      <label for="b2"><span class="icono"></span>Fechas</label>
+      <label for="b3"><span class="icono"></span>Puntos</label>
+      <label for="b4"><span class="icono"></span>Pilotos</label>
+      <label for="b5"><span class="icono"></span>Más</label>
+    </div>
+  </nav>
+</div>
+
+<div class="bloque">
+  <p class="titulo">C · solo el icono se encoge <span>la casilla no se mueve</span></p>
+  <nav class="barra c">
+    <div class="fila">
+      <input type="radio" name="c" id="c1" checked>
+      <input type="radio" name="c" id="c2">
+      <input type="radio" name="c" id="c3">
+      <input type="radio" name="c" id="c4">
+      <input type="radio" name="c" id="c5">
+      <span class="realce"></span>
+      <label for="c1"><span class="icono"></span>Inicio</label>
+      <label for="c2"><span class="icono"></span>Fechas</label>
+      <label for="c3"><span class="icono"></span>Puntos</label>
+      <label for="c4"><span class="icono"></span>Pilotos</label>
+      <label for="c5"><span class="icono"></span>Más</label>
+    </div>
+  </nav>
+</div>
+
+<div class="bloque">
+  <p class="titulo">D · como A, pero sin cristal <span>por si el desenfoque es el que estorba</span></p>
+  <nav class="barra d">
+    <div class="fila">
+      <input type="radio" name="d" id="d1" checked>
+      <input type="radio" name="d" id="d2">
+      <input type="radio" name="d" id="d3">
+      <input type="radio" name="d" id="d4">
+      <input type="radio" name="d" id="d5">
+      <span class="realce"></span>
+      <label for="d1"><span class="icono"></span>Inicio</label>
+      <label for="d2"><span class="icono"></span>Fechas</label>
+      <label for="d3"><span class="icono"></span>Puntos</label>
+      <label for="d4"><span class="icono"></span>Pilotos</label>
+      <label for="d5"><span class="icono"></span>Más</label>
+    </div>
+  </nav>
+</div>
+
+<div class="nota">
+  <b>Qué me tienes que decir</b>, una letra por cada cosa:
+  <ol>
+    <li>¿En cuál se pierden toques yendo rápido?</li>
+    <li>¿En cuál el realce te sigue siempre?</li>
+    <li>Si en todas va bien, entonces no es el pulsado: es la navegación, y lo ataco por otro lado.</li>
+  </ol>
+</div>
+
+</body>
+</html>

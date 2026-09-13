@@ -1,0 +1,11 @@
+{
+  "name": "MAQUETA · toques",
+  "short_name": "TOQUES",
+  "description": "Maqueta temporal para averiguar por que la barra pierde toques en iOS.",
+  "start_url": "/maqueta/toques.html",
+  "scope": "/maqueta/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B0B0F",
+  "theme_color": "#0B0B0F"
+}
