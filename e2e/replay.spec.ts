@@ -1255,6 +1255,82 @@ test.describe('expandir con el teléfono de pie', () => {
   });
 });
 
+test.describe('el alto de la lista en escritorio', () => {
+  /** El alto de una fila de la torre y el hueco que queda debajo, en píxeles. */
+  async function alto(page: Page) {
+    return page.evaluate(() => {
+      const torre = [...document.querySelectorAll('ol[aria-label="Clasificación en este instante"]')]
+        .find((o) => (o as HTMLElement).offsetParent) as HTMLElement;
+      const filas = [...torre.querySelectorAll('li')] as HTMLElement[];
+      const caja = torre.parentElement as HTMLElement;
+      const ultima = filas[filas.length - 1].getBoundingClientRect();
+      return {
+        cuantas: filas.length,
+        fila: Math.round(filas[0].getBoundingClientRect().height),
+        // Lo que sobra debajo del último piloto dentro de la caja que le toca.
+        sobra: Math.round(caja.getBoundingClientRect().bottom - ultima.bottom),
+        columna: Math.round(caja.getBoundingClientRect().height),
+      };
+    });
+  }
+
+  test('las filas se estiran en vez de dejar media columna muerta', async ({ page }) => {
+    /**
+     * Lo reportado: «mira todo el espacio que consumimos para el circuito y los
+     * mandos, es desproporcional con la lista de pilotos».
+     *
+     * Medido antes del arreglo, con la carrera real y su misma pantalla: las
+     * filas estaban clavadas en **30 px**, así que 22 pilotos ocupaban 660 px
+     * de una columna de ~1150 y quedaban **490 px muertos** debajo del último.
+     */
+    await page.setViewportSize({ width: 1440, height: 1250 });
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    const m = await alto(page);
+
+    // Con la lista completa en una columna alta, no puede sobrar un hueco
+    // del tamaño de varias filas.
+    expect(m.sobra, `sobran ${m.sobra} px debajo del último de ${m.cuantas} pilotos`).toBeLessThan(60);
+    expect(m.fila, `las filas siguen clavadas en ${m.fila} px`).toBeGreaterThan(34);
+  });
+
+  test('en una columna corta la fila no baja de 30 px y se desplaza', async ({ page }) => {
+    // El suelo importa tanto como el techo: estirar no puede volverse encoger
+    // cuando no hay sitio. 520 de alto es lo justo para seguir siendo `pc`.
+    await page.setViewportSize({ width: 1280, height: 520 });
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    const m = await alto(page);
+    expect(m.fila, `la fila se ha encogido a ${m.fila} px`).toBeGreaterThanOrEqual(30);
+  });
+
+  test('la fila no se vuelve una banda en un monitor enorme', async ({ page }) => {
+    // Sin techo, en 4K la columna pasa de 2000 px y cada fila se iría a ~95:
+    // deja de parecer una lista.
+    await page.setViewportSize({ width: 2560, height: 1440 });
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    const m = await alto(page);
+    expect(m.fila).toBeLessThanOrEqual(56);
+  });
+
+  test('en el móvil no cambia nada: la fila sigue siendo tocable', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    const m = await alto(page);
+    expect(m.fila, `la fila del móvil mide ${m.fila} px`).toBeGreaterThanOrEqual(44);
+  });
+});
+
 test.describe('la proporción en escritorio', () => {
   /** El ancho del reparto y el de la torre, en píxeles. */
   async function reparto(page: import('@playwright/test').Page) {

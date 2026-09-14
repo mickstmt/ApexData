@@ -1222,3 +1222,79 @@ proporcionalmente mas pequenos y cuesta MAS seguir a alguien, no menos.
 3. El radio de los coches crece con el mapa: `w < 480 ? 5 : clamp(6, w/150, 11)`.
    El suelo mantiene igual todo lo que ya funcionaba —de 480 a 900 px sale el
    mismo 6— y el techo evita que los veintidos puntos se solapen en la recta.
+
+## 43. UI · La lista de pilotos deja media columna muerta (2026-09-14)
+
+**Lo que dice el usuario**: «en el modo web mira todo el espacio que consumimos
+para el circuito y los mandos, es desproporcional con la lista de pilotos, creo
+que deberias de agrandar para que cubra todo el ancho al menos tambien».
+
+Es el hermano del punto 42. Aquel repartia el **ancho**; este es el **alto**:
+arreglado el ancho, la lista seguia siendo una banda corta arriba de una
+columna larga.
+
+**Medido**, con la carrera real y una pantalla de 1440x1250:
+
+```
+22 pilotos x 30 px = 660 px  en una columna de ~1085
+                              -> 425 px muertos debajo del ultimo
+```
+
+La prueba nueva reproduce exactamente ese numero antes del arreglo:
+`sobran 425 px debajo del ultimo de 22 pilotos`.
+
+**HECHO**. La lista llena su columna con flex —`pc:flex pc:min-h-full
+pc:flex-col` en el `<ol>`, `pc:flex-1` en cada fila— y en la pantalla del
+usuario las filas pasan de 30 a **52 px**. Tres detalles que no son adorno:
+
+1. **Suelo de 30 px**: si la columna es mas corta que las filas, el `min-h`
+   gana y la caja se desplaza como siempre. Estirar no puede volverse encoger.
+2. **Techo de 56 px**: sin el, en un monitor de 4K la columna pasa de 2000 px y
+   cada fila se iria a ~95. Deja de parecer una lista y parece un error.
+3. **Solo en `pc:`**: en el movil la fila sigue en sus 44 px tocables.
+
+Cuatro pruebas de navegador: la que reproduce el hueco, y tres guardias —la
+columna corta, el monitor enorme y el movil— que valen justo por lo que
+impiden, no por lo que reproducen.
+
+**Nota de metodo**: la primera sonda que escribi para medir el recorte de los
+nombres usaba `scrollWidth` y daba **cero en todo**, incluido un caso que se
+veia cortado en la captura. Con `text-overflow` el navegador recorta el
+contenido al hueco y `scrollWidth` no lo delata; hay que medir el texto con un
+`Range`. Queda escrito porque es una trampa que se repite.
+
+## 44. CONSULTA RESUELTA · Que lleva la fila, y si cambia al girar (2026-09-14)
+
+**Lo que pregunta el usuario**: «para el modo vertical solo mostrar los
+compuestos de llantas, y cuando este girada la pantalla si muestre todo, o en
+web tambien se podria?».
+
+**Primero, una correccion al modelo mental**: en la app **un telefono tumbado no
+es escritorio**. El `pc:` pide `min-height: 500px` y tumbado el iPhone mide 390
+de alto — se puso a proposito, es el punto 34. Girado se usa el reparto de
+movil con la fila a lo ancho de toda la pantalla.
+
+**Medido**: holgura que le queda al nombre del equipo en cada sitio real, con
+el peor caso posible (los 22 con tres paradas):
+
+| sitio | ancho de fila | B | C | D |
+|---|---|---|---|---|
+| iPhone de pie | 358 | 109 px | 77 px | 46 px |
+| Android de pie | 328 | 79 px | 47 px | 16 px |
+| iPhone tumbado (pantalla completa) | 812 | 563 px | 531 px | 500 px |
+| escritorio 1180 (torre en el suelo de 340) | 312 | 63 px | 31 px | **0 px** |
+| escritorio 1920 (torre en 399) | 371 | 122 px | 90 px | 59 px |
+
+**Nada se recorta en ningun sitio**, ni siquiera la D. Y el caso apretado **no
+es el movil de pie: es el escritorio a 1180**, donde la torre se queda en el
+suelo del `clamp`. Girado es el sitio con MAS espacio de los cinco.
+
+O sea que esconder columnas en vertical no compra sitio donde hace falta, lo
+compra donde sobra. Y una fila que cambia de contenido al girar es una fila que
+hay que aprenderse dos veces.
+
+**Recomendado**: la misma fila en los tres sitios. Si ademas se quiere el
+contador de paradas, que sea un numero (`2`) y no los puntitos: no crece con
+cada parada, y ese 0 px de la tabla deja de ser un 0.
+
+**Pendiente**: la eleccion del usuario (letra de la fila).

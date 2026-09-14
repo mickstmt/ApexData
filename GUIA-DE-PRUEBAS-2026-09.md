@@ -196,6 +196,20 @@ centrado.
 en una pantalla de 2560 se quedaba en el **13 %** del ancho. Y los coches medían
 6 px siempre, o sea que cuanto más grande el mapa, más pequeños se veían.
 
+### 5.1 · La lista llena su columna
+
+**Qué mirar**: el hueco **debajo del último piloto**.
+
+✅ La lista llega hasta abajo: las filas se estiran para repartirse la columna.
+En una pantalla de 1250 de alto pasan de 30 a **52 px**.
+✅ Si achicas la ventana a lo bajo, las filas **no se encogen** por debajo de
+30 px: la lista se desplaza como siempre.
+✅ En el móvil no cambia nada: la fila sigue midiendo sus 44 px tocables.
+
+❌ Medido antes, con la carrera real a 1440x1250: 22 pilotos de 30 px ocupaban
+660 px y quedaban **425 px muertos** debajo del último, mientras el mapa se lo
+quedaba todo.
+
 ---
 
 # 6 · Los avisos

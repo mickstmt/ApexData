@@ -92,15 +92,34 @@ export function TorreDeTiempos({
   }, [elegido]);
 
   return (
+    /**
+     * En escritorio la lista LLENA su columna en vez de quedarse corta.
+     *
+     * Lo reportado: «mira todo el espacio que consumimos para el circuito y los
+     * mandos, es desproporcional con la lista de pilotos». Medido en su
+     * captura: 22 filas de 30 px son 660 px en una columna de ~1150, o sea
+     * **490 px muertos** debajo de STR mientras el mapa se lo queda todo.
+     *
+     * El reparto lo hace el propio flex: `min-h-full` obliga a la lista a
+     * ocupar su columna, y cada fila se lleva su parte. No hay número mágico
+     * que mantener a mano —con 20 pilotos o con 22 sale solo—, y si la columna
+     * es más corta que las filas, el `min-h` de la fila gana y la caja de
+     * fuera se desplaza como siempre.
+     *
+     * El techo de 56 px no es decorativo: en un monitor de 4K la columna pasa
+     * de 2000 px y una fila de 95 px con texto de 14 no parece una lista, sino
+     * un error. Lo que sobra pasado ese punto vuelve a quedar abajo, pero ahí
+     * ya son 144 px en 1440p, no 490.
+     */
     <ol
-      className={cn('m-0 list-none p-0', className)}
+      className={cn('m-0 list-none p-0 pc:flex pc:min-h-full pc:flex-col', className)}
       aria-label="Clasificación en este instante"
       style={{ '--tapado-abajo': `${tapadoAbajo}px` } as React.CSSProperties}
     >
       {filas.map((fila) => {
         const activa = fila.piloto === elegido;
         return (
-          <li key={fila.piloto}>
+          <li key={fila.piloto} className="pc:flex pc:min-h-[30px] pc:max-h-[56px] pc:flex-1 pc:flex-col">
             <button
               type="button"
               ref={(el) => {
@@ -111,6 +130,11 @@ export function TorreDeTiempos({
               onClick={() => onElegir(fila.piloto)}
               className={cn(
                 'grid w-full grid-cols-[30px_4px_1fr_auto] items-center gap-x-2.5 px-4 text-left',
+                // `flex-1` y no `h-full`: la fila es hija de un `li` cuyo alto
+                // lo decide el reparto, y crecer con él es justo lo que hace
+                // que el realce y el `hover` cubran la fila entera y no una
+                // banda de 30 px en medio de un hueco.
+                'pc:flex-1',
                 'min-h-[44px] border-b border-[var(--replay-borde-fila)] pc:min-h-[30px] pc:grid-cols-[28px_3px_1fr_auto] pc:border-b-0 pc:px-3.5',
                 '[scroll-margin-bottom:var(--tapado-abajo)] pc:[scroll-margin-bottom:0px]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--replay-acento)]',
