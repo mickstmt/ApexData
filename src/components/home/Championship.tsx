@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { Trophy } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TimingRow } from '@/components/ui/TimingRow';
-import { DriverAvatar } from '@/components/ui/OptimizedImage';
+import { FilaDeTiempos, ListaDeFilas } from '@/components/tabla/TablaDeTiempos';
+import { CountryFlag } from '@/components/ui/CountryFlag';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { teamColor } from '@/lib/team-colors';
 
 /** Consulta la clasificación; devuelve null si no hay datos o si falla. */
 async function getStandings(year: number) {
@@ -35,7 +36,7 @@ async function getStandings(year: number) {
     // Each driver's current team, for the colour stripe. Reads the season's
     // entries newest-first so a driver who sat out the last round still
     // resolves, rather than falling back to the grey placeholder.
-    const teamByDriver = new Map<string, { name: string; constructorId: string }>();
+    const teamByDriver = new Map<string, { name: string; constructorId: string; nationality: string }>();
 
     const entries = await prisma.result.findMany({
       where: {
@@ -45,7 +46,7 @@ async function getStandings(year: number) {
       orderBy: { race: { round: 'desc' } },
       select: {
         driverId: true,
-        team: { select: { name: true, constructorId: true } },
+        team: { select: { name: true, constructorId: true, nationality: true } },
       },
     });
 
@@ -54,6 +55,7 @@ async function getStandings(year: number) {
         teamByDriver.set(entry.driverId, {
           name: entry.team.name,
           constructorId: entry.team.constructorId,
+          nationality: entry.team.nationality,
         });
       }
     }
@@ -97,38 +99,36 @@ export async function Championship({ year }: { year: number }) {
         </Link>
       </div>
 
-      <Card>
-        <CardContent className="flex flex-col gap-2 pt-4 sm:pt-5">
+      {/* La misma fila que las tablas de dentro: dorsal, foto y las dos
+          banderas. La portada usaba la fila vieja y se notaba al saltar de una
+          a otra. */}
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <ListaDeFilas titulo="Campeonato de pilotos" rejilla="26px 3px 34px minmax(0,1fr) 58px">
           {driverStandings.map((entry) => {
             const team = teamByDriver.get(entry.driverId);
 
             return (
-              <TimingRow
+              <FilaDeTiempos
                 key={entry.id}
-                position={entry.position}
-                constructorId={team?.constructorId}
-                href={`/drivers/${entry.driver.driverId}`}
-                value={entry.points}
-                valueLabel="pts"
-              >
-                <DriverAvatar
-                  src={entry.driver.imageUrl}
-                  name={`${entry.driver.givenName} ${entry.driver.familyName}`}
-                  size="sm"
-                />
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold">
-                    {entry.driver.givenName} {entry.driver.familyName}
-                  </span>
-                  <span className="block truncate text-sm text-muted-foreground">
-                    {team?.name ?? '—'}
-                  </span>
-                </span>
-              </TimingRow>
+                posicion={entry.position ?? '—'}
+                dorsal={entry.driver.permanentNumber}
+                equipo={team?.name ?? '—'}
+                equipoId={team?.constructorId ?? null}
+                equipoNacion={team?.nationality}
+                piloto={{
+                  nombre: `${entry.driver.givenName} ${entry.driver.familyName}`,
+                  foto: entry.driver.imageUrl,
+                  nacion: entry.driver.nationality,
+                  href: `/drivers/${entry.driver.driverId}`,
+                }}
+                valor={entry.points}
+                valorEtiqueta="pts"
+                destacada={entry.position !== null && entry.position <= 3}
+              />
             );
           })}
-        </CardContent>
-      </Card>
+        </ListaDeFilas>
+      </div>
 
       {constructorStandings.length > 0 && (
         <Card className="mt-4">
@@ -137,16 +137,34 @@ export async function Championship({ year }: { year: number }) {
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {constructorStandings.map((entry) => (
-              <TimingRow
+              <Link
                 key={entry.id}
-                position={entry.position}
-                constructorId={entry.team.constructorId}
                 href={`/constructors/${entry.team.constructorId}`}
-                value={entry.points}
-                valueLabel="pts"
+                transitionTypes={['nav-forward']}
+                className="relative flex min-h-[48px] items-center gap-3 rounded-xl px-1 transition-colors hover:bg-accent/60"
               >
-                <span className="truncate font-semibold">{entry.team.name}</span>
-              </TimingRow>
+                <span className="w-5 shrink-0 text-center font-mono text-[13px] font-semibold tabular-nums text-muted-foreground">
+                  {entry.position ?? '—'}
+                </span>
+                <span
+                  aria-hidden
+                  className="h-7 w-[3px] shrink-0 rounded-sm"
+                  style={{ backgroundColor: teamColor(entry.team.constructorId).color }}
+                />
+                {/* La bandera de la escuderia, como en el resto de la app. */}
+                <CountryFlag nationality={entry.team.nationality} size={14} />
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                  {entry.team.name}
+                </span>
+                <span className="shrink-0 text-right">
+                  <span className="block font-mono text-[15px] font-semibold tabular-nums">
+                    {entry.points}
+                  </span>
+                  <span className="block font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                    pts
+                  </span>
+                </span>
+              </Link>
             ))}
           </CardContent>
         </Card>

@@ -976,7 +976,16 @@ test.describe('pestañas de una carrera', () => {
     // La tarjeta de ganador suelta se sustituyó por el podio de tres: un
     // sprint reparte trofeo y puntos a los tres primeros, igual que la carrera.
     await expect(page.getByRole('heading', { name: /Podio del sprint/i })).toBeVisible();
-    expect(await page.locator('table tbody tr').count()).toBeGreaterThan(15);
+
+    // Las filas, contadas por la fila compartida y no por `<tr>`: desde el
+    // punto 46 el sprint usa la misma tabla que la carrera, maquetada con una
+    // rejilla y con el papel de tabla declarado a mano.
+    expect(await page.locator('li[data-fila-de-tiempos]').count()).toBeGreaterThan(15);
+
+    // Y con lo mismo dentro que las demás.
+    const primera = page.locator('li[data-fila-de-tiempos]').first();
+    await expect(primera.locator('[data-dorsal]')).toHaveText(/^\d+$/);
+    await expect(primera.locator('[data-bandera]')).toHaveCount(2);
   });
 
   test('los circuitos sin datos lo dicen, y el año deja de ser una trampa', async ({ page }) => {
@@ -2945,7 +2954,41 @@ test.describe('una sola fila para las cuatro tablas', () => {
     const desborde = await primera.evaluate((el) => el.scrollWidth - el.clientWidth);
     expect(desborde, 'la fila se sale por el lado').toBeLessThanOrEqual(1);
   });
+  /**
+   * Las OTRAS pestañas, que me dejé al cerrar el punto 46.
+   *
+   * El usuario lo vio a la primera: «veo que agregaste las fotos, dorsales y
+   * banderas pero solo en la de carreras. ¿Y las demás pestañas?». Tenía razón:
+   * la clasificación del fin de semana y el sprint seguían con su propia tabla.
+   * Esta prueba mide las tres con el mismo listón.
+   */
+  test('la clasificación del fin de semana lleva lo mismo que la carrera', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto('/results/2026/14?sesion=qualifying');
+
+    const primera = page.locator('li[data-fila-de-tiempos]').first();
+    await expect(primera).toBeVisible();
+
+    const partes = await anatomia(primera);
+    expect(partes.dorsal, 'la clasificación no enseña el dorsal').toMatch(/^\d+$/);
+    expect(partes.fotos, 'la clasificación no enseña la foto').toBe(1);
+    expect(partes.banderas, 'faltan banderas en la clasificación').toBe(2);
+  });
+
+  test('la portada usa la misma fila que las tablas de dentro', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto('/');
+
+    const primera = page.locator('li[data-fila-de-tiempos]').first();
+    await expect(primera).toBeVisible();
+
+    const partes = await anatomia(primera);
+    expect(partes.dorsal, 'la portada no enseña el dorsal').toMatch(/^\d+$/);
+    expect(partes.fotos).toBe(1);
+    expect(partes.banderas, 'la portada no enseña las banderas').toBe(2);
+  });
 });
+
 
 /**
  * La tarjeta de la próxima carrera, en la columna de contexto.

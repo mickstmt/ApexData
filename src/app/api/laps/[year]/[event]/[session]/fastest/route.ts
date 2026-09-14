@@ -46,7 +46,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       limit ? parseInt(limit, 10) : 10
     );
 
-    return NextResponse.json(fastestLaps);
+    return NextResponse.json(fastestLaps,
+      {
+        headers: {
+          /**
+           * Una sesion corrida no cambia nunca mas.
+           *
+           * Sin esto, cada visita a la pestaña volvia a pedirle la sesion al
+           * servicio de cronometria —y la primera peticion de una sesion
+           * descarga su cronometria entera, que es el minuto de espera que se
+           * veia—. Lo reporto el usuario: «por que siempre en las practicas
+           * libres pide la data cada vez que entramos».
+           *
+           * Un dia, el mismo valor que ya usaban las posiciones del replay por
+           * la misma razon. Si la sesion aun no ha corrido no se llega hasta
+           * aqui: es un 404, y un 404 no se cachea.
+           */
+          'Cache-Control': 'public, max-age=86400',
+        },
+      }
+    );
   } catch (error) {
     // Entrada con mala forma: es culpa de quien pregunta, no nuestra, y
     // decirlo con un 400 evita que un año imposible cueste segundos de

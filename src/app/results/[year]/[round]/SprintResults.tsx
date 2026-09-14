@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { teamColor } from '@/lib/team-colors';
 import { PriorityRows } from '@/components/ui/PriorityRows';
 import { PodioDeCarrera, type PuestoDelPodio } from '@/components/results/PodioDeCarrera';
@@ -8,6 +7,7 @@ import { FichaDePiloto } from '@/components/results/FichaDePiloto';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { clasesDeDorsal } from '@/lib/medallas';
 import { estadoEnPalabras, resumirEstado } from '@/lib/estado-resultado';
+import { FilaDeTiempos, TarjetaDeTabla } from '@/components/tabla/TablaDeTiempos';
 import type { Driver, SprintResult, Team } from '@prisma/client';
 
 /**
@@ -116,72 +116,62 @@ export function SprintResults({ resultados }: { resultados: SprintConPiloto[] })
           }}
         />
 
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full">
-            <caption className="sr-only">Resultado del sprint, con puntos y tiempos</caption>
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th scope="col" className="p-4 text-left text-sm font-semibold">
-                  POS
-                </th>
-                <th scope="col" className="p-4 text-left text-sm font-semibold">
-                  PILOTO
-                </th>
-                <th scope="col" className="p-4 text-left text-sm font-semibold">
-                  EQUIPO
-                </th>
-                <th scope="col" className="p-4 text-right text-sm font-semibold">
-                  SALIÓ
-                </th>
-                <th scope="col" className="p-4 text-right text-sm font-semibold">
-                  TIEMPO
-                </th>
-                <th scope="col" className="p-4 text-right text-sm font-semibold">
-                  PTS
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {resultados.map((fila) => (
-                <tr
+        {/* La misma tarjeta y la misma fila que la carrera y la
+            clasificacion (punto 46). */}
+        <div className="hidden md:block">
+          <TarjetaDeTabla
+            titulo="Resultado del sprint"
+            columnas={['Salió', 'Tiempo', 'Pts']}
+            rejilla="26px 3px 34px minmax(0,1fr) 62px 104px 42px"
+          >
+            {resultados.map((fila) => {
+              const estado = resumirEstado(fila.time, fila.status);
+
+              return (
+                <FilaDeTiempos
                   key={fila.id}
-                  className="border-b border-border transition-colors last:border-0 hover:bg-muted/30"
-                >
-                  <th
-                    scope="row"
-                    className="p-4 text-left font-mono font-semibold tabular-nums"
-                  >
-                    {fila.position ?? fila.positionText}
-                  </th>
-                  <td className="p-4">
-                    <Link href={`/drivers/${fila.driver.driverId}`} className="hover:text-primary">
-                      {fila.driver.givenName} {fila.driver.familyName}
-                    </Link>
-                  </td>
-                  <td className="p-4">
-                    <Link
-                      href={`/constructors/${fila.team.constructorId}`}
-                      className="hover:text-primary"
-                    >
-                      {fila.team.name}
-                    </Link>
-                  </td>
-                  <td className="p-4 text-right tabular-nums">{fila.grid}.º</td>
-                  <td className="p-4 text-right font-mono text-sm tabular-nums text-muted-foreground">
-                    {/* En escritorio hay sitio de sobra, así que aquí va el
-                        motivo completo en vez de la sigla. */}
-                    {resumirEstado(fila.time, fila.status).motivo ??
-                      resumirEstado(fila.time, fila.status).corto}
-                  </td>
-                  <td className="p-4 text-right font-mono font-semibold tabular-nums">
-                    {/* Solo los ocho primeros puntúan en un sprint: el resto no
-                        lleva cero, lleva raya, que no es lo mismo. */}
-                    {fila.points > 0 ? fila.points : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  posicion={fila.position ?? fila.positionText}
+                  dorsal={fila.driver.permanentNumber}
+                  equipo={fila.team.name}
+                  equipoId={fila.team.constructorId}
+                  equipoNacion={fila.team.nationality}
+                  piloto={{
+                    nombre: `${fila.driver.givenName} ${fila.driver.familyName}`,
+                    foto: fila.driver.imageUrl,
+                    nacion: fila.driver.nationality,
+                    href: `/drivers/${fila.driver.driverId}`,
+                  }}
+                  celdas={[
+                    <span key="salio" className="text-muted-foreground">
+                      {fila.grid}.º
+                    </span>,
+                    fila.time ? (
+                      <span key="tiempo">{fila.time}</span>
+                    ) : (
+                      <span
+                        key="tiempo"
+                        title={estado.motivo ?? undefined}
+                        className="inline-block rounded border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground"
+                      >
+                        {estado.corto}
+                        <span className="sr-only"> — {estadoEnPalabras(estado)}</span>
+                      </span>
+                    ),
+                  ]}
+                  // Solo los ocho primeros puntuan en un sprint: el resto no
+                  // lleva cero, lleva raya, que no es lo mismo.
+                  valor={
+                    <span className={fila.points > 0 ? 'text-primary' : 'text-muted-foreground'}>
+                      {fila.points > 0 ? fila.points : '—'}
+                    </span>
+                  }
+                  valorEtiqueta="pts"
+                  destacada={fila.position !== null && fila.position <= 3}
+                  apagada={estado.clase === 'dnf' || estado.clase === 'dns' || estado.clase === 'dsq'}
+                />
+              );
+            })}
+          </TarjetaDeTabla>
         </div>
       </div>
     </>

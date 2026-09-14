@@ -7,9 +7,8 @@ import { prisma } from '@/lib/prisma';
 import { esperandoResultados } from '@/lib/ultimo-resultado';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TimingRow } from '@/components/ui/TimingRow';
+import { FilaDeTiempos, ListaDeFilas } from '@/components/tabla/TablaDeTiempos';
 import { CountryFlag } from '@/components/ui/CountryFlag';
-import { DriverAvatar } from '@/components/ui/OptimizedImage';
 import { RaceCountdown, LocalDateTime } from '@/components/home/RaceCountdown';
 import { Championship, ChampionshipSkeleton } from '@/components/home/Championship';
 import { raceStart } from '@/lib/race-time';
@@ -110,9 +109,16 @@ const getHubDataCacheada = unstable_cache(
               position: true,
               points: true,
               driver: {
-                select: { driverId: true, givenName: true, familyName: true, imageUrl: true },
+                select: {
+                  driverId: true,
+                  givenName: true,
+                  familyName: true,
+                  imageUrl: true,
+                  nationality: true,
+                  permanentNumber: true,
+                },
               },
-              team: { select: { constructorId: true, name: true } },
+              team: { select: { constructorId: true, name: true, nationality: true } },
             },
           },
         },
@@ -362,31 +368,34 @@ export default async function Home() {
                   {lastRace.raceName}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                {lastRace.results.map((result) => (
-                  <TimingRow
-                    key={result.id}
-                    position={result.position}
-                    constructorId={result.team.constructorId}
-                    href={`/drivers/${result.driver.driverId}`}
-                    value={result.points}
-                    valueLabel="pts"
-                  >
-                    <DriverAvatar
-                      src={result.driver.imageUrl}
-                      name={`${result.driver.givenName} ${result.driver.familyName}`}
-                      size="sm"
+              {/* La misma fila que las tablas de dentro. La portada llevaba la
+                  vieja —sin dorsal y sin banderas— y se notaba al pasar de una
+                  a otra. */}
+              <CardContent className="p-0">
+                <ListaDeFilas
+                  titulo={`Podio de ${lastRace.raceName}`}
+                  rejilla="26px 3px 34px minmax(0,1fr) 58px"
+                >
+                  {lastRace.results.map((result) => (
+                    <FilaDeTiempos
+                      key={result.id}
+                      posicion={result.position ?? '—'}
+                      dorsal={result.driver.permanentNumber}
+                      equipo={result.team.name}
+                      equipoId={result.team.constructorId}
+                      equipoNacion={result.team.nationality}
+                      piloto={{
+                        nombre: `${result.driver.givenName} ${result.driver.familyName}`,
+                        foto: result.driver.imageUrl,
+                        nacion: result.driver.nationality,
+                        href: `/drivers/${result.driver.driverId}`,
+                      }}
+                      valor={result.points}
+                      valorEtiqueta="pts"
+                      destacada={result.position !== null && result.position <= 3}
                     />
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold">
-                        {result.driver.givenName} {result.driver.familyName}
-                      </span>
-                      <span className="block truncate text-sm text-muted-foreground">
-                        {result.team.name}
-                      </span>
-                    </span>
-                  </TimingRow>
-                ))}
+                  ))}
+                </ListaDeFilas>
               </CardContent>
             </Card>
           </section>

@@ -169,7 +169,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <MotionProvider>
-            <FavoritesProvider>
+            <FavoritesProvider hayCuenta={Boolean(cuenta)}>
               <TeamAccent />
               <SplashScreen />
               <NavigationProgress />

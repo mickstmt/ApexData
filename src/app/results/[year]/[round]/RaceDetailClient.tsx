@@ -866,135 +866,54 @@ export default function RaceDetailClient({ race, year, sesionInicial, directorio
                   ]}
                 />
 
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full">
-                      <caption className="sr-only">Clasificación por piloto, con los tiempos de Q1, Q2 y Q3</caption>
-                    <thead>
-                      <tr className="border-b border-border bg-muted/50">
-                        <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground w-16">POS</th>
-                        <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground w-20">NO</th>
-                        <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">PILOTO</th>
-                        <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">EQUIPO</th>
-                        <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-32">Q1</th>
-                        <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-32">Q2</th>
-                        <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-32">Q3</th>
-                        <th
-                          scope="col"
-                          className="p-4 text-right text-sm font-semibold text-foreground w-28"
-                        >
-                          {/* El `title` no lo ve quien va con el dedo ni quien
-                              va con lector de pantalla; la aclaración va en el
-                              propio encabezado, oculta a la vista. */}
-                          INT.
-                          <span className="sr-only"> (diferencia con el piloto de delante)</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {race.qualifyings.map((result) => {
-                        const isTop3 = result.position <= 3;
-                        const isPole = result.position === 1;
-
-                        return (
-                          <tr
-                            key={result.id}
-                            className={`border-b border-border transition-colors hover:bg-muted/30 ${
-                              isTop3 ? 'bg-muted/20' : ''
-                            }`}
-                          >
-                            {/* Position */}
-                            <td className="p-4">
-                              <div
-                                className={`flex items-center justify-center h-10 w-10 rounded-md font-bold ${
-                                  isPole
-                                    ? 'bg-podium-gold/20 text-podium-gold'
-                                    : isTop3
-                                    ? 'bg-primary/20 text-primary'
-                                    : 'bg-muted/50 text-foreground'
-                                }`}
-                              >
-                                {result.position}
-                              </div>
-                            </td>
-
-                            {/* Number */}
-                            <td className="p-4">
-                              <div className="text-lg font-bold text-muted-foreground">
-                                {result.driver.permanentNumber || '—'}
-                              </div>
-                            </td>
-
-                            {/* Driver */}
-                            <td className="p-4">
-                              <Link
-                                href={`/drivers/${result.driver.driverId}`}
-                                className="hover:text-primary transition-colors"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">
-                                    {result.driver.code ||
-                                      result.driver.familyName.slice(0, 3).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <div className="font-semibold">
-                                      {result.driver.givenName} {result.driver.familyName}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground">
-                                      {result.driver.nationality}
-                                    </div>
-                                  </div>
-                                </div>
-                              </Link>
-                            </td>
-
-                            {/* Team */}
-                            <td className="p-4">
-                              <Link
-                                href={`/constructors/${result.team.constructorId}`}
-                                className="text-sm hover:text-primary transition-colors"
-                              >
-                                {result.team.name}
-                              </Link>
-                            </td>
-
-                            {/* Q1 */}
-                            <td className="p-4 text-right">
-                              <span className="font-mono text-sm font-semibold">
-                                {result.q1 || '—'}
-                              </span>
-                            </td>
-
-                            {/* Q2 */}
-                            <td className="p-4 text-right">
-                              {result.q2 ? (
-                                <span className="font-mono text-sm font-semibold">{result.q2}</span>
-                              ) : (
-                                <span className="text-sm text-muted-foreground">—</span>
-                              )}
-                            </td>
-
-                            {/* Q3 */}
-                            <td className="p-4 text-right">
-                              {result.q3 ? (
-                                <span className="font-mono text-sm font-semibold text-primary">
-                                  {result.q3}
-                                </span>
-                              ) : (
-                                <span className="text-sm text-muted-foreground">—</span>
-                              )}
-                            </td>
-
-                            {/* Diferencia con el de delante */}
-                            <td className="p-4 text-right">
-                              <span className="font-mono text-sm tabular-nums text-muted-foreground">
-                                {intervaloDeQualy.get(result.id) ?? '—'}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                {/* La misma tarjeta y la misma fila que la carrera. Estaba sin
+                    convertir cuando se cerró el punto 46 y el usuario lo vio a
+                    la primera: aquí el piloto era un círculo con tres letras y
+                    su nacionalidad, una palabra en inglés debajo. */}
+                <div className="hidden md:block">
+                  <TarjetaDeTabla
+                    titulo="Clasificación"
+                    contexto={race.qualifyings.length > 0 ? 'Parrilla de salida' : undefined}
+                    columnas={['Q1', 'Q2', 'Q3', 'Int.']}
+                    rejilla="26px 3px 34px minmax(0,1fr) 78px 78px 82px 68px"
+                  >
+                    {race.qualifyings.map((result) => (
+                      <FilaDeTiempos
+                        key={result.id}
+                        posicion={result.position}
+                        dorsal={result.driver.permanentNumber}
+                        equipo={result.team.name}
+                        equipoId={result.team.constructorId}
+                        equipoNacion={result.team.nationality}
+                        piloto={{
+                          nombre: `${result.driver.givenName} ${result.driver.familyName}`,
+                          foto: result.driver.imageUrl,
+                          nacion: result.driver.nationality,
+                          href: `/drivers/${result.driver.driverId}`,
+                        }}
+                        celdas={[
+                          <span key="q1" className="text-muted-foreground">
+                            {result.q1 || '—'}
+                          </span>,
+                          <span key="q2" className="text-muted-foreground">
+                            {result.q2 || '—'}
+                          </span>,
+                          // El mejor tiempo de los tres va en el acento: es el
+                          // que decide la parrilla, y sin marcarlo las tres
+                          // columnas pesan lo mismo.
+                          <span key="q3" className="font-semibold text-primary">
+                            {result.q3 || '—'}
+                          </span>,
+                        ]}
+                        valor={
+                          <span className="text-muted-foreground">
+                            {intervaloDeQualy.get(result.id) ?? '—'}
+                          </span>
+                        }
+                        destacada={result.position !== null && result.position <= 3}
+                      />
+                    ))}
+                  </TarjetaDeTabla>
                 </div>
               </div>
 

@@ -76,6 +76,34 @@ export function decidirFusion(aparato: Favoritos, cuenta: Favoritos): Fusion {
 }
 
 /**
+ * Cuando los dos lados tienen cosas distintas: se juntan, no se elige.
+ *
+ * `decidirFusion` dice «preguntar» porque **ninguna elección automática es
+ * correcta**, y eso sigue siendo verdad. Lo que pasa es que el usuario zanjó
+ * que no quiere esa pregunta —«lo del conflicto no es gran cosa… con que al
+ * entrar se carguen y se guarden los datos ya existentes»— y entre las salidas
+ * posibles esta es la única que **no borra nada de nadie**: la unión de las dos
+ * listas. Que gane el aparato, o la cuenta, o la más reciente, borraría a
+ * alguien marcado a mano en el otro lado.
+ *
+ * Lo que sí hay que elegir es el acento, porque es uno solo y no se puede
+ * unir. Gana el del aparato: es el color que se está viendo ahora mismo, y
+ * cambiarlo de golpe al entrar sería lo más desconcertante que podría pasar.
+ *
+ * Si algún día se quiere la pregunta de verdad, esta función se sustituye por
+ * la pantalla y `decidirFusion` no cambia.
+ */
+export function juntar(aparato: Favoritos, cuenta: Favoritos): Favoritos {
+  const union = (a: string[], b: string[]) => Array.from(new Set([...a, ...b]));
+
+  return {
+    pilotos: union(aparato.pilotos, cuenta.pilotos),
+    equipos: union(aparato.equipos, cuenta.equipos),
+    acento: aparato.acento ?? cuenta.acento,
+  };
+}
+
+/**
  * De cómo lo guarda la base —`driverId` separados por comas— a listas.
  *
  * Se mantiene esa forma y no una tabla aparte porque es exactamente la que ya

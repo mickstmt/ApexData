@@ -3,6 +3,15 @@ import { cn } from '@/lib/utils';
 import { teamColor } from '@/lib/team-colors';
 
 /**
+ * La fila de una lista cuyo protagonista NO es un piloto.
+ *
+ * Queda un solo sitio que la usa: «Últimos resultados» en la ficha de un
+ * piloto, donde cada fila es una CARRERA y el piloto es el mismo en todas.
+ * `FilaDeTiempos` —la del punto 46— siempre enseña dorsal, foto y bandera de
+ * alguien, y aquí ese alguien sería el mismo veintidós veces.
+ *
+ * Todo lo demás pasó a `@/components/tabla/TablaDeTiempos`.
+ *
  * One row of a timing tower: position, team stripe, identity, trailing value.
  *
  * The team colour is a 4px stripe rather than text or a background, which is

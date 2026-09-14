@@ -131,6 +131,32 @@ export function TarjetaDeTabla({
   );
 }
 
+/**
+ * Unas cuantas filas sin cabeceras: los resúmenes de la portada.
+ *
+ * Existe por accesibilidad y no por maquetación. `FilaDeTiempos` declara
+ * `role="row"` y sus celdas `role="cell"`, y esos papeles **necesitan una tabla
+ * por encima**; sueltos dentro de un `<ol>` no significan nada y un lector de
+ * pantalla los ignora. En la portada no hay cabeceras que enseñar —son tres o
+ * cinco filas de resumen—, así que la tabla existe pero sin fila de rótulos.
+ */
+export function ListaDeFilas({
+  titulo,
+  rejilla,
+  children,
+}: {
+  /** El nombre de la tabla para quien no la ve. */
+  titulo: string;
+  rejilla: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div role="table" aria-label={titulo} style={estilo(rejilla)}>
+      <ol role="rowgroup">{children}</ol>
+    </div>
+  );
+}
+
 export function FilaDeTiempos({
   posicion,
   dorsal,
