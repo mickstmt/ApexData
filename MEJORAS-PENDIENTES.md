@@ -365,6 +365,11 @@ pestañas en claro y el replay en oscuro, mezclados.
 
 ## 9. UX · Los botones de avance/retroceso no dicen cuanto mueven
 
+> **HECHO** (`d94ff58`), dentro del rediseno de los mandos (punto 40). NO
+> lleva etiqueta fija: al pulsar, el destello del centro dice el salto
+> **real** —a dos segundos del final dice «+2 s», no «+10 s»—, que es mas
+> preciso que lo que se pidio. El nombre accesible si dice la cantidad.
+
 Quiere un indicador al pulsar: algo tipo **«+10 seg» / «−10 seg»** en pantalla, segun lo
 que salten. Texto del usuario: «ya tu conoces las mejores formas pero creo que me
 entiendes lo que busco».
@@ -580,6 +585,13 @@ empata siempre**. Hay que arreglar el arranque del sondeo antes de concluir nada
 barrido. No es una conclusion, es por donde empezar.
 
 ## 19. RECOMENDACION DADA · Navegador para la PWA en Android
+
+> **SIGUE ABIERTO, y depende del usuario.** La recomendacion esta dada, pero
+> lo importante —que Brave desactiva por defecto los servicios de Google para
+> mensajeria push, que es el canal del push web en Android— **no esta
+> verificado**. Hay que probarlo en su telefono: instalar la PWA en Brave y
+> comprobar si llega un aviso. Hasta entonces es una suposicion razonable, no
+> un hecho.
 
 Pregunta del usuario: ¿por que Chrome? ¿Y si usa Brave?
 
@@ -798,6 +810,10 @@ adivinando. Si llegan los dos y no navega, es el router; si llega el `touchstart
 `click`, es iOS descartando el toque por algo que todavia no hemos aislado.
 
 ## 24. DECISION DEL USUARIO · Mandos minimos en vertical, y replay a pantalla completa
+
+> **HECHO**, en dos piezas: los mandos minimos en `d94ff58` (solo iconos, sin
+> pastilla, con fondo translucido al pulsar) y la pantalla completa en
+> `0b86143` (expandir de pie pide girar en vez de romperse).
 
 **Decidido por el usuario**, no propuesto por mi: el cuadro que contiene los mandos del
 replay **ocupa demasiada pantalla** en vertical. Se reduce «al maximo posible», muy
@@ -1020,6 +1036,10 @@ descubriria que la pantalla completa existe.
 
 ## 33. BUG · Falta `env(safe-area-inset-top)` en la pantalla completa
 
+> **HECHO** (`7c0929b`). El contenedor del modo completo lleva
+> `pt-[env(safe-area-inset-top)]`, asi que la cabecera ya no se mete bajo la
+> hora y el wifi y el boton de expandir se deja pulsar. Punto 3.4 de la guia.
+
 El contenedor del modo completo reserva `env(safe-area-inset-left)`, `right` y
 `bottom`, **pero no `top`**. Se diseño pensando en horizontal, donde la muesca
 queda al lado; en vertical el hueco esta arriba y nadie lo reservo, asi que la
@@ -1051,10 +1071,19 @@ el corte saboteado a solo ancho: 339 px.
 
 ## 35. BUG · La barra de progreso queda bajo el menu
 
+> **HECHO** (`999eed9`). El deslizador vuelve a la vertical, fino y **encima**
+> de los botones, dentro de la caja de mandos — que es lo que lo saca de
+> debajo de la barra de pestanas. Punto 2.2 de la guia.
+
 En esa misma pantalla en vertical, el scrubber cae detras de la barra de
 pestañas. Va aunque el modo completo no llegue a abrirse nunca en vertical.
 
 ## 36. TEXTO · El aviso de abandono dice `DNF`, y debe decir `DNF · LEC`
+
+> **HECHO** (`7c0929b` el texto, `5188644` lo demas). Dice `DNF · LEC` con su
+> codigo, parpadea **tres veces** en vez de una y **hace cola**: dos coches
+> pueden quedarse fuera a la vez y con un solo hueco el segundo pisaba al
+> primero. Y la lista dice `DNF`, no `OUT`.
 
 Malentendido mio: el usuario dijo «en lugar de LEC - abandona debe ser DNF» y se
 leyo como sustituir el rotulo entero, cuando queria cambiar solo la palabra y
@@ -1097,6 +1126,10 @@ ahi no hay ninguna bandera que enseñar.
 
 ## 38. BUG DE PRODUCTO · La portada contradice a la notificacion
 
+> **HECHO** (`0f22ead`). La portada dice «ya se corrio, los resultados todavia
+> no han llegado» en vez de ensenar la carrera anterior. **Pendiente de
+> verlo en vivo** justo despues de la proxima carrera: punto 7 de la guia.
+
 A las cuatro horas de acabar el GP de España, la portada decia «proxima carrera:
 Azerbaiyan» (correcto) y «ultimo resultado: **Italian Grand Prix**». Comprobado:
 
@@ -1113,6 +1146,10 @@ con el lenguaje de sesion pendiente que la app ya usa— y llenar la base desde
 FastF1 marcando provisional, que va con el punto 18.
 
 ## 39. BUG · Veintiun abandonos falsos al relanzar tras la bandera roja
+
+> **HECHO** (`7c0929b`). De 21+5+2 falsos a **cero**, con LEC, ALO y STR
+> saliendo en 4:42, 70:12 y 75:03, que es cuando de verdad se quedan fuera.
+> Punto 1.2 de la guia.
 
 **Medido en Italia 2026**, contando quien pasa de «dentro» a «fuera» en cada
 instante:
@@ -1141,6 +1178,10 @@ parada entera.
 
 ## 40. UI · Rediseñar los mandos del replay
 
+> **HECHO** (`d94ff58`). El usuario eligio la **familia A** —«me quedo con la
+> A creo. Si, la A»— y pidio ademas un fondo al pulsar, «que no sea tan
+> intenso, un poco traslucido». Punto 2.1 de la guia.
+
 **Lo que dice el usuario**: «estos botones expandidos son horripilantes», y que
 en el modo normal tambien se pueden mejorar. Y quiere **quitar el «10 s»**.
 
@@ -1158,6 +1199,10 @@ baja de 44 px** en ninguna familia.
 **PENDIENTE**: que el usuario elija una letra.
 
 ## 41. BUG · Quien sale desde el pit lane figuraba lider
+
+> **HECHO** (`cd3b4f2`). BEA aparece el ultimo desde el instante cero. El
+> mismo fallo existia en Italia, Paises Bajos y Hungria durante un instante.
+> Punto 1.4 de la guia.
 
 **Lo que vio el usuario** en la repeticion del GP de España 2026: BEA salio
 desde el pit lane y **el replay lo daba por lider desde el primer segundo**.
