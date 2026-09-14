@@ -87,6 +87,36 @@
 
 ## Bitácora
 
+### 2026-09-14 (68) — La web deja de ser la PWA estirada, las cuentas, y un descuadre de documentos ✅
+
+**Puntos 45 y 47 · el armazón de escritorio.** Tres maquetas mías rechazadas antes de acertar: las tres movían la **cabecera** de sitio sobre la misma página de siempre, una tabla estirada de borde a borde. El usuario lo zanjó —«tus sugerencias de diseño son de las peores que he visto»— y tenía razón. La cuarta copió la **arquitectura** de sus referencias (FotMob, Flashscore) en vez de decorar la mía, y esa sí: «por fin entendiste la consigna». El contenido se para en **1280** —no es estética: es lo que decide si al lado de la tabla caben el raíl (232) y una columna de contexto (320) sin bajar de los ~670 px en que una tabla deja de leerse— y las nueve secciones bajan a un raíl desde `lg`. Desaparece la hoja modal de teléfono en un monitor.
+
+**Punto 17 · las cuentas.** Google primero, con el panel de ajustes detrás de un engranaje: la cuenta es la primera fila y **el tema es otra fila del mismo panel**. Mi primera idea —un icono de persona al lado del interruptor de tema— la cortó él: «es algo básico de UX/UI, entonces creo que no estás usando los agentes expertos». Después corrigió el texto del botón: «Entrar» no dice a dónde ni qué va a pedir, así que pasa a **«Iniciar sesión con Google»** con la marca de Google dibujada inline. La foto de perfil sale rota y **se deja en la inicial**: la CSP declara `img-src 'self' data: blob:` y enseñarla de verdad es abrirle la política a un dominio de Google — decisión suya, no mía.
+
+**Punto 17-bis · entrar con el correo.** Enlace sin contraseña, por la API de Resend y **sin `nodemailer`**: `next-auth/providers/email` lo carga en su primera línea, así que el proveedor se declara a mano. Dominio `meeks.fun` verificado por la auto-configuración de Cloudflare; los tres registros comprobados contra el DNS público antes de darlo por bueno. Dos pantallas que no se dejan en inglés: el aviso de «te hemos mandado el enlace» se resuelve dentro del panel, y la de error se sustituye por una propia que distingue los cuatro motivos.
+
+**Punto 17-ter · los favoritos ya viajan.** `sincronizar` decide qué queda, y es puro y probado porque es la única parte capaz de perder lo que alguien marcó a mano. El cuarto caso —el que `decidirFusion` llama «preguntar»— **junta las dos listas**: él zanjó que no quiere esa pregunta, y de las salidas posibles la unión es la única que no borra a nadie.
+
+**Punto 46 · una sola fila para todas las tablas.** Su pregunta —«¿por qué en una hay foto y en otra no?»— tenía respuesta concreta y no era estética: carrera y campeonato vienen de Jolpica, que manda la ficha completa; prácticas y clasificación de sesión vienen de **FastF1, que manda tres letras y el nombre del equipo y nada más**. `lib/parrilla` hace ese cruce. Sobre la maqueta pidió las cuatro cosas juntas —«el dorsal, la foto y la bandera son indispensables»— y añadió una que no se me había ocurrido: **la bandera de la escudería**, que estaba en `Team.nationality` desde siempre, con los 48 SVG en el repo, y no se enseñaba en ningún sitio. El dorsal va en columna propia y su tinta se elige **midiendo** los dos contrastes: las once escuderías de 2026 pasan de 4,5:1. Casi se pierde la semántica por el camino: `display: grid` sobre elementos de tabla les quita su papel en Chrome, y lo cazó una prueba de accesibilidad que ya existía.
+
+**Y lo vio a la primera cuando me dejé tres tablas.** Dije «las cuatro tablas» y había convertido carrera, prácticas, sprint-qualy y campeonato, pero no la **clasificación del fin de semana**, ni el **sprint**, ni la **portada**. «Veo que agregaste las fotos, dorsales y banderas pero solo en la de carreras. ¿Y las demás pestañas?».
+
+**Punto 20-bis · las prácticas se pedían cada vez.** También suyo: «¿por qué siempre en las prácticas libres pide la data cada vez que entramos?». Las cuatro rutas de cronometría no mandaban `Cache-Control` y las del replay sí. La primera vez sigue tardando —descarga la sesión entera—; las siguientes ya no.
+
+**Punto 49 · la casilla de sesión solo se pulsaba al 70 %.** Medido en producción antes de tocarlo: 61 px de enlace en una casilla de 88.
+
+**Punto 18 · verificado, y no había que esperarlo.** Leído `/api/fuentes` con el fin de semana de España ya corrido. El arreglo entró el 11 a las 21:39Z, así que las dos prácticas del viernes son anteriores y salen con `probes: 1` — el sesgo de antes. Desde la FP3 del sábado manda el código nuevo: `probes` 22/13/4 contra 50/31/47. Con las tres sesiones limpias, **fastf1 publica 16 minutos antes**.
+
+### El descuadre de documentos, que es lo que hay que arreglar de método
+
+Al preguntarme qué quedaba, le pasé **seis puntos como pendientes y cinco estaban hechos** — el aro del líder, los anillos del abandono, la roja que dura lo que duró la parada, el tirador del mapa y `SesionPendiente`. Antes había hecho lo mismo con dos ya cerrados (5 y 19) y había anunciado como espera futura una verificación cuya sesión había corrido dos días antes. Su respuesta: «me parece que no tienes la info al día... no me des información falsa».
+
+**No era git**: `git fetch` no traía nada y la rama coincidía con `origin/main`. Era **qué documento se lee**. `MEJORAS-PENDIENTES.md` son las notas de lo que él reporta, y sus secciones se quedan viejas porque el cierre se escribe aquí y en el commit. Se leyeron como estado actual.
+
+**Arreglado de tres formas** para que no dependa de acordarse: aviso al principio de `MEJORAS-PENDIENTES.md` diciendo que no manda y en qué orden mirar; las seis secciones cerradas con la línea de código que lo demuestra; y el orden escrito en `SIGUIENTE-SESION.md`. **El código manda sobre la bitácora, y la bitácora sobre las notas.**
+
+**Estado al cerrar**: 532 unitarias y 187 de navegador en verde, CI verde en `b9b452d`, todo desplegado y comprobado en producción. **Queda un solo punto de la lista: el 22, las radios de equipo**, que abre la CSP y por tanto hay que consultarle antes.
+
 ### 2026-09-14 (67) — La lista llena su columna, y una fila que se queda como está ✅
 
 **Punto 43 · el alto de la lista.** Hermano del 42: aquel repartía el ancho, este el alto. Arreglado el ancho, la lista seguía siendo una banda corta arriba de una columna larga. Medido con la carrera real a 1440x1250: 22 pilotos de 30 px ocupan 660 y quedaban **425 px muertos** debajo del último. La prueba nueva reproduce ese número exacto antes del arreglo — «sobran 425 px debajo del último de 22 pilotos». Ahora la lista llena su columna con flex y las filas pasan de 30 a **52 px**, con suelo de 30 (una columna corta no puede encoger la fila) y techo de 56 (en 4K la columna pasa de 2000 px y cada fila se iría a ~95, que deja de parecer una lista). Solo en `pc:`: en el móvil la fila sigue en sus 44 px tocables.
