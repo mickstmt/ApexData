@@ -1,5 +1,23 @@
 # ApexData - 19 trabajos pendientes (lista cerrada por el usuario el 2026-09-11)
 
+> ## ⚠️ ESTE DOCUMENTO NO ES LA FUENTE DE LA VERDAD
+>
+> **El registro que manda es `PROGRESO_RELANZAMIENTO_2026.md`** (la bitacora) y,
+> por encima de el, el **codigo**. Este archivo son las notas de lo que el
+> usuario reporto, y sus secciones **se quedan desactualizadas**: el trabajo se
+> cierra en la bitacora y en un commit, y volver aqui a tachar cada seccion se
+> olvida.
+>
+> **El 2026-09-14 eso costo caro**: se leyeron estas secciones como si fueran el
+> estado actual y se le presentaron al usuario **seis puntos como pendientes
+> cuando cinco estaban hechos** —11, 12, 25, 26 y 3+20—, ademas de dos ya
+> cerrados (5 y 19) y de una verificacion que se anuncio como futura cuando la
+> sesion que la cerraba habia corrido dos dias antes. Su respuesta: «me parece
+> que no tienes la info al dia... no me des informacion falsa».
+>
+> **Antes de decir que algo esta pendiente: buscarlo en el codigo.** No basta
+> con no encontrarlo aqui tachado.
+
 > **Estas son notas de trabajo tomadas mientras el usuario revisaba el replay recien
 > desplegado en su iPhone.** Estan en el orden en que el las dijo, no por prioridad.
 > Incluyen correcciones marcadas donde una primera lectura mia fue falsa: **hacer caso a
@@ -234,6 +252,10 @@ progreso. Hay que decidir cual manda.
 
 ## 3. FEATURE · Sesiones que aun no se han corrido: nunca vacias, y encadenadas
 
+**HECHO.** `SesionPendiente` se usa en cuatro sitios de la ficha de carrera, con
+`ParrillaProvisional` para la parrilla reconstruida. Comprobado en el codigo el
+2026-09-14.
+
 **Referencia**: Flashscore (captura del usuario, «Spanish Grand Prix-Madrid ·
 Clasificacion», 12.09.2026, aun sin correr). En vez de una sesion vacia enseñan **la
 lista de pilotos en orden alfabetico** por apellido, con bandera y equipo.
@@ -396,11 +418,21 @@ Dos cosas en una:
 
 ## 11. FEATURE · Un distintivo para el lider en el circuito
 
+**HECHO.** El aro del lider, por fuera del suyo propio, en
+`MapaDeCarrera.tsx` (`El aro del líder`, sobre la linea 279), con `ultimoLider`
+para que no salte entre fotogramas. Comprobado en el codigo el 2026-09-14.
+
 Con la carrera avanzada, entre doblados y rezagados **confunde**: parece que un doblado
 pelea con el de delante cuando en realidad ya le sacan mas de una vuelta. Quiere poder
 **ubicar al lider de un vistazo**.
 
 ## 12. FEATURE · Los abandonos y las banderas no se notan
+
+**HECHO** (bitacora 66, commit `5188644`). El abandono da **tres anillos
+encadenados** y un aviso `DNF · LEC` que parpadea tres veces y **hace cola**
+—dos coches pueden quedarse fuera a la vez—. Las banderas se ven en las bandas
+de color del estado de pista, en el deslizador. Comprobado en el codigo el
+2026-09-14.
 
 En esta carrera **Leclerc abandona en la vuelta 3 y no se aprecia**: el punto se queda
 parado y ya. Pide una animacion para el abandono, y algo mas llamativo tambien para las
@@ -632,6 +664,11 @@ se pierde el fin de semana entero de medidas y hay que esperar al siguiente GP.
 
 ## 20. UX · El mensaje de carga de los tiempos de sesion
 
+**HECHO.** El mensaje explica que la primera consulta descarga la sesion entera
+y que las siguientes son inmediatas. Y desde el 2026-09-14 eso es cierto: las
+cuatro rutas de cronometria mandan `Cache-Control: public, max-age=86400` (ver
+**20-bis** en el REGISTRO DE AVANCE).
+
 `src/app/results/[year]/[round]/TiemposDeSesion.tsx:55-66`, componente `Cargando`:
 «Pidiendo los tiempos de La práctica libre 1… / La primera consulta de una sesión
 descarga su cronometría entera y puede tardar cerca de un minuto. Las siguientes son
@@ -849,6 +886,13 @@ se puede forzar el giro: hay que responder a el, no pedirlo.
 
 ## 25. BUG REABIERTO · El delta sigue subiendo con todos parados
 
+**HECHO** (bitacora 66, commit `471303f`). Era la segunda hipotesis de las dos
+que este punto planteaba: el cartel decia AMARILLA durante veinte minutos con
+todos en el garaje porque el dato oficial declaraba 103 s de roja y la parada
+real fueron **1819**. Se corrige sobre los tramos, alargando una roja **ya
+declarada** y sin inventar ninguna, asi que el reloj de carrera —y con el, el
+delta— se congela lo que de verdad duro la parada.
+
 **Sigue pasando despues del arreglo del punto 1** (`4b66c8e`). El usuario: «el tiempo en
 el delta sigue subiendo aunque el lider y todos los demas esten en boxes por bandera
 amarilla o roja».
@@ -870,6 +914,12 @@ cuando la carrera corre**. Eso deberia congelar el delta con bandera roja.
 y si la pildora de estado decia ROJA o AMARILLA. Sin eso se arregla a ciegas.
 
 ## 26. BUG · Al encoger el circuito se pierden los primeros clasificados
+
+**HECHO.** Cuatro salidas a maqueta y el usuario eligio el **tirador**: encoger
+el mapa deja de ser el mismo gesto que recorrer la lista. Medido y escrito en
+`replay/ReplayClient.tsx`: el encogido costaba 220 px de desplazamiento y las
+filas miden 44, o sea las cinco que el usuario reportaba. De regalo, el tamaño
+del mapa **se queda** — antes volver arriba lo agrandaba sin querer.
 
 **Lo que dice el usuario**: en vertical ve el circuito y debajo solo los tres primeros.
 Si desplaza para que el circuito se achique y quepan mas pilotos, al llegar al maximo
