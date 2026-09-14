@@ -729,8 +729,15 @@ aunque la forma si viaje.
 **Lo que hay hoy**: el color lo pone `aria-current="page"`, que es **binario y salta de
 golpe** al llegar la ruta. No sabe nada de por donde va el realce.
 
-**ESTADO 2026-09-13**: maqueta hecha (`/maqueta/realce.html`), **pendiente de que el
-usuario elija**. Y por el camino aparecio lo importante:
+**HECHO (2026-09-13, `7c0929b`).** El usuario eligio la **opcion D, el rebote
+suave**: «me gusta mas el rebote suave, osea opcion D». Implementado con la via
+del `clip-path` —una segunda fila de pestanas ya coloreadas, `aria-hidden`,
+recortada por el realce y moviendose con el— y la curva cambiada a
+`cubic-bezier(0.34, 1.15, 0.64, 1)`, que es lo que hace que el recorrido dure
+**432 ms de los 720** en vez de 258. Es casi el doble de tiempo encendiendo
+pestanas, que era el problema real.
+
+Y por el camino aparecio lo importante:
 
 > Las tres primeras versiones **le parecieron identicas**, y tenia razon. Medido: con la
 > curva de hoy —`cubic-bezier(0.34, 1.56, 0.64, 1)`— el recorte **cruza la barra entera
@@ -1297,4 +1304,30 @@ hay que aprenderse dos veces.
 contador de paradas, que sea un numero (`2`) y no los puntitos: no crece con
 cada parada, y ese 0 px de la tabla deja de ser un 0.
 
-**Pendiente**: la eleccion del usuario (letra de la fila).
+**DECIDIDO POR EL USUARIO (2026-09-14): NO se integra, la fila se queda como
+esta.** Y no por sitio, que ya vimos que sobra, sino por valor:
+
+> «no me gusta C porque no me da todo lo que me gusta, ya que necesito toda la
+> informacion no solo algunas [...] evaluando bien he decidido que por el
+> momento ya no integrar mas, porque si bien es info valiosa, **al ser una
+> repeticion le quita peso; sin embargo si fuese en vivo ahi si que seria info
+> crucial**».
+
+Es un criterio de producto, no de diseno, y conviene no perderlo: **el
+neumatico, las paradas y el «en boxes» valen lo que valen porque no sabes lo
+que va a pasar**. En una repeticion el final ya esta escrito, asi que el dato
+que anticipa una parada no anticipa nada.
+
+**GUARDADO COMO PASO FINAL**, listo para retomar sin repetir trabajo:
+
+- La maqueta con las cuatro opciones: `mockups/09-la-fila-y-el-alto.html`.
+- El dato ya comprobado contra produccion: el servicio sirve por vuelta
+  `Compound`, `TyreLife`, `Stint`, `PitInTime` y `PitOutTime`, o sea que «en
+  boxes» **no hay que adivinarlo por geometria** — se sabe entre el PitIn y el
+  PitOut. Endpoint: `/api/laps/{year}/{round}/R/stints`.
+- La paleta ya existe: `COMPOUND_COLORS` en `src/lib/team-colors.ts`.
+- La tabla de holguras de arriba, para no volver a medirla.
+
+**Cuando se retome**: el disparador natural es el dia que haya **timing en
+vivo**. Ahi esto deja de ser adorno. Y si se retoma antes, que el contador de
+paradas sea un numero y no puntitos, por el 0 px del escritorio a 1180.

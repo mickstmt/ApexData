@@ -87,6 +87,58 @@
 
 ## Bitácora
 
+### 2026-09-14 (67) — La lista llena su columna, y una fila que se queda como está ✅
+
+**Punto 43 · el alto de la lista.** Hermano del 42: aquel repartía el ancho, este el alto. Arreglado el ancho, la lista seguía siendo una banda corta arriba de una columna larga. Medido con la carrera real a 1440x1250: 22 pilotos de 30 px ocupan 660 y quedaban **425 px muertos** debajo del último. La prueba nueva reproduce ese número exacto antes del arreglo — «sobran 425 px debajo del último de 22 pilotos». Ahora la lista llena su columna con flex y las filas pasan de 30 a **52 px**, con suelo de 30 (una columna corta no puede encoger la fila) y techo de 56 (en 4K la columna pasa de 2000 px y cada fila se iría a ~95, que deja de parecer una lista). Solo en `pc:`: en el móvil la fila sigue en sus 44 px tocables.
+
+**Punto 44 · la fila, y la consulta del usuario.** Preguntó si en vertical enseñar solo el compuesto de neumático y en horizontal o en web todo. Antes de opinar se midió, y el resultado va contra la idea por dos motivos. Primero, **un teléfono tumbado no es escritorio** en esta app: `pc:` pide `min-height: 500px` y tumbado el iPhone mide 390 de alto — se puso así a propósito en el punto 34. Segundo, la holgura que le queda al nombre del equipo con el peor caso posible (los 22 con tres paradas):
+
+| sitio | ancho | B | C | D |
+|---|---|---|---|---|
+| iPhone de pie | 358 | 109 px | 77 px | 46 px |
+| Android de pie | 328 | 79 px | 47 px | 16 px |
+| iPhone tumbado (pantalla completa) | 812 | 563 px | 531 px | 500 px |
+| escritorio 1180 (torre en el suelo de 340) | 312 | 63 px | 31 px | **0 px** |
+| escritorio 1920 | 371 | 122 px | 90 px | 59 px |
+
+Nada se recorta en ningún sitio, y **el caso apretado no es el móvil de pie: es el escritorio a 1180**. Girado es el sitio con más espacio de los cinco.
+
+**Decisión del usuario: dejar la fila como está.** No por sitio, sino por valor: «necesito toda la información, no solo algunas» y, sobre todo, «al ser una repetición le quita peso; **sin embargo si fuese en vivo ahí sí que sería info crucial**». Queda guardado como paso final, con la maqueta `mockups/09-la-fila-y-el-alto.html` y los datos ya comprobados: el servicio sirve `Compound`, `TyreLife`, `Stint`, `PitInTime` y `PitOutTime`, así que «en boxes» no habría que adivinarlo por geometría.
+
+**Error propio.** La primera sonda para medir el recorte de los nombres usaba `scrollWidth` y daba **cero en todo**, incluido un caso que se veía cortado en la captura. Con `text-overflow` el navegador recorta el contenido al hueco y `scrollWidth` no lo delata; hay que medir el texto con un `Range`. Se rehízo antes de enseñar ningún número.
+
+**Estado**: 497 unitarias y 168 de navegador en verde (1 saltada), tipos y lint limpios. CI en verde y desplegado.
+
+
+### 2026-09-13 (66) — El día largo: doce puntos nuevos salidos de usar la app ✅
+
+Un día entero de fallos encontrados **usando lo desplegado** durante el fin de semana del GP de España, no leyendo el código.
+
+**Los avisos, 37 minutos antes (punto 18).** El usuario recibió el resultado del GP de España **cincuenta minutos después** de la bandera a cuadros. Se cambió el orden de las fuentes: FastF1 primero, OpenF1 de respaldo pasado el minuto 35. Verificado contra la carrera real: el texto que sale de FastF1 es **idéntico** al que le llegó —«Ganó Antonelli (Mercedes). Detrás, Verstappen y Norris.»— y está disponible 37 minutos antes. Hallazgo del camino: **FastF1 no publica clasificación de prácticas** —devuelve las filas con la posición vacía—, así que las prácticas siguen como estaban y eso queda pendiente de una medida honesta el próximo fin de semana.
+
+**La portada contradecía a nuestro propio aviso (punto 38).** A las cuatro horas del GP de España la portada decía «próxima carrera: Azerbaiyán» y justo debajo «último resultado: Italian Grand Prix», mientras el teléfono ya tenía un aviso nuestro diciendo quién había ganado en España. Ahora dice que la carrera ya se corrió y que los resultados aún no han llegado.
+
+**Veintiún abandonos falsos (punto 39).** En el minuto 35:32 de Italia salían **veintiún avisos de golpe** —la parrilla entera— y otros cinco al relanzar. La causa era que el detector de abandono medía sesenta segundos de reloj de pared sin distinguir «parado porque ha abandonado» de «parado porque la carrera lo está». Se midió el tiempo **de carrera** por bisección y se separó la parada de parrilla de la bandera roja. De 21+5+2 falsos a **cero**, con LEC, ALO y STR saliendo en 4:42, 70:12 y 75:03, que es cuando de verdad se quedan fuera.
+
+**La bandera roja dura lo que duró (punto 37).** El cartel decía BANDERA AMARILLA durante veinte minutos con todos los coches en el garaje. El dato oficial declara 103 segundos de roja; la parada real fueron **1819**. Se corrige sobre los tramos y solo **alarga una roja ya declarada**, nunca la inventa. El usuario rechazó mi propuesta de llamarlo «CARRERA DETENIDA»: «bandera roja es bandera roja, así como bandera amarilla es bandera amarilla, respetemos esto». Tenía razón.
+
+**Quien sale desde el pit lane (punto 41).** BEA figuraba **líder durante doce segundos** en España: el pit lane está por delante de la línea de meta, así que proyectado sobre el circuito salía por delante de toda la parrilla. Lo que lo distingue no es dónde está, es que **no se ha movido**. El mismo fallo existía en Italia, Países Bajos y Hungría durante un instante.
+
+**La pantalla completa (puntos 32, 33, 34, 35).** Pulsar expandir de pie metía el reparto horizontal en una pantalla vertical. Ahora pide girar con un aviso translúcido que se cierra solo al girar, y a los cuatro segundos avisa de que puede ser el bloqueo de rotación. Punto de corte nuevo, **`pc`**, que exige ancho **y alto**: un teléfono tumbado mide 844 px y la app se creía un ordenador. Y se respetan los márgenes del iPhone, que era por lo que el botón de expandir no se dejaba tocar.
+
+**Los mandos (punto 40) y el deslizador.** Cuatro familias de diseño en maqueta; el usuario eligió la A —solo iconos, sin pastilla— y pidió «un fondo, realce o relieve» al pulsar, «que no sea tan intenso, un poco translúcido». Y volvió el deslizador en vertical, fino y **encima** de los botones, con las bandas de color del estado de pista.
+
+**La proporción en escritorio (punto 42).** «El circuito es muy grande con respecto a lo demás». Medido: la torre estaba **clavada en 339 px** a cualquier ancho, o sea el 26 % a 1280 y el **13 % a 2560**. Y lo que se llevaba el sitio no lo aprovechaba: los coches medían **6 px siempre**, así que cuanto más grande el mapa, más pequeños se veían. Arreglado con `clamp(340px, 26%, 520px)`, tope del conjunto en 1536 —el de toda la app, medido— y radio que crece con el mapa.
+
+**Los abandonos se ven (punto 36).** `OUT` pasa a `DNF` en la lista, el aviso del mapa dice `DNF · LEC` con su código, parpadea tres veces en vez de una y **hace cola**: dos coches pueden quedarse fuera a la vez —un toque entre ellos es la forma más normal de abandonar— y con un solo hueco el segundo pisaba al primero.
+
+**Regla nueva del usuario sobre las maquetas.** Por defecto van a `mockups/`, que se abren en el PC con doble clic. `public/maqueta/` —instalable como PWA y sin JavaScript, porque la CSP de la app bloquea los scripts de archivos estáticos— **solo cuando lo que se mide es el propio teléfono**: áreas seguras, comportamiento táctil de iOS, orientación.
+
+**Errores propios.** Reenvié una maqueta de algo que el usuario ya había decidido al principio de la sesión —«si lo del realce ya te lo respondí, ¿por qué me lo vuelves a pasar?»—. Entendí mal el texto del abandono: pidió `DNF · LEC` y yo quité el código. Y **no desplegué nada** mientras le pedía que probara: «¿subiste todo a producción o dónde quieres que revise?». Dos tandas de CI rojas: navegaciones inestables en `/drivers` y `/circuits` —resueltas deduplicando la consulta del replay con `cache()`— y una prueba de la carrera de fuentes que se rompió porque la sonda ahora exige clasificaciones de verdad.
+
+**Estado al cerrar**: 497 unitarias y 164 de navegador en verde. Guía de pruebas punto por punto en `GUIA-DE-PRUEBAS-2026-09.md`, con lo que debe pasar y lo que pasaba antes.
+
+
 ### 2026-09-12 (65) — El final de carrera, el doble toque, y la barra acorralada ✅
 
 **Punto 2 · el final de carrera.** El replay terminaba con un orden que no era el de la carrera. Medido contra el resultado oficial en el último instante: **8 fallos de 10 en Hungría, 5 en Países Bajos, 4 en Italia**. La causa es que la bandera a cuadros cae **66-79 s antes del final de los datos** — ese minuto largo es la vuelta de celebración, donde el ganador levanta el pie y los de atrás le comen metros. Ordenando por cruces de meta los fallos caen a **0, 0 y 2**; las dos de Hungría son HAM y LEC, que cruzó 4,3 s después y sin embargo es cuarto: sanción posterior a la carrera. Manda el resultado oficial cuando la base lo tiene, y los cruces cuando no. Verificado contra Italia y Hungría reales en el navegador: la torre coincide **fila a fila** con la clasificación oficial, con sus huecos y sus vueltas.
