@@ -107,13 +107,29 @@
 
 **Punto 18 · verificado, y no había que esperarlo.** Leído `/api/fuentes` con el fin de semana de España ya corrido. El arreglo entró el 11 a las 21:39Z, así que las dos prácticas del viernes son anteriores y salen con `probes: 1` — el sesgo de antes. Desde la FP3 del sábado manda el código nuevo: `probes` 22/13/4 contra 50/31/47. Con las tres sesiones limpias, **fastf1 publica 16 minutos antes**.
 
+### Cinco puntos que estaban hechos y que NINGÚN documento registraba
+
+Rastreados commit por commit el 2026-09-14, al preguntar el usuario si de verdad estaban documentados. No lo estaban:
+
+| Punto | Commit | Fecha | Estaba en la bitácora |
+|---|---|---|---|
+| **11** el aro del líder | `3e422eb` — «el líder lleva aro, y un abandono se nota» | 2026-09-12 | **No.** La entrada 65 de ese día cubre otras cosas |
+| **26** los cinco primeros al encoger | `581b4b5` — «el circuito se encoge con su tirador, y ya no cuesta cinco filas» | 2026-09-12 | **No** |
+| **12** abandonos y banderas | `3e422eb` + `5188644` | 2026-09-12 y 13 | Sí, **pero como «punto 36»**, no 12 |
+| **25** el delta con todos parados | `471303f` — la roja dura lo que duró la parada | 2026-09-13 | Sí, **pero como «punto 37»**, no 25 |
+| **3** sesiones nunca vacías | `92866a9` — «las sesiones llevan a sus datos, y las pestañas vacías explican qué falta» | 2026-08-21 | **No** |
+
+El **20** (el mensaje de carga) va con el 3 y se completó el 2026-09-14 con la caché de las rutas de cronometría.
+
+De ahí la conclusión que corrige lo que se escribió media hora antes en esta misma entrada: **el código es el único registro completo**. La bitácora es mejor que las notas, pero también tiene agujeros, y dos commits del 12 de septiembre cerraron dos puntos que no aparecen en ninguna parte.
+
 ### El descuadre de documentos, que es lo que hay que arreglar de método
 
 Al preguntarme qué quedaba, le pasé **seis puntos como pendientes y cinco estaban hechos** — el aro del líder, los anillos del abandono, la roja que dura lo que duró la parada, el tirador del mapa y `SesionPendiente`. Antes había hecho lo mismo con dos ya cerrados (5 y 19) y había anunciado como espera futura una verificación cuya sesión había corrido dos días antes. Su respuesta: «me parece que no tienes la info al día... no me des información falsa».
 
 **No era git**: `git fetch` no traía nada y la rama coincidía con `origin/main`. Era **qué documento se lee**. `MEJORAS-PENDIENTES.md` son las notas de lo que él reporta, y sus secciones se quedan viejas porque el cierre se escribe aquí y en el commit. Se leyeron como estado actual.
 
-**Arreglado de tres formas** para que no dependa de acordarse: aviso al principio de `MEJORAS-PENDIENTES.md` diciendo que no manda y en qué orden mirar; las seis secciones cerradas con la línea de código que lo demuestra; y el orden escrito en `SIGUIENTE-SESION.md`. **El código manda sobre la bitácora, y la bitácora sobre las notas.**
+**Arreglado de cuatro formas** para que no dependa de acordarse: aviso al principio de `MEJORAS-PENDIENTES.md` diciendo que no manda y en qué orden mirar; las seis secciones cerradas con la línea de código que lo demuestra; los cinco huecos de la bitácora tapados con su commit (la tabla de arriba); y el orden escrito en `SIGUIENTE-SESION.md`. **El código manda sobre la bitácora, y la bitácora sobre las notas — pero el único registro COMPLETO es el código, porque la bitácora también se olvida.**
 
 **Estado al cerrar**: 532 unitarias y 187 de navegador en verde, CI verde en `b9b452d`, todo desplegado y comprobado en producción. **Queda un solo punto de la lista: el 22, las radios de equipo**, que abre la CSP y por tanto hay que consultarle antes.
 

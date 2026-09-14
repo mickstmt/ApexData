@@ -2,37 +2,49 @@
 
 ---
 
-## 0 · ⚠️ LO PRIMERO: el descuadre de documentos, y cómo no repetirlo
+## 0 · ⚠️ LO PRIMERO: ningún documento tiene el estado completo. Solo el código.
 
-Hoy pasó, y costó una bronca merecida del usuario: se le presentaron **seis
-puntos como pendientes cuando cinco estaban hechos**. La causa está
-identificada y no es git.
+Hoy costó una bronca merecida: se le presentaron al usuario **seis puntos como
+pendientes cuando cinco estaban hechos**. La causa está identificada y **no es
+git**.
 
-**No falta nada por bajar.** Comprobado hoy: `git fetch` no trae nada y la rama
-local coincide con `origin/main`. Lo que se hizo en casa el 13 y el 14 —incluida
-la bitácora— está en el repositorio.
+**No falta nada por bajar.** Comprobado: `git fetch` no trae nada y la rama
+local coincide con `origin/main`. Lo hecho en casa el 13 y el 14 está en el
+repositorio.
 
-**Lo que falla es cuál documento se lee.** `MEJORAS-PENDIENTES.md` son las
-**notas de lo que el usuario reportó**, y sus secciones se quedan
-desactualizadas: el trabajo se cierra en la bitácora y en un commit, y volver
-ahí a tachar cada sección se olvida. Leerlo como si fuera el estado actual da
-una foto de hace días.
+### El problema de verdad: los dos documentos tienen agujeros
 
-**El orden correcto para saber si algo está hecho:**
+- **`MEJORAS-PENDIENTES.md`** son las **notas de lo que el usuario reportó**.
+  Sus secciones se quedan viejas: el cierre se escribe en la bitácora y en el
+  commit, y volver ahí a tachar se olvida. **Nunca sirve para saber si algo está
+  resuelto.**
+- **`PROGRESO_RELANZAMIENTO_2026.md`** (la bitácora) es mejor, pero **también se
+  olvida**. Rastreado el 2026-09-14: los puntos **11** (aro del líder, `3e422eb`)
+  y **26** (el tirador del mapa, `581b4b5`) se construyeron el 12 de septiembre y
+  **no aparecen en ninguna entrada**; el **3** se cerró el 21 de agosto y
+  tampoco; y el **12** y el **25** sí están, pero archivados con OTRO número
+  (como 36 y como 37). Están anotados desde hoy, pero la lección queda: la
+  bitácora se escribe a mano y por eso falla.
 
-1. **El código.** Buscar la cosa concreta. Si el aro del líder está pintado en
-   `MapaDeCarrera.tsx`, el punto 11 está hecho, diga lo que diga el otro
-   archivo.
-2. **`PROGRESO_RELANZAMIENTO_2026.md`** (la bitácora). Entradas en orden
-   inverso: la más nueva **arriba**, no al final. Hoy se leyó el final y salieron
-   las entradas de agosto.
-3. **El registro de avance de `MEJORAS-PENDIENTES.md`**, que sí se mantiene.
+### El orden correcto para saber si algo está hecho
+
+1. **El código, y `git log --grep`.** Buscar la cosa concreta. Si el aro del
+   líder está pintado en `MapaDeCarrera.tsx`, el punto 11 está hecho, diga lo
+   que diga cualquier documento. **Este es el único registro completo.**
+2. **La bitácora**, para el porqué y lo medido. Entradas en orden inverso: la
+   más nueva **arriba**, no al final. Hoy se leyó el final y salieron las
+   entradas de agosto.
+3. El **registro de avance** de `MEJORAS-PENDIENTES.md`, que sí se mantiene.
 4. Las secciones sueltas de `MEJORAS-PENDIENTES.md`, solo para leer **qué
-   reportó el usuario**, nunca para saber si está resuelto.
+   reportó el usuario**.
 
-**Y mirar la fecha.** Una condición de reapertura escrita en futuro («la prueba
-llega con la FP3 del sábado») caduca sola. Hoy se anunció como espera algo que
-había corrido dos días antes y que se cerró leyendo `/api/fuentes` en un minuto.
+**Y mirar la fecha de hoy.** Una condición de reapertura escrita en futuro («la
+prueba llega con la FP3 del sábado») caduca sola. Hoy se anunció como espera
+algo que había corrido dos días antes y que se cerró leyendo `/api/fuentes` en
+un minuto.
+
+**Regla práctica**: antes de decirle al usuario que algo está pendiente, buscarlo
+en el código. No basta con no encontrarlo tachado en un documento.
 
 ---
 
@@ -92,11 +104,11 @@ tocar nada — es una regla suya, no una cortesía.
 
 | Punto | Dónde está la prueba de que está hecho |
 |---|---|
-| **11** aro del líder | `MapaDeCarrera.tsx`, «El aro del líder», sobre la línea 279 |
-| **12** abandonos y banderas | `MapaDeCarrera.tsx`: tres anillos encadenados y cola de `DNF · LEC` (`5188644`); bandas de estado en el deslizador |
-| **25** el delta con todos parados | `471303f`: la roja dura lo que duró la parada real (1819 s contra los 103 declarados) |
-| **26** los cinco primeros al encoger | `replay/ReplayClient.tsx`: el tirador, elegido por el usuario sobre maqueta |
-| **3 + 20** sesiones nunca vacías | `SesionPendiente` usado en cuatro sitios + `ParrillaProvisional` |
+| **11** aro del líder | `3e422eb` (12 sept) · `MapaDeCarrera.tsx`, «El aro del líder», sobre la línea 279. **No estaba en la bitácora** |
+| **12** abandonos y banderas | `3e422eb` + `5188644` · tres anillos encadenados y cola de `DNF · LEC`; bandas de estado en el deslizador. En la bitácora **como «punto 36»** |
+| **25** el delta con todos parados | `471303f` · la roja dura lo que duró la parada real (1819 s contra los 103 declarados). En la bitácora **como «punto 37»** |
+| **26** los cinco primeros al encoger | `581b4b5` (12 sept) · el tirador, elegido por el usuario sobre maqueta. **No estaba en la bitácora** |
+| **3 + 20** sesiones nunca vacías | `92866a9` (21 ago) · `SesionPendiente` en cuatro sitios + `ParrillaProvisional`. **No estaba en la bitácora**. El 20 se completó el 14 sept con la caché |
 | **5** «from ApexData» | Cerrado el 12: lo añade iOS, no existe la opción en la Notification API |
 | **19** Brave en Android | El usuario ya lo comprobó. **Falta anotar el resultado** — si los avisos llegan o no |
 
