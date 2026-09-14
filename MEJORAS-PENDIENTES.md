@@ -1185,3 +1185,40 @@ entre **1,3 y 3,0 s** y el del pit lane a los **20**.
 instante cero**, y su carrera no cambia — termina 16.º en el replay, que es su
 puesto oficial. En las otras tres carreras desaparece el falso lider del primer
 instante y nada mas cambia.
+
+## 42. UI · La proporcion del replay en escritorio
+
+**Lo que dice el usuario**: «siento que el circuito o el area que abarca es muy
+grande con respecto a lo demas, ya que la lista de pilotos se ve muy pequena».
+Y la palabra que buscaba era **proporcion**.
+
+**Medido con la carrera real**, antes del arreglo:
+
+| pantalla | mapa | torre | torre / ancho |
+|---|---|---|---|
+| 1280 |  940 | 339 | 26 % |
+| 1600 | 1260 | 339 | 21 % |
+| 1920 | 1580 | 339 | 18 % |
+| 2560 | 2220 | 339 | **13 %** |
+
+La torre estaba **clavada en 339 px** y el mapa era elastico: uno crecia sin
+limite y la otra no.
+
+**Y lo que se llevaba el sitio no lo aprovechaba.** El trazado si crece —usa el
+95 % de su caja a 2560— pero el radio de los coches era `w < 480 ? 5 : 6`, o
+sea **6 px siempre**. En un mapa de 940 un coche ocupa el 0,6 % del ancho; en
+uno de 2220, el **0,27 %**. Al agrandar el circuito los coches se vuelven
+proporcionalmente mas pequenos y cuesta MAS seguir a alguien, no menos.
+
+**HECHO**, tres cosas:
+
+1. La torre en proporcion: `clamp(340px, 26%, 520px)`. El suelo son los 340 de
+   siempre —a 1280 sale exactamente igual, sin regresion— y el techo evita que
+   la fila se quede con un hueco en medio.
+2. Tope al conjunto en **1536 px, que es el de toda la app**: medido, la
+   cabecera y el contenido de la portada, los resultados, la clasificacion y
+   los pilotos se paran ahi en cualquier pantalla. El replay era el unico que
+   seguia estirandose.
+3. El radio de los coches crece con el mapa: `w < 480 ? 5 : clamp(6, w/150, 11)`.
+   El suelo mantiene igual todo lo que ya funcionaba —de 480 a 900 px sale el
+   mismo 6— y el techo evita que los veintidos puntos se solapen en la recta.

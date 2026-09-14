@@ -1221,6 +1221,83 @@ test.describe('expandir con el teléfono de pie', () => {
   });
 });
 
+test.describe('la proporción en escritorio', () => {
+  /** El ancho del reparto y el de la torre, en píxeles. */
+  async function reparto(page: import('@playwright/test').Page) {
+    return page.evaluate(() => {
+      const torre = [...document.querySelectorAll('ol[aria-label="Clasificación en este instante"]')]
+        .find((o) => (o as HTMLElement).offsetParent) as HTMLElement;
+      const rejilla = torre.closest('div.pc\\:grid') ?? torre.parentElement!.parentElement!;
+      return {
+        conjunto: Math.round(rejilla.getBoundingClientRect().width),
+        torre: Math.round(torre.getBoundingClientRect().width),
+      };
+    });
+  }
+
+  test('la torre crece con la pantalla en vez de quedarse clavada', async ({ page }) => {
+    /**
+     * Lo reportado: «siento que el circuito o el área que abarca es muy grande
+     * con respecto a lo demás, ya que la lista de pilotos se ve muy pequeña».
+     *
+     * Medido antes del arreglo, con la carrera real: la torre estaba clavada en
+     * **339 px** a cualquier ancho, y el mapa se quedaba con el resto. Así que
+     * la torre pasaba del 26 % de la pantalla a 1280 al **13 % a 2560**.
+     */
+    await simularCarrera(page);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+    const chica = await reparto(page);
+
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.waitForTimeout(300);
+    const grande = await reparto(page);
+
+    expect(grande.torre, 'la torre no ha crecido con la pantalla').toBeGreaterThan(chica.torre);
+
+    // Y la proporción se mantiene, que es lo que se pedía.
+    for (const r of [chica, grande]) {
+      const pct = (r.torre / r.conjunto) * 100;
+      expect(pct, `la torre se queda en el ${pct.toFixed(0)} % del reparto`).toBeGreaterThan(22);
+      expect(pct).toBeLessThan(30);
+    }
+  });
+
+  test('a 1280 sale exactamente como antes, sin regresión', async ({ page }) => {
+    // El suelo del `clamp` son los 340 de siempre: el arreglo no puede cambiar
+    // lo que ya estaba bien repartido.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    const { torre } = await reparto(page);
+    expect(torre).toBeGreaterThanOrEqual(335);
+    expect(torre).toBeLessThanOrEqual(345);
+  });
+
+  test('el conjunto se para donde se para el resto de la app', async ({ page }) => {
+    // 1536 px, medido: la cabecera y el contenido de la portada, los
+    // resultados, la clasificación y los pilotos se paran ahí en cualquier
+    // pantalla. El replay era el único que seguía estirándose.
+    await page.setViewportSize({ width: 2560, height: 1440 });
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    const { conjunto } = await reparto(page);
+    expect(conjunto).toBeLessThanOrEqual(1536);
+
+    const cabecera = await page
+      .locator('header nav')
+      .first()
+      .evaluate((el) => Math.round(el.getBoundingClientRect().width));
+    expect(Math.abs(conjunto - cabecera), 'el replay no cuadra con la cabecera').toBeLessThan(40);
+  });
+});
+
 test.describe('un teléfono tumbado no es un ordenador', () => {
   test.use({ viewport: TUMBADO });
 

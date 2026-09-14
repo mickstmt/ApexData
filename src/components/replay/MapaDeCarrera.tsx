@@ -205,7 +205,20 @@ export function MapaDeCarrera({
       ctx.strokeStyle = paleta.estados[ultimoEstado.current];
       ctx.stroke(p.pista);
 
-      const radio = w < 480 ? 5 : 6;
+      /**
+       * El tamaño de un coche crece con el mapa.
+       *
+       * Era `6` fijo para todo lo que no fuera un móvil, y eso se notaba justo
+       * donde más sitio hay: medido con la carrera real, en un mapa de 940 px
+       * un coche ocupa el 0,6 % del ancho y en uno de 2220 el **0,27 %**. O
+       * sea que al agrandar el circuito los coches se vuelven proporcionalmente
+       * más pequeños y cuesta más seguir a alguien, no menos.
+       *
+       * El suelo de 6 mantiene igual todo lo que ya funcionaba —de 480 a 900 px
+       * sale exactamente el mismo 6 de antes— y el techo de 11 evita que en una
+       * pantalla enorme los veintidós puntos se solapen en la recta.
+       */
+      const radio = w < 480 ? 5 : Math.max(6, Math.min(11, w / 150));
       const sel = ultimoElegido.current;
       const enPista = ultimosCoches.current;
 

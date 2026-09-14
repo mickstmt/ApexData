@@ -890,7 +890,35 @@ function Replay({
     //
     // Escritorio: tres filas y dos columnas — cabecera a lo ancho; mapa y
     // mandos a la izquierda; la torre entera a la derecha, desplazable.
-    <div className="flex h-[calc(100dvh-4rem-env(safe-area-inset-top))] flex-col pc:grid pc:h-[calc(100dvh-4rem)] pc:grid-cols-[1fr_340px] pc:grid-rows-[auto_1fr_auto]">
+    /**
+     * En escritorio, la torre va en PROPORCIÓN y el conjunto tiene tope.
+     *
+     * Antes la torre estaba clavada en 340 px y el mapa se quedaba con todo lo
+     * demás, así que el reparto se degradaba solo con el ancho. Medido con la
+     * carrera real:
+     *
+     * | pantalla | mapa | torre | torre / ancho |
+     * |---|---|---|---|
+     * | 1280 |  940 | 339 | 26 % |
+     * | 1920 | 1580 | 339 | 18 % |
+     * | 2560 | 2220 | 339 | **13 %** |
+     *
+     * Y lo que se llevaba el sitio no lo aprovechaba: el trazado sí crece —usa
+     * el 95 % de su caja a 2560— pero **los coches medían 6 px siempre**, así
+     * que en un mapa tres veces más grande son tres veces más difíciles de
+     * seguir. Un dibujo mayor, no más información.
+     *
+     * El `clamp` deja el 26 % que ya funcionaba a 1280, con suelo en los 340 de
+     * siempre —a 1280 sale exactamente igual que antes, sin regresión— y techo
+     * en 520: más ancha, la fila se queda con un hueco en medio entre el código
+     * del piloto y su hueco.
+     *
+     * Y el tope son **1536 px porque es el de toda la app**: medido, la cabecera
+     * y el contenido de la portada, los resultados, la clasificación y los
+     * pilotos se paran ahí en cualquier pantalla. El replay era el único que
+     * seguía estirándose, y estirarlo ya vimos que no añade nada.
+     */
+    <div className="mx-auto flex h-[calc(100dvh-4rem-env(safe-area-inset-top))] w-full flex-col pc:grid pc:h-[calc(100dvh-4rem)] pc:max-w-[1536px] pc:grid-cols-[minmax(0,1fr)_clamp(340px,26%,520px)] pc:grid-rows-[auto_1fr_auto]">
       <div
         ref={pegadoRef}
         className="shrink-0 bg-[var(--replay-fondo)] pc:col-span-2"
