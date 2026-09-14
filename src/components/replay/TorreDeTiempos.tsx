@@ -128,7 +128,10 @@ export function TorreDeTiempos({
                 {fila.fuera ? (
                   // La tinta y no el bloque: aquí el rojo se lee contra la
                   // página, y eso pide 4,5:1 en cada tema.
-                  <span className="font-mono text-xs font-bold tracking-wider text-[var(--replay-roja-texto)]">OUT</span>
+                  // `DNF` y no `OUT`: es la palabra de la F1 y la que ya usa el
+                  // aviso del mapa. Decirlo de dos formas en la misma pantalla
+                  // obliga a traducir mentalmente entre una y otra.
+                  <span className="font-mono text-xs font-bold tracking-wider text-[var(--replay-roja-texto)]">DNF</span>
                 ) : (
                   <span className="font-mono text-[13px] tabular-nums text-[var(--replay-hueco)]">{fila.hueco}</span>
                 )}

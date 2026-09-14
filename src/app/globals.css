@@ -786,7 +786,41 @@ html[data-instalada] [data-pie-de-la-app] > footer {
   70% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
   100% { opacity: 0; transform: translateX(-50%) translateY(-4px) scale(1); }
 }
+/**
+ * El aviso de abandono: tres parpadeos en vez de uno.
+ *
+ * Con un solo destello de 900 ms el usuario se lo perdia — «sale una vez y
+ * dura un segundo a lo mucho». Un abandono es de lo poco que pasa en una
+ * carrera y merece que se vea: parpadea tres veces y se va, que es el mismo
+ * lenguaje que los tres anillos que salen del coche en el mapa.
+ */
+.replay-aviso-dnf {
+  animation: replay-aviso-dnf 2400ms ease forwards;
+}
+@keyframes replay-aviso-dnf {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.92); }
+  6% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  26% { opacity: 1; }
+  33% { opacity: .15; }
+  40% { opacity: 1; }
+  59% { opacity: 1; }
+  66% { opacity: .15; }
+  73% { opacity: 1; }
+  92% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -54%) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* Sin movimiento se queda puesto el mismo rato y se va: los parpadeos son
+     para llamar la atencion, no para contar nada. */
+  .replay-aviso-dnf {
+    animation: replay-aviso-dnf-quieto 2400ms steps(1) forwards;
+  }
+  @keyframes replay-aviso-dnf-quieto {
+    0%, 92% { opacity: 1; transform: translate(-50%, -50%); }
+    100% { opacity: 0; transform: translate(-50%, -50%); }
+  }
+
   .replay-destello { animation: replay-destello-quieto 900ms steps(1) forwards; }
   @keyframes replay-destello-quieto {
     0%, 70% { opacity: 1; transform: translateX(-50%); }

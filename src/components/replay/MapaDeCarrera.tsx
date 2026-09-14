@@ -115,18 +115,28 @@ export function MapaDeCarrera({
   /** Cuándo cambió la bandera, para el latido del trazado. */
   const cambioDeBandera = useRef(0);
 
+  /** Un contador que no se repite, para reiniciar la animación de cada aviso. */
+  const pase = useRef(1);
+
   /**
-   * El aviso de «DNF», con su número de pase.
+   * Los avisos de «DNF», EN COLA.
    *
-   * El contador no es decorativo: en una salida con varios coches fuera a la
-   * vez el texto es el mismo, y sin algo que cambie la animación no se
-   * reinicia y el segundo abandono se come al primero.
+   * En cola y no uno solo porque dos coches pueden quedarse fuera a la vez —un
+   * toque entre ellos es la forma mas normal de abandonar— y con un solo hueco
+   * el segundo pisaba al primero: se veia un aviso donde habian pasado dos
+   * cosas. Asi salen uno detras de otro y no se pierde ninguno.
+   *
+   * El `pase` no es decorativo: dos abandonos seguidos del mismo piloto —o dos
+   * pases por el mismo instante— tienen el mismo texto, y sin algo que cambie,
+   * React no reinicia la animacion y el segundo no se ve.
    */
-  const [aviso, setAviso] = useState<{ texto: string; pase: number } | null>(null);
+  const [cola, setCola] = useState<{ texto: string; pase: number }[]>([]);
+  const aviso = cola[0] ?? null;
 
   useEffect(() => {
     if (!aviso) return;
-    const temporizador = setTimeout(() => setAviso(null), 1400);
+    // Lo que dura la animacion de los tres parpadeos.
+    const temporizador = setTimeout(() => setCola((resto) => resto.slice(1)), 2400);
     return () => clearTimeout(temporizador);
   }, [aviso]);
   useEffect(() => {
@@ -139,10 +149,10 @@ export function MapaDeCarrera({
           pulsos.current.set(i, performance.now());
           // Con el código del piloto: «DNF» a secas no dice QUIÉN, y en una
           // salida con varios coches fuera es justo lo que hace falta saber.
-          setAviso((previo) => ({
-            texto: `DNF · ${coches[i].codigo}`,
-            pase: (previo?.pase ?? 0) + 1,
-          }));
+          setCola((previa) => [
+            ...previa,
+            { texto: `DNF · ${coches[i].codigo}`, pase: previa.length + pase.current++ },
+          ]);
         }
       }
     }
@@ -376,7 +386,7 @@ export function MapaDeCarrera({
           key={aviso.pase}
           data-dnf
           role="status"
-          className="replay-destello pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full px-5 py-2.5 font-mono text-xl font-bold tracking-[.04em] text-white"
+          className="replay-aviso-dnf pointer-events-none absolute left-1/2 top-1/2 z-10 whitespace-nowrap rounded-full px-5 py-2.5 font-mono text-xl font-bold tracking-[.04em] text-white"
           style={{ background: 'var(--replay-roja)' }}
         >
           {aviso.texto}

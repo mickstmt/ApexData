@@ -750,7 +750,7 @@ test.describe('el final de carrera', () => {
       page
         .getByRole('list', { name: 'Clasificación en este instante' })
         .filter({ visible: true })
-        .getByText('OUT', { exact: true })
+        .getByText('DNF', { exact: true })
     ).toHaveCount(0);
   });
 });
@@ -759,6 +759,37 @@ test.describe('el mapa cuenta lo que pasa', () => {
   // Tumbado: desde el punto 24 el scrubber vive en la pantalla completa, y
   // estas pruebas lo necesitan para colocarse justo antes del abandono.
   test.use({ viewport: TUMBADO });
+
+  test('el aviso de abandono parpadea tres veces, no una', async ({ page }) => {
+    // El usuario: «sale una vez y dura un segundo a lo mucho». Un abandono es
+    // de lo poco que pasa en una carrera y merece verse; parpadea tres veces y
+    // se va, el mismo lenguaje que los tres anillos del mapa.
+    await simularCarreraConAbandono(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    await moverScrubber(page, INSTANTE_EN_QUE_PARA + 235);
+    await visible(page, 'Reproducir').click();
+
+    /**
+     * Margen largo a proposito.
+     *
+     * Esto no espera a que se pinte algo: espera a que la REPRODUCCION llegue
+     * al instante del abandono, y eso corre en tiempo real. Con la tanda
+     * entera compitiendo por la maquina, diez segundos se quedaban cortos de
+     * vez en cuando y la prueba salia roja sin que nada estuviera mal.
+     */
+    const aviso = page.locator('[data-dnf]');
+    await expect(aviso).toBeVisible({ timeout: 30_000 });
+
+    const animacion = await aviso.evaluate((el) => {
+      const e = getComputedStyle(el);
+      return { nombre: e.animationName, duracion: e.animationDuration };
+    });
+    expect(animacion.nombre).toBe('replay-aviso-dnf');
+    // Tres parpadeos necesitan mas de un segundo; con 900 ms no cabian.
+    expect(parseFloat(animacion.duracion)).toBeGreaterThanOrEqual(2);
+  });
 
   test('avisa con «DNF» cuando alguien abandona, reproduciendo', async ({ page }) => {
     // Lo reportado: «Leclerc abandona en la vuelta 3 y no se aprecia, el punto
@@ -776,13 +807,16 @@ test.describe('el mapa cuenta lo que pasa', () => {
     await visible(page, 'Reproducir').click();
     // Con el código del piloto: «DNF» a secas no dice QUIÉN abandona, y en una
     // salida con varios coches fuera es justo lo que hace falta saber.
+    // Margen largo: esto espera a que la reproducción llegue al instante del
+    // abandono, que corre en tiempo real, no a que se pinte algo.
     await expect(page.locator('[data-dnf]')).toHaveText(
       `DNF · ${PILOTOS[QUIEN_ABANDONA].code}`,
-      { timeout: 10_000 }
+      { timeout: 30_000 }
     );
 
-    // Y se va solo: es un aviso, no una etiqueta.
-    await expect(page.locator('[data-dnf]')).toHaveCount(0, { timeout: 5_000 });
+    // Y se va solo: es un aviso, no una etiqueta. Los tres parpadeos duran
+    // 2400 ms, así que se le deja el doble.
+    await expect(page.locator('[data-dnf]')).toHaveCount(0, { timeout: 8_000 });
   });
 
   test('arrastrando el scrubber NO salta el aviso', async ({ page }) => {
