@@ -149,7 +149,6 @@ model Race {
 
   /**
    * La clasificación que ordena la parrilla del sprint, el viernes.
-   *
    * Faltaba: un fin de semana al sprint se enseñaba como «Práctica 1 → Sprint»,
    * saltándose la sesión que decide desde dónde sale cada uno. Jolpica la manda
    * como `SprintQualifying` desde que existe el formato.
@@ -380,17 +379,14 @@ model PushSubscription {
 
   /**
    * A quién sigue quien recibe estos avisos: `driverId` separados por comas.
-   *
    * Los favoritos vivían solo en el `localStorage` del teléfono, y por eso el
    * servidor no podía escribir un aviso que hablara de tu piloto: no sabía
    * cuál era. Se guardan aquí, junto a la suscripción, porque es el aviso —y no
    * la pantalla— quien los necesita.
-   *
    * Se guarda el `driverId` y no el código de tres letras porque el código no
    * es estable: se reutiliza entre épocas (Michael y Mick Schumacher fueron
    * los dos «MSC»). La traducción a código se hace al redactar, con la
    * temporada delante.
-   *
    * Vacío o nulo es válido: el aviso sale igual, contando lo que pasó.
    */
   favoriteDrivers      String?
@@ -398,7 +394,6 @@ model PushSubscription {
 
   /**
    * De qué sesiones se avisa, por sus códigos separados por comas.
-   *
    * Nulo significa todas, que es lo que se pidió: las siete del fin de semana.
    * Existe para poder apagar las prácticas sin renunciar al resto.
    */
@@ -406,7 +401,6 @@ model PushSubscription {
 
   /**
    * El huso horario de quien recibe los avisos: `America/Lima`.
-   *
    * Hace falta para la previa, que no sale «N horas antes» sino a las 20:00 de
    * la noche anterior — y esas 20:00 son las del reloj de esta persona, no las
    * del circuito. Lo manda el navegador solo al activar los avisos; sin él, esa
@@ -416,34 +410,52 @@ model PushSubscription {
 
   previas SentPreview[]
 
+  /**
+   * De quien es esta suscripcion, si es que hay alguien detras.
+   * Nulo es lo normal y lo seguira siendo: se puede recibir avisos sin cuenta,
+   * exactamente como hasta ahora. Se rellena al entrar, y es lo que hace que
+   * los avisos dejen de depender del aparato: al entrar en un telefono nuevo,
+   * su suscripcion hereda los favoritos de la persona en vez de empezar vacia.
+   * `onDelete: SetNull` y no `Cascade`: borrar la cuenta no debe apagarle los
+   * avisos a un navegador que sigue suscrito. Se queda como estaba antes de
+   * existir las cuentas.
+   */
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt @default(now())
+  updatedAt  DateTime  @default(now()) @updatedAt
   lastSentAt DateTime?
 
+  @@index([userId])
   @@map("push_subscriptions")
 }
 
 /**
  * De qué sesiones ya se avisó.
- *
  * Es lo que hace que el aviso se pueda repetir sin miedo: el disparador corre
  * cada pocos minutos y la mayoría de las veces no hace nada, pero si se reinicia
  * el servidor a mitad, o se despliega, o coinciden dos vueltas, nadie recibe el
  * mismo aviso dos veces.
- *
  * La marca vivía en `races.notifiedAt`, y servía mientras solo se avisaba de la
  * carrera. Con siete sesiones por fin de semana hace falta una marca por sesión,
  * y la clave natural es la que da OpenF1: `session_key` es único y no cambia.
  */
 model NotifiedSession {
-  /** El `session_key` de OpenF1. */
+  /**
+   * El `session_key` de OpenF1.
+   */
   sessionKey Int @id
 
-  /** Para poder leer la tabla sin cruzarla con nada. */
+  /**
+   * Para poder leer la tabla sin cruzarla con nada.
+   */
   sessionName String
   year        Int
 
-  /** Cuántas suscripciones recibieron el aviso. Cero también se guarda. */
+  /**
+   * Cuántas suscripciones recibieron el aviso. Cero también se guarda.
+   */
   sent Int @default(0)
 
   notifiedAt DateTime @default(now())
@@ -454,47 +466,56 @@ model NotifiedSession {
 
 /**
  * La carrera entre las dos fuentes: quién publica antes.
- *
  * Un experimento con fecha de caducidad, no una pieza del producto. La pregunta
  * es concreta: para cada sesión, ¿cuánto tarda cada fuente en tener sus datos?
  * Se responde sondeando las dos cada cinco minutos desde que baja la bandera y
  * anotando el primer instante en que cada una contesta con algo.
- *
  * Con eso decidido —seguir con las dos, o quedarse con una— esta tabla y su
  * módulo se borran. Está aquí escrito para que nadie la herede sin saber para
  * qué era.
  */
 model SourceProbe {
-  /** El `session_key` de OpenF1, que identifica la sesión en las dos. */
+  /**
+   * El `session_key` de OpenF1, que identifica la sesión en las dos.
+   */
   sessionKey Int
-  /** `openf1` o `fastf1`. */
+  /**
+   * `openf1` o `fastf1`.
+   */
   source     String
 
   sessionName String
   year        Int
 
-  /** Cuándo terminó la sesión, que es el momento cero de la cuenta. */
+  /**
+   * Cuándo terminó la sesión, que es el momento cero de la cuenta.
+   */
   endedAt DateTime
 
-  /** El primer sondeo en que esta fuente tuvo datos. Nulo = todavía nada. */
+  /**
+   * El primer sondeo en que esta fuente tuvo datos. Nulo = todavía nada.
+   */
   firstSeenAt DateTime?
 
   /**
    * Cuándo se preguntó por primera vez.
-   *
    * Distingue «la fuente tardó media hora» de «tardamos media hora en
    * preguntar». Sin este dato, las dos primeras medidas del experimento no
    * significaban nada.
    */
   firstProbeAt DateTime?
 
-  /** Cuántas veces se le preguntó, para saber si la cuenta es fina o gruesa. */
+  /**
+   * Cuántas veces se le preguntó, para saber si la cuenta es fina o gruesa.
+   */
   probes Int @default(0)
 
-  /** El último motivo por el que no había datos, tal cual. */
+  /**
+   * El último motivo por el que no había datos, tal cual.
+   */
   lastNote String?
 
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@id([sessionKey, source])
   @@index([year])
@@ -503,17 +524,17 @@ model SourceProbe {
 
 /**
  * Qué previas se han mandado ya, y a quién.
- *
  * Los resultados llevan una marca global —lo que pasó es igual para todos— pero
  * la previa no: sale a las 20:00 de cada cual, así que dos personas en husos
  * distintos la reciben en instantes distintos. Con una marca compartida, la
  * primera en recibirla dejaría a la segunda sin la suya.
- *
  * Se identifica por la primera sesión del día, que es lo que define al grupo.
  */
 model SentPreview {
   subscriptionId String
-  /** El `session_key` de OpenF1 de la primera sesión de ese día. */
+  /**
+   * El `session_key` de OpenF1 de la primera sesión de ese día.
+   */
   sessionKey     Int
 
   sentAt DateTime @default(now())
@@ -522,4 +543,119 @@ model SentPreview {
 
   @@id([subscriptionId, sessionKey])
   @@map("sent_previews")
+}
+
+// ============================================================================
+// CUENTAS
+// ============================================================================
+
+/**
+ * Una persona.
+ * Hasta ahora ApexData no tenia usuarios: los favoritos vivian en el
+ * `localStorage` de cada navegador. Eso significaba tres cosas, y las tres se
+ * arreglan aqui: no viajaban entre aparatos —ni siquiera entre la PWA instalada
+ * y Safari en el MISMO iPhone, que tienen almacenamientos separados—, se podian
+ * perder sin avisar si iOS recuperaba espacio, y los avisos dependian del
+ * navegador y no de la persona.
+ * La cuenta es OPCIONAL, y eso no es un detalle: sin entrar, la app funciona
+ * exactamente igual que antes. Entrar solo añade que tus cosas te sigan.
+ * Los cuatro modelos de esta seccion —User, Account, Session y
+ * VerificationToken— los exige el adaptador de Prisma de next-auth, y sus
+ * nombres de campo no se pueden cambiar: el adaptador los busca asi.
+ */
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+
+  /**
+   * Los favoritos de la persona, con la MISMA forma que en `PushSubscription`:
+   * `driverId` separados por comas.
+   * Se repite la forma a proposito. Los favoritos ya viajaban al servidor con
+   * la suscripcion —para poder redactar un aviso que hable de tu piloto— y
+   * copiarlos de un sitio al otro tiene que ser trivial. Se guarda el
+   * `driverId` y no el codigo de tres letras por lo mismo que alli: el codigo
+   * se reutiliza entre epocas (Michael y Mick Schumacher fueron los dos «MSC»).
+   */
+  favoriteDrivers      String?
+  favoriteConstructors String?
+
+  /**
+   * El equipo que tiñe la app, si eligio uno.
+   */
+  accentTeam String?
+
+  accounts      Account[]
+  sessions      Session[]
+  suscripciones PushSubscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("users")
+}
+
+/**
+ * La cuenta de un proveedor externo —hoy Google— atada a una persona.
+ * Aqui no hay ninguna contraseña, y esa es justo la gracia: ApexData no guarda
+ * ninguna, asi que no puede perderla. La recuperacion la hace el proveedor.
+ */
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+/**
+ * Una sesion abierta.
+ * Existe porque el adaptador la exige, pero **hoy no se usa**: la sesion va en
+ * una cookie firmada y no en la base. Con la base en Virginia, guardarla alli
+ * costaria una ida y vuelta en cada peticion autenticada solo para saber quien
+ * eres, y eso se nota en cada pantalla.
+ * El precio de la cookie es que no se puede cerrar la sesion de otro aparato al
+ * instante. Si algun dia hace falta, se cambia una linea —`strategy`— y esta
+ * tabla empieza a usarse sin migrar nada.
+ */
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/**
+ * El testigo de un enlace por correo.
+ * Todavia no se usa: el correo es el segundo paso, detras de Google. Se crea ya
+ * porque el adaptador lo busca —sin esta tabla no compila— y porque añadirla
+ * ahora ahorra una segunda migracion cuando llegue.
+ */
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
 }
