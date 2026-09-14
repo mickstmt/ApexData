@@ -1,4 +1,5 @@
 import RaceDetailClient from './RaceDetailClient';
+import { directorioDePilotos } from '@/lib/parrilla';
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 
@@ -79,5 +80,29 @@ export default async function RaceResultPage({ params, searchParams }: RaceResul
 
   const { sesion } = await searchParams;
 
-  return <RaceDetailClient race={race} year={yearNum} sesionInicial={sesion} />;
+  /**
+   * Quien es cada piloto, por sus tres letras.
+   *
+   * Las pestañas de practicas y de clasificacion al sprint vienen de FastF1,
+   * que solo manda el codigo. Sin este cruce esas tablas salen sin foto, sin
+   * dorsal, sin bandera y con «VER» por nombre — el punto 46.
+   *
+   * Se arma aqui, en el servidor, con lo que ya se ha traido de esta carrera y
+   * una consulta corta de respaldo para el viernes, cuando la carrera aun no ha
+   * corrido y por tanto no hay resultados de los que sacarlo.
+   */
+  const directorio = await directorioDePilotos(yearNum, [
+    ...race.results,
+    ...race.qualifyings,
+    ...race.sprintResults,
+  ]);
+
+  return (
+    <RaceDetailClient
+      race={race}
+      year={yearNum}
+      sesionInicial={sesion}
+      directorio={directorio}
+    />
+  );
 }

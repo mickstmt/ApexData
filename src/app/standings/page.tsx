@@ -1,7 +1,9 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { Trophy, Medal, Award } from 'lucide-react';
-import { DriverAvatar, TeamLogo } from '@/components/ui/OptimizedImage';
+import { Trophy } from 'lucide-react';
+import { TeamLogo } from '@/components/ui/OptimizedImage';
+import { FilaDeTiempos, TarjetaDeTabla } from '@/components/tabla/TablaDeTiempos';
+import { ProximaCarrera } from '@/components/home/ProximaCarrera';
 import { teamColor } from '@/lib/team-colors';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { PointsEvolution, type EvolutionSeries } from '@/components/charts/PointsEvolution';
@@ -44,7 +46,7 @@ async function getStandings(year: number) {
 
     if (round === 0) return { drivers: [], constructors: [], round: 0, leaders: [], failed: false };
 
-    const teamOf = { select: { name: true, constructorId: true } } as const;
+    const teamOf = { select: { name: true, constructorId: true, nationality: true } } as const;
 
     const [driverRows, constructorRows, lastRoundEntries] = await Promise.all([
       prisma.driverStanding.findMany({
@@ -74,7 +76,7 @@ async function getStandings(year: number) {
     // viene con las tablas, y solo si falta alguien —un piloto lesionado, un
     // sustituto, alguien que se fue a mitad de año— se hace una segunda
     // consulta con el resto de la temporada. Dos viajes en el peor caso.
-    const teamByDriver = new Map<string, { name: string; constructorId: string }>();
+    const teamByDriver = new Map<string, { name: string; constructorId: string; nationality: string }>();
     for (const entry of lastRoundEntries) {
       if (!teamByDriver.has(entry.driverId)) {
         teamByDriver.set(entry.driverId, entry.team);
@@ -109,9 +111,11 @@ async function getStandings(year: number) {
         driver: `${row.driver.givenName} ${row.driver.familyName}`,
         driverId: row.driver.driverId,
         nationality: row.driver.nationality,
+        number: row.driver.permanentNumber,
         imageUrl: row.driver.imageUrl,
         team: teamByDriver.get(row.driverId)?.name ?? '—',
         constructorId: teamByDriver.get(row.driverId)?.constructorId ?? null,
+        teamNationality: teamByDriver.get(row.driverId)?.nationality ?? null,
         points: row.points,
         wins: row.wins,
       })),
@@ -119,6 +123,7 @@ async function getStandings(year: number) {
         position: row.position,
         team: row.team.name,
         constructorId: row.team.constructorId,
+        nationality: row.team.nationality,
         logoUrl: row.team.logoUrl,
         points: row.points,
         wins: row.wins,
@@ -282,139 +287,118 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           {/* Drivers Standings */}
           <div className="min-w-0 xl:col-start-1 xl:row-start-1">
-            <h2 className="mb-6 text-2xl font-bold">
-              <Medal className="mb-1 inline-block h-6 w-6 text-primary" /> Campeonato de Pilotos
-            </h2>
-
-            <FlipRows className="space-y-2">
-              {driversStandings.map((entry) => {
-                const medalIcon =
-                  entry.position === 1 ? '🥇' :
-                  entry.position === 2 ? '🥈' :
-                  entry.position === 3 ? '🥉' : null;
-
-                return (
-                  <Link
+            <FlipRows>
+              <TarjetaDeTabla
+                titulo="Campeonato de Pilotos"
+                contexto={round > 0 ? `Tras la ronda ${round}` : undefined}
+                columnas={['Victorias', 'Pts']}
+                rejilla="26px 3px 34px minmax(0,1fr) 80px 58px"
+              >
+                {driversStandings.map((entry) => (
+                  <FilaDeTiempos
                     key={entry.driverId}
-                    data-flip-id={entry.driverId}
-                    // De qué equipo es la fila: `TeamAccent` la tiñe si es la
-                    // del equipo elegido. Aquí no se sabe cuál es —esto es
-                    // servidor y la elección vive en el navegador—.
-                    data-equipo={entry.constructorId ?? undefined}
-                    href={`/drivers/${entry.driverId}`}
-                    className={`relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 pl-5 transition-[transform,colors] duration-100 ease-out active:scale-[0.99] motion-reduce:active:scale-100 ${
-                      entry.position !== null && entry.position <= 3
-                        ? 'border-primary/40 bg-primary/5'
-                        : 'border-border bg-card hover:border-primary'
-                    }`}
-                  >
-                    <span
-                      aria-hidden
-                      className="absolute inset-y-0 left-0 w-1"
-                      style={{ backgroundColor: teamColor(entry.constructorId).color }}
-                    />
-                    {/* Position */}
-                    <div className="flex w-12 items-center justify-center">
-                      {medalIcon && <span className="sr-only">Posición {entry.position}</span>}
-                      {medalIcon ? (
-                        <span className="text-2xl">{medalIcon}</span>
-                      ) : (
-                        <span className="text-xl font-bold tabular-nums text-muted-foreground">
-                          {entry.position ?? '—'}
-                        </span>
-                      )}
-                    </div>
-
-                    <DriverAvatar src={entry.imageUrl} name={entry.driver} size="sm" />
-
-                    {/* Driver info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 font-bold">
-                        <CountryFlag nationality={entry.nationality} size={16} />
-                        {entry.driver}
-                      </div>
-                      <div className="text-sm text-muted-foreground">{entry.team}</div>
-                    </div>
-
-                    {/* Points */}
-                    <div className="text-right">
-                      <RollingNumber
-                        value={entry.points}
-                        className="font-display text-2xl font-bold text-primary"
-                      />
-                      <div className="text-xs text-muted-foreground">pts</div>
-                    </div>
-                  </Link>
-                );
-              })}
+                    idParaAnimar={entry.driverId}
+                    posicion={entry.position ?? '—'}
+                    dorsal={entry.number}
+                    equipo={entry.team}
+                    equipoId={entry.constructorId}
+                    equipoNacion={entry.teamNationality}
+                    piloto={{
+                      nombre: entry.driver,
+                      foto: entry.imageUrl,
+                      nacion: entry.nationality,
+                      href: `/drivers/${entry.driverId}`,
+                    }}
+                    celdas={[entry.wins]}
+                    valor={<RollingNumber value={entry.points} />}
+                    valorEtiqueta="pts"
+                    extra={[entry.wins === 1 ? '1 victoria' : `${entry.wins} victorias`]}
+                    // El podio se marca con el fondo de la fila y no con una
+                    // medalla de emoji. Decidido con el usuario sobre maqueta:
+                    // las otras tres tablas lo hacen así, y una medalla en la
+                    // tabla de la carrera —donde el primero es el ganador, no
+                    // un medallista— no significaría lo mismo.
+                    destacada={entry.position !== null && entry.position <= 3}
+                  />
+                ))}
+              </TarjetaDeTabla>
             </FlipRows>
           </div>
 
-          {/* Constructors Standings */}
-          <aside className="min-w-0 xl:col-start-2 xl:row-start-1">
-            <h2 className="mb-6 text-2xl font-bold">
-              <Award className="mb-1 inline-block h-6 w-6 text-primary" /> Constructores
-            </h2>
+          {/* La columna de contexto: cuándo se corre la siguiente y cómo va el
+              campeonato de escuderías. */}
+          <aside className="grid min-w-0 gap-6 xl:col-start-2 xl:row-start-1">
+            <Suspense fallback={null}>
+              <ProximaCarrera />
+            </Suspense>
 
-            <FlipRows className="space-y-2">
-              {constructorsStandings.map((entry) => {
-                const medalIcon =
-                  entry.position === 1 ? '🥇' :
-                  entry.position === 2 ? '🥈' :
-                  entry.position === 3 ? '🥉' : null;
+            <FlipRows>
+              <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                <div className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
+                  <h2 className="font-display text-base font-bold">Constructores</h2>
+                  {round > 0 && (
+                    <p className="whitespace-nowrap font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
+                      Tras la ronda {round}
+                    </p>
+                  )}
+                </div>
 
-                return (
-                  <Link
-                    key={entry.constructorId}
-                    data-flip-id={entry.constructorId}
-                    data-equipo={entry.constructorId}
-                    href={`/constructors/${entry.constructorId}`}
-                    // Más apretada que la de pilotos: esta columna mide 320 px
-                    // en escritorio y la fila de antes no cabía sin partir el
-                    // nombre del equipo.
-                    className={`relative flex items-center gap-3 overflow-hidden rounded-xl border p-3 pl-4 transition-[transform,colors] duration-100 ease-out active:scale-[0.99] motion-reduce:active:scale-100 ${
-                      entry.position !== null && entry.position <= 3
-                        ? 'border-primary/40 bg-primary/5'
-                        : 'border-border bg-card hover:border-primary'
-                    }`}
-                  >
-                    <span
-                      aria-hidden
-                      className="absolute inset-y-0 left-0 w-1"
-                      style={{ backgroundColor: teamColor(entry.constructorId).color }}
-                    />
-                    {/* Position */}
-                    <div className="flex w-7 items-center justify-center">
-                      {medalIcon ? (
-                        <span className="text-xl">{medalIcon}</span>
-                      ) : (
-                        <span className="text-lg font-bold tabular-nums text-muted-foreground">
-                          {entry.position ?? '—'}
-                        </span>
-                      )}
-                    </div>
-
-                    <TeamLogo
-                      src={entry.logoUrl}
-                      name={entry.team}
-                      constructorId={entry.constructorId}
-                      size="sm"
-                    />
-
-                    {/* Team name */}
-                    <div className="min-w-0 flex-1 truncate font-bold">{entry.team}</div>
-
-                    {/* Points */}
-                    <div className="text-right">
-                      <RollingNumber
-                        value={entry.points}
-                        className="font-display text-xl font-bold text-primary"
+                <ol>
+                  {constructorsStandings.map((entry) => (
+                    <li
+                      key={entry.constructorId}
+                      data-flip-id={entry.constructorId}
+                      data-equipo={entry.constructorId}
+                      className={`relative flex min-h-[52px] items-center gap-3 border-b border-border/60 px-3.5 py-2 last:border-b-0 transition-colors hover:bg-accent/60 ${
+                        entry.position !== null && entry.position <= 3 ? 'bg-primary/[0.07]' : ''
+                      }`}
+                    >
+                      {/* El enlace cubre la fila entera, no solo el nombre. */}
+                      <Link
+                        href={`/constructors/${entry.constructorId}`}
+                        transitionTypes={['nav-forward']}
+                        aria-label={entry.team}
+                        className="absolute inset-0 z-[1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                       />
-                      <div className="text-xs text-muted-foreground">pts</div>
-                    </div>
-                  </Link>
-                );
-              })}
+
+                      <span className="w-5 shrink-0 text-center font-mono text-[13px] font-semibold tabular-nums text-muted-foreground">
+                        {entry.position ?? '—'}
+                      </span>
+
+                      <span
+                        aria-hidden
+                        className="h-7 w-[3px] shrink-0 rounded-sm"
+                        style={{ backgroundColor: teamColor(entry.constructorId).color }}
+                      />
+
+                      <TeamLogo
+                        src={entry.logoUrl}
+                        name={entry.team}
+                        constructorId={entry.constructorId}
+                        size="sm"
+                      />
+
+                      {/* La bandera de la escudería. Estaba en la base desde el
+                          principio —`Team.nationality`, las 25 la tienen— y no
+                          se enseñaba en ningún sitio. */}
+                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <CountryFlag nationality={entry.nationality} size={14} />
+                        <span className="truncate text-sm font-semibold">{entry.team}</span>
+                      </span>
+
+                      <span className="shrink-0 text-right">
+                        <RollingNumber
+                          value={entry.points}
+                          className="block font-mono text-[15px] font-semibold tabular-nums"
+                        />
+                        <span className="block font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                          pts
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </FlipRows>
           </aside>
 

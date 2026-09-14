@@ -158,18 +158,37 @@ test.describe('semántica y objetivos táctiles (informe 2, puntos 6, 9, 12-14)'
     await expect(page.getByRole('tab', { selected: true })).not.toHaveText(antes);
   });
 
+  /**
+   * Sigue siendo una tabla para quien no la ve.
+   *
+   * Antes esto miraba `<table>`, `<th scope>` y `<caption>`. Desde el punto 46
+   * la tabla de la carrera se maqueta con una rejilla —`display: grid` sobre
+   * elementos de tabla les quita su papel en Chrome, que es la trampa clásica
+   * de este patrón—, así que el papel va declarado a mano. Lo que importa no
+   * cambió: que haya una tabla, que tenga nombre, y que cada columna tenga su
+   * cabecera. Esto es lo que lo comprueba, y sin los `role` falla.
+   */
   test('las tablas asocian cada celda con su cabecera', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/results/2024/1');
 
     // La ruta tiene `loading.tsx`, así que `goto` termina con el ESQUELETO en
-    // pantalla y la tabla llega después. Contar sin esperar hacía dos cosas
-    // malas: fallar cuando el CI iba lento —pasó el 2026-08-20— y, peor, pasar
-    // por vacío cuando el resto de comprobaciones no encontraban ninguna tabla
-    // que revisar. `toBeAttached` reintenta hasta que el contenido llega.
-    const cabeceras = page.locator('table th');
-    await expect(cabeceras.first()).toBeAttached({ timeout: 30_000 });
-    await expect(page.locator('table th:not([scope])')).toHaveCount(0);
-    await expect(page.locator('table caption').first()).not.toBeEmpty();
+    // pantalla y la tabla llega después. Esperar a que aparezca evita dos
+    // cosas: fallar cuando el CI va lento —pasó el 2026-08-20— y, peor, pasar
+    // por vacío sin haber mirado nada.
+    const tabla = page.getByRole('table').first();
+    await expect(tabla).toBeAttached({ timeout: 30_000 });
+
+    // Con nombre: sin él, un lector de pantalla anuncia «tabla» y nada más.
+    await expect(tabla).toHaveAttribute('aria-label', /.+/);
+
+    const cabeceras = tabla.getByRole('columnheader');
+    await expect(cabeceras.first()).toBeVisible();
+
+    // Y tantas cabeceras como celdas tiene una fila: es lo que hace que al
+    // moverse por la tabla cada valor se anuncie con lo que significa.
+    const fila = tabla.getByRole('row').nth(1);
+    expect(await cabeceras.count()).toBe(await fila.getByRole('cell').count());
   });
 
   test('en móvil las tablas anchas no obligan a arrastrar', async ({ page }) => {
@@ -223,8 +242,10 @@ test.describe('semántica y objetivos táctiles (informe 2, puntos 6, 9, 12-14)'
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/results/2024/1');
 
-    await expect(page.locator('table:visible')).toHaveCount(1);
-    await expect(page.locator('table:visible th[scope="col"]').first()).toBeVisible();
+    // Una sola: la lista plegable del móvil está en el DOM pero oculta, y no
+    // declara papel de tabla justamente para no anunciarse como una segunda.
+    await expect(page.getByRole('table')).toHaveCount(1);
+    await expect(page.getByRole('columnheader').first()).toBeVisible();
   });
 
   test('en móvil no queda ningún control por debajo de 44 px', async ({ page }) => {
@@ -603,15 +624,27 @@ test.describe('tiempos de FastF1 en la ficha de la carrera', () => {
 
     await page.goto('/results/2024/1?sesion=practice1');
 
-    // `exact`, porque «VER» sin más también cae dentro de «Volver a Resultados»
-    // y la búsqueda por texto no distingue mayúsculas.
-    await expect(page.getByText('VER', { exact: true })).toBeVisible({ timeout: 30_000 });
+    // El nombre COMPLETO, no las tres letras.
+    //
+    // FastF1 manda «VER» y nada más, y eso es lo que se pintaba: el punto 46.
+    // Ahora ese código se cruza con la ficha que ya teníamos guardada, así que
+    // esta pestaña enseña nombre, foto, dorsal y banderas como las demás. Sin
+    // ese cruce, aquí pone «VER» y esta comprobación falla.
+    await expect(page.getByText('Max Verstappen')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText('1:32.267')).toBeVisible();
-    await expect(page.getByText('SOFT', { exact: true })).toBeVisible();
+    // `.first()`: el compuesto sale dos veces, una por ancho — en su columna
+    // en escritorio y en la segunda línea en el móvil. Las dos son correctas.
+    await expect(page.getByText('SOFT', { exact: true }).first()).toBeVisible();
 
-    // El piloto sin equipo sale igual: si esto se rompe, la pestaña se queda a
-    // medias por una vuelta a la que FastF1 no le puso equipo.
-    await expect(page.getByText('ALO', { exact: true })).toBeVisible();
+    // Y con él llegan la foto, el dorsal y las dos banderas, igual que en la
+    // tabla de la carrera y en el campeonato.
+    const primera = page.locator('li[data-fila-de-tiempos]').first();
+    await expect(primera.locator('[data-dorsal]')).toHaveText(/^\d+$/);
+    await expect(primera.locator('[data-bandera]')).toHaveCount(2);
+
+    // El piloto al que FastF1 no le puso equipo sale igual: si esto se rompe,
+    // la pestaña se queda a medias por una vuelta suelta sin equipo.
+    await expect(page.getByText('Fernando Alonso')).toBeVisible();
 
     // La advertencia no es un formalismo: cada equipo rueda su programa con la
     // gasolina que le conviene, y sin decirlo este orden se lee como una
@@ -2482,8 +2515,10 @@ test.describe('orden de la clasificación', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/standings');
 
-    const filaPiloto = page.locator('a[href^="/drivers/"][data-flip-id]').first();
-    const filaEquipo = page.locator('a[href^="/constructors/"][data-flip-id]').first();
+    const filaPiloto = page.locator('li[data-fila-de-tiempos]').first();
+    const filaEquipo = page.locator('li[data-flip-id]').filter({
+      has: page.locator('a[href^="/constructors/"]'),
+    }).first();
     await expect(filaEquipo).toBeVisible();
 
     const [caja, cajaEquipo] = await Promise.all([
@@ -2491,12 +2526,23 @@ test.describe('orden de la clasificación', () => {
       filaEquipo.boundingBox(),
     ]);
 
-    // A la derecha y arrancando a la misma altura: acompaña, no va detrás.
+    // A la derecha, y con la mitad de ancho: es una columna de contexto, no
+    // otra sección que haya que buscar al final de la página.
     expect(cajaEquipo!.x).toBeGreaterThan(caja!.x + caja!.width - 1);
-    expect(Math.abs(cajaEquipo!.y - caja!.y)).toBeLessThanOrEqual(4);
-
-    // Y con la mitad de ancho, no con el mismo.
     expect(caja!.width).toBeGreaterThan(cajaEquipo!.width * 1.5);
+
+    // Y las dos columnas arrancan a la misma altura. Se comparan las COLUMNAS
+    // y no sus primeras filas: encima de los constructores va ahora la tarjeta
+    // de la próxima carrera, así que su primera fila empieza más abajo sin que
+    // eso signifique que la columna vaya detrás.
+    const [arribaPilotos, arribaContexto] = await Promise.all([
+      page
+        .getByRole('table', { name: 'Campeonato de Pilotos' })
+        .evaluate((el) => Math.round(el.getBoundingClientRect().top)),
+      page.locator('aside').first().evaluate((el) => Math.round(el.getBoundingClientRect().top)),
+    ]);
+
+    expect(Math.abs(arribaPilotos - arribaContexto)).toBeLessThanOrEqual(60);
   });
 });
 
@@ -2765,5 +2811,162 @@ test.describe('retroalimentación al navegar (informe 1)', () => {
       expect(respuesta.status()).toBe(308);
       expect(respuesta.headers()['location']).toContain(destino);
     }
+  });
+});
+
+/**
+ * Las tablas se parecen entre sí, y ninguna pierde un dato (punto 46).
+ *
+ * Lo reportado: «las tablas de resultados no se parecen entre sí, y en web son
+ * pobres», y después, viendo la maqueta: «el dorsal, la foto y la bandera son
+ * indispensables… y para los equipos, banderas de nacionalidad también».
+ *
+ * Estas pruebas miden esas cuatro cosas en la misma fila. Con el código
+ * anterior ninguna existía: el campeonato pintaba tarjetas con medalla de emoji
+ * y sin dorsal, y la carrera una tabla HTML con un círculo de tres letras en
+ * vez de la foto.
+ */
+test.describe('una sola fila para las cuatro tablas', () => {
+  const ESCRITORIO = { width: 1440, height: 1000 };
+
+  /** Lo que tiene que llevar una fila, mirado en el DOM y no a ojo. */
+  async function anatomia(fila: import('@playwright/test').Locator) {
+    return fila.evaluate((el) => ({
+      dorsal: (el.querySelector('[data-dorsal]')?.textContent ?? '').trim(),
+      fotos: el.querySelectorAll('img[alt^="Foto de"]').length,
+      // Las banderas son imágenes con el gentilicio como texto alternativo, y
+      // van dos: la del piloto y la de su escudería.
+      banderas: el.querySelectorAll('[data-bandera]').length,
+      enlaces: el.querySelectorAll('a[href^="/drivers/"]').length,
+    }));
+  }
+
+  test('el campeonato lleva dorsal, foto y las dos banderas', async ({ page }) => {
+    await page.setViewportSize(ESCRITORIO);
+    await page.goto('/standings');
+
+    const primera = page.locator('li[data-fila-de-tiempos]').first();
+    await expect(primera).toBeVisible();
+
+    const partes = await anatomia(primera);
+    expect(partes.dorsal, 'la fila no enseña el dorsal').toMatch(/^\d+$/);
+    expect(partes.fotos, 'la fila no enseña la foto del piloto').toBe(1);
+    expect(partes.banderas, 'faltan banderas: van la del piloto y la del equipo').toBe(2);
+    expect(partes.enlaces, 'la fila no lleva a la ficha del piloto').toBe(1);
+  });
+
+  test('la carrera lleva exactamente lo mismo', async ({ page }) => {
+    await page.setViewportSize(ESCRITORIO);
+    await page.goto('/results/2026/14');
+
+    const tabla = page.getByRole('heading', { name: 'Resultado de carrera' });
+    await expect(tabla).toBeVisible();
+
+    // La ficha de la carrera conserva su lista de móvil, oculta a este ancho
+    // pero presente: por eso se busca la fila compartida por su marca y no por
+    // «el primer `li` con un enlace a un piloto».
+    const primera = page.locator('li[data-fila-de-tiempos]').first();
+    const partes = await anatomia(primera);
+
+    expect(partes.dorsal).toMatch(/^\d+$/);
+    expect(partes.fotos).toBe(1);
+    expect(partes.banderas).toBe(2);
+  });
+
+  test('las dos tablas usan la MISMA fila, no una parecida', async ({ page }) => {
+    await page.setViewportSize(ESCRITORIO);
+
+    const claseDe = async (url: string) => {
+      await page.goto(url);
+      return page.locator('li[data-fila-de-tiempos]').first().getAttribute('class');
+    };
+
+    const campeonato = await claseDe('/standings');
+    const carrera = await claseDe('/results/2026/14');
+
+    // Se comparan las clases de maquetación —las que deciden la forma— y no la
+    // cadena entera: el podio y el abandono añaden las suyas, y deben poder.
+    const forma = (clases: string | null) =>
+      (clases ?? '').split(/\s+/).filter((c) => c.startsWith('grid') || c.startsWith('min-h') || c.startsWith('md:['));
+
+    expect(forma(campeonato).sort()).toEqual(forma(carrera).sort());
+    expect(forma(campeonato).length).toBeGreaterThan(2);
+  });
+
+  test('un abandono se dice DNF, no con la palabra larga', async ({ page }) => {
+    await page.setViewportSize(ESCRITORIO);
+    await page.goto('/results/2026/14');
+
+    await expect(page.getByRole('heading', { name: 'Resultado de carrera' })).toBeVisible();
+
+    const siglas = page.locator('li[data-fila-de-tiempos] [data-sigla]');
+    const cuantas = await siglas.count();
+    test.skip(cuantas === 0, 'Esta carrera la terminaron todos');
+
+    // Y la palabra larga no desaparece: vive en el `title` y en lo que lee un
+    // lector de pantalla, porque «de-ene-efe» no dice nada.
+    // La sigla, y no la palabra larga que había antes.
+    const sigla = await siglas.first().getAttribute('data-sigla');
+    expect(sigla, `«${sigla}» no es una sigla de cronometraje`).toMatch(/^(DNF|DNS|DSQ|Doblado|Meta|\+\d+ vuelta)/);
+    await expect(siglas.first()).toContainText(/^(DNF|DNS|DSQ)/);
+
+    // Y la palabra larga no desaparece: vive en el `title` y en lo que lee un
+    // lector de pantalla, porque «de-ene-efe» no dice nada.
+    const motivo = await siglas.first().getAttribute('title');
+    expect(motivo, 'la sigla no explica el motivo en ningún sitio').toBeTruthy();
+  });
+
+  test('las escuderías enseñan su bandera', async ({ page }) => {
+    await page.setViewportSize(ESCRITORIO);
+    await page.goto('/standings');
+
+    const fila = page
+      .locator('li')
+      .filter({ has: page.locator('a[href^="/constructors/"]') })
+      .first();
+
+    await expect(fila).toBeVisible();
+    await expect(fila.locator('[data-bandera]')).toHaveCount(1);
+  });
+
+  test('en el móvil la fila se parte en dos y no pierde nada', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/standings');
+
+    const primera = page.locator('li[data-fila-de-tiempos]').first();
+    await expect(primera).toBeVisible();
+
+    const partes = await anatomia(primera);
+    expect(partes.dorsal).toMatch(/^\d+$/);
+    expect(partes.fotos).toBe(1);
+    expect(partes.banderas).toBe(2);
+
+    // Y no se desborda de lado, que es lo que hacía la tabla de la carrera.
+    const desborde = await primera.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(desborde, 'la fila se sale por el lado').toBeLessThanOrEqual(1);
+  });
+});
+
+/**
+ * La tarjeta de la próxima carrera, en la columna de contexto.
+ *
+ * Estaba en la maqueta que el usuario aprobó y no llegó a construirse; se
+ * quedó pendiente y se dijo. Ahora sí está.
+ */
+test.describe('próxima carrera en Clasificación', () => {
+  test('dice cuál es y cuánto falta', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto('/standings');
+
+    const tarjeta = page.locator('section').filter({
+      has: page.getByRole('heading', { name: 'Próxima carrera' }),
+    });
+
+    // Fuera de temporada no hay ninguna, y entonces la tarjeta no se pinta: no
+    // es un fallo, es que no hay nada que contar.
+    if ((await tarjeta.count()) === 0) test.skip(true, 'No hay carrera próxima en el calendario');
+
+    await expect(tarjeta.getByRole('link')).toHaveCount(1);
+    await expect(tarjeta).toContainText(/en\s+\d/);
   });
 });

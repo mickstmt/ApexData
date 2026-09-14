@@ -115,9 +115,12 @@ export function DriverAvatar({
 }: {
   src?: string | null;
   name: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 }) {
   const sizeClasses = {
+    // `xs` es la de las tablas de tiempos, donde la fila mide 58 px y una foto
+    // de 48 la llenaría entera sin dejar sitio a las dos lineas de texto.
+    xs: 'h-[34px] w-[34px]',
     sm: 'h-12 w-12',
     md: 'h-16 w-16',
     lg: 'h-24 w-24',
@@ -137,14 +140,14 @@ export function DriverAvatar({
       <div
         className={`flex items-center justify-center rounded-full border-2 border-primary bg-gradient-to-br from-primary/20 to-primary/5 ${sizeClasses[size]}`}
       >
-        <span className={`font-bold text-primary ${size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-3xl'}`}>
+        <span className={`font-bold text-primary ${size === 'xs' || size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-3xl'}`}>
           {initials}
         </span>
       </div>
     );
   }
 
-  const dimension = size === 'sm' ? 48 : size === 'md' ? 64 : size === 'lg' ? 96 : 192;
+  const dimension = size === 'xs' ? 34 : size === 'sm' ? 48 : size === 'md' ? 64 : size === 'lg' ? 96 : 192;
 
   return (
     <OptimizedImage

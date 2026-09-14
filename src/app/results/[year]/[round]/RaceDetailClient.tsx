@@ -19,6 +19,8 @@ import { fechaDeCarrera, horaUTCDe, tieneHoraConocida } from '@/lib/fechas';
 import { SprintResults } from './SprintResults';
 import { SesionPendiente } from './SesionPendiente';
 import { ClasificacionSprint, VueltasDePractica } from './TiemposDeSesion';
+import type { DirectorioDePilotos } from '@/lib/parrilla';
+import { FilaDeTiempos, TarjetaDeTabla } from '@/components/tabla/TablaDeTiempos';
 import { comienzoDeCarrera, estadoDeSesion, queEnseñar } from '@/lib/sesiones';
 import { VolverAtras } from '@/components/ui/VolverAtras';
 import { PRIMERA_TEMPORADA_CON_REPLAY, VerReplay } from '@/components/replay/VerReplay';
@@ -54,6 +56,11 @@ interface RaceDetailClientProps {
   year: number;
   /** Pestaña con la que abrir, si la dirección lo pide. */
   sesionInicial?: string;
+  /**
+   * Quién es cada piloto, por sus tres letras. Lo arma el servidor; aquí solo
+   * viaja hasta las tablas que vienen de FastF1, que es lo único que trae.
+   */
+  directorio: DirectorioDePilotos;
 }
 
 type SessionTab =
@@ -71,7 +78,7 @@ interface TabConfig {
   shortLabel: string;
 }
 
-export default function RaceDetailClient({ race, year, sesionInicial }: RaceDetailClientProps) {
+export default function RaceDetailClient({ race, year, sesionInicial, directorio }: RaceDetailClientProps) {
   // La pestaña de la dirección solo manda si es una de verdad: un `?sesion=`
   // inventado abre la carrera, que es el destino razonable.
   const PESTAÑAS_VALIDAS: SessionTab[] = [
@@ -670,123 +677,75 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
               }}
             />
 
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full">
-                  <caption className="sr-only">Resultado de la carrera por piloto</caption>
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground w-16">POS</th>
-                    <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground w-20">NO</th>
-                    <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">PILOTO</th>
-                    <th scope="col" className="p-4 text-left text-sm font-semibold text-foreground">EQUIPO</th>
-                    <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-20">VUELTAS</th>
-                    <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-32">
-                      TIEMPO/ABANDONO
-                    </th>
-                    <th scope="col" className="p-4 text-right text-sm font-semibold text-foreground w-20">PTS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {race.results.map((result) => {
-                    const isPodium = result.position && result.position <= 3;
-                    const isWinner = result.position === 1;
+            {/* En escritorio, la misma tarjeta y la misma fila que la
+                clasificación, las prácticas y el campeonato (punto 46).
 
-                    return (
-                      <tr
-                        key={result.id}
-                        className={`border-b border-border transition-colors hover:bg-muted/30 ${
-                          isPodium ? 'bg-muted/20' : ''
-                        }`}
-                      >
-                        {/* Position */}
-                        <td className="p-4">
-                          <div
-                            className={`flex items-center justify-center h-10 w-10 rounded-md font-bold ${
-                              isWinner
-                                ? 'bg-podium-gold/20 text-podium-gold'
-                                : isPodium
-                                ? 'bg-primary/20 text-primary'
-                                : 'bg-muted/50 text-foreground'
-                            }`}
-                          >
-                            {result.positionText}
-                          </div>
-                        </td>
+                Aquí no hay `PriorityRows`: esa es la de arriba, la del móvil,
+                y se queda. Abre con un toque y enseña parrilla, vueltas, mejor
+                vuelta y el motivo del abandono — más de lo que cabría en una
+                fila unificada de 390 px. Cambiarla por simetría sería quitar
+                datos, que es lo contrario de lo que se pidió. */}
+            <div className="hidden md:block">
+              <TarjetaDeTabla
+                titulo="Resultado de carrera"
+                // Las vueltas del ganador son las de la carrera.
+                contexto={race.results[0]?.laps ? `${race.results[0].laps} vueltas` : undefined}
+                columnas={['Vueltas', 'Tiempo', 'Pts']}
+                rejilla="26px 3px 34px minmax(0,1fr) 62px 104px 42px"
+              >
+                {race.results.map((result) => {
+                  const estado = resumirEstado(result.time, result.status);
+                  const enPodio = result.position !== null && result.position <= 3;
 
-                        {/* Number */}
-                        <td className="p-4">
-                          <div className="text-lg font-bold text-muted-foreground">
-                            {result.driver.permanentNumber || '—'}
-                          </div>
-                        </td>
-
-                        {/* Driver */}
-                        <td className="p-4">
-                          <Link
-                            href={`/drivers/${result.driver.driverId}`}
-                            className="hover:text-primary transition-colors"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">
-                                {result.driver.code ||
-                                  result.driver.familyName.slice(0, 3).toUpperCase()}
-                              </div>
-                              <div>
-                                <div className="font-semibold">
-                                  {result.driver.givenName} {result.driver.familyName}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {result.driver.nationality}
-                                </div>
-                              </div>
-                            </div>
-                          </Link>
-                        </td>
-
-                        {/* Team */}
-                        <td className="p-4">
-                          <Link
-                            href={`/constructors/${result.team.constructorId}`}
-                            className="text-sm hover:text-primary transition-colors"
-                          >
-                            {result.team.name}
-                          </Link>
-                        </td>
-
-                        {/* Laps */}
-                        <td className="p-4 text-right text-sm text-muted-foreground">
+                  return (
+                    <FilaDeTiempos
+                      key={result.id}
+                      posicion={result.positionText}
+                      dorsal={result.driver.permanentNumber}
+                      equipo={result.team.name}
+                      equipoId={result.team.constructorId}
+                      equipoNacion={result.team.nationality}
+                      piloto={{
+                        nombre: `${result.driver.givenName} ${result.driver.familyName}`,
+                        foto: result.driver.imageUrl,
+                        nacion: result.driver.nationality,
+                        href: `/drivers/${result.driver.driverId}`,
+                      }}
+                      celdas={[
+                        <span key="vueltas" className="text-muted-foreground">
                           {result.laps}
-                        </td>
-
-                        {/* Time/Status */}
-                        <td className="p-4 text-right">
-                          {result.time ? (
-                            <span className="font-mono text-sm font-semibold">{result.time}</span>
-                          ) : (
-                            // En escritorio cabe el motivo entero, así que aquí
-                            // no se abrevia: la sigla es para la fila estrecha.
-                            <span className="text-sm text-muted-foreground">
-                              {resumirEstado(result.time, result.status).motivo ??
-                                resumirEstado(result.time, result.status).corto}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Points */}
-                        <td className="p-4 text-right">
+                        </span>,
+                        result.time ? (
+                          <span key="tiempo">{result.time}</span>
+                        ) : (
+                          // La sigla y no la palabra: DNF, DNS, DSQ es como se
+                          // dicen estas cosas en cronometraje, y es lo que ya
+                          // usa el resto de la app. El motivo entero va en el
+                          // `title` y en el texto que lee un lector de
+                          // pantalla, porque «de-ene-efe» no dice nada.
                           <span
-                            className={`font-bold ${
-                              result.points > 0 ? 'text-primary' : 'text-muted-foreground'
-                            }`}
+                            key="tiempo"
+                            data-sigla={estado.corto}
+                            title={estado.motivo ?? undefined}
+                            className="inline-block rounded border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground"
                           >
-                            {result.points}
+                            {estado.corto}
+                            <span className="sr-only"> — {estadoEnPalabras(estado)}</span>
                           </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        ),
+                      ]}
+                      valor={
+                        <span className={result.points > 0 ? 'text-primary' : 'text-muted-foreground'}>
+                          {result.points}
+                        </span>
+                      }
+                      valorEtiqueta="pts"
+                      destacada={enPodio}
+                      apagada={estado.clase === 'dnf' || estado.clase === 'dns' || estado.clase === 'dsq'}
+                    />
+                  );
+                })}
+              </TarjetaDeTabla>
             </div>
           </div>
 
@@ -1144,13 +1103,14 @@ export default function RaceDetailClient({ race, year, sesionInicial }: RaceDeta
          * prácticas: si el domingo quedó atrás, el viernes también.
          */
         cronometrada.sesion === 'SQ' ? (
-          <ClasificacionSprint year={year} round={race.round} />
+          <ClasificacionSprint year={year} round={race.round} directorio={directorio} />
         ) : (
           <VueltasDePractica
             year={year}
             round={race.round}
             sesion={cronometrada.sesion}
             nombre={cronometrada.titulo}
+            directorio={directorio}
           />
         )
       ) : (

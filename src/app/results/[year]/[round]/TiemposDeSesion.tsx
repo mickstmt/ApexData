@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Loader2, Timer, TriangleAlert } from 'lucide-react';
-import { compoundColor, teamColor, teamIdFromName } from '@/lib/team-colors';
+import { compoundColor, teamIdFromName } from '@/lib/team-colors';
 import { intervalosAlAnterior, mejorVueltaPorPiloto } from '@/lib/lap-times';
+import { FilaDeTiempos, TarjetaDeTabla } from '@/components/tabla/TablaDeTiempos';
+import { fichaDesconocida, type DirectorioDePilotos } from '@/lib/parrilla';
 import type { FastestLapsResponse, SessionClassificationResponse } from '@/types';
 
 /**
@@ -107,6 +109,25 @@ function Vacio({ que }: { que: string }) {
 }
 
 /** El tramo en el que cada piloto se quedó: SQ1, SQ2 o SQ3. */
+/**
+ * Quien es este codigo de tres letras.
+ *
+ * Es el cruce que hacia falta para que estas dos tablas dejaran de ser pobres:
+ * FastF1 manda «VER» y «Red Bull Racing», y de ahi salen nombre completo, foto,
+ * dorsal, bandera del piloto y bandera de la escuderia. Si no esta en el
+ * directorio —un piloto de una sola sesion de viernes— se queda con sus tres
+ * letras, que es mejor que ponerle la ficha de otro.
+ */
+function quienEs(directorio: DirectorioDePilotos, codigo: string, equipo: string | null | undefined) {
+  const ficha = directorio[codigo?.toUpperCase() ?? ''];
+  if (ficha) return ficha;
+
+  // Sin ficha, al menos el equipo se reconoce por su nombre: `teamIdFromName`
+  // es lo que ya daba color a la barra antes de que existiera el directorio.
+  const equipoId = teamIdFromName(equipo);
+  return { ...fichaDesconocida(codigo, equipo), equipoId: equipoId ?? '' };
+}
+
 function Tramo({ segmento }: { segmento: number | null }) {
   if (!segmento) return null;
 
@@ -124,7 +145,15 @@ function Tramo({ segmento }: { segmento: number | null }) {
  * aunque su vuelta fuera mejor. Eso lo resuelve el servicio, y por eso cada fila
  * enseña su tramo — sin él, un tiempo mayor arriba parece un error.
  */
-export function ClasificacionSprint({ year, round }: { year: number; round: number }) {
+export function ClasificacionSprint({
+  year,
+  round,
+  directorio,
+}: {
+  year: number;
+  round: number;
+  directorio: DirectorioDePilotos;
+}) {
   const { datos, cargando, fallo } = usePeticion<SessionClassificationResponse>(
     `/api/clasificacion/${year}/${round}/SQ`
   );
@@ -136,59 +165,49 @@ export function ClasificacionSprint({ year, round }: { year: number; round: numb
   const intervalos = intervalosAlAnterior(datos.classification);
 
   return (
-    <div>
-      <div className="mb-4 rounded-lg border border-border bg-card p-4">
-        <h3 className="mb-1 text-lg font-bold">Clasificación al sprint</h3>
-        <p className="max-w-prose text-sm text-muted-foreground">
-          Reconstruida desde la cronometría de FastF1, que es la única fuente que la publica.{' '}
-          <b>Es provisional</b>: las sanciones de parrilla se aplican después y no aparecen aquí.
-        </p>
-      </div>
+    <TarjetaDeTabla
+      titulo="Clasificación al sprint"
+      contexto="Reconstruida desde FastF1"
+      nota="Es provisional: las sanciones de parrilla se aplican después y no aparecen aquí."
+      columnas={['Tramo', 'Dif.', 'Vuelta']}
+      rejilla="26px 3px 34px minmax(0,1fr) 64px 76px 84px"
+    >
+      {datos.classification.map((fila, indice) => {
+        const piloto = quienEs(directorio, fila.driver, fila.team);
 
-      <ol className="grid gap-2 sm:grid-cols-2">
-        {datos.classification.map((fila, indice) => {
-          const equipoId = teamIdFromName(fila.team);
-
-          return (
-            <li
-              key={fila.driver}
-              className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-card py-2.5 pl-4 pr-4"
-            >
-              <span
-                aria-hidden
-                className="absolute inset-y-0 left-0 w-1"
-                style={{
-                  backgroundColor: equipoId
-                    ? teamColor(equipoId).color
-                    : 'hsl(var(--muted-foreground))',
-                }}
-              />
-              <span className="w-6 shrink-0 text-center font-mono text-sm font-semibold tabular-nums text-muted-foreground">
-                {fila.position}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold">{fila.driverName}</span>
-                {fila.team && (
-                  <span className="block truncate text-xs text-muted-foreground">{fila.team}</span>
-                )}
-              </span>
-              <Tramo segmento={fila.segment} />
-              <span className="shrink-0 text-right">
-                <span className="block font-mono text-xs tabular-nums text-muted-foreground">
-                  {fila.time ?? '—'}
+        return (
+          <FilaDeTiempos
+            key={fila.driver}
+            posicion={fila.position}
+            dorsal={piloto.dorsal}
+            equipo={piloto.equipo}
+            equipoId={piloto.equipoId || null}
+            equipoNacion={piloto.equipoNacion}
+            piloto={{
+              nombre: piloto.nombre,
+              foto: piloto.foto,
+              nacion: piloto.nacion,
+              href: piloto.driverId ? `/drivers/${piloto.driverId}` : undefined,
+            }}
+            celdas={[
+              <Tramo key="tramo" segmento={fila.segment} />,
+              intervalos[indice] ? (
+                <span key="dif" className="text-muted-foreground">
+                  <span className="sr-only">Diferencia con el de delante: </span>
+                  {intervalos[indice]}
                 </span>
-                {intervalos[indice] && (
-                  <span className="block font-mono text-[10px] tabular-nums text-muted-foreground">
-                    <span className="sr-only">Diferencia con el de delante: </span>
-                    {intervalos[indice]}
-                  </span>
-                )}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-    </div>
+              ) : (
+                <span key="dif" className="text-muted-foreground">
+                  —
+                </span>
+              ),
+            ]}
+            valor={fila.time ?? '—'}
+            destacada={fila.position === 1}
+          />
+        );
+      })}
+    </TarjetaDeTabla>
   );
 }
 
@@ -204,11 +223,13 @@ export function VueltasDePractica({
   round,
   sesion,
   nombre,
+  directorio,
 }: {
   year: number;
   round: number;
   sesion: 'FP1' | 'FP2' | 'FP3';
   nombre: string;
+  directorio: DirectorioDePilotos;
 }) {
   /*
    * Se piden **todas** las vueltas, no veinte.
@@ -219,11 +240,6 @@ export function VueltasDePractica({
    * repetidos tres veces cada uno. Con el límite alto llega la sesión entera
    * —601 vueltas, 150 KB medidos— y `mejorVueltaPorPiloto` se queda con una por
    * piloto, que son los 22 que se quieren ver.
-   *
-   * Traer 150 KB para pintar 22 filas es un desperdicio y está anotado como
-   * pendiente del servicio, que es quien debería agrupar. Cuando lo haga, esta
-   * misma petición devolverá ya solo 22 y aquí no habrá que tocar nada: reducir
-   * una lista ya reducida no cambia nada.
    */
   const { datos, cargando, fallo } = usePeticion<FastestLapsResponse>(
     `/api/laps/${year}/${round}/${sesion}/fastest?limit=2000`
@@ -236,62 +252,54 @@ export function VueltasDePractica({
   if (porPiloto.length === 0) return <Vacio que="vueltas cronometradas" />;
 
   return (
-    <div>
-      <div className="mb-4 rounded-lg border border-border bg-card p-4">
-        <h3 className="mb-1 text-lg font-bold">{nombre}: la vuelta más rápida de cada piloto</h3>
-        <p className="max-w-prose text-sm text-muted-foreground">
-          Una práctica no es un resultado: cada equipo rueda su propio programa y con la gasolina que
-          le conviene, así que este orden no dice quién es más rápido de verdad.
-        </p>
-      </div>
+    <TarjetaDeTabla
+      titulo={nombre}
+      contexto="Mejor vuelta de cada piloto"
+      nota="Una práctica no es un resultado: cada equipo rueda su propio programa y con la gasolina que le conviene, así que este orden no dice quién es más rápido de verdad."
+      columnas={['Neum.', 'Vuelta']}
+      rejilla="26px 3px 34px minmax(0,1fr) 92px 92px"
+    >
+      {porPiloto.map((vuelta, indice) => {
+        const piloto = quienEs(directorio, vuelta.Driver, vuelta.Team);
 
-      <ol className="grid gap-2 sm:grid-cols-2">
-        {porPiloto.map((vuelta, indice) => {
-          // `Team` puede no venir: FastF1 lo deja vacío en alguna vuelta suelta.
-          const equipoId = teamIdFromName(vuelta.Team);
-
-          return (
-            <li
-              key={`${vuelta.Driver}-${vuelta.LapNumber}`}
-              className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-card py-2.5 pl-4 pr-4"
-            >
-              <span
-                aria-hidden
-                className="absolute inset-y-0 left-0 w-1"
-                style={{
-                  backgroundColor: equipoId
-                    ? teamColor(equipoId).color
-                    : 'hsl(var(--muted-foreground))',
-                }}
-              />
-              <span className="w-6 shrink-0 text-center font-mono text-sm font-semibold tabular-nums text-muted-foreground">
-                {indice + 1}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold">{vuelta.Driver}</span>
-                {vuelta.Team && (
-                  <span className="block truncate text-xs text-muted-foreground">{vuelta.Team}</span>
-                )}
-              </span>
-              {vuelta.Compound && (
+        return (
+          <FilaDeTiempos
+            key={`${vuelta.Driver}-${vuelta.LapNumber}`}
+            posicion={indice + 1}
+            dorsal={piloto.dorsal}
+            equipo={piloto.equipo}
+            equipoId={piloto.equipoId || null}
+            equipoNacion={piloto.equipoNacion}
+            piloto={{
+              nombre: piloto.nombre,
+              foto: piloto.foto,
+              nacion: piloto.nacion,
+              href: piloto.driverId ? `/drivers/${piloto.driverId}` : undefined,
+            }}
+            celdas={[
+              vuelta.Compound ? (
                 // El punto relleno con su anillo, como en la tabla de vueltas:
                 // los colores oficiales valen para un bloque, no para texto.
-                <span className="flex shrink-0 items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <span key="goma" className="inline-flex items-center justify-end gap-1.5 text-[10.5px] uppercase text-muted-foreground">
                   <span
                     aria-hidden
-                    className="h-2.5 w-2.5 rounded-full ring-1 ring-border"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-border"
                     style={{ backgroundColor: compoundColor(vuelta.Compound) }}
                   />
                   {vuelta.Compound}
                 </span>
-              )}
-              <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
-                {vuelta.LapTime ?? '—'}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-    </div>
+              ) : (
+                <span key="goma" className="text-muted-foreground">
+                  —
+                </span>
+              ),
+            ]}
+            valor={vuelta.LapTime ?? '—'}
+            extra={vuelta.Compound ? [vuelta.Compound] : undefined}
+            destacada={indice === 0}
+          />
+        );
+      })}
+    </TarjetaDeTabla>
   );
 }

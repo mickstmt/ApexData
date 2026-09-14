@@ -31,6 +31,10 @@ export function CountryFlag({
     <Image
       src={`/images/flags/${iso}.svg`}
       alt={label}
+      // La marca con la que se reconoce una bandera desde fuera. `src` no vale:
+      // `next/image` lo reescribe a `/_next/image?url=…` y deja de contener la
+      // ruta del archivo.
+      data-bandera={iso}
       title={label}
       width={size}
       height={size}
