@@ -125,6 +125,22 @@ h1 { margin: 0 0 4px; font-size: clamp(22px,4vw,29px); line-height: 1.15; }
 .panel .tiempos { display: flex; justify-content: space-between; font: 400 12px/1 ui-monospace,monospace; color: var(--apagado); margin-bottom: 10px; }
 .panel input { width: 100%; }
 
+/* La barra de pestañas de la app, para ver cuanto sitio queda de verdad. */
+.tel[data-conBarra] { height: 250px; }
+.tel[data-conBarra] .mandos { bottom: 96px; }
+.pestanas {
+  position: absolute; left: 26px; right: 26px; bottom: 20px; height: 68px;
+  border: 1px solid rgba(255,255,255,.10); border-radius: 34px;
+  background: rgba(28,28,34,.9); display: flex; align-items: center;
+}
+.pestanas span {
+  flex: 1; display: grid; justify-items: center; gap: 3px;
+  font: 500 11.5px/1 inherit; color: var(--apagado);
+}
+.pestanas span i {
+  width: 26px; height: 26px; border-radius: 8px; border: 2px solid currentColor;
+}
+
 .nota { border: 1px solid var(--linea); border-radius: 14px; padding: 15px; font-size: 13.5px; color: var(--apagado); }
 .nota b { color: var(--texto); }
 .nota p { margin: 0 0 10px; } .nota p:last-child { margin: 0; }
@@ -166,7 +182,7 @@ h1 { margin: 0 0 4px; font-size: clamp(22px,4vw,29px); line-height: 1.15; }
   </div>
 
   <div class="opcion">
-    <h2>C · deslizador fino <span class="sello">Recomendada</span></h2>
+    <h2>C1 · deslizador fino, ARRIBA <span class="sello">Recomendada</span></h2>
     <p>Cuatro píxeles de alto, con <b>30 px de zona tocable invisible</b> alrededor — la lección de la barra de abajo, donde medimos que el 25 % no respondía. Se ve como un hilo y se agarra como un mando. <b>Arrástralo.</b></p>
     <div class="tel" data-relleno>
       <div class="mandos">
@@ -176,6 +192,21 @@ h1 { margin: 0 0 4px; font-size: clamp(22px,4vw,29px); line-height: 1.15; }
           <input type="range" min="0" max="1000" value="380" aria-label="Minuto de la carrera">
         </div>
         <div class="fila" data-botones></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="opcion">
+    <h2>C2 · el mismo deslizador, ABAJO</h2>
+    <p>Idéntico, pero debajo de los botones. Míralo con la barra de pestañas justo debajo: <b>quedan a 9 px una de otra</b>, y las dos se manejan con el pulgar.</p>
+    <div class="tel" data-relleno data-conBarra>
+      <div class="mandos">
+        <div class="fila" data-botones></div>
+        <div class="finoCaja" style="margin: 8px 12px 0">
+          <span class="fino"><i></i></span>
+          <span class="pulgar"></span>
+          <input type="range" min="0" max="1000" value="380" aria-label="Minuto de la carrera">
+        </div>
       </div>
     </div>
   </div>
@@ -204,7 +235,9 @@ h1 { margin: 0 0 4px; font-size: clamp(22px,4vw,29px); line-height: 1.15; }
     <p><b>Por qué recomiendo la C.</b> Es la única que devuelve lo que se perdió en vez de añadir algo nuevo: saltar a un momento. Y de paso hace lo de la <b>B</b> —siempre se ve por dónde vas—, así que la B queda incluida.</p>
     <p>Lo que hay que vigilar de la C, y por eso va escrito: cuatro píxeles se ven pero no se agarran. La zona tocable se construye a <b>30 px</b>, invisible, igual que se hizo con la barra de abajo. Si la eliges, lo compruebo en tu teléfono antes de darla por buena.</p>
     <p>La <b>D</b> me gusta como añadido a la C, no en su lugar: saltar por vueltas es muy de F1, pero no sustituye a poder ir al minuto 48.</p>
-    <p><b>Lo que necesito de ti</b>: una letra. Y si quieres dos —por ejemplo C y D juntas—, dímelo, que caben: sobran 138 px.</p>
+    <p><b>Arriba o abajo.</b> Lo normal en las apps es <b>arriba</b>: YouTube, Netflix, Apple Music, Spotify y el reproductor de vídeo de iOS ponen el progreso encima de los botones. Abajo solo aparece en los mini-reproductores, y ahí es un hilo que <b>no se toca</b> — justo lo que aquí no queremos.</p>
+    <p>Y hay una razón física además de la costumbre: la cápsula flota sobre la barra de pestañas. Con el deslizador abajo quedan <b>a 9 px</b>, y las dos se manejan con el pulgar — el mismo error que ya nos costó medir el 25 % de zona muerta. Arriba, el deslizador queda lo más lejos posible de la barra.</p>
+    <p><b>Lo que necesito de ti</b>: C1 o C2. Y si quieres añadir la D, dímelo, que caben: sobran 138 px.</p>
   </div>
 </div>
 
@@ -260,6 +293,17 @@ h1 { margin: 0 0 4px; font-size: clamp(22px,4vw,29px); line-height: 1.15; }
       caja.appendChild(f);
     });
     tel.insertBefore(caja, tel.firstChild);
+
+    if (tel.hasAttribute('data-conBarra')) {
+      var barra = document.createElement('div');
+      barra.className = 'pestanas';
+      ['Inicio', 'Fechas', 'Puntos', 'Pilotos', 'Más'].forEach(function (n) {
+        var s = document.createElement('span');
+        s.innerHTML = '<i></i>' + n;
+        barra.appendChild(s);
+      });
+      tel.appendChild(barra);
+    }
   });
 
   // El deslizador fino: el pulgar sigue al valor.
