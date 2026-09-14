@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { signIn, signOut } from 'next-auth/react';
-import { Bell, LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { Bell, Check, LogOut, Loader2, Mail, Moon, Settings, Sun } from 'lucide-react';
+import type { ViasDeAcceso } from '@/lib/cuentas/disponible';
 
 import { cn } from '@/lib/utils';
 
@@ -94,12 +95,13 @@ function MarcaGoogle() {
 
 export function PanelDeAjustes({
   cuenta,
-  hayCuentas,
+  vias,
 }: {
   cuenta: Cuenta | null;
-  /** Sin credenciales de Google no hay a dónde ir, así que no se ofrece. */
-  hayCuentas: boolean;
+  /** Qué vías de acceso existen hoy. No se ofrece lo que no está configurado. */
+  vias: ViasDeAcceso;
 }) {
+  const hayCuentas = vias.google || vias.correo;
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
   const boton = useRef<HTMLButtonElement>(null);
@@ -164,7 +166,7 @@ export function PanelDeAjustes({
         >
           {cuenta ? (
             <FilaDeCuenta cuenta={cuenta} />
-          ) : hayCuentas ? (
+          ) : vias.google ? (
             /**
              * «Iniciar sesión con Google», y no «Entrar».
              *
@@ -194,6 +196,8 @@ export function PanelDeAjustes({
               </span>
             </button>
           ) : null}
+
+          {!cuenta && vias.correo && <AccesoPorCorreo conGoogle={vias.google} />}
 
           {(cuenta || hayCuentas) && <Separador />}
 
@@ -225,6 +229,113 @@ export function PanelDeAjustes({
         </div>
       )}
     </div>
+  );
+}
+
+
+/**
+ * Entrar con el correo, sin contraseña.
+ *
+ * ## Por qué no pide contraseña
+ *
+ * Porque no hay ninguna que pedir: se escribe la dirección, llega un enlace y
+ * al pulsarlo se entra. Nadie tiene que inventarse una contraseña para una app
+ * de resultados de Fórmula 1, y aquí no se custodia el secreto de nadie.
+ *
+ * ## Por qué el aviso se queda dentro del panel
+ *
+ * `signIn` de next-auth lleva por defecto a una página suya que dice «Check
+ * your email» en inglés. Con `redirect: false` el envío se resuelve aquí y la
+ * confirmación sale donde estaba la mano, sin salir de la página ni cambiar de
+ * idioma.
+ */
+function AccesoPorCorreo({ conGoogle }: { conGoogle: boolean }) {
+  const [abierto, setAbierto] = useState(false);
+  const [correo, setCorreo] = useState('');
+  const [estado, setEstado] = useState<'quieto' | 'enviando' | 'enviado' | 'falló'>('quieto');
+
+  if (estado === 'enviado') {
+    return (
+      <p className="mt-2 flex items-start gap-2.5 rounded-xl border border-border bg-primary/[0.07] p-3 text-[12.5px] leading-relaxed">
+        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+        <span>
+          Te hemos enviado un enlace a <strong className="font-semibold">{correo}</strong>. Ábrelo
+          desde este mismo aparato y entrarás.
+        </span>
+      </p>
+    );
+  }
+
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="mt-2 flex w-full items-center gap-3 rounded-xl border border-border p-3 text-left ring-offset-background transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <span
+          aria-hidden
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground"
+        >
+          <Mail className="h-[18px] w-[18px]" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold">
+            {conGoogle ? 'O con tu correo' : 'Entrar con tu correo'}
+          </span>
+          <span className="block text-xs text-muted-foreground">Sin contraseña: te llega un enlace</span>
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <form
+      className="mt-2 rounded-xl border border-border p-3"
+      onSubmit={async (evento) => {
+        evento.preventDefault();
+        setEstado('enviando');
+
+        // `redirect: false` para que la confirmación salga aquí. Un fallo de
+        // red no puede quedarse en silencio: el botón volvería a decir «enviar»
+        // y parecería que no se pulsó.
+        const salida = await signIn('email', { email: correo, redirect: false });
+        setEstado(salida?.ok ? 'enviado' : 'falló');
+      }}
+    >
+      <label htmlFor="correo-de-acceso" className="mb-1.5 block text-xs text-muted-foreground">
+        Tu correo
+      </label>
+      <input
+        id="correo-de-acceso"
+        name="email"
+        type="email"
+        required
+        autoComplete="email"
+        autoFocus
+        value={correo}
+        onChange={(evento) => setCorreo(evento.target.value)}
+        placeholder="tu@correo.com"
+        // 16 px de letra: por debajo de eso, Safari en el iPhone hace zoom al
+        // enfocar el campo y deja la página torcida.
+        className="mb-2 h-11 w-full rounded-lg border border-input bg-background px-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
+      />
+
+      <button
+        type="submit"
+        disabled={estado === 'enviando'}
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground ring-offset-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60 md:h-10"
+      >
+        {estado === 'enviando' && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+        {estado === 'enviando' ? 'Enviando…' : 'Enviarme el enlace'}
+      </button>
+
+      {estado === 'falló' && (
+        <p role="alert" className="mt-2 text-xs text-destructive">
+          No se pudo enviar el enlace. Comprueba la dirección y vuelve a intentarlo.
+        </p>
+      )}
+    </form>
   );
 }
 

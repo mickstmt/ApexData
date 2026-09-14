@@ -10,6 +10,31 @@
  * variables de entorno pueden llegar después del primer módulo cargado; una
  * constante se quedaría con la foto del arranque.
  */
-export function hayCuentas(): boolean {
+export function hayGoogle(): boolean {
   return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}
+
+/** ¿Y con qué mandar un enlace de acceso por correo? */
+export function hayCorreo(): boolean {
+  return Boolean(process.env.RESEND_API_KEY);
+}
+
+/**
+ * ¿Se puede entrar de alguna manera?
+ *
+ * Con una vía basta para que la cuenta exista; de cuáles son se encarga la
+ * pantalla, que enseña una fila por cada una.
+ */
+export function hayCuentas(): boolean {
+  return hayGoogle() || hayCorreo();
+}
+
+/** Las vías de acceso que hay hoy, para pintar una fila por cada una. */
+export interface ViasDeAcceso {
+  google: boolean;
+  correo: boolean;
+}
+
+export function viasDeAcceso(): ViasDeAcceso {
+  return { google: hayGoogle(), correo: hayCorreo() };
 }

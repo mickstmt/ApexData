@@ -7,16 +7,17 @@ import { Menu, X } from 'lucide-react';
 import { Sheet } from '@/components/ui/Sheet';
 import { RejillaDeSecciones } from './Secciones';
 import { PanelDeAjustes, type Cuenta } from './PanelDeAjustes';
+import type { ViasDeAcceso } from '@/lib/cuentas/disponible';
 import { navItems } from '@/config/site';
 import { cn } from '@/lib/utils';
 
 export function Header({
   cuenta,
-  hayCuentas,
+  vias,
 }: {
   /** Quien ha entrado, leído en el servidor. `null` es «nadie». */
   cuenta: Cuenta | null;
-  hayCuentas: boolean;
+  vias: ViasDeAcceso;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -85,7 +86,7 @@ export function Header({
           </button>
           {/* El último de la fila, que es donde lo busca la mano. Dentro van la
               cuenta y el tema; el tema estaba aquí fuera y ya no. */}
-          <PanelDeAjustes cuenta={cuenta} hayCuentas={hayCuentas} />
+          <PanelDeAjustes cuenta={cuenta} vias={vias} />
         </div>
       </nav>
 

@@ -2,7 +2,8 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 
-import { hayCuentas } from '@/lib/cuentas/disponible';
+import { proveedorDeCorreo } from '@/lib/cuentas/correo';
+import { hayCorreo, hayGoogle } from '@/lib/cuentas/disponible';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -49,13 +50,14 @@ const SECRETO = process.env.GOOGLE_CLIENT_SECRET;
  * La misma pregunta que hace la interfaz para no ofrecer lo que no existe, pero
  * ella la hace a través de `@/lib/cuentas/disponible`, que no arrastra nada.
  */
-export const hayProveedores = hayCuentas();
+export const hayProveedores = hayGoogle();
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
 
-  providers: hayProveedores
-    ? [
+  providers: [
+    ...(hayProveedores
+      ? [
         GoogleProvider({
           clientId: CLIENTE!,
           clientSecret: SECRETO!,
@@ -70,7 +72,36 @@ export const authOptions: NextAuthOptions = {
           authorization: { params: { scope: 'openid email profile' } },
         }),
       ]
-    : [],
+      : []),
+    /**
+     * Y el correo, si hay con qué enviarlo.
+     *
+     * Va como objeto y no como `EmailProvider(...)` porque ese módulo carga
+     * `nodemailer` en su primera línea y aquí no se habla SMTP: se envía por la
+     * API de Resend. Ver `@/lib/cuentas/correo`.
+     *
+     * El molde viene del tipo `EmailConfig` de next-auth, que arrastra tipos de
+     * `nodemailer` para un campo —`server`— que este proveedor no usa. De ahí
+     * la conversión: lo que se declara arriba SÍ tiene la forma que next-auth
+     * lee en tiempo de ejecución.
+     */
+    ...(hayCorreo()
+      ? [proveedorDeCorreo() as unknown as NextAuthOptions['providers'][number]]
+      : []),
+  ],
+
+  /**
+   * La pantalla de error, en español.
+   *
+   * La de serie dice «Unable to sign in» y no explica cuál de los motivos
+   * posibles es. Un enlace de acceso caducado —llega al correo y se abre al día
+   * siguiente— es lo más normal del mundo y merece una frase, no un cartel.
+   *
+   * Las demás pantallas de next-auth no se sustituyen porque no se ven: se
+   * entra desde el panel de ajustes, y el envío del enlace se resuelve ahí
+   * mismo sin salir de la página.
+   */
+  pages: { error: '/acceso/error' },
 
   session: { strategy: 'jwt' },
 

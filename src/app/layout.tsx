@@ -19,7 +19,7 @@ import { ThemeColorSync } from '@/components/pwa/ThemeColorSync';
 import { IosInstallHint } from '@/components/pwa/IosInstallHint';
 import { APPLE_STARTUP_IMAGES } from '@/lib/apple-splash';
 import { authOptions } from '@/lib/auth';
-import { hayCuentas } from '@/lib/cuentas/disponible';
+import { hayCuentas, viasDeAcceso } from '@/lib/cuentas/disponible';
 
 // Chakra Petch carries the motorsport character without the sci-fi cliché
 // Orbitron brings; its real italics give headings the forward lean F1 uses.
@@ -184,7 +184,7 @@ export default async function RootLayout({
                 Saltar al contenido
               </a>
 
-              <Header cuenta={cuenta} hayCuentas={hayCuentas()} />
+              <Header cuenta={cuenta} vias={viasDeAcceso()} />
               {/* El armazón de escritorio: raíl a la izquierda, contenido a la
                   derecha, y el conjunto limitado al mismo ancho que la cabecera
                   y el pie (1280, ver `tailwind.config.ts`).
