@@ -733,6 +733,47 @@ test.describe('la tira de sesiones del fin de semana', () => {
     // un hueco a su izquierda, esto lo cazaría.
     expect(Math.abs(caja!.x - lista!.x)).toBeLessThan(2);
   });
+
+  /**
+   * Toda la casilla se puede pulsar, no solo la parte con texto.
+   *
+   * Lo reportado por el usuario: al pasar el cursor por PRÁCTICA 2 solo se
+   * sombreaba el 70 % del recuadro, y solo esa parte respondía al clic. Pasaba
+   * en las cuatro casillas a la derecha de la primera.
+   *
+   * La causa: la casilla se estira hasta la altura de la fila, que la fija la
+   * única que lleva cuenta atrás; el enlace de dentro medía lo que ocupaba su
+   * texto. El tercio de abajo parecía parte del botón y no lo era.
+   */
+  test('el enlace llena la casilla entera, no solo su texto', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+
+    const celdas = page.locator('ul[class*="grid-cols-2"] > li');
+    const cuantas = await celdas.count();
+    if (cuantas === 0) test.skip(true, 'No hay carrera próxima en el calendario');
+
+    const medidas = await celdas.evaluateAll((lis) =>
+      lis.map((li) => {
+        const enlace = li.querySelector('a')!;
+        return {
+          // `clientHeight` y no la caja: la casilla lleva borde abajo, y el
+          // enlace llena lo de dentro. Compararlo con la caja entera pediría un
+          // píxel que no existe y la prueba fallaría estando bien.
+          casilla: li.clientHeight,
+          enlace: Math.round(enlace.getBoundingClientRect().height),
+          texto: (li.textContent ?? '').slice(0, 24),
+        };
+      })
+    );
+
+    for (const m of medidas) {
+      expect(
+        m.enlace,
+        `«${m.texto}»: el enlace mide ${m.enlace} de ${m.casilla} px de casilla`
+      ).toBeGreaterThanOrEqual(m.casilla);
+    }
+  });
 });
 
 test.describe('calendario', () => {

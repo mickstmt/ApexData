@@ -117,7 +117,15 @@ export function SesionesDelFinDeSemana({
           <li
             key={sesion.nombre}
             aria-current={esProxima || enCurso ? 'step' : undefined}
-            className={`border-b border-r border-border last:border-r-0 ${
+            // `flex` para que el enlace de dentro llegue abajo del todo.
+            //
+            // La casilla se estira hasta la altura de la fila, que la fija la
+            // más alta —la única que lleva cuenta atrás—. El enlace, en cambio,
+            // medía lo que ocupaba su texto: en las otras cuatro quedaba un
+            // tercio de casilla que ni se sombreaba al pasar por encima ni se
+            // podía pulsar, aunque pareciera parte del mismo botón. Como hijo
+            // de un contenedor flex se estira solo.
+            className={`flex border-b border-r border-border last:border-r-0 ${
               carreraAncha && indice === ultima ? 'col-span-2' : ''
             } ${enCurso || esProxima ? 'bg-primary/5' : ''} ${
               estado === 'pasada' ? 'opacity-55' : ''
@@ -125,7 +133,7 @@ export function SesionesDelFinDeSemana({
           >
             <Link
               href={enlaceDe(sesion.nombre, year, round)}
-              className="block p-3 ring-offset-background transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              className="block flex-1 p-3 ring-offset-background transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {sesion.nombre}

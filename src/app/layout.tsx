@@ -100,8 +100,8 @@ export default async function RootLayout({
    *
    * Con `strategy: 'jwt'` esto es descifrar una cookie: ni una consulta a la
    * base. A cambio, la cabecera se pinta ya sabiendo de quién es la cuenta, en
-   * vez de enseñar «Entrar» y cambiarlo un instante después —que es lo que
-   * pasaría montando el proveedor de sesión de `next-auth` en el cliente—.
+   * vez de ofrecer iniciar sesión y cambiarlo un instante después —que es lo
+   * que pasaría montando el proveedor de sesión de `next-auth` en el cliente—.
    *
    * No hace la página dinámica: ya lo era por el `nonce` de arriba.
    */
@@ -110,7 +110,6 @@ export default async function RootLayout({
     ? {
         nombre: sesion.user.name ?? null,
         correo: sesion.user.email ?? null,
-        foto: sesion.user.image ?? null,
       }
     : null;
 

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { signIn, signOut } from 'next-auth/react';
-import { Bell, LogOut, Moon, Settings, Sun, User } from 'lucide-react';
+import { Bell, LogOut, Moon, Settings, Sun } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -41,13 +41,55 @@ import { cn } from '@/lib/utils';
 export interface Cuenta {
   nombre: string | null;
   correo: string | null;
-  foto: string | null;
 }
 
-/** La inicial para cuando Google no da foto, o el navegador no la carga. */
+/**
+ * La inicial, y por qué no la foto de Google.
+ *
+ * La sesión trae la URL de la foto, y se llegó a pintar: salía rota. La
+ * política de contenido de la app declara `img-src 'self' data: blob:`, así que
+ * el navegador bloquea cualquier imagen de otro dominio —incluido
+ * `lh3.googleusercontent.com`— sin decir nada en pantalla.
+ *
+ * Enseñarla de verdad significa abrirle la política a un dominio de Google y
+ * pedirle una imagen a Google en cada página que se abra. Eso es una decisión
+ * del usuario, no mía, así que hasta que la tome va la inicial: no depende de
+ * nadie de fuera y no se rompe.
+ */
 function inicial(cuenta: Cuenta): string {
   const texto = cuenta.nombre ?? cuenta.correo ?? '';
   return texto.trim().charAt(0).toUpperCase() || '?';
+}
+
+/**
+ * La «G» de Google, dibujada aquí.
+ *
+ * Va inline y no como archivo por lo mismo que la foto no se pinta: la política
+ * de contenido solo deja imágenes propias. Y Google pide su marca en el botón
+ * que lleva a su pantalla, así que dibujarla es la forma de cumplir sin abrir
+ * nada.
+ */
+function MarcaGoogle() {
+  return (
+    <svg viewBox="0 0 48 48" className="h-[18px] w-[18px]" aria-hidden focusable="false">
+      <path
+        fill="#4285F4"
+        d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17Z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M11.69 28.18c-.44-1.32-.69-2.73-.69-4.18s.25-2.86.69-4.18v-5.7H4.34A21.99 21.99 0 0 0 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07Z"
+      />
+    </svg>
+  );
 }
 
 export function PanelDeAjustes({
@@ -123,6 +165,16 @@ export function PanelDeAjustes({
           {cuenta ? (
             <FilaDeCuenta cuenta={cuenta} />
           ) : hayCuentas ? (
+            /**
+             * «Iniciar sesión con Google», y no «Entrar».
+             *
+             * «Entrar» lo escribí yo y el usuario lo cuestionó con razón: no
+             * dice a dónde se entra ni qué va a pedir, y no es lo que usa
+             * nadie. Un botón tiene que decir exactamente lo que pasa al
+             * pulsarlo, y lo que pasa es que se abre la pantalla de Google.
+             * Cuando exista el correo como segunda vía habrá dos filas, cada
+             * una diciendo la suya.
+             */
             <button
               type="button"
               onClick={() => signIn('google')}
@@ -130,12 +182,12 @@ export function PanelDeAjustes({
             >
               <span
                 aria-hidden
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/[0.16] text-primary"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-background"
               >
-                <User className="h-[18px] w-[18px]" />
+                <MarcaGoogle />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold">Entrar</span>
+                <span className="block text-sm font-semibold">Iniciar sesión con Google</span>
                 <span className="block text-xs text-muted-foreground">
                   Para que tus favoritos te sigan
                 </span>
@@ -183,28 +235,12 @@ function Separador() {
 function FilaDeCuenta({ cuenta }: { cuenta: Cuenta }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border p-3">
-      {/* Un `<img>` normal y no `next/image`: la foto viene del dominio de
-          Google y meterla por el optimizador obligaría a abrirle un hueco en
-          `remotePatterns` y a pagar una transformación por cada visita, para
-          una miniatura de 36 px que Google ya sirve del tamaño pedido. */}
-      {cuenta.foto ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={cuenta.foto}
-          alt=""
-          width={36}
-          height={36}
-          referrerPolicy="no-referrer"
-          className="h-9 w-9 shrink-0 rounded-full object-cover"
-        />
-      ) : (
-        <span
-          aria-hidden
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/[0.16] font-display text-sm font-bold text-primary"
-        >
-          {inicial(cuenta)}
-        </span>
-      )}
+      <span
+        aria-hidden
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/[0.16] font-display text-sm font-bold text-primary"
+      >
+        {inicial(cuenta)}
+      </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold">
           {cuenta.nombre ?? 'Tu cuenta'}
