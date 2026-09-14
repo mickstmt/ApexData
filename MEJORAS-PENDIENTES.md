@@ -38,7 +38,7 @@
 
 | Punto | Estado | Commit | Lo que quedo medido |
 |---|---|---|---|
-| **18** carrera de fuentes | HECHO, **sin verificar** | `1d2413b` + `432c669` | El segundo lo hizo otra sesion: el arreglo de la mañana seguia midiendo con sesgo. La prueba llega sola con la **FP3 del sabado 12, 10:30Z (05:30 en Lima)**: `firstProbe` cerca de `0m 00s` y `probes` mucho mayor que 1. |
+| **18** carrera de fuentes | **VERIFICADO** (2026-09-14) | `1d2413b` + `432c669` | El segundo lo hizo otra sesion: el arreglo de la mañana seguia midiendo con sesgo. **Comprobado con el fin de semana de España ya corrido**, leyendo `/api/fuentes` en produccion. El arreglo entro el 11 a las 21:39Z, asi que las dos practicas del viernes (12:30Z y 16:00Z) son anteriores y salen con `probes: 1` y `firstProbe: null` — el sesgo de antes, y se nota: 1906 vs 1883 s y 1908 vs 1879 s, un empate que no significa nada. Desde la **FP3 del sabado** (11:30Z) manda el codigo nuevo: `probes` 22/13/4 en fastf1 y 50/31/47 en openf1, con `firstProbe` entre 45 y 61 s — no `0m 00s` como decia la nota, porque el primer sondeo cae en el primer tic del reloj y el reloj va cada minuto. **Veredicto, y con las tres sesiones limpias es mas claro que la media que publica el endpoint**: fastf1 1558 s de media (597 carrera, 1500 clasi, 2577 FP3) contra 2553 de openf1 (2804, 1859, 2996). Fastf1 publica antes, por unos 16 minutos. |
 | **7 + 16** (parte de bug) | HECHO | `4428cee` | El pie medía 553 px DENTRO del replay en iPhone 390, entre el mapa pegado y los mandos. Y la barra no publicaba su alto: cinco sitios lo adivinaban (`4rem`, `4.5rem`, `4.75rem`, `5rem`) y el real es 60 px + borde seguro. Rendija de 4 px -> 0. Scroll 2163 -> 1546 px. |
 | **8** modo claro en el replay | HECHO | `9751d2d` | Decision del usuario contra mi recomendacion, y con razon: «si me das la opcion, damela bien». En claro el replay es `rgb(247,247,248)`, el mismo fondo que el cuerpo y las dos barras. En oscuro cada valor computado coincide uno a uno con el hex que estaba a fuego. |
 | **10b** cursor del scrubber | HECHO | `e4d7771` | No era del tema claro: el riel es `absolute` y el `input` era estatico, asi que el riel pintaba ENCIMA y partia el cursor. Pasaba igual en oscuro desde siempre. |
@@ -301,7 +301,7 @@ vez):
 **Donde mirar**: `previa.ts` (`diasDeCarrera`, `diaLocal`, `diaAnterior`, `tocaLaPrevia`),
 `previas-de-sesion.ts`, `zona.ts`, la tabla de marcas y el cron que lo dispara.
 
-## 5. TEXTO · Quitar «from ApexData» del aviso
+## 5. CERRADO · Quitar «from ApexData» del aviso — **NO SE PUEDE, no es nuestro**
 
 El usuario lo ve innecesario: con el logo en la notificacion basta.
 
@@ -593,14 +593,12 @@ empata siempre**. Hay que arreglar el arranque del sondeo antes de concluir nada
 **Lead**: mirarlo junto al punto 4 (la previa de mas). Los dos huelen a los tiempos del
 barrido. No es una conclusion, es por donde empezar.
 
-## 19. RECOMENDACION DADA · Navegador para la PWA en Android
+## 19. CERRADO · Navegador para la PWA en Android
 
-> **SIGUE ABIERTO, y depende del usuario.** La recomendacion esta dada, pero
-> lo importante —que Brave desactiva por defecto los servicios de Google para
-> mensajeria push, que es el canal del push web en Android— **no esta
-> verificado**. Hay que probarlo en su telefono: instalar la PWA en Brave y
-> comprobar si llega un aviso. Hasta entonces es una suposicion razonable, no
-> un hecho.
+> **CERRADO el 2026-09-14.** El usuario ya lo comprobo en su telefono. Queda
+> sin anotar **cual fue el resultado** —si los avisos llegan en Brave o no—,
+> que es lo unico que valdria la pena conservar de este punto. Si aparece, se
+> escribe aqui.
 
 Pregunta del usuario: ¿por que Chrome? ¿Y si usa Brave?
 
@@ -899,7 +897,7 @@ enteras— pero no vio que esas 8 empiezan en la sexta.
 anchos. La cifra que hay que batir es 8, que es lo que dio el 6+15.
 
 ---
-## VERIFICACION PENDIENTE — FP3 del sabado 12, **10:30Z (05:30 en Lima)**
+## VERIFICACION HECHA (2026-09-14) — la FP3 del sabado 12 ya corrio
 
 > **Corregido el 2026-09-11.** Aqui ponia «FP3 a las 11:30Z» y estaba mal: las
 > 11:30Z son la **FP1**, que fue el viernes 11. Consultado en la base, GP de
