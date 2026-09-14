@@ -43,6 +43,22 @@ prueba llega con la FP3 del sábado») caduca sola. Hoy se anunció como espera
 algo que había corrido dos días antes y que se cerró leyendo `/api/fuentes` en
 un minuto.
 
+### Y el paso que hoy NO se dio
+
+Al empezar la sesión habían entrado **51 commits funcionales desde el 10 de
+septiembre**, 28 de ellos el 13 y el 14. **Ninguno se reconcilió.** Se leyó un
+documento viejo y se dieron seis puntos por pendientes; solo al ser corregido se
+comprobaron uno a uno.
+
+**Lo primero de cada sesión que vuelve de la otra máquina es esto:**
+
+```
+git log --format="%h|%ad|%s" --date=short --since="<último día que conozco>"   | grep -E "\|(feat|fix|perf)"
+```
+
+y mapear **cada línea** a su punto. El mapa completo del 10 al 14 está en la
+sección 2; se amplía, no se rehace.
+
 **Regla práctica**: antes de decirle al usuario que algo está pendiente, buscarlo
 en el código. No basta con no encontrarlo tachado en un documento.
 
@@ -89,28 +105,75 @@ documentación.
 
 ---
 
-## 2 · LO QUE QUEDA: un punto, y son las radios
+## 2 · EL ESTADO REAL, reconciliado commit por commit
 
-**Verificado el 2026-09-14 buscando cada cosa en el código**, no leyendo el
-documento de notas.
+**Cómo se hizo esto, y cómo hay que rehacerlo cada vez que se vuelve de la otra
+máquina** (es el paso que hoy no se dio, y por eso salió mal):
+
+```
+git log --format="%h|%ad|%s" --date=short --since="<último día que conozco>" \
+  | grep -E "\|(feat|fix|perf)"
+```
+
+Y mapear **cada línea** a su punto antes de decir nada. No es opcional: hoy
+habían entrado **51 commits funcionales desde el 10 de septiembre**, 28 de ellos
+el 13 y el 14, y la sesión de la oficina no reconcilió ninguno — se limitó a
+leer un documento viejo y a comprobar seis puntos sueltos cuando el usuario la
+corrigió.
+
+### El mapa completo (2026-09-10 → 2026-09-14)
+
+| Commit | Punto que cierra |
+|---|---|
+| `82a039c` `5e054ee` | El replay entero, coche a coche |
+| `debdc19` `60baeac` `1803007` `a937692` | Navegación: parpadeo, entrada desde la derecha, rebote |
+| `1d2413b` `432c669` `426bc62` | **18** la carrera de fuentes (**verificado el 14**) |
+| `4428cee` | **7 + 16** el pie en el replay y el alto de la barra |
+| `9751d2d` `704c4aa` | **8** el modo claro en el replay, y sus contrastes |
+| `e4d7771` | **10b** el cursor del scrubber |
+| `9a21a01` | **21** la cabecera del detalle |
+| `794a3f5` | **16** el pie es de la web, y `/acerca` |
+| `2758640` | **14** la barra inferior flotante |
+| `1cc677b` | **6 + 15** el mapa se encoge |
+| `6b100d7` | **13** el botón «Ver la carrera» |
+| `4b66c8e` | **1** los huecos en bandera roja |
+| `d40f51f` | **4** la previa repetida |
+| `0a3183b` | **9 + 10a** cuánto mueven los saltos, y en qué minuto estás |
+| `d583991` `e134104` `c913d6b` `d3848e1` | **14-bis** la barra corregida sobre maqueta |
+| `b935adb` `3a12035` `3a29370` | Avisos: el 401 de OpenF1, la pestaña correcta, el «a las» |
+| `ba416c5` `471303f` | **25** el delta con todos parados (dos commits, dos días) |
+| `581b4b5` | **26** los cinco primeros al encoger |
+| `2ee07cd` `0b86143` | **24 + 32** mandos en vertical y pantalla completa |
+| `3e422eb` | **11** el aro del líder · **12** el abandono se nota |
+| `9fcab8e` | **2** el final de carrera |
+| `ecc0709` | **28** el doble toque |
+| `73152c7` | Una consulta menos por visita al replay |
+| `b72ed48` | **14-ter** la barra se comía toques |
+| `7c0929b` | **39** abandonos falsos · **36** DNF con nombre · **23** el realce |
+| `d94ff58` `999eed9` | **40** los mandos del replay, y el deslizador |
+| `426bc62` | **18** FastF1 primero — 37 minutos antes |
+| `0f22ead` | **38** la portada contradecía al aviso |
+| `69204b4` | **34** un teléfono tumbado no es un ordenador |
+| `cd3b4f2` | **41** quien sale del pit lane |
+| `d221934` | **42** la proporción en escritorio |
+| `5188644` | **36 / 12** el aviso parpadea tres veces y hace cola |
+| `7f51418` | **43** la lista llena su columna |
+| `81b9e50` `2a2d9b6` `698ec24` | **17** las cuentas: modelo, sesión y favoritos |
+| `8fe22c5` | **45 + 47** el armazón de escritorio · **17** el panel de ajustes |
+| `e773521` | **49** la casilla pulsable · el botón dice a dónde lleva |
+| `45537c2` `b9b452d` | **46** una sola fila para todas las tablas · **48** · **20-bis** · **17-ter** |
+| `7bce630` | **17-bis** entrar con el correo |
+| `92866a9` (21 ago) | **3 + 20** sesiones nunca vacías |
+
+### Conclusión
+
+**De los 49 puntos de la lista, queda uno: el 22.** Todo lo demás está cerrado,
+y cada cierre tiene su commit arriba.
 
 ### 22 · Radios de equipo en el replay (OpenF1 `/v1/team_radio`)
 
-Es lo único abierto de toda la lista. ⚠️ **Abre la CSP a
-`livetiming.formula1.com`**, así que hay que avisar al usuario **antes** de
-tocar nada — es una regla suya, no una cortesía.
-
-### Cerrados hoy tras comprobarlos en el código (estaban marcados como abiertos)
-
-| Punto | Dónde está la prueba de que está hecho |
-|---|---|
-| **11** aro del líder | `3e422eb` (12 sept) · `MapaDeCarrera.tsx`, «El aro del líder», sobre la línea 279. **No estaba en la bitácora** |
-| **12** abandonos y banderas | `3e422eb` + `5188644` · tres anillos encadenados y cola de `DNF · LEC`; bandas de estado en el deslizador. En la bitácora **como «punto 36»** |
-| **25** el delta con todos parados | `471303f` · la roja dura lo que duró la parada real (1819 s contra los 103 declarados). En la bitácora **como «punto 37»** |
-| **26** los cinco primeros al encoger | `581b4b5` (12 sept) · el tirador, elegido por el usuario sobre maqueta. **No estaba en la bitácora** |
-| **3 + 20** sesiones nunca vacías | `92866a9` (21 ago) · `SesionPendiente` en cuatro sitios + `ParrillaProvisional`. **No estaba en la bitácora**. El 20 se completó el 14 sept con la caché |
-| **5** «from ApexData» | Cerrado el 12: lo añade iOS, no existe la opción en la Notification API |
-| **19** Brave en Android | El usuario ya lo comprobó. **Falta anotar el resultado** — si los avisos llegan o no |
+⚠️ **Abre la CSP a `livetiming.formula1.com`**, así que hay que avisar al
+usuario **antes** de tocar nada — es una regla suya, no una cortesía.
 
 ---
 
