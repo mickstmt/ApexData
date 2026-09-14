@@ -16,18 +16,22 @@ export const siteConfig = {
 } as const;
 
 /**
- * Primary navigation, consumed by the header (desktop bar and mobile sheet).
- * `primary: false` keeps an entry out of the always-visible desktop row, which
- * otherwise overflows its container on narrow laptops and iPads.
+ * Las secciones de la app, en el orden en que se ven.
+ *
+ * Las consumen los tres sitios que navegan: el raíl de escritorio, la hoja de
+ * la cabecera entre `md` y `lg`, y la barra flotante del teléfono. Ya no hay
+ * marca de «principal»: existía para decidir cuáles de las nueve cabían en la
+ * fila de la cabecera, y desde que la navegación larga vive en el raíl no hay
+ * ninguna fila que repartir.
  */
 export const navItems = [
-  { title: 'Inicio', href: '/', primary: true },
-  { title: 'Pilotos', href: '/drivers', primary: true },
-  { title: 'Equipos', href: '/constructors', primary: true },
-  { title: 'Calendario', href: '/calendar', primary: true },
-  { title: 'Clasificación', href: '/standings', primary: true },
-  { title: 'Resultados', href: '/results', primary: true },
-  { title: 'Circuitos', href: '/circuits', primary: false },
-  { title: 'Telemetría', href: '/analysis', primary: false },
-  { title: 'Favoritos', href: '/favorites', primary: false },
+  { title: 'Inicio', href: '/' },
+  { title: 'Pilotos', href: '/drivers' },
+  { title: 'Equipos', href: '/constructors' },
+  { title: 'Calendario', href: '/calendar' },
+  { title: 'Clasificación', href: '/standings' },
+  { title: 'Resultados', href: '/results' },
+  { title: 'Circuitos', href: '/circuits' },
+  { title: 'Telemetría', href: '/analysis' },
+  { title: 'Favoritos', href: '/favorites' },
 ] as const;

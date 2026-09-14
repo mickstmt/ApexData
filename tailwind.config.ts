@@ -11,6 +11,31 @@ const config: Config = {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    /**
+     * Hasta dónde se estira el contenido.
+     *
+     * Por defecto `.container` llega a 1536 px en pantallas grandes, y eso es
+     * lo que hacía que en un monitor la app fuera una tabla de borde a borde:
+     * una fila de clasificación con tres datos repartida en metro y medio. Las
+     * apps de esta familia —FotMob, Flashscore— se quedan cerca de 1280 y usan
+     * el ancho sobrante para repartir en columnas, no para estirar.
+     *
+     * 1280 no es un gusto: es lo que decide si al lado del contenido caben el
+     * raíl de secciones (232) y una columna de contexto (300) sin dejar la
+     * tabla por debajo de los 700 px en los que deja de leerse.
+     *
+     * Se declara aquí y no en `extend` porque hay que SUSTITUIR la lista que
+     * trae Tailwind, no añadirle nada: extenderla dejaría el 1536 en pie.
+     */
+    container: {
+      screens: {
+        sm: '640px',
+        md: '768px',
+        lg: '1024px',
+        xl: '1280px',
+        '2xl': '1280px',
+      },
+    },
     extend: {
       /**
        * `pc`: hay ancho de escritorio Y altura para usarlo.

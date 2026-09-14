@@ -6,13 +6,18 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Sheet } from '@/components/ui/Sheet';
 import { RejillaDeSecciones } from './Secciones';
-import { ThemeToggle } from './ThemeToggle';
+import { PanelDeAjustes, type Cuenta } from './PanelDeAjustes';
 import { navItems } from '@/config/site';
 import { cn } from '@/lib/utils';
 
-const primaryItems = navItems.filter((item) => item.primary);
-
-export function Header() {
+export function Header({
+  cuenta,
+  hayCuentas,
+}: {
+  /** Quien ha entrado, leído en el servidor. `null` es «nadie». */
+  cuenta: Cuenta | null;
+  hayCuentas: boolean;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   // `Escape`, el foco atrapado dentro y el foco devuelto al botón ya no se
@@ -31,7 +36,7 @@ export function Header() {
           lugar de él, para no perder el desenfoque; y como `--ambiente` vale
           por defecto lo mismo que el fondo, sin equipo elegido no se ve. */}
       <span aria-hidden className="pointer-events-none absolute inset-0 bg-ambiente/[0.14]" />
-      <nav className="container relative mx-auto flex h-16 items-center justify-between gap-4 px-4">
+      <nav className="container relative mx-auto flex h-16 items-center gap-5 px-4">
         <Link href="/" className="flex shrink-0 items-center">
           <span className="font-display text-2xl font-bold tracking-tight">
             <span className="text-foreground">Apex</span>
@@ -39,36 +44,38 @@ export function Header() {
           </span>
         </Link>
 
-        {/* Only the primary entries sit in the bar; the rest are behind "Más",
-            which keeps the row from wrapping on iPads and small laptops. */}
+        {/* Las secciones NO están aquí.
+
+            Estaban: seis enlaces en fila, y los otros tres detrás de un botón.
+            A partir de `lg` viven en el raíl de la izquierda, donde caben las
+            nueve y se leen a la vez. Lo que queda arriba es lo que no es una
+            sección —habla de la app, no lleva a datos—, que es exactamente el
+            reparto de las referencias: cabecera casi vacía, navegación al
+            lado. */}
         <div className="hidden items-center gap-5 lg:flex">
-          {primaryItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive(item.href) ? 'page' : undefined}
-              className={cn(
-                'text-sm font-medium transition-colors hover:text-primary',
-                isActive(item.href) ? 'text-foreground' : 'text-foreground/60'
-              )}
-            >
-              {item.title}
-            </Link>
-          ))}
+          <Link
+            href="/acerca"
+            aria-current={isActive('/acerca') ? 'page' : undefined}
+            className={cn(
+              'text-sm font-medium transition-colors hover:text-primary',
+              isActive('/acerca') ? 'text-foreground' : 'text-foreground/60'
+            )}
+          >
+            Acerca de
+          </Link>
         </div>
 
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
+        <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
-            // Oculto justo donde aparece la barra de pestañas.
+            // Solo entre `md` y `lg`, que es la única franja sin navegación.
             //
             // Debajo de `md` el menú se abre desde «Más», abajo, al alcance del
             // pulgar; dejar aquí un segundo botón para lo mismo sería dar dos
-            // puertas a la misma habitación. Entre `md` y `lg` no hay barra ni
-            // enlaces en la cabecera, así que este botón es la única
-            // navegación que queda y tiene que estar.
-            className="hidden h-11 w-11 items-center justify-center rounded-md text-foreground ring-offset-background hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:flex md:h-10 md:w-10"
+            // puertas a la misma habitación. Y a partir de `lg` está el raíl,
+            // que enseña las nueve sin abrir nada: ahí este botón sería la
+            // tercera puerta.
+            className="hidden h-11 w-11 items-center justify-center rounded-md text-foreground ring-offset-background hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:flex md:h-10 md:w-10 lg:hidden"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
             aria-expanded={menuOpen}
@@ -76,6 +83,9 @@ export function Header() {
           >
             {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
+          {/* El último de la fila, que es donde lo busca la mano. Dentro van la
+              cuenta y el tema; el tema estaba aquí fuera y ya no. */}
+          <PanelDeAjustes cuenta={cuenta} hayCuentas={hayCuentas} />
         </div>
       </nav>
 

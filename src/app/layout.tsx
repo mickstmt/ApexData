@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import { getServerSession } from 'next-auth';
 import type { Metadata, Viewport } from 'next';
 import { Chakra_Petch, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
@@ -12,10 +13,13 @@ import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import { TeamAccent } from '@/components/providers/TeamAccent';
 import { SplashScreen } from '@/components/pwa/SplashScreen';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
+import { RailDeSecciones } from '@/components/layout/RailDeSecciones';
 import { PwaRegister } from '@/components/pwa/PwaRegister';
 import { ThemeColorSync } from '@/components/pwa/ThemeColorSync';
 import { IosInstallHint } from '@/components/pwa/IosInstallHint';
 import { APPLE_STARTUP_IMAGES } from '@/lib/apple-splash';
+import { authOptions } from '@/lib/auth';
+import { hayCuentas } from '@/lib/cuentas/disponible';
 
 // Chakra Petch carries the motorsport character without the sci-fi cliché
 // Orbitron brings; its real italics give headings the forward lean F1 uses.
@@ -91,6 +95,25 @@ export default async function RootLayout({
   // de la respuesta y en el HTML.
   const nonce = (await headers()).get('x-nonce') ?? undefined;
 
+  /**
+   * Quién ha entrado, resuelto aquí y no en el navegador.
+   *
+   * Con `strategy: 'jwt'` esto es descifrar una cookie: ni una consulta a la
+   * base. A cambio, la cabecera se pinta ya sabiendo de quién es la cuenta, en
+   * vez de enseñar «Entrar» y cambiarlo un instante después —que es lo que
+   * pasaría montando el proveedor de sesión de `next-auth` en el cliente—.
+   *
+   * No hace la página dinámica: ya lo era por el `nonce` de arriba.
+   */
+  const sesion = hayCuentas() ? await getServerSession(authOptions) : null;
+  const cuenta = sesion?.user
+    ? {
+        nombre: sesion.user.name ?? null,
+        correo: sesion.user.email ?? null,
+        foto: sesion.user.image ?? null,
+      }
+    : null;
+
   return (
     <html lang="es" className={`${display.variable} ${inter.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="flex min-h-dvh flex-col" suppressHydrationWarning>
@@ -162,10 +185,23 @@ export default async function RootLayout({
                 Saltar al contenido
               </a>
 
-              <Header />
-              <main id="contenido" className="flex-1">
-                <PageTransition>{children}</PageTransition>
-              </main>
+              <Header cuenta={cuenta} hayCuentas={hayCuentas()} />
+              {/* El armazón de escritorio: raíl a la izquierda, contenido a la
+                  derecha, y el conjunto limitado al mismo ancho que la cabecera
+                  y el pie (1280, ver `tailwind.config.ts`).
+
+                  Las páginas siguen trayendo su propio `.container`, y no hay
+                  que tocarlas: dentro de `main` ese contenedor ya no tiene sitio
+                  para estirarse más allá de lo que le deja el armazón, así que
+                  se limita a poner los márgenes laterales de siempre. Por
+                  debajo de `lg` el raíl no se pinta y `main` ocupa el ancho
+                  entero, que es exactamente lo que había hasta ahora. */}
+              <div className="mx-auto flex w-full max-w-[1280px] flex-1">
+                <RailDeSecciones />
+                <main id="contenido" className="min-w-0 flex-1">
+                  <PageTransition>{children}</PageTransition>
+                </main>
+              </div>
               {/* El pie, y el hueco que le deja la barra inferior para que
                   siga siendo alcanzable en el móvil. Las pantallas que ocupan
                   la ventana entera no llevan ninguno de los dos. */}

@@ -41,8 +41,8 @@ import { cn } from '@/lib/utils';
 /** Una entrada de la navegación, tal como la declara `site.ts`. */
 export type Seccion = (typeof navItems)[number];
 
-/** El icono de cada sección, por su ruta. */
-const ICONOS: Record<string, LucideIcon> = {
+/** El icono de cada sección, por su ruta. Lo comparten la rejilla y el raíl. */
+export const ICONOS: Record<string, LucideIcon> = {
   '/': Home,
   '/drivers': Users,
   '/constructors': Shield,

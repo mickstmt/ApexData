@@ -2,6 +2,7 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 
+import { hayCuentas } from '@/lib/cuentas/disponible';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -42,8 +43,13 @@ import { prisma } from '@/lib/prisma';
 const CLIENTE = process.env.GOOGLE_CLIENT_ID;
 const SECRETO = process.env.GOOGLE_CLIENT_SECRET;
 
-/** ¿Hay con qué entrar? Lo consulta también la interfaz, para no ofrecer lo que no existe. */
-export const hayProveedores = Boolean(CLIENTE && SECRETO);
+/**
+ * ¿Hay con qué entrar?
+ *
+ * La misma pregunta que hace la interfaz para no ofrecer lo que no existe, pero
+ * ella la hace a través de `@/lib/cuentas/disponible`, que no arrastra nada.
+ */
+export const hayProveedores = hayCuentas();
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),

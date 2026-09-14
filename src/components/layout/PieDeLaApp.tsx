@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { esPantallaCompleta } from '@/lib/pantallas-completas';
 import { Footer } from './Footer';
 
 /**
@@ -17,15 +18,16 @@ import { Footer } from './Footer';
  *
  * La otra pregunta —si la app instalada debe llevar pie— ya está contestada, y
  * no aquí: la respuesta es que no, y la aplica una regla de CSS sobre
- * `[data-instalada]`. Lo que este componente decide es solo qué pantallas no
- * lo llevan en ningún caso.
+ * `[data-instalada]`.
+ *
+ * Cuáles son esas pantallas tampoco se decide aquí: está en
+ * `@/lib/pantallas-completas`, porque el raíl de secciones se aparta de las
+ * mismas y dos listas separadas acabarían diciendo cosas distintas.
  */
-const PANTALLAS_COMPLETAS = [/^\/results\/[^/]+\/[^/]+\/replay\/?$/];
-
 export function PieDeLaApp() {
   const pathname = usePathname();
 
-  if (PANTALLAS_COMPLETAS.some((ruta) => ruta.test(pathname))) return null;
+  if (esPantallaCompleta(pathname)) return null;
 
   // El hueco que deja la barra inferior, para que lo último de la página no
   // quede debajo de ella.

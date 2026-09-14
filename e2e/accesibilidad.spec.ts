@@ -2256,6 +2256,210 @@ test.describe('menú de secciones', () => {
   });
 });
 
+/**
+ * El armazón de escritorio (puntos 45 y 47).
+ *
+ * En la web la navegación era la del teléfono estirada: seis enlaces arriba y
+ * los otros tres detrás de un botón que abría una hoja de móvil en un monitor.
+ * Estas pruebas fijan el reparto nuevo —raíl a la izquierda con las nueve, nada
+ * que abrir— y el ancho máximo del que depende que ese raíl quepa.
+ */
+test.describe('el armazón de escritorio', () => {
+  const ESCRITORIO = { width: 1440, height: 900 };
+
+  test('las nueve secciones están a la vista, sin abrir nada', async ({ page }) => {
+    await page.setViewportSize(ESCRITORIO);
+    await page.goto('/standings');
+
+    const rail = page.getByRole('navigation', { name: 'Secciones' });
+    await expect(rail).toBeVisible();
+    await expect(rail.getByRole('link')).toHaveCount(9);
+
+    // Y ninguna otra puerta a lo mismo: ni el botón de la cabecera ni la barra
+    // del teléfono. Tres formas de llegar al mismo sitio es lo que había.
+    await expect(page.getByRole('button', { name: 'Abrir menú' })).toBeHidden();
+    await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeHidden();
+  });
+
+  test('el raíl dice en qué sección estás', async ({ page }) => {
+    await page.setViewportSize(ESCRITORIO);
+    await page.goto('/standings');
+
+    const rail = page.getByRole('navigation', { name: 'Secciones' });
+    await expect(rail.getByRole('link', { name: 'Clasificación' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+  });
+
+  test('en una tableta no hay raíl, y el botón sigue siendo la única puerta', async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await page.goto('/standings');
+
+    await expect(page.getByRole('navigation', { name: 'Secciones' })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Abrir menú' })).toBeVisible();
+  });
+
+  /**
+   * El contenido no se estira hasta el borde del monitor.
+   *
+   * Punto 47. No es una preferencia: 1280 es lo que decide si al lado de la
+   * tabla caben el raíl y una columna de contexto sin dejarla por debajo de los
+   * 700 px en los que deja de leerse. Con el ancho de antes —1536— esta prueba
+   * falla por 256 px.
+   */
+  test('nada se estira más allá de 1280', async ({ page }) => {
+    await page.setViewportSize({ width: 2560, height: 1440 });
+    await page.goto('/standings');
+
+    const anchoCabecera = await page
+      .locator('header nav')
+      .first()
+      .evaluate((el) => Math.round(el.getBoundingClientRect().width));
+
+    expect(anchoCabecera).toBeLessThanOrEqual(1280);
+
+    // Y el raíl arranca en la misma vertical que la marca de la cabecera. Es
+    // lo que delata si el armazón y el contenedor de las páginas están
+    // midiendo cosas distintas: se ve como un escalón en el borde izquierdo.
+    const [izquierdaMarca, izquierdaRail] = await Promise.all([
+      page
+        .getByRole('link', { name: 'ApexData' })
+        .first()
+        .evaluate((el) => Math.round(el.getBoundingClientRect().left)),
+      page
+        .getByRole('navigation', { name: 'Secciones' })
+        .evaluate((el) => Math.round(el.getBoundingClientRect().left)),
+    ]);
+
+    expect(Math.abs(izquierdaMarca - izquierdaRail)).toBeLessThanOrEqual(2);
+  });
+});
+
+/**
+ * Los ajustes, detrás de un engranaje.
+ *
+ * El tema era un botón suelto en la cabecera y la cuenta iba a ser otro al
+ * lado. Las referencias que trajo el usuario —FotMob, Flashscore— no hacen eso:
+ * las dos cosas viven dentro de un panel de ajustes. Estas pruebas fijan que el
+ * tema ya no esté fuera y que el panel se comporte como debe.
+ */
+test.describe('panel de ajustes', () => {
+  test('el tema vive dentro del panel, no en la cabecera', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/standings');
+
+    // Cerrado, no hay ningún mando de tema en la página.
+    await expect(page.getByRole('group', { name: 'Tema' })).toBeHidden();
+
+    await page.getByRole('button', { name: 'Ajustes' }).click();
+
+    const panel = page.getByRole('dialog', { name: 'Ajustes' });
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole('group', { name: 'Tema' })).toBeVisible();
+  });
+
+  test('desde el panel se cambia el tema de verdad', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/standings');
+    await page.getByRole('button', { name: 'Ajustes' }).click();
+
+    const tema = page.getByRole('dialog', { name: 'Ajustes' }).getByRole('group', { name: 'Tema' });
+
+    await tema.getByRole('button', { name: 'Oscuro' }).click();
+    await expect(page.locator('html')).toHaveClass(/dark/);
+    await expect(tema.getByRole('button', { name: 'Oscuro' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+
+    await tema.getByRole('button', { name: 'Claro' }).click();
+    await expect(page.locator('html')).not.toHaveClass(/dark/);
+  });
+
+  test('Escape lo cierra y devuelve el foco al engranaje', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/standings');
+
+    const engranaje = page.getByRole('button', { name: 'Ajustes' });
+    await engranaje.click();
+    await expect(page.getByRole('dialog', { name: 'Ajustes' })).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Ajustes' })).toBeHidden();
+    await expect(engranaje).toBeFocused();
+  });
+
+  test('tocar fuera lo cierra', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/standings');
+
+    await page.getByRole('button', { name: 'Ajustes' }).click();
+    await expect(page.getByRole('dialog', { name: 'Ajustes' })).toBeVisible();
+
+    // Una esquina de la página, lejos del panel y del botón.
+    await page.mouse.click(30, 400);
+    await expect(page.getByRole('dialog', { name: 'Ajustes' })).toBeHidden();
+  });
+});
+
+/**
+ * La clasificación empieza por los pilotos (punto 48).
+ *
+ * Abría con el gráfico de evolución: 280 px de altura antes de ver a nadie, en
+ * la pantalla a la que se entra para saber quién va primero. Esta prueba mide
+ * el orden en la página, que es lo que se pidió cambiar.
+ */
+test.describe('orden de la clasificación', () => {
+  test('el primer piloto se ve antes que el gráfico', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/standings');
+
+    const pilotos = page.getByRole('heading', { name: 'Campeonato de Pilotos' });
+    await expect(pilotos).toBeVisible();
+
+    const grafico = page.getByRole('heading', { name: 'Evolución del campeonato' });
+    await expect(grafico).toBeVisible();
+
+    const [arribaPilotos, arribaGrafico] = await Promise.all([
+      pilotos.evaluate((el) => Math.round(el.getBoundingClientRect().top + window.scrollY)),
+      grafico.evaluate((el) => Math.round(el.getBoundingClientRect().top + window.scrollY)),
+    ]);
+
+    expect(arribaPilotos).toBeLessThan(arribaGrafico);
+  });
+
+  /**
+   * Los constructores son una columna de contexto, no media página.
+   *
+   * Antes las dos tablas se repartían el ancho a la mitad, y la de pilotos
+   * —que es a lo que se viene, y la que lleva foto, bandera, equipo y puntos—
+   * se quedaba con lo mismo que una lista de diez nombres. Esta prueba mide ese
+   * reparto: con las dos al 50 % falla.
+   */
+  test('los pilotos se llevan el ancho, y los constructores acompañan', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/standings');
+
+    const filaPiloto = page.locator('a[href^="/drivers/"][data-flip-id]').first();
+    const filaEquipo = page.locator('a[href^="/constructors/"][data-flip-id]').first();
+    await expect(filaEquipo).toBeVisible();
+
+    const [caja, cajaEquipo] = await Promise.all([
+      filaPiloto.boundingBox(),
+      filaEquipo.boundingBox(),
+    ]);
+
+    // A la derecha y arrancando a la misma altura: acompaña, no va detrás.
+    expect(cajaEquipo!.x).toBeGreaterThan(caja!.x + caja!.width - 1);
+    expect(Math.abs(cajaEquipo!.y - caja!.y)).toBeLessThanOrEqual(4);
+
+    // Y con la mitad de ancho, no con el mismo.
+    expect(caja!.width).toBeGreaterThan(cajaEquipo!.width * 1.5);
+  });
+});
+
+
 test.describe('acento por equipo favorito', () => {
   const tono = (page: import('@playwright/test').Page) =>
     page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--primary').trim());

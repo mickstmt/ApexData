@@ -183,7 +183,7 @@ async function ChampionshipEvolution({
   if (evolution.length <= 1) return null;
 
   return (
-    <section className="mb-10">
+    <section>
       <h2 className="mb-1 font-display text-xl font-semibold">Evolución del campeonato</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         Puntos acumulados de los cinco primeros. Los compañeros de equipo comparten color, así que
@@ -199,7 +199,7 @@ async function ChampionshipEvolution({
 /** Mismo hueco que ocupará el gráfico, para que nada salte al llegar. */
 function EvolutionSkeleton() {
   return (
-    <section className="mb-10" aria-hidden>
+    <section aria-hidden>
       <div className="mb-1 h-7 w-64 animate-pulse rounded bg-muted" />
       <div className="mb-4 h-5 w-full max-w-xl animate-pulse rounded bg-muted" />
       <div className="rounded-xl border border-border bg-card p-4">
@@ -222,9 +222,9 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
   } = await getStandings(displayYear);
 
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-12">
+      <div className="mb-8">
         <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <Trophy className="h-8 w-8 text-primary" />
@@ -239,12 +239,6 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
           {round > 0 && ` · tras la ronda ${round}`}
         </p>
       </div>
-
-      {leaders.length > 1 && (
-        <Suspense fallback={<EvolutionSkeleton />}>
-          <ChampionshipEvolution year={displayYear} round={round} leaders={leaders} />
-        </Suspense>
-      )}
 
       {failed ? (
         <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-12 text-center">
@@ -270,9 +264,24 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
           </p>
         </div>
       ) : (
-        <div className="grid gap-8 lg:grid-cols-2">
+        /**
+         * Los pilotos primero, y el resto a su alrededor.
+         *
+         * Antes esta página abría con el gráfico de evolución: 280 px de altura
+         * antes de ver a nadie, en la pantalla a la que se entra para ver quién
+         * va primero (punto 48). Ahora lo primero son los pilotos, los
+         * constructores acompañan en una columna estrecha —diez filas de nombre
+         * y puntos, que es justo lo que cabe ahí— y el gráfico queda debajo de
+         * los pilotos, donde explica lo que ya se ha leído.
+         *
+         * El gráfico NO va en la columna de la derecha aunque sea lo que pide
+         * la simetría: su dibujo mide 720 px de ancho y rotularlo a 320 deja
+         * las cifras de los ejes ilegibles. Debajo de los pilotos le quedan
+         * ~670, que es prácticamente su tamaño natural.
+         */
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           {/* Drivers Standings */}
-          <div>
+          <div className="min-w-0 xl:col-start-1 xl:row-start-1">
             <h2 className="mb-6 text-2xl font-bold">
               <Medal className="mb-1 inline-block h-6 w-6 text-primary" /> Campeonato de Pilotos
             </h2>
@@ -342,9 +351,9 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
           </div>
 
           {/* Constructors Standings */}
-          <div>
+          <aside className="min-w-0 xl:col-start-2 xl:row-start-1">
             <h2 className="mb-6 text-2xl font-bold">
-              <Award className="mb-1 inline-block h-6 w-6 text-primary" /> Campeonato de Constructores
+              <Award className="mb-1 inline-block h-6 w-6 text-primary" /> Constructores
             </h2>
 
             <FlipRows className="space-y-2">
@@ -360,7 +369,10 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                     data-flip-id={entry.constructorId}
                     data-equipo={entry.constructorId}
                     href={`/constructors/${entry.constructorId}`}
-                    className={`relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 pl-5 transition-[transform,colors] duration-100 ease-out active:scale-[0.99] motion-reduce:active:scale-100 ${
+                    // Más apretada que la de pilotos: esta columna mide 320 px
+                    // en escritorio y la fila de antes no cabía sin partir el
+                    // nombre del equipo.
+                    className={`relative flex items-center gap-3 overflow-hidden rounded-xl border p-3 pl-4 transition-[transform,colors] duration-100 ease-out active:scale-[0.99] motion-reduce:active:scale-100 ${
                       entry.position !== null && entry.position <= 3
                         ? 'border-primary/40 bg-primary/5'
                         : 'border-border bg-card hover:border-primary'
@@ -372,11 +384,11 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                       style={{ backgroundColor: teamColor(entry.constructorId).color }}
                     />
                     {/* Position */}
-                    <div className="flex w-12 items-center justify-center">
+                    <div className="flex w-7 items-center justify-center">
                       {medalIcon ? (
-                        <span className="text-2xl">{medalIcon}</span>
+                        <span className="text-xl">{medalIcon}</span>
                       ) : (
-                        <span className="text-xl font-bold tabular-nums text-muted-foreground">
+                        <span className="text-lg font-bold tabular-nums text-muted-foreground">
                           {entry.position ?? '—'}
                         </span>
                       )}
@@ -390,13 +402,13 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                     />
 
                     {/* Team name */}
-                    <div className="flex-1 font-bold">{entry.team}</div>
+                    <div className="min-w-0 flex-1 truncate font-bold">{entry.team}</div>
 
                     {/* Points */}
                     <div className="text-right">
                       <RollingNumber
                         value={entry.points}
-                        className="font-display text-2xl font-bold text-primary"
+                        className="font-display text-xl font-bold text-primary"
                       />
                       <div className="text-xs text-muted-foreground">pts</div>
                     </div>
@@ -404,7 +416,17 @@ export default async function StandingsPage({ searchParams }: StandingsPageProps
                 );
               })}
             </FlipRows>
-          </div>
+          </aside>
+
+          {/* El gráfico, debajo de los pilotos y no encima. Se pide aparte y
+              llega cuando llegue: la tabla no lo espera. */}
+          {leaders.length > 1 && (
+            <div className="min-w-0 xl:col-start-1 xl:row-start-2">
+              <Suspense fallback={<EvolutionSkeleton />}>
+                <ChampionshipEvolution year={displayYear} round={round} leaders={leaders} />
+              </Suspense>
+            </div>
+          )}
         </div>
       )}
     </div>

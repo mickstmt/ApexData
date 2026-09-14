@@ -1345,7 +1345,7 @@ test.describe('la proporción en escritorio', () => {
     });
   }
 
-  test('la torre crece con la pantalla en vez de quedarse clavada', async ({ page }) => {
+  test('la torre conserva su parte del reparto a cualquier ancho', async ({ page }) => {
     /**
      * Lo reportado: «siento que el circuito o el área que abarca es muy grande
      * con respecto a lo demás, ya que la lista de pilotos se ve muy pequeña».
@@ -1353,6 +1353,13 @@ test.describe('la proporción en escritorio', () => {
      * Medido antes del arreglo, con la carrera real: la torre estaba clavada en
      * **339 px** a cualquier ancho, y el mapa se quedaba con el resto. Así que
      * la torre pasaba del 26 % de la pantalla a 1280 al **13 % a 2560**.
+     *
+     * Esta prueba comprobaba también que la torre CRECIERA de 1280 a 1920, y
+     * ya no puede: desde el punto 47 la app entera se para en 1280, así que a
+     * 1920 el reparto es el mismo que a 1280 y no hay nada que crecer. Lo que
+     * se pedía —que la torre no se quede con las migajas— se mide igual con la
+     * proporción, que es lo que se vigila aquí; y de paso se fija que el
+     * reparto ya no dependa del monitor, que es lo que se acaba de decidir.
      */
     await simularCarrera(page);
 
@@ -1365,7 +1372,7 @@ test.describe('la proporción en escritorio', () => {
     await page.waitForTimeout(300);
     const grande = await reparto(page);
 
-    expect(grande.torre, 'la torre no ha crecido con la pantalla').toBeGreaterThan(chica.torre);
+    expect(grande.conjunto, 'el reparto se ha estirado con el monitor').toBe(chica.conjunto);
 
     // Y la proporción se mantiene, que es lo que se pedía.
     for (const r of [chica, grande]) {
@@ -1389,16 +1396,20 @@ test.describe('la proporción en escritorio', () => {
   });
 
   test('el conjunto se para donde se para el resto de la app', async ({ page }) => {
-    // 1536 px, medido: la cabecera y el contenido de la portada, los
+    // 1280 px desde el punto 47: la cabecera y el contenido de la portada, los
     // resultados, la clasificación y los pilotos se paran ahí en cualquier
-    // pantalla. El replay era el único que seguía estirándose.
+    // pantalla. El replay era el único que seguía estirándose, y sigue yendo
+    // con ellos — lo único que no lleva es el raíl de secciones, porque de esta
+    // pantalla no se navega.
     await page.setViewportSize({ width: 2560, height: 1440 });
     await simularCarrera(page);
     await page.goto(REPLAY);
     await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
     const { conjunto } = await reparto(page);
-    expect(conjunto).toBeLessThanOrEqual(1536);
+    // 1280 desde el punto 47: el contenido dejó de estirarse hasta el borde del
+    // monitor, y el replay va con el resto.
+    expect(conjunto).toBeLessThanOrEqual(1280);
 
     const cabecera = await page
       .locator('header nav')
