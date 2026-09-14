@@ -1315,6 +1315,93 @@ veia cortado en la captura. Con `text-overflow` el navegador recorta el
 contenido al hueco y `scrollWidth` no lo delata; hay que medir el texto con un
 `Range`. Queda escrito porque es una trampa que se repite.
 
+
+---
+
+# ---- Tanda del 2026-09-14: la web deja de ser la PWA estirada ----
+
+> **El diagnostico es suyo y es el correcto**: la app esta construida como una
+> PWA de telefono a la que se le ha estirado el ancho, no como una web. Los
+> cuatro puntos de abajo son caras de lo mismo.
+>
+> Su encuadre, literal: «no es que todo esto este mal, si no que creo que hemos
+> llegado a un punto en el cual debemos buscar la perfeccion o lo mas cerca
+> posible». Y: «ya dejamos de ser simplemente unos entusiastas del motor sport y
+> pasamos a ser obsesivos con ofrecer lo mejor en informacion y experiencia de
+> usuario».
+>
+> Los cuatro van a **maqueta**, y los cuatro se miran juntos: comparten la misma
+> causa y arreglarlos por separado es rehacer el mismo trabajo cuatro veces.
+
+## 45. WEB · El menu de secciones es una hoja de telefono en una pantalla grande
+
+**Lo que se ve** (captura suya, escritorio): al pulsar el menu de la cabecera se
+abre la MISMA hoja modal que en el movil —una rejilla de nueve casillas
+centrada, con su tirador y su boton de cerrar— en una ventana de 1900 px. Detras
+hay sitio de sobra y no se usa.
+
+**Medido**: `RejillaDeSecciones` se pinta identica en los dos sitios; lo unico
+que cambia es QUE secciones entran (`FUERA_DE_LA_BARRA` en el movil, las nueve
+en tableta y escritorio). El contenedor es `Sheet` con `forma="panel"`.
+
+**A decidir en la maqueta**: si en escritorio las secciones dejan de estar tras
+un menu —hay hueco en la cabecera para mas de seis— o si el menu se queda pero
+con forma de web (desplegable anclado al boton, no hoja modal centrada).
+
+## 46. WEB · Las tablas de resultados no se parecen entre si, y en web son pobres
+
+**Lo que dice el usuario**: la carrera se ve bien en la PWA pero no tanto en web;
+la clasificacion igual; **las practicas libres son «bastante pobres para todos
+los dispositivos»**. Y pregunta por que en una hay foto y en otra no.
+
+**La respuesta a su pregunta, leida del codigo — y no es la que yo suponia**:
+nadie eligio iniciales para la web. La tabla de escritorio de
+`RaceDetailClient` pinta a mano un circulo de 40 px con el **codigo de tres
+letras** sobre `bg-primary/20`, y **nunca pide la foto**. El podio, en esa misma
+pantalla y justo encima, si usa la foto de verdad. Son dos componentes escritos
+en momentos distintos que nunca se reconciliaron.
+
+(`DriverAvatar` de `OptimizedImage.tsx` tambien tiene un respaldo de iniciales,
+pero solo salta cuando falta `src`. No es lo que se ve en la tabla.)
+
+**Lo que hay que resolver, y va junto**:
+- Que las cuatro pantallas de sesion —carrera, clasificacion, sprint y las tres
+  practicas— **se lean como la misma familia**.
+- Que en escritorio se use el sitio que hay: hoy la tabla de practicas son dos
+  columnas de tarjetas con codigo, equipo y tiempo, y poco mas.
+- Que enriquecerlas tenga sentido por sesion: una practica NO es un resultado
+  —eso ya se dice en pantalla— asi que lo que se añada no puede sugerir que lo
+  sea.
+
+## 47. WEB · Ocupamos mas ancho del que usa este tipo de aplicacion
+
+**Lo que dice el usuario**: navegando otras webs del ramo ve que ApexData ocupa
+mucho mas ancho del habitual.
+
+**Medido**: `tailwind.config.ts` **no configura `container`**, asi que se usa el
+de serie: ancho maximo el del punto de ruptura, o sea **1536 px** a partir de
+`2xl`. Se usa `container mx-auto` en 32 sitios del arbol de paginas. Los sitios
+de datos deportivos suelen quedarse entre 1200 y 1280.
+
+**A decidir**: el ancho maximo, y si es uno solo para toda la app o depende de
+la pantalla —una tabla de resultados aguanta mas ancho que un texto—. Se cambia
+en un sitio (`theme.container`), asi que lo caro no es hacerlo sino elegirlo.
+
+## 48. UI · En Clasificacion, el grafico gigante va antes que los pilotos
+
+**Lo que dice el usuario**: «lo que uno quiere ver principalmente cuando entra en
+este apartado son los pilotos y no un grafico gigante», y da igual el
+dispositivo.
+
+**Medido**: en `src/app/standings/page.tsx` la «Evolucion del campeonato» se
+pinta sobre la linea 187 y los campeonatos de Pilotos y Constructores sobre la
+277. O sea: el grafico primero, las tablas despues.
+
+**A decidir**: el orden, y si el grafico se queda entero, se encoge, o se pliega.
+Y el usuario pide ademas **una propuesta para enriquecerlo**.
+
+---
+
 ## 44. CONSULTA RESUELTA · Que lleva la fila, y si cambia al girar (2026-09-14)
 
 **Lo que pregunta el usuario**: «para el modo vertical solo mostrar los
