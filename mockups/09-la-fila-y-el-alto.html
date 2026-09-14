@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La fila de la torre y el alto de la lista</title>
+<style>
+/* ---------------------------------------------------------------------------
+   DOS DECISIONES QUE VAN JUNTAS
+
+   1 · QUE LLEVA CADA FILA. El usuario pide tres cosas nuevas: el compuesto de
+       neumatico, cuantas paradas lleva cada piloto, y que se vea cuando esta
+       EN BOXES.
+
+       Comprobado contra produccion: el servicio ya sirve por vuelta
+       `Compound`, `TyreLife`, `Stint`, `PitInTime` y `PitOutTime`. O sea que
+       las tres se pueden, y con dato exacto — «en boxes» no hay que adivinarlo
+       por geometria, se sabe entre el PitIn y el PitOut.
+
+         ANT -> MEDIUM v1-14, HARD v15-57
+         VER -> SOFT   v1-14, HARD v15-57
+
+   2 · CUANTO ALTO OCUPA LA LISTA. Medido en la captura del usuario: 22 filas
+       de 30 px son 660 px en una columna de ~1150. Son 490 px muertos debajo,
+       mientras el circuito ocupa todo.
+
+   Van juntas porque LO QUE PONGAS EN LA FILA DECIDE CUANTO ALTO NECESITA.
+--------------------------------------------------------------------------- */
+:root {
+  color-scheme: dark;
+  --fondo: #0B0B0F;
+  --superficie: #151519;
+  --superficie2: #1E1E24;
+  --borde: #26262E;
+  --borde-fila: #16161C;
+  --texto: #F5F5F7;
+  --apagado: #A2A2AC;
+  --hueco: #BFBFC6;
+  --tenue: #3A3A44;
+  --acento: #CCFF00;
+  --roja: #FF6B6B;
+  --naranja: #FFA94D;
+  --papel: #0F110E;
+  --linea: #272B23;
+  /* Los del proyecto, en `team-colors.ts`. */
+  --soft: #DA291C;
+  --medium: #FFD12E;
+  --hard: #F0F0EC;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 22px 16px 60px; background: var(--papel); color: var(--texto);
+  font: 400 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+}
+.envoltura { max-width: 1060px; margin: 0 auto; display: grid; grid-template-columns: minmax(0,1fr); gap: 20px; }
+h1 { margin: 0 0 4px; font-size: clamp(22px,4vw,29px); line-height: 1.15; }
+h2.seccion { margin: 22px 0 0; font-size: 19px; }
+.sub { margin: 0; max-width: 64ch; color: var(--apagado); font-size: 14px; }
+.sub b { color: var(--texto); }
+
+.medido {
+  border: 1px solid var(--linea); border-left: 3px solid var(--naranja); border-radius: 12px;
+  padding: 13px 15px; font: 400 12.5px/1.6 ui-monospace, Menlo, monospace;
+  white-space: pre; overflow-x: auto; color: var(--apagado);
+}
+
+.opcion { border: 1px solid var(--linea); border-radius: 16px; padding: 15px; background: #121410; }
+.opcion h3 {
+  margin: 0 0 3px; font: 600 11px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--acento);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+}
+.sello { padding: 3px 7px; border-radius: 5px; background: var(--acento); color: #000;
+  font: 700 9px/1 ui-monospace, monospace; letter-spacing: .06em; }
+.opcion p { margin: 0 0 13px; font-size: 13.5px; color: var(--apagado); }
+.opcion p b { color: var(--texto); }
+
+/* --- la torre ---------------------------------------------------------- */
+.torre { border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; background: var(--fondo); }
+.fila {
+  display: grid; align-items: center; gap: 10px; padding: 0 12px;
+  height: 30px; border-bottom: 1px solid var(--borde-fila);
+  grid-template-columns: 26px 3px 1fr auto;
+}
+.fila:last-child { border-bottom: 0; }
+.fila .pos { font: 600 12px/1 ui-monospace,monospace; color: var(--apagado); text-align: right; }
+.fila .tira { height: 18px; border-radius: 2px; }
+.fila .quien { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 14px; font-weight: 600; }
+.fila .quien span { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--apagado); }
+.fila .cola { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.fila .h { font: 400 13px/1 ui-monospace,monospace; color: var(--hueco); }
+.fila .dnf { font: 700 11px/1 ui-monospace,monospace; letter-spacing: .08em; color: var(--roja); }
+.fila[data-boxes] { background: rgba(255,169,77,.08); }
+.fila .boxes { font: 700 10.5px/1 ui-monospace,monospace; letter-spacing: .08em; color: var(--naranja); }
+
+/* El neumatico: un aro del color del compuesto con su letra dentro. */
+.nm {
+  width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+  border: 2px solid var(--tenue); font: 700 10px/1 ui-monospace, monospace; color: var(--texto);
+  flex: none;
+}
+.nm.s { border-color: var(--soft); }
+.nm.m { border-color: var(--medium); }
+.nm.h { border-color: var(--hard); }
+.vida { font: 400 11.5px/1 ui-monospace,monospace; color: var(--apagado); min-width: 22px; text-align: left; }
+.paradas { font: 400 11.5px/1 ui-monospace,monospace; color: var(--apagado); }
+.puntitos { display: flex; gap: 3px; }
+.puntitos i { width: 5px; height: 5px; border-radius: 50%; background: var(--apagado); }
+
+/* --- el alto ----------------------------------------------------------- */
+/* El alto no es inventado: es la proporcion medida en la captura del usuario.
+   22 filas en una columna de 1150 px; aqui son 12 filas, asi que el alto
+   equivalente es 1150 x 12/22 = 627 px. Con eso, la opcion 1 deja el mismo
+   hueco proporcional que se ve en su pantalla. */
+.visor { overflow-x: auto; }
+.pantalla {
+  display: grid; grid-template-columns: 1fr 300px; gap: 0;
+  height: 627px; min-width: 620px;
+  border: 1px solid var(--borde); border-radius: 12px; overflow: hidden;
+  background: var(--fondo);
+}
+.pantalla .mapa { display: grid; place-items: center; border-right: 1px solid var(--borde); }
+.pantalla .mapa svg { width: 86%; height: 70%; }
+.pantalla .lista { overflow: hidden; position: relative; }
+/* El hueco muerto, rayado, para que se vea de cuanto estamos hablando. */
+.hueco-muerto {
+  position: absolute; inset: auto 0 0 0; height: 267px;
+  display: grid; place-items: center;
+  background: repeating-linear-gradient(45deg, transparent 0 8px, rgba(255,107,107,.09) 8px 16px);
+  border-top: 1px dashed rgba(255,107,107,.45);
+}
+.hueco-muerto span { font: 600 11px/1 ui-monospace,monospace; letter-spacing: .06em; color: var(--roja); }
+.pantalla .lista .fila { border-radius: 0; }
+.estirado .fila { height: auto; min-height: 30px; }
+.estirado .lista { display: grid; grid-template-rows: repeat(12, 1fr); }
+
+.nota { border: 1px solid var(--linea); border-radius: 14px; padding: 15px; font-size: 13.5px; color: var(--apagado); }
+.nota b { color: var(--texto); }
+.nota p { margin: 0 0 10px; } .nota p:last-child { margin: 0; }
+</style>
+</head>
+<body>
+<div class="envoltura">
+
+  <header>
+    <h1>La fila de la torre, y el alto de la lista</h1>
+    <p class="sub">Dos decisiones que van juntas: <b>lo que pongas en la fila decide cuánto alto necesita</b>. Arriba, qué lleva cada piloto. Abajo, cómo se reparte la columna en escritorio.</p>
+  </header>
+
+  <div class="medido">comprobado contra produccion — el dato existe y es exacto:
+
+  el servicio sirve por vuelta  Compound · TyreLife · Stint · PitInTime · PitOutTime
+
+    ANT -> MEDIUM v1-14, HARD v15-57
+    VER -> SOFT   v1-14, HARD v15-57
+
+  o sea que «en boxes» NO hay que adivinarlo por geometria:
+  se sabe entre el PitIn y el PitOut
+
+  y el hueco de abajo, medido en la captura del usuario:
+    22 filas x 30 px = 660 px  en una columna de ~1150  ->  490 px muertos</div>
+
+  <h2 class="seccion">1 · Qué lleva cada fila</h2>
+
+  <div class="opcion">
+    <h3>A · como está ahora</h3>
+    <p>Puesto, equipo y hueco. Nada de neumáticos ni paradas.</p>
+    <div class="torre" data-filas="A"></div>
+  </div>
+
+  <div class="opcion">
+    <h3>B · el neumático</h3>
+    <p>Un aro del color del compuesto con su letra dentro. <b>El color solo no basta</b>: el medio y el duro se distinguen mal de un vistazo, y quien no vea bien el color se queda sin el dato.</p>
+    <div class="torre" data-filas="B"></div>
+  </div>
+
+  <div class="opcion">
+    <h3>C · el neumático y las vueltas que lleva <span class="sello">Recomendada</span></h3>
+    <p>Lo mismo, más <b>cuántas vueltas lleva con ese juego</b>. Es el número que de verdad se mira en una carrera: dice si alguien está a punto de parar, que es lo que cambia el orden.</p>
+    <div class="torre" data-filas="C"></div>
+  </div>
+
+  <div class="opcion">
+    <h3>D · y además las paradas</h3>
+    <p>Se añade cuántas veces ha entrado. <b>Ojo al ancho</b>: son cuatro cosas a la derecha del nombre, y en el móvil la fila mide 358 px.</p>
+    <div class="torre" data-filas="D"></div>
+  </div>
+
+  <div class="opcion">
+    <h3>en boxes · va en todas</h3>
+    <p>Mientras está en el pit lane, el hueco se sustituye por <b>EN BOXES</b> y la fila se tiñe. Es el mismo lenguaje que ya usa el DNF, y por eso no hace falta explicarlo.</p>
+    <div class="torre" data-filas="C" data-boxes></div>
+  </div>
+
+  <h2 class="seccion">2 · Cuánto alto ocupa la lista</h2>
+
+  <div class="opcion">
+    <h3>1 · filas fijas, como ahora</h3>
+    <p>Treinta píxeles pase lo que pase. En una pantalla alta <b>sobra casi media columna</b>: es el hueco rayado de abajo.</p>
+    <div class="visor"><div class="pantalla"><div class="mapa" data-mapa></div><div class="lista" data-filas="C" data-cuantas="12"><div class="hueco-muerto"><span>267 px sin usar</span></div></div></div></div>
+  </div>
+
+  <div class="opcion">
+    <h3>2 · las filas se estiran para llenar la columna <span class="sello">Recomendada</span></h3>
+    <p>La lista reparte el alto que hay entre los pilotos que hay: aquí las filas pasan de 30 a <b>52 px</b>. En una pantalla grande se lee de lejos; en una pequeña se queda en los 30 de siempre, que es el mínimo.</p>
+    <div class="visor"><div class="pantalla estirado"><div class="mapa" data-mapa></div><div class="lista" data-filas="C" data-cuantas="12"></div></div></div>
+  </div>
+
+  <div class="nota">
+    <p><b>Por qué la C.</b> El compuesto solo dice con qué va; las vueltas dicen <b>si está a punto de parar</b>, que es lo que anticipa un cambio de orden. Las paradas (D) son un dato de resumen: interesan al final, no mientras miras la carrera, y pagan un sitio que en el móvil no sobra.</p>
+    <p><b>Por qué la 2.</b> El hueco de abajo no es un problema de decoración: es media columna sin usar mientras el circuito ocupa todo. Estirando las filas, la lista llena lo que tiene y de paso se lee mejor en un monitor grande — que es de donde salió tu queja.</p>
+    <p><b>Lo que necesito de ti</b>: una letra para la fila y un número para el alto. Y si quieres las paradas igualmente, dímelo: caben, pero prefiero que sea a sabiendas.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var PILOTOS = [
+    ['RUS', 'Mercedes', '#00D7B6', 'líder', 'm', 'M', 12, 1],
+    ['HAM', 'Ferrari', '#E8002D', '+1.8s', 'h', 'H', 4, 2],
+    ['ANT', 'Mercedes', '#00D7B6', '+7.8s', 'm', 'M', 14, 1],
+    ['NOR', 'McLaren', '#FF8000', '+9.3s', 's', 'S', 2, 2],
+    ['VER', 'Red Bull', '#3671C6', '+13.0s', 'h', 'H', 18, 1],
+    ['LEC', 'Ferrari', '#E8002D', '+21.0s', 'm', 'M', 9, 1],
+    ['PIA', 'McLaren', '#FF8000', '+22.3s', 'h', 'H', 20, 1],
+    ['LIN', 'Racing Bulls', '#6692FF', '+31.0s', 'm', 'M', 6, 2],
+    ['HAD', 'Red Bull', '#3671C6', '+40.0s', 's', 'S', 1, 2],
+    ['BEA', 'Haas', '#B6BABD', '+40.8s', 'h', 'H', 25, 1],
+    ['BOT', 'Cadillac', '#00594F', 'DNF', 'h', 'H', 11, 1],
+    ['STR', 'Aston Martin', '#229971', 'DNF', 'm', 'M', 3, 1]
+  ];
+
+  function fila(p, i, opcion, enBoxes) {
+    var f = document.createElement('div');
+    f.className = 'fila';
+
+    var esDNF = p[3] === 'DNF';
+    var boxes = enBoxes && i === 3;
+    if (boxes) f.setAttribute('data-boxes', '');
+
+    var extra = '';
+    if (opcion !== 'A' && !esDNF) {
+      extra += '<span class="nm ' + p[4] + '">' + p[5] + '</span>';
+      if (opcion === 'C' || opcion === 'D') extra += '<span class="vida">' + p[6] + '</span>';
+      if (opcion === 'D') {
+        extra += '<span class="puntitos">';
+        for (var n = 0; n < p[7]; n++) extra += '<i></i>';
+        extra += '</span>';
+      }
+    }
+
+    var derecha = boxes
+      ? '<span class="boxes">EN BOXES</span>'
+      : esDNF
+        ? '<span class="dnf">DNF</span>'
+        : '<span class="h">' + p[3] + '</span>';
+
+    f.innerHTML =
+      '<span class="pos">' + (i + 1) + '</span>' +
+      '<span class="tira" style="background:' + p[2] + '"></span>' +
+      '<span class="quien">' + p[0] + '<span>' + p[1] + '</span></span>' +
+      '<span class="cola">' + extra + derecha + '</span>';
+    return f;
+  }
+
+  document.querySelectorAll('[data-filas]').forEach(function (caja) {
+    var opcion = caja.getAttribute('data-filas');
+    var cuantas = Number(caja.getAttribute('data-cuantas') || PILOTOS.length);
+    var enBoxes = caja.hasAttribute('data-boxes');
+    PILOTOS.slice(0, cuantas).forEach(function (p, i) {
+      caja.appendChild(fila(p, i, opcion, enBoxes));
+    });
+  });
+
+  var TRAZADO = '<svg viewBox="0 0 300 150" aria-hidden="true">' +
+    '<path d="M40 124 L196 124 C232 124 246 108 234 92 L180 30 C172 20 158 20 150 28 L120 56 C112 64 100 64 93 56 L76 38 C66 28 50 32 44 44 L26 84 C18 100 24 118 40 124 Z" ' +
+    'fill="none" stroke="#6B6B78" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>' +
+    '<circle cx="150" cy="124" r="8" fill="#00D7B6"/><circle cx="120" cy="124" r="8" fill="#E8002D"/></svg>';
+  document.querySelectorAll('[data-mapa]').forEach(function (m) { m.innerHTML = TRAZADO; });
+})();
+</script>
+</body>
+</html>
