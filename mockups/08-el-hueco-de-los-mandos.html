@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El hueco de los mandos — vertical</title>
+<style>
+/* ---------------------------------------------------------------------------
+   QUE FALTA EN LA BARRA DE MANDOS EN VERTICAL
+
+   Al pasar los mandos a «minimos» (punto 24) el deslizador se mudo a la
+   pantalla completa. El usuario lo nota: «a veces me da la sensacion de que
+   justamente falta algo».
+
+   Y no es una sensacion. Sin deslizador, en vertical la UNICA forma de moverse
+   por la carrera es de diez en diez segundos. Saltar a un momento concreto
+   —«llevame a la vuelta 30»— dejo de ser posible.
+
+   MEDIDO en la app, iPhone 390, con la carrera real cargada:
+     capsula      338 x 68
+     botones      44 + 56 + 44 + 56 = 200 px
+     libre        138 px a lo ancho, ~10 px de alto
+
+   O sea que cabe un quinto boton con holgura, o un deslizador fino.
+--------------------------------------------------------------------------- */
+:root {
+  color-scheme: dark;
+  --fondo: #0B0B0F;
+  --superficie: #151519;
+  --borde: #26262E;
+  --texto: #F5F5F7;
+  --apagado: #A2A2AC;
+  --acento: #CCFF00;
+  --tenue: #3A3A44;
+  --papel: #0F110E;
+  --linea: #272B23;
+  --cristal: rgba(21, 21, 25, .92);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; padding: 22px 16px 60px; background: var(--papel); color: var(--texto);
+  font: 400 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+}
+.envoltura { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: minmax(0,1fr); gap: 20px; }
+h1 { margin: 0 0 4px; font-size: clamp(22px,4vw,29px); line-height: 1.15; }
+.sub { margin: 0; max-width: 62ch; color: var(--apagado); font-size: 14px; }
+.sub b { color: var(--texto); }
+
+.medido {
+  border: 1px solid var(--linea); border-left: 3px solid #FFA94D; border-radius: 12px;
+  padding: 13px 15px; font: 400 12.5px/1.6 ui-monospace, Menlo, monospace;
+  white-space: pre; overflow-x: auto; color: var(--apagado);
+}
+
+.opcion { border: 1px solid var(--linea); border-radius: 16px; padding: 15px; background: #121410; }
+.opcion h2 {
+  margin: 0 0 3px; font: 600 11px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--acento);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+}
+.sello {
+  padding: 3px 7px; border-radius: 5px; background: var(--acento); color: #000;
+  font: 700 9px/1 ui-monospace, monospace; letter-spacing: .06em;
+}
+.opcion p { margin: 0 0 14px; font-size: 13.5px; color: var(--apagado); }
+.opcion p b { color: var(--texto); }
+
+/* --- el telefono, a tamaño real -------------------------------------- */
+.tel {
+  position: relative; width: 390px; max-width: 100%; height: 210px;
+  border: 1px solid var(--borde); border-radius: 16px; overflow: hidden;
+  background: var(--fondo);
+}
+.fondoFalso { position: absolute; inset: 0; display: grid; }
+.fondoFalso div {
+  border-bottom: 1px solid #16161C; display: grid; align-items: center;
+  padding: 0 14px; font: 400 13px/1 ui-monospace,monospace; color: #2E2E36;
+}
+
+/* La capsula, con las medidas de la app. */
+.mandos {
+  position: absolute; left: 26px; right: 26px; bottom: 14px;
+  border: 1px solid var(--borde); border-radius: 34px;
+  background: var(--cristal); backdrop-filter: blur(2px) saturate(1.8);
+  box-shadow: 0 10px 34px rgba(0,0,0,.45);
+  padding: 10px 5px; overflow: hidden;
+}
+.fila { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.btn {
+  position: relative; display: grid; place-items: center; min-width: 44px; height: 44px;
+  border: 0; background: transparent; color: var(--apagado); cursor: pointer;
+  border-radius: 12px; transition: background 120ms;
+  font: 600 13px/1 ui-monospace, monospace;
+}
+.btn:active { background: rgba(245,245,247,.14); }
+.btn svg { display: block; width: 22px; height: 22px; }
+.btn.play { color: var(--acento); min-width: 56px; height: 48px; }
+.btn.play svg { width: 28px; height: 28px; }
+.btn.vel { min-width: 56px; }
+
+/* --- B · hilo de progreso, solo informativo ---------------------------- */
+.hilo { position: absolute; left: 18px; right: 18px; top: 6px; height: 3px; border-radius: 2px; background: var(--tenue); }
+.hilo i { display: block; height: 100%; border-radius: 2px; background: var(--acento); }
+
+/* --- C · deslizador fino, arrastrable --------------------------------- */
+.finoCaja { position: relative; margin: 0 12px 8px; height: 10px; }
+.finoCaja input {
+  position: absolute; inset: -10px -6px; width: calc(100% + 12px); height: 30px;
+  margin: 0; opacity: 0; cursor: pointer;
+}
+.fino { position: absolute; inset: 3px 0; border-radius: 2px; background: var(--tenue); pointer-events: none; }
+.fino i { display: block; height: 100%; border-radius: 2px; background: var(--acento); }
+.pulgar {
+  position: absolute; top: 0; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--texto); pointer-events: none; transform: translateX(-50%);
+}
+
+/* --- E · el panel que se despliega ------------------------------------ */
+.panel {
+  position: absolute; left: 26px; right: 26px; bottom: 90px;
+  border: 1px solid var(--borde); border-radius: 18px; background: var(--superficie);
+  padding: 14px 16px 16px; display: none;
+}
+.panel.abierto { display: block; }
+.panel .tiempos { display: flex; justify-content: space-between; font: 400 12px/1 ui-monospace,monospace; color: var(--apagado); margin-bottom: 10px; }
+.panel input { width: 100%; }
+
+.nota { border: 1px solid var(--linea); border-radius: 14px; padding: 15px; font-size: 13.5px; color: var(--apagado); }
+.nota b { color: var(--texto); }
+.nota p { margin: 0 0 10px; } .nota p:last-child { margin: 0; }
+</style>
+</head>
+<body>
+<div class="envoltura">
+
+  <header>
+    <h1>El hueco de los mandos</h1>
+    <p class="sub">Al pasar los mandos a mínimos, el deslizador se mudó a la pantalla completa. <b>No es una sensación</b>: en vertical la única forma de moverse por la carrera es de diez en diez segundos. Saltar a un momento concreto dejó de ser posible.</p>
+  </header>
+
+  <div class="medido">medido en la app, iPhone 390, con la carrera real cargada:
+
+  capsula    338 x 68
+  botones    44 + 56 + 44 + 56 = 200 px
+  libre      138 px a lo ancho, ~10 px de alto
+
+  cabe un quinto boton con holgura, o un deslizador fino</div>
+
+  <div class="opcion">
+    <h2>A · como está ahora</h2>
+    <p>Cuatro botones y nada más. Limpio, y sin forma de saltar a un momento.</p>
+    <div class="tel" data-relleno>
+      <div class="mandos"><div class="fila" data-botones></div></div>
+    </div>
+  </div>
+
+  <div class="opcion">
+    <h2>B · un hilo de progreso</h2>
+    <p>Una línea de 3 px en el borde de la cápsula que se va llenando. <b>Dice dónde estás, pero no deja ir</b>. No añade nada que tocar y no quita ni un píxel a los botones.</p>
+    <div class="tel" data-relleno>
+      <div class="mandos">
+        <span class="hilo"><i style="width:38%"></i></span>
+        <div class="fila" data-botones></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="opcion">
+    <h2>C · deslizador fino <span class="sello">Recomendada</span></h2>
+    <p>Cuatro píxeles de alto, con <b>30 px de zona tocable invisible</b> alrededor — la lección de la barra de abajo, donde medimos que el 25 % no respondía. Se ve como un hilo y se agarra como un mando. <b>Arrástralo.</b></p>
+    <div class="tel" data-relleno>
+      <div class="mandos">
+        <div class="finoCaja">
+          <span class="fino"><i></i></span>
+          <span class="pulgar"></span>
+          <input type="range" min="0" max="1000" value="380" aria-label="Minuto de la carrera">
+        </div>
+        <div class="fila" data-botones></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="opcion">
+    <h2>D · un quinto botón: saltar de vuelta en vuelta</h2>
+    <p>En vez de segundos, <b>vueltas</b>, que es como se piensa una carrera. Un toque te lleva al principio de la siguiente. No hay que apuntar con el dedo a nada fino, pero para ir de la vuelta 3 a la 40 son treinta y siete toques.</p>
+    <div class="tel" data-relleno>
+      <div class="mandos"><div class="fila" data-botones data-vuelta></div></div>
+    </div>
+  </div>
+
+  <div class="opcion">
+    <h2>E · un quinto botón que despliega el deslizador</h2>
+    <p>La barra se queda limpia y el deslizador aparece <b>grande</b> cuando lo pides, encima del circuito. Cuesta un toque de más, pero el que arrastra es cómodo de verdad. <b>Pulsa el botón del reloj.</b></p>
+    <div class="tel" data-relleno>
+      <div class="panel">
+        <div class="tiempos"><span>33:33</span><span>1:52:34</span></div>
+        <input type="range" min="0" max="1000" value="300" aria-label="Minuto de la carrera">
+      </div>
+      <div class="mandos"><div class="fila" data-botones data-panel></div></div>
+    </div>
+  </div>
+
+  <div class="nota">
+    <p><b>Por qué recomiendo la C.</b> Es la única que devuelve lo que se perdió en vez de añadir algo nuevo: saltar a un momento. Y de paso hace lo de la <b>B</b> —siempre se ve por dónde vas—, así que la B queda incluida.</p>
+    <p>Lo que hay que vigilar de la C, y por eso va escrito: cuatro píxeles se ven pero no se agarran. La zona tocable se construye a <b>30 px</b>, invisible, igual que se hizo con la barra de abajo. Si la eliges, lo compruebo en tu teléfono antes de darla por buena.</p>
+    <p>La <b>D</b> me gusta como añadido a la C, no en su lugar: saltar por vueltas es muy de F1, pero no sustituye a poder ir al minuto 48.</p>
+    <p><b>Lo que necesito de ti</b>: una letra. Y si quieres dos —por ejemplo C y D juntas—, dímelo, que caben: sobran 138 px.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var ICONO = {
+    atras: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6 3 12l8 6zM20 6l-8 6 8 6z"/></svg>',
+    play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+    delante: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 6l8 6-8 6zM4 6l8 6-8 6z"/></svg>',
+    vueltaAtras: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H7"/><path d="M11 7l-5 5 5 5"/></svg>',
+    reloj: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>'
+  };
+
+  function boton(clase, html, etiqueta) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn' + (clase ? ' ' + clase : '');
+    b.innerHTML = html;
+    b.setAttribute('aria-label', etiqueta);
+    return b;
+  }
+
+  document.querySelectorAll('[data-botones]').forEach(function (fila) {
+    fila.appendChild(boton('', ICONO.atras, 'Retroceder 10 s'));
+    fila.appendChild(boton('play', ICONO.play, 'Reproducir'));
+    fila.appendChild(boton('', ICONO.delante, 'Avanzar 10 s'));
+    fila.appendChild(boton('vel', '1×', 'Velocidad'));
+
+    if (fila.hasAttribute('data-vuelta')) {
+      fila.insertBefore(boton('', ICONO.vueltaAtras, 'Vuelta anterior'), fila.firstChild);
+      fila.appendChild(boton('', ICONO.vueltaAtras.replace('M19 12H7', 'M5 12h12').replace('M11 7l-5 5 5 5', 'M13 7l5 5-5 5'), 'Vuelta siguiente'));
+    }
+
+    if (fila.hasAttribute('data-panel')) {
+      var b = boton('', ICONO.reloj, 'Ir a un momento');
+      b.addEventListener('click', function () {
+        fila.closest('.tel').querySelector('.panel').classList.toggle('abierto');
+      });
+      fila.appendChild(b);
+    }
+  });
+
+  // Filas de fondo, para que la cápsula flote sobre algo y se vea el cristal.
+  var EQUIPOS = [['ANT', '#00A19B'], ['VER', '#3671C6'], ['NOR', '#FF8000'], ['LEC', '#E8002D'], ['RUS', '#00A19B'], ['HAM', '#E8002D']];
+  document.querySelectorAll('[data-relleno]').forEach(function (tel) {
+    var caja = document.createElement('div');
+    caja.className = 'fondoFalso';
+    EQUIPOS.forEach(function (e, i) {
+      var f = document.createElement('div');
+      f.textContent = (i + 1) + '   ' + e[0] + '   +' + (i * 3.4).toFixed(1) + 's';
+      caja.appendChild(f);
+    });
+    tel.insertBefore(caja, tel.firstChild);
+  });
+
+  // El deslizador fino: el pulgar sigue al valor.
+  document.querySelectorAll('.finoCaja').forEach(function (caja) {
+    var rango = caja.querySelector('input');
+    var lleno = caja.querySelector('.fino i');
+    var pulgar = caja.querySelector('.pulgar');
+    var pintar = function () {
+      var pct = (rango.value / rango.max) * 100;
+      lleno.style.width = pct + '%';
+      pulgar.style.left = pct + '%';
+    };
+    rango.addEventListener('input', pintar);
+    pintar();
+  });
+})();
+</script>
+</body>
+</html>
