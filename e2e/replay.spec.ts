@@ -998,10 +998,18 @@ test.describe('el mapa se encoge con su tirador', () => {
 test.describe('los mandos mínimos y la pantalla completa', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('en vertical solo están los cuatro botones', async ({ page }) => {
-    // Decisión del usuario en el punto 24: el cuadro de mandos ocupaba
-    // demasiada pantalla. La barra de progreso no se pierde — se muda a la
-    // pantalla completa— y el reloj sale porque la cabecera ya lo lleva.
+  test('en vertical: cuatro botones y un deslizador fino encima', async ({ page }) => {
+    /**
+     * El punto 24 dejó los mandos en cuatro botones y mandó la barra de
+     * progreso a la pantalla completa. Y ahí se perdió algo que el usuario
+     * notó después: **en vertical la única forma de moverse por la carrera
+     * quedó siendo de diez en diez segundos**. Saltar a un momento concreto no
+     * se podía.
+     *
+     * Vuelve, pero fino y encima de los botones — no debajo: medido, abajo
+     * quedaría a 9 px de la barra de pestañas, dos objetivos finos pegados y
+     * los dos manejados con el pulgar.
+     */
     await simularCarrera(page);
     await page.goto(REPLAY);
     await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
@@ -1009,15 +1017,69 @@ test.describe('los mandos mínimos y la pantalla completa', () => {
     const botonera = page.locator('[data-botonera]').filter({ visible: true });
     await expect(botonera.getByRole('button')).toHaveCount(4);
 
-    // Ni barra ni fila de tiempos en vertical.
-    await expect(page.getByLabel('Minuto de la carrera').filter({ visible: true })).toHaveCount(0);
-    await expect(page.locator('[data-tiempos]').filter({ visible: true })).toHaveCount(0);
+    const deslizador = page.getByLabel('Minuto de la carrera').filter({ visible: true });
+    await expect(deslizador).toHaveCount(1);
 
-    // Y el reloj sigue estando: en la cabecera, que es de donde no se movió.
+    // La fila de tiempos sigue sin estar: en 68 px no cabía, y el reloj ya
+    // vive en la cabecera.
+    await expect(page.locator('[data-tiempos]').filter({ visible: true })).toHaveCount(0);
     await expect(page.getByLabel('Minuto de carrera')).toBeVisible();
 
     // El botón de reproducir ya no dice la palabra, pero sí la tiene de nombre.
     await expect(visible(page, 'Reproducir')).not.toContainText(/reproducir/i);
+  });
+
+  test('el deslizador fino se ve fino pero se agarra', async ({ page }) => {
+    // Cuatro o cinco píxeles se ven y no se agarran. La zona tocable se
+    // construye aparte, que es la lección de la barra de abajo — allí medimos
+    // que el 25 % no respondía por no cuidar esto.
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    const deslizador = page.getByLabel('Minuto de la carrera').filter({ visible: true });
+    const caja = (await deslizador.boundingBox())!;
+    expect(caja.height, 'la zona tocable se ha quedado corta').toBeGreaterThanOrEqual(30);
+
+    // Y el riel que se VE es fino: si midiera lo mismo que el de la pantalla
+    // completa, esto no sería un deslizador fino sino el de siempre.
+    const riel = await deslizador.evaluate((el) => {
+      const pintado = el.parentElement!.querySelector('[aria-hidden]')!;
+      return Math.round(pintado.getBoundingClientRect().height);
+    });
+    expect(riel).toBeLessThanOrEqual(6);
+  });
+
+  test('va arriba de los botones, no debajo', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    const deslizador = (await page
+      .getByLabel('Minuto de la carrera')
+      .filter({ visible: true })
+      .boundingBox())!;
+    const botones = (await page.locator('[data-botonera]').filter({ visible: true }).boundingBox())!;
+
+    expect(deslizador.y, 'el deslizador debería ir encima').toBeLessThan(botones.y);
+  });
+
+  test('lleva las bandas de estado de pista, como el grande', async ({ page }) => {
+    // Medio motivo de que exista: con las bandas se ve de un vistazo dónde
+    // hubo bandera roja o coche de seguridad, sin recorrer la carrera.
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    const fondo = await page
+      .getByLabel('Minuto de la carrera')
+      .filter({ visible: true })
+      .evaluate((el) => {
+        const pintado = el.parentElement!.querySelector('[aria-hidden]')!;
+        return getComputedStyle(pintado).backgroundImage;
+      });
+
+    expect(fondo, 'el riel no lleva el degradado de estados').toContain('gradient');
   });
 
   test('el botón de expandir abre la pantalla completa, y se puede salir', async ({ page }) => {
@@ -1053,9 +1115,12 @@ test.describe('los mandos mínimos y la pantalla completa', () => {
     expect(caja.height, 'los botones no están en columna').toBeGreaterThan(caja.width);
 
     await salir.click();
-    // Por visibles: los mandos de escritorio siguen en el DOM, ocultos con
-    // `md:`, así que contarlos todos daría uno aunque no se vea ninguno.
-    await expect(page.getByLabel('Minuto de la carrera').filter({ visible: true })).toHaveCount(0);
+
+    // Fuera de la pantalla completa quedan los mandos mínimos. El deslizador
+    // sigue estando —volvió fino y encima de los botones— pero la barra grande
+    // y su fila de tiempos no.
+    await expect(page.getByRole('button', { name: 'Salir de pantalla completa' })).toHaveCount(0);
+    await expect(page.locator('[data-tiempos]').filter({ visible: true })).toHaveCount(0);
     await expect(visible(page, 'Reproducir')).toBeVisible();
   });
 

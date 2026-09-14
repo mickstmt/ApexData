@@ -733,6 +733,43 @@ html[data-instalada] [data-pie-de-la-app] > footer {
 }
 
 /**
+ * El deslizador fino de los mandos en vertical.
+ *
+ * Al pasar los mandos a minimos, el deslizador se mudo a la pantalla completa
+ * y en vertical la UNICA forma de moverse por la carrera quedo siendo de diez
+ * en diez segundos. Saltar a un momento concreto dejo de ser posible, y el
+ * usuario lo noto: «a veces me da la sensacion de que justamente falta algo».
+ *
+ * Aqui el pulgar es de 12 px en vez de 22: con 22 sobre un riel de 5 px, la
+ * bola pesa mas que la barra y se lee como un boton suelto. El AREA TOCABLE no
+ * baja: el `input` mide 30 px de alto aunque se vean 5, la misma leccion de la
+ * barra de abajo, donde medimos que el 25 % no respondia por no cuidar esto.
+ */
+.replay-scrubber-fino::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--replay-pulgar);
+  border: 2px solid var(--replay-pulgar-borde);
+  box-shadow: 0 0 0 1px var(--replay-tenue);
+  cursor: pointer;
+}
+.replay-scrubber-fino::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--replay-pulgar);
+  border: 2px solid var(--replay-pulgar-borde);
+  box-shadow: 0 0 0 1px var(--replay-tenue);
+  cursor: pointer;
+}
+.replay-scrubber-fino::-moz-range-track {
+  background: transparent;
+}
+
+/**
  * El destello que confirma un salto de diez segundos.
  *
  * Aparece, se queda lo justo para leerse y se va. Con «reducir movimiento» no

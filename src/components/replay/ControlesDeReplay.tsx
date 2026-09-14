@@ -283,6 +283,55 @@ export function ControlesDeReplay({
     </div>
   );
 
+  /**
+   * El deslizador fino, para los mandos en vertical.
+   *
+   * Lo mismo que `pista` pero de 5 px, sin marcas de vuelta y sin burbuja: en
+   * una capsula de 68 px no hay sitio para lo demas, y lo que hacia falta era
+   * poder ir a un momento, no poder leerlo mientras se va.
+   *
+   * **Las bandas de estado se conservan**, que es medio motivo de que esto
+   * exista: el riel se pinta con el mismo degradado que el grande, asi que la
+   * roja y la amarilla se ven tambien aqui. Y desde el arreglo de la roja, la
+   * banda roja cubre la parada de verdad y no los 103 segundos que llegaron a
+   * declararse en Italia.
+   *
+   * El area tocable son 30 px de alto aunque se vean 5. Cuatro pixeles se ven
+   * pero no se agarran, y eso ya nos costo medir el 25 % de la barra de abajo.
+   */
+  const pistaFina = (
+    /**
+     * Ocupa 16 px de alto, pero se toca en 30.
+     *
+     * La cápsula mide 68 px y el punto 24 fue justamente pedir que ocupara
+     * menos: reservar los 30 px de golpe la subía a 102, un 50 % más, y eso
+     * deshace lo que se gano. El `input` se sale de su caja hacia arriba y hacia
+     * abajo, así que el dedo tiene sus 30 px y el reparto solo paga 16.
+     */
+    <div className="relative h-4">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-[5.5px] h-[5px] rounded-full"
+        style={{ background: degradadoDelScrubber(tramos, 'var(--replay-superficie-2)', TINTA_CSS) }}
+      />
+      <input
+        type="range"
+        min={0}
+        max={count - 1}
+        step={1}
+        value={Math.floor(k)}
+        aria-label="Minuto de la carrera"
+        aria-valuetext={
+          vuelta !== undefined && totalVueltas !== undefined
+            ? `${formatoReloj(segundos)}, vuelta ${vuelta} de ${totalVueltas}`
+            : formatoReloj(segundos)
+        }
+        onChange={(e) => onBuscar(Number(e.target.value))}
+        className="replay-scrubber replay-scrubber-fino absolute inset-x-0 -top-[7px] h-[30px] w-full cursor-pointer appearance-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]"
+      />
+    </div>
+  );
+
   const pista = (
     <div className="relative flex h-11 items-center">
       <div
@@ -398,8 +447,9 @@ export function ControlesDeReplay({
     return (
       <div className="px-4 pb-2.5 pt-2">
         <div className="relative">
-          {/* El destello se queda: sin barra de progreso es la única señal de
-              que el salto ocurrió, y de cuánto fue. */}
+          {/* El destello se queda aunque ahora haya barra: dice el salto REAL
+              —a dos segundos del final dice «+2 s»— y eso el riel no lo
+              cuenta. */}
           {destello && (
             <span
               key={destello.pase}
@@ -410,6 +460,15 @@ export function ControlesDeReplay({
               {destello.texto}
             </span>
           )}
+
+          {/* Arriba de los botones, no debajo. Es lo que hacen YouTube,
+              Netflix, Apple Music, Spotify y el reproductor de iOS; abajo solo
+              aparece en los mini-reproductores, y ahi es un hilo que no se
+              toca. Y hay una razon fisica ademas de la costumbre: la capsula
+              flota sobre la barra de pestañas, y abajo el deslizador quedaria
+              a 9 px de ella —medido—, dos objetivos finos pegados y los dos
+              manejados con el pulgar. */}
+          <div className="mb-1 px-1">{pistaFina}</div>
 
           <div
             data-botonera
