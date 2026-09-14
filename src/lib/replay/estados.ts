@@ -150,6 +150,89 @@ export function nombreDeEstado(clase: ClaseDeEstado): string {
   return NOMBRES[clase];
 }
 
+/**
+ * Los tramos de estado, con la roja durando lo que duro la parada de verdad.
+ *
+ * ## Por que hace falta
+ *
+ * Lo reporto el usuario: en Italia 2026, con LEC fuera y todos los coches en el
+ * garaje, **el indicador cambiaba a amarilla**. Su razonamiento es exacto: por
+ * una amarilla nadie va al garaje.
+ *
+ * Medido en los tramos de ese GP:
+ *
+ * ```
+ *    252s ->  355s  ( 103s)  ROJA
+ *    355s ->  371s  (  16s)  verde
+ *    371s -> 1578s  (1208s)  AMARILLA
+ * ```
+ *
+ * La roja **declarada** dura 103 segundos. Despues hay 16 de verde y luego
+ * **veinte minutos de amarilla** mientras no se mueve nadie: la detencion real
+ * fue de 1819 segundos. O sea que la app se pasaba veinte minutos diciendo
+ * amarilla y pintando el circuito de naranja.
+ *
+ * ## Que se respeta y que no
+ *
+ * Se respeta el vocabulario, que es lo que pidio el usuario: **una bandera roja
+ * es una bandera roja y una amarilla es una amarilla**. No se inventa un estado
+ * nuevo ni se renombra nada. Lo unico que se corrige es CUANTO dura la roja, y
+ * se corrige con lo unico que lo sabe: que no se mueve nadie.
+ *
+ * Al arreglarlo aqui —sobre los tramos, y no en cada sitio que los lee— el
+ * cartel, el color del circuito y las bandas de la barra de progreso dicen lo
+ * mismo sin tener que acordarse de nada.
+ */
+export function conLaParadaDeVerdad(
+  tramos: PositionsTrackStatus[],
+  paradas: { desde: number; hasta: number }[],
+  paso: number
+): PositionsTrackStatus[] {
+  if (!paradas.length) return tramos;
+
+  /**
+   * Solo se ALARGA una roja que ya estaba declarada. Nunca se inventa.
+   *
+   * Es lo que separa una bandera roja de una parada de parrilla: en Italia 2026
+   * se detectan tres detenciones —4:12, 37:49 y 41:08— y solo la primera cae
+   * sobre una roja declarada. Las otras dos son **las dos paradas de parrilla
+   * del relanzamiento**, y ahí no hay ninguna bandera roja que enseñar.
+   */
+  const rojas = tramos
+    .filter((tramo) => claseDeEstado(tramo.status) === 'roja')
+    .map((tramo) => {
+      let end = tramo.end;
+      for (const parada of paradas) {
+        const desde = parada.desde * paso;
+        const hasta = parada.hasta * paso;
+        if (desde < tramo.end && hasta > tramo.start) end = Math.max(end, hasta);
+      }
+      return { start: tramo.start, end };
+    });
+
+  if (!rojas.length) return tramos;
+
+  const salida: PositionsTrackStatus[] = [];
+
+  for (const tramo of tramos) {
+    if (claseDeEstado(tramo.status) === 'roja') continue;
+
+    // Lo que cae dentro de una roja alargada se lo queda ella; el resto se
+    // parte y se conserva tal cual, con su estado original.
+    let desde = tramo.start;
+    for (const roja of rojas) {
+      if (roja.end <= desde || roja.start >= tramo.end) continue;
+      if (roja.start > desde) salida.push({ ...tramo, start: desde, end: roja.start });
+      desde = Math.max(desde, roja.end);
+    }
+    if (desde < tramo.end) salida.push({ ...tramo, start: desde, end: tramo.end });
+  }
+
+  for (const roja of rojas) salida.push({ status: '5', start: roja.start, end: roja.end });
+
+  return salida.sort((a, b) => a.start - b.start);
+}
+
 /** El estado vigente en un instante, en segundos desde la salida. */
 export function estadoEn(tramos: PositionsTrackStatus[], t: number): ClaseDeEstado {
   for (const tramo of tramos) {

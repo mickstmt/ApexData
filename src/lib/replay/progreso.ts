@@ -354,38 +354,61 @@ const QUIETO_ANTES_DE_PARAR = 40;
  * que permite que quien se quedó fuera antes de la roja siga fuera cuando los
  * demás arrancan, en vez de parpadear.
  */
-export function paradasDeLaCarrera(reloj: Int32Array): Int32Array {
-  const n = reloj.length;
-  const paradas = new Int32Array(n).fill(-1);
+export interface ParadaDeLaCarrera {
+  /** Primer instante en que la carrera deja de avanzar. */
+  desde: number;
+  /** Primer instante en que vuelve a avanzar. */
+  hasta: number;
+}
 
-  /**
-   * Cada parada larga, con el instante en que se SABE que lo es.
-   *
-   * No se puede saber al empezar —un parón de dos segundos es ruido— ni hay que
-   * esperar a que acabe, que es lo que hacía la primera versión y dejaba a LEC
-   * sin declarar hasta el minuto 35. Se sabe a los treinta segundos de empezar.
-   */
-  const hitos: { inicio: number; sabido: number }[] = [];
+/**
+ * Los tramos en que la carrera estuvo detenida de verdad.
+ *
+ * El reloj de carrera se queda plano cuando nadie avanza, asi que sus mesetas
+ * largas SON las paradas. Es la unica medida que no depende de que el dato
+ * oficial siga declarando la roja: en Italia 2026 la declaro **103 segundos** y
+ * la parada real duro **1819**.
+ */
+export function paradasDeLaCarrera(reloj: Int32Array): ParadaDeLaCarrera[] {
+  const n = reloj.length;
+  const paradas: ParadaDeLaCarrera[] = [];
 
   let k = 1;
   while (k < n) {
     if (reloj[k] === reloj[k - 1]) {
-      const inicio = k - 1;
-      while (k < n && reloj[k] === reloj[inicio]) k++;
-      if (k - inicio >= PARADA_MINIMA) hitos.push({ inicio, sabido: inicio + PARADA_MINIMA });
+      const desde = k - 1;
+      while (k < n && reloj[k] === reloj[desde]) k++;
+      if (k - desde >= PARADA_MINIMA) paradas.push({ desde, hasta: k });
     } else {
       k++;
     }
   }
 
+  return paradas;
+}
+
+/**
+ * Para cada instante, cuando empezo la ultima parada vigente, o `-1`.
+ *
+ * **Sigue valiendo despues del relanzamiento**: eso es lo que permite que quien
+ * se quedo fuera antes de la roja siga fuera cuando los demas arrancan, en vez
+ * de parpadear.
+ *
+ * No se puede saber al empezar —un paron de dos segundos es ruido— ni hay que
+ * esperar a que acabe, que es lo que hacia la primera version y dejaba a LEC
+ * sin declarar hasta el minuto 35. Se sabe a los treinta segundos de empezar.
+ */
+export function inicioDeLaParada(reloj: Int32Array, paradas: ParadaDeLaCarrera[]): Int32Array {
+  const salida = new Int32Array(reloj.length).fill(-1);
+
   let vigente = -1;
-  let h = 0;
-  for (let i = 0; i < n; i++) {
-    while (h < hitos.length && hitos[h].sabido <= i) vigente = hitos[h++].inicio;
-    paradas[i] = vigente;
+  let p = 0;
+  for (let i = 0; i < salida.length; i++) {
+    while (p < paradas.length && paradas[p].desde + PARADA_MINIMA <= i) vigente = paradas[p++].desde;
+    salida[i] = vigente;
   }
 
-  return paradas;
+  return salida;
 }
 
 /**

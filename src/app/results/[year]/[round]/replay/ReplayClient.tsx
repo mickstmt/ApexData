@@ -13,6 +13,7 @@ import { leerBloque, type BloqueDePosiciones } from '@/lib/replay/bloque';
 import {
   estadoEn,
   nombreDeEstado,
+  conLaParadaDeVerdad,
   relojDeCarrera,
   tramosDelScrubber,
   type ClaseDeEstado,
@@ -22,6 +23,7 @@ import {
   estaFuera,
   huecoEn,
   arranques,
+  inicioDeLaParada,
   ordenEn,
   paradasDeLaCarrera,
   prepararTrazado,
@@ -381,16 +383,12 @@ function Replay({
 
   const k = reloj.kEntero;
   const t = k * paso;
-  const estado = estadoEn(meta.trackStatus, t);
 
   const claro = tema?.claro ?? false;
   const colores = useMemo(
     () => meta.drivers.map((d) => colorDeEquipo(d.team, d.color, claro)),
     [meta.drivers, claro]
   );
-
-  // Con bandera roja la carrera está detenida.
-  const parada = estado === 'roja';
 
   /**
    * El reloj que se detiene con la carrera, para que los huecos no se traguen
@@ -418,7 +416,32 @@ function Replay({
    * Sale del reloj, asi que se calcula con el: quien ya estaba parado al
    * detenerse la carrera sigue estandolo despues del relanzamiento.
    */
-  const paradas = useMemo(() => paradasDeLaCarrera(relojCarrera), [relojCarrera]);
+  /** Los tramos en que la carrera estuvo detenida de verdad. */
+  const detenciones = useMemo(() => paradasDeLaCarrera(relojCarrera), [relojCarrera]);
+
+  const paradas = useMemo(
+    () => inicioDeLaParada(relojCarrera, detenciones),
+    [relojCarrera, detenciones]
+  );
+
+  /**
+   * Los tramos de estado con la roja durando lo que duro la parada.
+   *
+   * Medido en Italia 2026: la roja declarada son 103 s y la parada real 1819.
+   * Sin esto, la app se pasaba veinte minutos diciendo «amarilla» con todos los
+   * coches en el garaje. Corregido aqui, el cartel, el color del circuito y las
+   * bandas de la barra dicen lo mismo sin tener que acordarse de nada.
+   */
+  const tramosDeEstado = useMemo(
+    () => conLaParadaDeVerdad(meta.trackStatus, detenciones, paso),
+    [meta.trackStatus, detenciones, paso]
+  );
+
+  const estado = estadoEn(tramosDeEstado, t);
+
+  // Con bandera roja la carrera está detenida. Y ahora la roja dura lo que duró
+  // la parada, no lo que el dato oficial llegó a declarar.
+  const parada = estado === 'roja';
 
   /**
    * Cuando arranca cada coche, para que el que sale del pit lane no figure
@@ -510,8 +533,8 @@ function Replay({
   const duracionDelRiel = Math.max(0, (count - 1) * paso);
 
   const tramos = useMemo(
-    () => tramosDelScrubber(meta.trackStatus, duracionDelRiel),
-    [meta.trackStatus, duracionDelRiel]
+    () => tramosDelScrubber(tramosDeEstado, duracionDelRiel),
+    [tramosDeEstado, duracionDelRiel]
   );
 
   // Las marcas de vuelta del scrubber: los cruces de meta de quien más dio,

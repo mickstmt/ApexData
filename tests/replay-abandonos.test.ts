@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { estaFuera, paradasDeLaCarrera, INSTANTES_QUIETO } from '@/lib/replay/progreso';
+import {
+  estaFuera,
+  inicioDeLaParada,
+  paradasDeLaCarrera,
+  INSTANTES_QUIETO,
+} from '@/lib/replay/progreso';
 import { relojDeCarrera } from '@/lib/replay/estados';
 import type { PositionsTrackStatus } from '@/types';
 
@@ -60,7 +65,7 @@ function carrera({ parado, seCaeAntes }: { parado: number; seCaeAntes?: number }
   ];
 
   const reloj = relojDeCarrera(tramos, COUNT, PASO, progreso);
-  const paradas = paradasDeLaCarrera(reloj);
+  const paradas = inicioDeLaParada(reloj, paradasDeLaCarrera(reloj));
   return { progreso, reloj, paradas, COUNT, PARA, REANUDA, PILOTOS };
 }
 

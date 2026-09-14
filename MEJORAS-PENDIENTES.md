@@ -1044,9 +1044,21 @@ garaje.
 **Ya existe la señal**: el «nadie avanza» que se calculo para `relojDeCarrera`
 en el punto 25. Hoy solo lo usa el reloj.
 
-**PENDIENTE**: que palabra usar durante esos minutos — «BANDERA ROJA», que es lo
-que pasa en pista aunque el dato ya no lo declare, o «CARRERA DETENIDA», que es
-literal y no inventa una bandera. Mi voto: la segunda.
+**DECIDIDO POR EL USUARIO (2026-09-13), contra mi recomendacion y con razon**:
+«BANDERA ROJA ES BANDERA ROJA, asi como BANDERA AMARILLA ES BANDERA AMARILLA,
+respetemos esto». Nada de inventar un estado nuevo: se respeta el vocabulario de
+banderas y lo unico que se corrige es **cuanto dura la roja**.
+
+**HECHO.** Se corrige sobre los TRAMOS y no en cada sitio que los lee, asi que
+el cartel, el color del circuito y las bandas de la barra de progreso dicen lo
+mismo sin tener que acordarse de nada. En Italia la roja pasa de **103 s
+declarados a 1879**, que es lo que duro la parada.
+
+**Y solo se ALARGA una roja ya declarada, nunca se inventa una.** Es lo que
+separa una bandera roja de una parada de parrilla: en Italia se detectan TRES
+detenciones —4:12, 37:49 y 41:08— y solo la primera cae sobre una roja
+declarada. Las otras dos son las dos paradas de parrilla del relanzamiento, y
+ahi no hay ninguna bandera que enseñar.
 
 ## 38. BUG DE PRODUCTO · La portada contradice a la notificacion
 
