@@ -981,7 +981,35 @@ con el puesto. Con el bloqueo puesto es donde la opcion 1 deja tirado al
 usuario, que es justo lo que hay que decidir. En la opcion 3, «Girar de todos
 modos» aparece a los cuatro segundos de no girar.
 
-**PENDIENTE**: que el usuario elija 1, 2 o 3.
+**DECIDIDO Y HECHO (2026-09-13).** El usuario probo la maqueta instalada, las
+dos veces —con el bloqueo de rotacion puesto y quitado— y descarto girar por
+CSS: con el bloqueo quitado, al girar el movil el sistema gira la pantalla y la
+rotacion propia se suma a la del sistema. «Se pone de cabeza. Inviable.»
+
+**Correccion honesta**: ese doble giro es culpa de la MAQUETA, no del diseño.
+Sin JavaScript, la rotacion por CSS no puede enterarse de que el movil ya giro;
+en la app las dos rotaciones leerian la misma señal y no podrian sumarse. Se le
+dijo. Aun asi eligio la opcion 1, y su razon vale: una capa que se puede sentir
+al reves no compensa lo que resuelve.
+
+**Lo implementado**, con lo que el pidio:
+
+1. Pulsar expandir de pie NO entra en el modo roto: sale el aviso animado.
+2. El aviso **se cierra solo al girar** —eso si se sabe detectar— y entra la
+   pantalla completa. Nada de tener que darle a Salir despues de hacer lo que
+   pedia.
+3. A los cuatro segundos sin girar aparece **«¿No gira? Puede que tengas el
+   bloqueo de rotacion puesto.»** La pista llega tarde a proposito: quien gira
+   enseguida no necesita que le digan nada.
+4. **Ligera transparencia**, tambien peticion suya: se ve por debajo que el
+   replay sigue ahi, asi que el aviso se lee como un paso y no como otra
+   pantalla.
+
+Y la lista de pilotos cortada que quedaba (su ultima pega) **desaparece sola**:
+ya no se entra nunca en ese reparto estando de pie.
+
+**El boton se queda visible en vertical**, decision suya: escondido, nadie
+descubriria que la pantalla completa existe.
 
 ## 33. BUG · Falta `env(safe-area-inset-top)` en la pantalla completa
 

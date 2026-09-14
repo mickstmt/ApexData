@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { VolverAtras } from '@/components/ui/VolverAtras';
 import { CargaDelReplay } from '@/components/replay/CargaDelReplay';
+import { AvisoDeGirar } from '@/components/replay/AvisoDeGirar';
 import { ControlesDeReplay } from '@/components/replay/ControlesDeReplay';
 import { MapaDeCarrera } from '@/components/replay/MapaDeCarrera';
 import { TorreDeTiempos, type FilaDeLaTorre } from '@/components/replay/TorreDeTiempos';
@@ -568,6 +569,16 @@ function Replay({
    */
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
 
+  /**
+   * Se ha pedido la pantalla completa pero el teléfono está de pie.
+   *
+   * Entrar igualmente dejaba el reparto horizontal metido en una pantalla
+   * vertical: torre cortada, circuito aplastado y barra de progreso bajo el
+   * menú. Se pide girar y se espera, que es lo único honesto — en iOS no se
+   * puede girar la pantalla por código.
+   */
+  const [pidiendoGirar, setPidiendoGirar] = useState(false);
+
   useEffect(() => {
     /**
      * «Un teléfono tumbado», y no «una pantalla ancha».
@@ -578,7 +589,14 @@ function Replay({
      * abrir, que no es lo que se pidió.
      */
     const tumbado = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
-    const alGirar = (e: MediaQueryList | MediaQueryListEvent) => setPantallaCompleta(e.matches);
+
+    const alGirar = (e: MediaQueryList | MediaQueryListEvent) => {
+      setPantallaCompleta(e.matches);
+      // Girar es la respuesta al aviso, así que el aviso se va solo. Tener que
+      // cerrarlo a mano después de hacer lo que pedía es de las cosas que más
+      // molestan, y aquí sí sabemos detectarlo.
+      if (e.matches) setPidiendoGirar(false);
+    };
 
     alGirar(tumbado);
     tumbado.addEventListener('change', alGirar);
@@ -900,7 +918,16 @@ function Replay({
 
           <button
             type="button"
-            onClick={() => setPantallaCompleta(true)}
+            onClick={() => {
+              // De pie no se entra: se pide girar. El botón se queda visible en
+              // vertical a propósito — escondido, nadie descubriría que esta
+              // pantalla existe.
+              const tumbado = window.matchMedia(
+                '(orientation: landscape) and (max-height: 500px)'
+              ).matches;
+              if (tumbado) setPantallaCompleta(true);
+              else setPidiendoGirar(true);
+            }}
             aria-label="Ver a pantalla completa"
             className="absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-[10px] border border-[var(--replay-borde)] bg-[var(--replay-superficie)] text-[var(--replay-texto)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--replay-acento)]"
           >
@@ -962,6 +989,11 @@ function Replay({
       >
         {controles(false)}
       </div>
+
+      {/* Se pidió la pantalla completa con el teléfono de pie. */}
+      {pidiendoGirar && !pantallaCompleta && (
+        <AvisoDeGirar alCerrar={() => setPidiendoGirar(false)} />
+      )}
     </div>
   );
 }

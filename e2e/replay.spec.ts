@@ -1021,12 +1021,24 @@ test.describe('los mandos mínimos y la pantalla completa', () => {
   });
 
   test('el botón de expandir abre la pantalla completa, y se puede salir', async ({ page }) => {
-    // El botón no es un adorno: con el giro bloqueado —que mucha gente lleva—
-    // es la única puerta. Y el de salir tampoco: quien entrara por el botón se
-    // quedaría atrapado si la única salida fuese girar.
+    /**
+     * Tumbado, porque de pie el botón ya no entra: pide girar.
+     *
+     * Hasta el 2026-09-13 esta prueba entraba en vertical, y eso era justo el
+     * fallo — el reparto horizontal metido en una pantalla vertical, con la
+     * torre cortada y la barra de progreso bajo el menú. Lo que sigue
+     * comprobando es lo de siempre: que el botón lleva a algún sitio y que de
+     * ahí se puede salir, porque quien entrara sin poder salir quedaría
+     * atrapado.
+     */
+    await page.setViewportSize(TUMBADO);
     await simularCarrera(page);
     await page.goto(REPLAY);
-    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    // Tumbado se entra solo; se sale para poder probar el botón.
+    const salirPrimero = page.getByRole('button', { name: 'Salir de pantalla completa' });
+    await expect(salirPrimero).toBeVisible({ timeout: 20_000 });
+    await salirPrimero.click();
 
     await page.getByRole('button', { name: 'Ver a pantalla completa' }).click();
 
@@ -1069,6 +1081,78 @@ test.describe('los mandos mínimos y la pantalla completa', () => {
     await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
 
     await expect(page.getByRole('button', { name: 'Salir de pantalla completa' })).toHaveCount(0);
+  });
+});
+
+test.describe('expandir con el teléfono de pie', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('pide girar en vez de meterse en el modo horizontal', async ({ page }) => {
+    /**
+     * Lo reportado: pulsar expandir sin girar dejaba el reparto horizontal
+     * metido en una pantalla vertical —torre cortada, circuito aplastado, barra
+     * de progreso bajo el menú—. El usuario: «en todo caso me quedo mejor sin
+     * el modo fullscreen».
+     *
+     * Y en iOS no se puede girar la pantalla por código: ni
+     * `screen.orientation.lock()` en Safari ni el `orientation` del manifest.
+     * Lo único honesto es pedirlo.
+     */
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole('button', { name: 'Ver a pantalla completa' }).click();
+
+    await expect(page.locator('[data-aviso-girar]')).toBeVisible();
+
+    // Lo que no puede pasar: entrar igualmente.
+    await expect(page.getByRole('button', { name: 'Salir de pantalla completa' })).toHaveCount(0);
+  });
+
+  test('al girar se cierra solo y entra la pantalla completa', async ({ page }) => {
+    // Tener que cerrar a mano el aviso después de hacer lo que pedía es de las
+    // cosas que más molestan, y girar SÍ lo sabemos detectar.
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole('button', { name: 'Ver a pantalla completa' }).click();
+    await expect(page.locator('[data-aviso-girar]')).toBeVisible();
+
+    await page.setViewportSize(TUMBADO);
+
+    await expect(page.locator('[data-aviso-girar]')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Salir de pantalla completa' })).toBeVisible();
+  });
+
+  test('si la pantalla no gira, dice que mires el bloqueo de rotación', async ({ page }) => {
+    // La pista llega tarde a propósito: quien gira enseguida no necesita que le
+    // digan nada. Aparece solo cuando la pantalla no ha girado, que es justo el
+    // síntoma de llevar el bloqueo puesto — y eso no se puede leer desde la web.
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole('button', { name: 'Ver a pantalla completa' }).click();
+    const pista = page.getByText(/bloqueo de rotación/);
+
+    await expect.poll(() => pista.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+    await expect
+      .poll(() => pista.evaluate((el) => getComputedStyle(el).opacity), { timeout: 8000 })
+      .toBe('1');
+  });
+
+  test('se puede salir sin girar', async ({ page }) => {
+    await simularCarrera(page);
+    await page.goto(REPLAY);
+    await expect(visible(page, 'Reproducir')).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole('button', { name: 'Ver a pantalla completa' }).click();
+    await page.locator('[data-aviso-girar]').getByRole('button', { name: 'Salir' }).click();
+
+    await expect(page.locator('[data-aviso-girar]')).toHaveCount(0);
+    await expect(visible(page, 'Reproducir')).toBeVisible();
   });
 });
 

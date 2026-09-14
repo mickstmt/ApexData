@@ -213,6 +213,35 @@
      daba tiempo a verla. Medido en la maqueta cuanto de los 720 ms es
      recorrido de verdad: la de antes 258 ms, esta 432, y una sin rebote
      609. Con esta se conserva el muelle y el viaje dura casi el doble. */
+  /* El telefono del aviso de girar, y sus dos flechas.
+     ------------------------------------------------------------------
+     La referencia la trajo el usuario: las flechas parpadean cuatro veces
+     y luego el telefono gira. Van juntas en el mismo ciclo para que el
+     giro caiga justo cuando las flechas se apagan. */
+  .girar-movil {
+    animation: girar-movil 4200ms ease-in-out infinite;
+  }
+  @keyframes girar-movil {
+    0%, 62% { transform: rotate(0deg); }
+    78%, 100% { transform: rotate(-90deg); }
+  }
+
+  .girar-flecha {
+    animation: girar-flecha 4200ms ease-in-out infinite;
+  }
+  @keyframes girar-flecha {
+    0%, 12%, 24%, 36% { opacity: 1; }
+    6%, 18%, 30%, 42% { opacity: .15; }
+    48%, 100% { opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Sin movimiento queda el dibujo quieto y las flechas puestas, que es
+       lo que hay que entender; la animacion solo lo subraya. */
+    .girar-movil { animation: none; }
+    .girar-flecha { animation: none; opacity: 1; }
+  }
+
   .barra-realce,
   .barra-encendida {
     transition:
