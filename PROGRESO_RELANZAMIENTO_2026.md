@@ -123,6 +123,28 @@ El **20** (el mensaje de carga) va con el 3 y se completó el 2026-09-14 con la 
 
 De ahí la conclusión que corrige lo que se escribió media hora antes en esta misma entrada: **el código es el único registro completo**. La bitácora es mejor que las notas, pero también tiene agujeros, y dos commits del 12 de septiembre cerraron dos puntos que no aparecen en ninguna parte.
 
+### Para la sesión de casa: lo que no supe, y lo que sí queda escrito
+
+Esto se escribe aquí a propósito, porque es la información que a la oficina le
+faltó y que ninguna sesión puede deducir sola.
+
+**Una sesión que llega no distingue «no está hecho» de «está hecho y nadie lo
+escribió».** La oficina se encontró 51 commits funcionales desde el 10 de
+septiembre —el replay prácticamente terminado— y unos documentos que seguían
+describiendo casi todo eso como pendiente. Propuso trabajar en cosas ya
+construidas y dio seis puntos por abiertos cuando quedaba uno.
+
+**La asimetría, que es lo que hay que saber**: de la oficina hacia casa el
+problema no existe. Todo lo del 14 quedó con su commit, esta entrada, su fila en
+el registro de avance de `MEJORAS-PENDIENTES.md` y el mapa commit → punto de
+`SIGUIENTE-SESION.md`. De lo anterior al 14, fiarse del `git log`, no de los
+documentos.
+
+**Regla que sale de aquí, para las dos máquinas**: cerrar un punto es commit +
+fila en el registro de avance **con su número** + entrada de bitácora. Y si el
+trabajo cubre un punto que no era el que se estaba mirando —pasó dos veces, con
+el 12 archivado como 36 y el 25 como 37—, se nombran los dos.
+
 ### El descuadre de documentos, que es lo que hay que arreglar de método
 
 Al preguntarme qué quedaba, le pasé **seis puntos como pendientes y cinco estaban hechos** — el aro del líder, los anillos del abandono, la roja que dura lo que duró la parada, el tirador del mapa y `SesionPendiente`. Antes había hecho lo mismo con dos ya cerrados (5 y 19) y había anunciado como espera futura una verificación cuya sesión había corrido dos días antes. Su respuesta: «me parece que no tienes la info al día... no me des información falsa».

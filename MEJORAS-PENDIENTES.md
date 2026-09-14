@@ -17,6 +17,11 @@
 >
 > **Antes de decir que algo esta pendiente: buscarlo en el codigo.** No basta
 > con no encontrarlo aqui tachado.
+>
+> **Y al cerrar un punto, anotarlo aqui con su NUMERO.** El 12 quedo archivado
+> en la bitacora como «punto 36» y el 25 como «punto 37»: el trabajo estaba
+> hecho y escrito, pero buscando «punto 25» no aparecia. Un punto archivado bajo
+> otro numero es tan invisible como uno no escrito.
 
 > **Estas son notas de trabajo tomadas mientras el usuario revisaba el replay recien
 > desplegado en su iPhone.** Estan en el orden en que el las dijo, no por prioridad.

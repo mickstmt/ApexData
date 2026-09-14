@@ -26,6 +26,45 @@ repositorio.
   (como 36 y como 37). Están anotados desde hoy, pero la lección queda: la
   bitácora se escribe a mano y por eso falla.
 
+### Lo que le pasó a la sesión de la oficina, y por qué te lo cuento
+
+No es un reproche, es información que necesitas para trabajar: **el código
+avanzó mucho más de lo que los documentos contaban**, y una sesión que llega
+sin haber vivido ese trabajo no puede distinguir «esto no está hecho» de «esto
+está hecho y nadie lo escribió».
+
+**Lo que se encontró la oficina el 14 de septiembre:** 51 commits funcionales
+desde el día 10, con el replay prácticamente terminado, y unos documentos que
+seguían describiendo casi todo eso como pendiente. El resultado previsible:
+propuso trabajar en cosas ya construidas —el aro del líder, los anillos del
+abandono, el tirador del mapa— y le dijo al usuario que quedaban seis puntos
+cuando quedaba uno. El usuario tuvo que corregirla tres veces seguidas.
+
+**Los casos concretos, para que se entienda el mecanismo:**
+
+| Estaba en el código desde | Qué decían los documentos |
+|---|---|
+| `3e422eb` · 12 sept · el aro del líder (**punto 11**) | Nada. Ninguna entrada de bitácora lo menciona |
+| `581b4b5` · 12 sept · el tirador del mapa (**punto 26**) | Nada |
+| `92866a9` · 21 ago · `SesionPendiente` (**puntos 3 y 20**) | Nada |
+| `ba416c5` + `471303f` · el delta con todos parados (**punto 25**) | Sí, pero archivado como «punto 37» |
+| `3e422eb` + `5188644` · el abandono se nota (**punto 12**) | Sí, pero archivado como «punto 36» |
+
+Un punto archivado bajo otro número es tan invisible como uno no escrito:
+buscando «punto 25» no aparece.
+
+**La asimetría que importa, y por la que esto está escrito aquí:** de la oficina
+hacia casa el problema no existe. Todo lo del 14 quedó con su commit, su entrada
+de bitácora (la **68**), su fila en el registro de avance y el mapa
+commit → punto de la sección 2. **Puedes fiarte de lo que dice este documento
+sobre el día 14.** De lo anterior, no del todo: fíate del `git log`.
+
+**Lo que tienes que hacer al terminar tu sesión** para que no se repita al
+revés: cada punto que cierres, además del commit, una línea en el registro de
+avance de `MEJORAS-PENDIENTES.md` **con su número**, y la entrada de bitácora.
+Si el trabajo cubre un punto que no es el que estabas mirando —pasó dos veces—,
+nómbralos los dos.
+
 ### El orden correcto para saber si algo está hecho
 
 1. **El código, y `git log --grep`.** Buscar la cosa concreta. Si el aro del
