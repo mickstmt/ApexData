@@ -7,104 +7,56 @@
 
 ---
 
-## 0 · ⚠️ LO PRIMERO: ningún documento tiene el estado completo. Solo el código.
+## 0 · ⚠️ LO PRIMERO: no leas para saber qué falta. Ejecútalo.
 
-Hoy costó una bronca merecida: se le presentaron al usuario **seis puntos como
-pendientes cuando cinco estaban hechos**. La causa está identificada y **no es
-git**.
+```bash
+git status && git pull --ff-only && npm ci
+npm run estado
+```
 
-**No falta nada por bajar.** Comprobado: `git fetch` no trae nada y la rama
-local coincide con `origin/main`. Lo hecho en casa el 13 y el 14 está en el
-repositorio.
+`npm run estado` imprime **`ESTADO.md`**, y es el único documento del proyecto
+que **no puede quedarse viejo**: no lo escribe nadie. Cada línea es una sonda
+sobre el repositorio (`scripts/estado.ts`) y `tests/estado.test.ts` compara el
+fichero con lo que sale al ejecutarlo, así que si el código cambia y no se
+regenera, **el CI se pone en rojo**. Comprobado que muerde en los dos sentidos.
 
-### El problema de verdad: los dos documentos tienen agujeros
+La skill **`empezar-sesion`** lleva el procedimiento completo. Úsala.
 
-- **`MEJORAS-PENDIENTES.md`** son las **notas de lo que el usuario reportó**.
-  Sus secciones se quedan viejas: el cierre se escribe en la bitácora y en el
-  commit, y volver ahí a tachar se olvida. **Nunca sirve para saber si algo está
-  resuelto.**
-- **`PROGRESO_RELANZAMIENTO_2026.md`** (la bitácora) es mejor, pero **también se
-  olvida**. Rastreado el 2026-09-14: los puntos **11** (aro del líder, `3e422eb`)
-  y **26** (el tirador del mapa, `581b4b5`) se construyeron el 12 de septiembre y
-  **no aparecen en ninguna entrada**; el **3** se cerró el 21 de agosto y
-  tampoco; y el **12** y el **25** sí están, pero archivados con OTRO número
-  (como 36 y como 37). Están anotados desde hoy, pero la lección queda: la
-  bitácora se escribe a mano y por eso falla.
+### Por qué existe todo esto
 
-### Lo que le pasó a la sesión de la oficina, y por qué te lo cuento
+El 14 y el 15 de septiembre de 2026 se le dijeron al usuario **cuatro cosas
+falsas seguidas**, todas por leer un documento en vez de el código:
 
-No es un reproche, es información que necesitas para trabajar: **el código
-avanzó mucho más de lo que los documentos contaban**, y una sesión que llega
-sin haber vivido ese trabajo no puede distinguir «esto no está hecho» de «esto
-está hecho y nadie lo escribió».
+1. Que quedaban **seis puntos pendientes**, cuando cinco estaban hechos.
+2. Que había que **esperar al siguiente fin de semana** para una verificación
+   cuya sesión había corrido dos días antes.
+3. Que **quedaba un solo punto**, contando sobre un índice con agujeros.
+4. Que había que **pulsar Deploy a mano** en el servicio de telemetría, que se
+   despliega solo desde el 2026-08-24.
 
-**Lo que se encontró la oficina el 14 de septiembre:** 51 commits funcionales
-desde el día 10, con el replay prácticamente terminado, y unos documentos que
-seguían describiendo casi todo eso como pendiente. El resultado previsible:
-propuso trabajar en cosas ya construidas —el aro del líder, los anillos del
-abandono, el tirador del mapa— y le dijo al usuario que quedaban seis puntos
-cuando quedaba uno. El usuario tuvo que corregirla tres veces seguidas.
+Ninguna fue git: la rama siempre coincidió con `origin`. Se escribieron avisos
+en los tres documentos y **la cuarta vez volvió a pasar igual**. Por eso ahora
+hay barreras que fallan, no párrafos que avisan:
 
-**Los casos concretos, para que se entienda el mecanismo:**
-
-| Estaba en el código desde | Qué decían los documentos |
+| Barrera | Qué impide |
 |---|---|
-| `3e422eb` · 12 sept · el aro del líder (**punto 11**) | Nada. Ninguna entrada de bitácora lo menciona |
-| `581b4b5` · 12 sept · el tirador del mapa (**punto 26**) | Nada |
-| `92866a9` · 21 ago · `SesionPendiente` (**puntos 3 y 20**) | Nada |
-| `ba416c5` + `471303f` · el delta con todos parados (**punto 25**) | Sí, pero archivado como «punto 37» |
-| `3e422eb` + `5188644` · el abandono se nota (**punto 12**) | Sí, pero archivado como «punto 36» |
+| `ESTADO.md` + `tests/estado.test.ts` | Que el estado del proyecto se quede viejo sin que nadie lo note |
+| Job `bitacora` en el CI | Que se trabaje sin dejar rastro: un push que toca `src/`, `python-service/app/` o `prisma/` y no toca la bitácora **falla**, y el despliegue depende de él |
+| Skill `empezar-sesion` | Llegar de la otra máquina y opinar sin reconciliar |
 
-Un punto archivado bajo otro número es tan invisible como uno no escrito:
-buscando «punto 25» no aparece.
+### Qué documento sirve para qué
 
-**La asimetría que importa, y por la que esto está escrito aquí:** de la oficina
-hacia casa el problema no existe. Todo lo del 14 quedó con su commit, su entrada
-de bitácora (la **68**), su fila en el registro de avance y el mapa
-commit → punto de la sección 2. **Puedes fiarte de lo que dice este documento
-sobre el día 14.** De lo anterior, no del todo: fíate del `git log`.
+| Documento | Para qué | Para qué NO |
+|---|---|---|
+| **`ESTADO.md`** | Saber **cómo está el código ahora**. Generado | — |
+| `PROGRESO_RELANZAMIENTO_2026.md` | Saber **qué se hizo y por qué**. Entradas nuevas **arriba** | Saber si algo sigue pendiente: también se olvida. Los puntos 11 y 26 se construyeron el 12 y no aparecían en ninguna entrada |
+| `MEJORAS-PENDIENTES.md` | Saber **qué reportó el usuario**, con sus palabras | Saber si está resuelto. **Nunca** |
+| Este fichero | El traspaso y lo que un script no puede saber: decisiones suyas pendientes, cosas aplazadas | La lista de pendientes: esa la da `npm run estado` |
 
-**Lo que tienes que hacer al terminar tu sesión** para que no se repita al
-revés: cada punto que cierres, además del commit, una línea en el registro de
-avance de `MEJORAS-PENDIENTES.md` **con su número**, y la entrada de bitácora.
-Si el trabajo cubre un punto que no es el que estabas mirando —pasó dos veces—,
-nómbralos los dos.
+### Y mirar la fecha
 
-### El orden correcto para saber si algo está hecho
-
-1. **El código, y `git log --grep`.** Buscar la cosa concreta. Si el aro del
-   líder está pintado en `MapaDeCarrera.tsx`, el punto 11 está hecho, diga lo
-   que diga cualquier documento. **Este es el único registro completo.**
-2. **La bitácora**, para el porqué y lo medido. Entradas en orden inverso: la
-   más nueva **arriba**, no al final. Hoy se leyó el final y salieron las
-   entradas de agosto.
-3. El **registro de avance** de `MEJORAS-PENDIENTES.md`, que sí se mantiene.
-4. Las secciones sueltas de `MEJORAS-PENDIENTES.md`, solo para leer **qué
-   reportó el usuario**.
-
-**Y mirar la fecha de hoy.** Una condición de reapertura escrita en futuro («la
-prueba llega con la FP3 del sábado») caduca sola. Hoy se anunció como espera
-algo que había corrido dos días antes y que se cerró leyendo `/api/fuentes` en
-un minuto.
-
-### Y el paso que hoy NO se dio
-
-Al empezar la sesión habían entrado **51 commits funcionales desde el 10 de
-septiembre**, 28 de ellos el 13 y el 14. **Ninguno se reconcilió.** Se leyó un
-documento viejo y se dieron seis puntos por pendientes; solo al ser corregido se
-comprobaron uno a uno.
-
-**Lo primero de cada sesión que vuelve de la otra máquina es esto:**
-
-```
-git log --format="%h|%ad|%s" --date=short --since="<último día que conozco>"   | grep -E "\|(feat|fix|perf)"
-```
-
-y mapear **cada línea** a su punto. El mapa completo del 10 al 14 está en la
-sección 2; se amplía, no se rehace.
-
-**Regla práctica**: antes de decirle al usuario que algo está pendiente, buscarlo
-en el código. No basta con no encontrarlo tachado en un documento.
+Una condición escrita en futuro («la prueba llega con la FP3 del sábado»)
+caduca sola. Comparar su fecha con hoy antes de repetirla.
 
 ---
 
@@ -230,16 +182,11 @@ fila, buscando en los tres sitios —`MEJORAS-PENDIENTES.md`, la bitácora y el
 «Lo que NO está hecho» de `GUIA-DE-PRUEBAS-2026-09.md`— y comprobando cada una
 **en el código**.
 
-### LO QUE QUEDA DE VERDAD (comprobado en el código el 2026-09-15)
+### LO QUE QUEDA DE VERDAD
 
-**Trabajo pendiente**
-
-| Qué | Comprobación hecha | Nota |
-|---|---|---|
-| **22 · Radios de equipo** | No hay código de `team_radio`; la CSP no menciona `livetiming` | ⚠️ **Avisar antes**: abre la CSP a `livetiming.formula1.com`. Es regla suya |
-| **18-bis · Las prácticas siguen por OpenF1** | `avisos-de-sesion.ts`: `const fastf1Puede = sesion.tipo !== 'practica'` | El punto 18 se verificó para carrera y clasificación (fastf1 publica 16 min antes). **Las prácticas no**: FastF1 devuelve las 22 filas con la posición vacía. El propio documento dice «siguen sin decidir». Los avisos de práctica siguen a ~50 min |
-| **Retirar `public/maqueta/`** | Seis ficheros siguen ahí: `barra.html`, `girar.html`, `toques.html` y tres manifests | Se dijo que se retiraba al cerrar el punto 14, que ya está cerrado. **Sigue servido en producción** |
-| **Pruebas de componente con jsdom** | No hay `jsdom` en `vitest.config` ni en `package.json` | Decisión suya: «al final de todo» |
+**No se mantiene aquí a mano: lo da `npm run estado`.** Esta sección lo listaba
+y duraba un día. Lo que sigue es lo que un script no puede saber —decisiones
+suyas y cosas aplazadas por él—, y eso sí vive aquí.
 
 **Esperando una decisión o una prueba suya**
 
