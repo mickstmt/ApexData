@@ -1,6 +1,6 @@
 ---
 name: desplegar
-description: Despliega ApexData y verifica el cutover. Úsala al subir cambios a producción, y siempre que el cambio toque python-service/, que NO se despliega solo.
+description: Despliega ApexData y verifica el cutover en producción. Úsala al subir cambios. El servicio de telemetría SÍ se despliega solo desde el 2026-08-24; solo hace falta pulsar Deploy a mano si el CI deja un aviso de que falta el secreto.
 ---
 
 # Desplegar ApexData
@@ -54,9 +54,14 @@ En su consola, la primera línea al arrancar es la prueba:
 2. Proyecto **`ditto`** → app **`apexdata-telemetry`** (no `apexdata`, que es la web)
 3. Pestaña **Deployments** → **Deploy**
 
-Díselo **explícitamente** cuando el cambio toque esa carpeta, y avisa de qué se
-rompe mientras tanto: la web se despliega sola y el servicio no, así que hay una
-ventana con la web nueva llamando al servicio viejo.
+**Solo si el CI dejó ese aviso.** Esta sección contradecía al principio del
+fichero —decía «la web se despliega sola y el servicio no»— y el 2026-09-15 se
+le pidió al usuario un Deploy a mano que no hacía falta. El CI dispara el del
+servicio **antes** que el de la web justamente para que no exista esa ventana.
+
+Antes de pedirle nada: `npm run estado` lo dice en una línea, y en la ejecución
+del CI el paso «Desplegar el servicio de telemetría» sale en verde y **sin
+anotaciones** cuando el secreto está puesto.
 
 Su Build Path es `/python-service` con File `/Dockerfile` — no la raíz: el
 `.dockerignore` de la raíz excluye esa carpeta entera.

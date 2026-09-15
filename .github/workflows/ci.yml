@@ -124,10 +124,67 @@ jobs:
             test-results/
           retention-days: 7
 
+  bitacora:
+    name: Todo lo que se trabaja deja bitácora
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Por qué esto es un job y no una frase en un documento.
+      #
+      # Porque las frases no impiden nada, y está comprobado: dos puntos del
+      # 12 de septiembre —el aro del líder y el tirador del mapa— se
+      # construyeron, se commitearon y NO se escribieron en ninguna parte. Tres
+      # días después, otra sesión los dio por pendientes y propuso rehacerlos.
+      #
+      # La regla que lo evita es simple: un push que cambia el producto cambia
+      # también la bitácora. No pide una entrada bonita; pide que alguien haya
+      # abierto el fichero.
+      - name: La bitácora acompaña al código
+        env:
+          ANTES: ${{ github.event.before }}
+        run: |
+          if [ -z "$ANTES" ] || [ "$ANTES" = "0000000000000000000000000000000000000000" ]; then
+            echo "Push sin base de comparación; no se puede exigir nada."
+            exit 0
+          fi
+
+          CAMBIADOS=$(git diff --name-only "$ANTES" "${{ github.sha }}")
+
+          # Solo el producto. Un push de solo documentación no tiene que
+          # documentarse a sí mismo, y las pruebas y la configuración del
+          # entorno tampoco cuentan como avance que contar.
+          PRODUCTO=$(echo "$CAMBIADOS" | grep -E '^(src/|python-service/app/|prisma/)' || true)
+
+          if [ -z "$PRODUCTO" ]; then
+            echo "Este push no toca el producto: nada que exigir."
+            exit 0
+          fi
+
+          if echo "$CAMBIADOS" | grep -q '^PROGRESO_RELANZAMIENTO_2026.md$'; then
+            echo "Bitácora actualizada junto al código. Correcto."
+            exit 0
+          fi
+
+          echo "::error::Este push cambia el producto y no toca la bitácora."
+          echo ""
+          echo "Cambió:"
+          echo "$PRODUCTO" | sed 's/^/  /'
+          echo ""
+          echo "Escribe la entrada en PROGRESO_RELANZAMIENTO_2026.md —qué se hizo,"
+          echo "por qué, y los números medidos— y vuelve a subir. La regla existe"
+          echo "porque dos puntos construidos el 12 de septiembre no quedaron"
+          echo "escritos en ninguna parte y tres días después se dieron por"
+          echo "pendientes."
+          exit 1
+
   deploy:
     name: Deploy to EasyPanel
     runs-on: ubuntu-latest
-    needs: [web, service, e2e]
+    needs: [web, service, e2e, bitacora]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     concurrency:
       group: deploy-easypanel-apexdata

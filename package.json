@@ -26,7 +26,8 @@
     "pwa:icons": "tsx scripts/pwa/generate-icons.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "estado": "tsx scripts/estado.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

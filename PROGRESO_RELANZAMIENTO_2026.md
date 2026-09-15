@@ -33,6 +33,12 @@
 
 **PWA**: instalable en iOS con icono propio, splash nativa, barra de pestañas inferior, modo offline y aviso de actualización.
 
+**Cómo saber qué falta**: `npm run estado`. Lo imprime `ESTADO.md`, generado por
+sondas sobre el repositorio y vigilado por una prueba, así que es el único
+documento que no puede quedarse viejo. Este de aquí dice **qué se hizo y por
+qué**; `MEJORAS-PENDIENTES.md`, **qué reportó el usuario**, y nunca si está
+resuelto.
+
 **Próximo paso**: pendiente de **confirmar en la próxima carrera** que los avisos por sesión salen ~30 min tras la bandera (ver entrada 56). Abiertos desde el 2026-09-10, cada uno con su propia sesión: **comprimir las siete rutas de telemetría** que ya existen —Next no comprime ninguna ruta de API, medido: 690 KB por el cable en `/api/laps`— y la **auditoría de la versión web** que pidió el usuario, por las diferencias de formato frente al teléfono (ver entrada 62). La deuda del Sprint 5 quedó cerrada al completo el 2026-08-28, y abajo está el porqué de cada cierre, escrito para **no volver a evaluar lo ya decidido**. Ese mismo día se subieron `checkout`, `setup-node` y `setup-python` a **v7** en los cinco workflows —apuntaban a Node 20, ya obsoleto en los runners—: CI verde y **cero avisos de obsolescencia**.
 
 **Tests**: **417 unitarios** (TypeScript) + **61 (Python)** + **134 de navegador (Playwright), que desde el 2026-08-18 corren también en CI** con acceso a la base de datos. Bloquean el despliegue en CI, igual que en plastik. Cubren lo que estuvo mal en silencio: detección de abandonos, horas reales de carrera, agregación por temporada, cara a cara, serialización de telemetría, el orden de los tiempos de vuelta, la edad de los pilotos y que cada equipo tenga un color visible en tema claro.
@@ -40,7 +46,7 @@
 ### Deuda técnica conocida (documentada, no bloqueante)
 - ~~Colisión del modelo `Constructor`~~ → **resuelto en S3**: el modelo se llama `Team` (con `@@map("constructors")`, sin tocar la BD) y el workaround de `src/lib/prisma.ts` desapareció.
 - ~~El venv local tiene FastF1 3.7.0~~ → resuelto el 2026-08-19: se creó `python-service/.venv` desde `requirements-dev.txt`, con **FastF1 3.8.3**. Está en `.gitignore`, así que es de esta máquina.
-- ~~Pendientes de S4: mapa del circuito por velocidad y estrategia de neumáticos~~ → **hechos el 2026-08-19**, con dos endpoints nuevos en el servicio Python. **Exigen pulsar *Deploy* a mano en el panel**: sin eso, los dos botones nuevos de `/analysis` responden con error en producción.
+- ~~Pendientes de S4: mapa del circuito por velocidad y estrategia de neumáticos~~ → **hechos el 2026-08-19**, con dos endpoints nuevos en el servicio Python. *(Aquel día exigían pulsar Deploy a mano; desde el 2026-08-24 el CI lo dispara solo — ver abajo.)*
 - ~~15 warnings de lint~~ → **resuelto**: `npm run lint` sale limpio, 0 avisos, y así se mantiene desde entonces (comprobado el 2026-08-24).
 - 🟢 **Estados de carga: resueltos.** De 6 páginas con `loading.tsx` se pasa a 12, la home transmite por partes con `<Suspense>` y las páginas históricas tienen caché de una hora. Lo último que quedaba, la ficha de piloto, se cerró el 2026-08-24 en `083d687`: el `<Suspense>` ya estaba desde el 19 y lo que fallaba era la espera, no el arranque. **Comprobado en producción el 2026-08-28**: primer byte 90-100 ms y página completa en 0,11-0,15 s en caliente, con las estadísticas y el cara a cara ya dentro del HTML.
 - **Recortado de S5 el 2026-08-18, decisión del usuario** (se registra en lugar de desaparecer, que era justo el fallo de método diagnosticado):
@@ -58,7 +64,7 @@
 - 🟢 **Latencia: resuelta el 2026-08-19** pasando la app al puerto 5432 (modo sesión) con `connection_limit=5`. Medido en producción antes/después: `/api/health` **540 → 155 ms**, `/standings?season=2015` **2.963 → 1.699 ms**, `/standings?season=2024` **2.837 → 1.268 ms**, home **~1.400 → ~1.140 ms**. Queda como nota histórica lo que se midió: el pooler en modo transacción (6543) cobraba ~400 ms por consulta sobre el mismo host, porque está pensado para serverless —un proceso por petición— y aquí hay un contenedor permanente.
 - ⚪ **Medido y descartado por ahora: Postgres en el VPS.** Daría ~1 ms por consulta frente a los 101 ms de red hasta Virginia, pero con la conexión directa ya resuelta, el salto restante no compensa asumir backups y actualizaciones propios. Queda anotado por si algún día la latencia vuelve a molestar.
 - ⚪ **Nota histórica: el pooler cuesta 5× lo que la conexión directa** (medido el 2026-08-18; no se ha cambiado nada, por decisión del usuario). Sobre el mismo host `aws-1-us-east-1`: una `SELECT 1` por el **pooler (6543)** tarda **506 ms**; por la **conexión directa (5432)**, **101 ms**, que es exactamente el ida y vuelta de red hasta Virginia. Además `connection_limit=1` serializa: cinco consultas en paralelo tardan lo mismo que en fila india. Se nota donde no hay caché: la home, con 4 consultas encadenadas, tarda **1,4 s**, y `/api/health`, con una sola, **540 ms**; las páginas con `unstable_cache` responden en 55-90 ms y estaban tapando el problema. El pooler tiene sentido en serverless, donde cada petición es un proceso nuevo; aquí hay un contenedor permanente.
-- **El servicio de telemetría no tiene despliegue automático**: el CI solo dispara el webhook de la web, así que un cambio en `python-service/` exige pulsar *Deploy* a mano en el panel.
+- ~~El servicio de telemetría no tiene despliegue automático~~ → **FALSO desde el 2026-08-24** (`e892dff`). El CI tiene dos pasos, `¿Cambió el servicio de telemetría?` y `Desplegar el servicio de telemetría`, que disparan `EASYPANEL_SERVICE_HOOK` **solo** cuando el push toca `python-service/` —reconstruirlo en cada push de la web cuesta minutos y tira su caché de FastF1— y van **antes** que el de la web, para que no haya una ventana con la página nueva llamando a un servicio viejo. **Esta línea se quedó tres semanas mintiendo** y el 2026-09-15 hizo que se le pidiera al usuario un Deploy a mano que no hacía falta; él lo cortó: «cómo me vas a decir que no se despliega solo si tú mismo me hiciste los pasos». **Cómo comprobarlo sin creerse esto**: en la ejecución del CI, el paso `Desplegar el servicio de telemetría` sale en verde y **sin anotaciones**; si el secreto faltara, dejaría dos avisos.
 - 🟢 **Auditoría triple del 2026-08-17: cerrada el 2026-08-19.** Los tres informes se contrastaron punto por punto contra el código (ver la bitácora de cierre). Del informe 1 y del 2 no queda nada sin resolver o sin recortar explícitamente. **Recortado a propósito, con motivo**: (a) `PageTransition` —la acusación de 300 ms era de ~20 ms medidos, y el arreglo tenía un riesgo peor que el defecto—; (b) el `role="img"` de `TelemetryChart`, sin alternativa textual, porque una vuelta son miles de muestras y una tabla equivalente no es legible —el gráfico del campeonato sí la tiene—; (c) la «golden rule» de safe-area en `Header`, que se desvía del plan pero funciona por su altura fija. **Del informe 3 (huecos silenciosos)**: el punto 2 quedó **cerrado el 2026-08-20** — `PriorityRows`, `Chip` y `Sheet` existen los tres en `src/components/ui/`. Siguen abiertos los puntos 1, 4, 5, 7 y 9.
 
 **Decisiones tomadas**:
@@ -77,7 +83,7 @@
 ## Acciones pendientes del usuario
 
 1. ~~**Desplegar la web y el servicio de telemetría en EasyPanel**~~ → ambos hechos: la web el 2026-08-17 y la telemetría el 2026-08-18, con el volumen en `/app/cache` y `FASTF1_SERVICE_URL` ya configurada. ~~Comprobación de cutover del CI~~ → resuelta.
-2. ~~**Pulsar *Deploy* en el servicio de telemetría** por el endpoint `/classification`~~ → hecho el 2026-08-22, comprobado en producción: `/api/clasificacion/2026/12/SQ` devuelve los 22 puestos y la pestaña del sprint enseña la parrilla. Recordatorio permanente: **el servicio de telemetría no se despliega solo**; cualquier cambio bajo `python-service/` necesita pulsar *Deploy* a mano en panel.dittochatbot.com.
+2. ~~**Pulsar *Deploy* en el servicio de telemetría** por el endpoint `/classification`~~ → hecho el 2026-08-22, comprobado en producción: `/api/clasificacion/2026/12/SQ` devuelve los 22 puestos y la pestaña del sprint enseña la parrilla. ~~Recordatorio permanente: el servicio de telemetría no se despliega solo~~ → **ya no**: desde el 2026-08-24 lo despliega el CI cuando el push toca `python-service/`. Ver la deuda técnica de arriba.
 3. ~~**Activar los avisos push**~~ → **hecho**, comprobado el 2026-08-26: la base tiene **1 suscripcion**, creada el 2026-08-24. La cadena entera funciona. Lo de abajo queda como historico: abrir la app instalada en la pantalla de inicio, entrar a **Favoritos** y pulsar el boton de avisos. Comprobado el 2026-08-24: la base tiene **cero suscripciones**, asi que el aviso del GP de Paises Bajos se envio a nadie aunque la carrera quedara marcada como avisada. La cadena entera esta probada salvo este ultimo paso, que solo se puede dar desde un telefono.
 4. ~~**6 logos de equipo**~~ → **cerrado el 2026-08-25**: los once equipos de 2026 tienen su logo, Ferrari incluido, con cero equipos cayendo al respaldo de iniciales. Ver la bitacora del dia para como se resolvio lo del escudo. Los detalles historicos de antes: Descargar el SVG de cada uno (Brandfetch, seeklogo o la web oficial) y guardarlo como `public/images/constructors/<constructorId>.svg` — exactamente: `ferrari.svg`, `red_bull.svg`, `aston_martin.svg`, `rb.svg`, `cadillac.svg`, `alphatauri.svg`. Después ejecutar `npm run images:link`. Sin esto, esos equipos muestran sus iniciales en un recuadro (no se rompe nada).
 5. ~~Decidir cuánto histórico cargar~~ → hecho: 2010–2026 completo.
@@ -86,6 +92,33 @@
 ---
 
 ## Bitácora
+
+### 2026-09-15 (70) — Dejar de confiar en los documentos: el estado se ejecuta, no se lee ✅
+
+**El día empezó con otro error del mismo tipo, el cuarto en dos días.** Se le pidió al usuario pulsar *Deploy* a mano en el servicio de telemetría. Su respuesta: «cómo me vas a decir que no se despliega solo si tú mismo me hiciste los pasos». Comprobado en el CI: el servicio **se despliega solo desde el 2026-08-24** (`e892dff`), con dos pasos —`¿Cambió el servicio de telemetría?` y `Desplegar el servicio de telemetría`— que disparan `EASYPANEL_SERVICE_HOOK` cuando el push toca `python-service/`, y **antes** que el de la web para que no haya ventana con la página nueva llamando a un servicio viejo. En la ejecución de `0ac21fd` ese paso salió en verde y sin anotaciones: si el secreto faltara, habría dejado dos avisos.
+
+La frase falsa vivía en tres sitios: la deuda técnica de este documento, el «recordatorio permanente» de las acciones pendientes, y —la que de verdad la disparó— la skill `cerrar-sesion`, que terminaba diciendo «pide el Deploy manual del servicio». La skill `desplegar` lo tenía bien arriba y mal abajo, y su propia descripción decía «que NO se despliega solo». Corregidas las cuatro.
+
+**Los cuatro errores del 14 y el 15, todos del mismo tipo**: seis puntos dados por pendientes cuando cinco estaban hechos; una verificación anunciada como futura cuando su sesión había corrido dos días antes; un «queda uno» contado sobre un índice con agujeros; y este Deploy. Ninguno fue git —la rama siempre coincidió con `origin`—. Los cuatro salieron de **leer un documento en vez de el código**.
+
+## Lo que se ha montado para que no dependa de acordarse
+
+Se llevaban dos días escribiendo avisos en los documentos, y **la cuarta vez volvió a pasar igual**. Un párrafo no puede fallar. Lo que sigue sí:
+
+- **`npm run estado` → `ESTADO.md`.** Siete sondas sobre el repositorio en `scripts/estado.ts`: si hay código de `team_radio`, si `avisos-de-sesion.ts` sigue excluyendo las prácticas, si existe `public/maqueta/`, si el CI despliega el servicio… Cada línea del fichero sale de mirar un archivo, no de la memoria de nadie.
+- **`tests/estado.test.ts`.** Regenera y compara. **Comprobado que muerde en los dos sentidos**: falla si alguien edita `ESTADO.md` a mano y falla si cambia el código sin regenerarlo. Tiene además una prueba dedicada al caso concreto que costó la bronca: si el CI despliega el servicio, el estado tiene que decirlo.
+- **Job `bitacora` en el CI.** Un push que toca `src/`, `python-service/app/` o `prisma/` **y no toca este fichero falla**, y el despliegue depende de él (`needs: [web, service, e2e, bitacora]`). Nace de que el aro del líder y el tirador del mapa se construyeron el 12 de septiembre, se commitearon, y no se escribieron en ninguna parte: tres días después se dieron por pendientes.
+- **Skill `empezar-sesion`.** Lo que hay que hacer antes de opinar sobre qué falta: mirar si hay trabajo local sin subir, bajar, `npm run estado`, y reconciliar con `git log` lo que entró de la otra máquina. Con los cuatro errores escritos dentro, para que se lean.
+
+**Y la tabla de qué documento sirve para qué**, que hasta ahora estaba implícita: `ESTADO.md` dice cómo está el código —generado, no se queda viejo—; esta bitácora, qué se hizo y por qué; `MEJORAS-PENDIENTES.md`, qué reportó el usuario, y **nunca** si está resuelto.
+
+## Y el trabajo del día
+
+**18-bis, medido antes de construir.** Contra producción: `/api/clasificacion/2026/14/FP1|FP2|FP3` devuelve **cero filas** —FastF1 no publica clasificación de prácticas, así que el sondeo estricto que entró el 13 estaba condenado a decir «no hay datos» para siempre—, mientras que `/fastest` devuelve **22 vueltas de 22 pilotos**, que es la clasificación de una práctica de verdad. El `42m 57s` de la FP3 lo midió el sondeo viejo, o sea «la sesión ya carga», que es cuando aparecen las vueltas: contra los `49m 56s` de OpenF1, **la ganancia sería de ~7 minutos, no de 37**. No compensa una carga de sesión cada cinco minutos, así que **no se construyó el aviso**: se arregló el sondeo para que en prácticas mida las vueltas y Azerbaiyán dé la medida buena. El servicio gana `sondeo=1` en `/fastest`, igual que ya lo tenía `/info`.
+
+**`public/maqueta/` retirada.** No era que siguiera en el repo: `/maqueta/barra.html` respondía **200 en producción** pese a que el punto 14 se cerró días antes.
+
+**Estado al cerrar**: 537 unitarias y 63 de Python en verde, tipos y lint limpios. Queda pendiente lo que diga `ESTADO.md`, que ya no hay que creerse.
 
 ### 2026-09-15 (69) — «Queda uno» era falso: contar puntos numerados no vale ✅
 
