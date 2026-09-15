@@ -118,7 +118,11 @@ Se llevaban dos días escribiendo avisos en los documentos, y **la cuarta vez vo
 
 **`public/maqueta/` retirada.** No era que siguiera en el repo: `/maqueta/barra.html` respondía **200 en producción** pese a que el punto 14 se cerró días antes.
 
-**Estado al cerrar**: 537 unitarias y 63 de Python en verde, tipos y lint limpios. Queda pendiente lo que diga `ESTADO.md`, que ya no hay que creerse.
+**El CI se puso rojo con este mismo cambio, y la causa era mía de ayer.** Falló la prueba de la ficha de circuito: `waitForURL` se comió los 90 s en CI mientras aquí pasaba en 4,4 s. El comentario de esa prueba ya lo tenía diagnosticado —«`/circuits` pinta 36 tarjetas y su cola de optimización de imágenes deja al servidor, dos núcleos en CI, sin turno para servir el documento siguiente»— y se había endurecido dos veces atacando el síntoma. Medido en producción: **185 peticiones a `/_next/image` en `/standings` y 218 en `/circuits`**, casi todas para SVG de menos de 1 KB. Las 48 banderas promedian **0,6 KB** y los 36 trazados, **3 KB**: rasterizarlos cuesta más de lo que ahorran, y el resultado es fácilmente mayor que el original. Y las tablas de ayer añadieron ~40 banderas por página, o sea que la cola la empeoré yo.
+
+Arreglado en el sitio central: un SVG propio no pasa por el optimizador (`OptimizedImage`, `CountryFlag` y la tarjeta de circuito). **De 218 a 0 en `/circuits` y de 185 a 69 en `/standings`**, con las 91 imágenes de la lista de circuitos cargando y cero respuestas de error. 537 unitarias y 188 de navegador en verde.
+
+**Estado al cerrar**: 537 unitarias, 188 de navegador y 63 de Python en verde, tipos y lint limpios. Queda pendiente lo que diga `ESTADO.md`, que ya no hay que creerse.
 
 ### 2026-09-15 (69) — «Queda uno» era falso: contar puntos numerados no vale ✅
 

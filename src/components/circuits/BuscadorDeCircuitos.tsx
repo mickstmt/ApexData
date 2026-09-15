@@ -84,6 +84,10 @@ function Tarjeta({ circuito }: { circuito: CircuitoDeLaLista }) {
             alt=""
             width={128}
             height={128}
+            // Treinta y seis trazados vectoriales de 3 KB. Optimizarlos era la
+            // cola que dejaba sin turno al servidor en el CI. Ver
+            // `OptimizedImage`.
+            unoptimized={circuito.imageUrl.endsWith('.svg')}
             // Los archivos traen la tinta fija —23 de 36 en blanco y el resto en
             // negro—, así que se fuerzan a silueta monocroma como los logos.
             className="h-16 w-auto object-contain opacity-90 brightness-0 dark:brightness-0 dark:invert"

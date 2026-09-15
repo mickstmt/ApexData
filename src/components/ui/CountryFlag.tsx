@@ -38,6 +38,9 @@ export function CountryFlag({
       title={label}
       width={size}
       height={size}
+      // Un SVG propio de 0,6 KB no gana nada pasando por el optimizador, y en
+      // una tabla son cuarenta peticiones. Ver `OptimizedImage`.
+      unoptimized
       className={`inline-block shrink-0 rounded-full ${className}`}
     />
   );

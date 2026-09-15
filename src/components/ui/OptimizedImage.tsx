@@ -17,6 +17,25 @@ interface OptimizedImageProps {
   objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
 }
 
+/**
+ * Un SVG propio no pasa por el optimizador.
+ *
+ * Next lo permite —`dangerouslyAllowSVG`— y por eso funcionaba, pero
+ * «funcionar» aqui era pagar una peticion a `/_next/image` y un turno de
+ * `sharp` por cada trazado y cada bandera, para rasterizar un vector que ya
+ * pesa lo que pesa. **Medido el 2026-09-15 en produccion: 185 peticiones al
+ * optimizador en `/standings` y 218 en `/circuits`**, casi todas para SVG de
+ * menos de 1 KB —las 48 banderas promedian 0,6 KB y los 36 trazados, 3 KB—.
+ * El resultado optimizado es facilmente mas grande que el original.
+ *
+ * En el CI, con dos nucleos, esa cola dejaba al servidor sin turno para servir
+ * el documento siguiente: la prueba de la ficha de circuito se comio los 90 s
+ * de `waitForURL` dos veces seguidas. Esta al final del mismo fichero de
+ * pruebas, documentado, y ya se habia endurecido dos veces atacando el
+ * sintoma.
+ */
+const esVectorPropio = (src: string) => src.startsWith('/') && src.endsWith('.svg');
+
 export function OptimizedImage({
   src,
   alt,
@@ -87,6 +106,7 @@ export function OptimizedImage({
         fill={fill}
         sizes={sizes}
         priority={priority}
+        unoptimized={esVectorPropio(src)}
         // La opacidad se ata al esqueleto, no a «cargando»: si nunca hubo
         // esqueleto tampoco debe haber fundido, porque no hay nada de lo que
         // aparecer.
