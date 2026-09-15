@@ -42,6 +42,34 @@ describe('ESTADO.md no puede quedarse viejo', () => {
   });
 
   /**
+   * Lo que el usuario tiene que decidir sale ARRIBA, no enterrado.
+   *
+   * Lo pidió él: «¿por qué no dejas escrita la evidencia para que, si le pido
+   * continuar con lo pendiente, lo primero que me diga sea lo de la CSP?».
+   * Estaba escrito —en una fila entre siete y en la sección 3 del traspaso— y
+   * aun así había que acordarse de sacarlo.
+   */
+  it('las decisiones del usuario van antes que la tabla', () => {
+    const estado = construirEstado(RAIZ);
+    const pendientesConDecision = SONDAS.filter((s) => s.decision && !s.resuelta(RAIZ));
+
+    if (pendientesConDecision.length === 0) {
+      expect(estado).not.toContain('Antes de proponer trabajo');
+      return;
+    }
+
+    const avisoEn = estado.indexOf('Antes de proponer trabajo');
+    const tablaEn = estado.indexOf('| Qué | Cómo está |');
+
+    expect(avisoEn, 'el aviso de decisiones no aparece').toBeGreaterThan(-1);
+    expect(avisoEn, 'el aviso va DESPUÉS de la tabla: se lee tarde').toBeLessThan(tablaEn);
+
+    for (const sonda of pendientesConDecision) {
+      expect(estado, `falta la decisión de «${sonda.pregunta}»`).toContain(sonda.decision!);
+    }
+  });
+
+  /**
    * El caso concreto que costó la bronca del 2026-09-15.
    *
    * Si el CI tiene el paso que despliega el servicio, **ninguna sesión puede

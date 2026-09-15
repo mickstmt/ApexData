@@ -41,6 +41,16 @@ interface Sonda {
   /** Qué decir cuando `resuelta` es verdadero, y qué cuando no. */
   siSi: string;
   siNo: string;
+  /**
+   * Lo que hay que preguntarle al usuario ANTES de ponerse con esto, si sigue
+   * sin resolver.
+   *
+   * Existe porque no basta con que la pregunta esté escrita: estaba, en una
+   * fila entre siete y en la sección 3 del traspaso, y aun así había que
+   * acordarse de sacarla. Lo que aparece aquí sale **arriba del todo** del
+   * documento generado, y desaparece solo el día que la sonda se resuelva.
+   */
+  decision?: string;
 }
 
 const leer = (raiz: string, ruta: string): string => {
@@ -69,6 +79,10 @@ export const SONDAS: Sonda[] = [
     evidencia: '`team_radio` en el cliente de OpenF1 · `livetiming` en `src/lib/csp.ts`',
     siSi: 'HECHO',
     siNo: 'PENDIENTE — ⚠️ abre la CSP a `livetiming.formula1.com`: hay que avisar al usuario ANTES',
+    decision:
+      '**¿Se abre la CSP a `livetiming.formula1.com`?** Sin eso no hay radios de equipo. ' +
+      'Es regla suya avisar antes de tocar la política, así que **esto se pregunta antes de empezar**, ' +
+      'no a mitad.',
   },
   {
     pregunta: '18-bis · Los avisos de práctica, ¿salen por FastF1?',
@@ -98,6 +112,9 @@ export const SONDAS: Sonda[] = [
     evidencia: '`img-src` en `src/lib/csp.ts`',
     siSi: 'SÍ — la CSP la admite',
     siNo: 'NO, y es decisión suya: enseñarla obliga a abrir la CSP a `lh3.googleusercontent.com`',
+    decision:
+      '**¿Se abre la CSP a `lh3.googleusercontent.com`** para que se vea la foto de su cuenta de Google? ' +
+      'Mientras tanto va la inicial, que no depende de nadie de fuera.',
   },
   {
     pregunta: 'El servicio de telemetría, ¿se despliega solo?',
@@ -140,8 +157,34 @@ export function construirEstado(raiz: string): string {
     return `| ${sonda.pregunta} | ${ok ? sonda.siSi : sonda.siNo} | ${sonda.evidencia} |`;
   });
 
+  /**
+   * Lo que hay que preguntarle al usuario antes de proponerle trabajo.
+   *
+   * Va ARRIBA DEL TODO a propósito. Estas preguntas ya estaban escritas y aun
+   * así había que acordarse de sacarlas; si el usuario dice «sigue con lo
+   * pendiente», lo primero que tiene que ver quien lea esto es que hay algo
+   * que decidir, no una lista de tareas que no se pueden empezar.
+   */
+  const bloqueos = SONDAS.filter((s) => s.decision && !s.resuelta(raiz)).map(
+    (s) => `- ${s.decision}`
+  );
+
+  const aviso = bloqueos.length
+    ? [
+        '## 🛑 Antes de proponer trabajo: esto lo decide el usuario',
+        '',
+        ...bloqueos,
+        '',
+        'Preguntárselo **antes** de ponerse, no a mitad. Estas líneas se generan',
+        'solas y desaparecen el día que la sonda de arriba quede resuelta.',
+        '',
+      ]
+    : [];
+
   return [
     CABECERA,
+    '',
+    ...aviso,
     '| Qué | Cómo está | Dónde se comprueba |',
     '|---|---|---|',
     ...filas,

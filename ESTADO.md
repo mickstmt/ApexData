@@ -13,6 +13,15 @@
 > Este dice **cómo está el código ahora mismo**. Para saber si algo sigue
 > pendiente, se mira este.
 
+
+## 🛑 Antes de proponer trabajo: esto lo decide el usuario
+
+- **¿Se abre la CSP a `livetiming.formula1.com`?** Sin eso no hay radios de equipo. Es regla suya avisar antes de tocar la política, así que **esto se pregunta antes de empezar**, no a mitad.
+- **¿Se abre la CSP a `lh3.googleusercontent.com`** para que se vea la foto de su cuenta de Google? Mientras tanto va la inicial, que no depende de nadie de fuera.
+
+Preguntárselo **antes** de ponerse, no a mitad. Estas líneas se generan
+solas y desaparecen el día que la sonda de arriba quede resuelta.
+
 | Qué | Cómo está | Dónde se comprueba |
 |---|---|---|
 | 22 · Radios de equipo en el replay | PENDIENTE — ⚠️ abre la CSP a `livetiming.formula1.com`: hay que avisar al usuario ANTES | `team_radio` en el cliente de OpenF1 · `livetiming` en `src/lib/csp.ts` |

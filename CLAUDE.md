@@ -18,6 +18,10 @@ npm run estado                   # el estado real, leído del código
 **Usa la skill `empezar-sesion`**, que lleva el procedimiento completo,
 incluida la reconciliación de los commits que entraron de la otra máquina.
 
+Si `ESTADO.md` abre con **«🛑 Antes de proponer trabajo»**, eso es lo primero
+que hay que decirle al usuario — antes de listarle tareas que no se pueden
+empezar sin su permiso. Ese bloque se genera solo y desaparece solo.
+
 ## Qué documento sirve para qué
 
 | Documento | Para qué | Para qué NO |
