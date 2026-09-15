@@ -87,6 +87,27 @@
 
 ## Bitácora
 
+### 2026-09-15 (69) — «Queda uno» era falso: contar puntos numerados no vale ✅
+
+**Lo que pasó.** El usuario pidió el listado de pendientes tras construir el login y se le respondió que **solo quedaban las radios de equipo (punto 22)**. Él sabía que no y tuvo que insistir dos veces: «nosotros acá sabemos que faltan algunas otras cosas más además de las radios».
+
+**Por qué falló, y no es git.** Comprobado: no faltaba nada por subir, la rama local coincidía con `origin/main`. El fallo fue el método — la cuenta se hizo sobre los **puntos numerados** de `MEJORAS-PENDIENTES.md`, y ese índice tiene agujeros:
+
+| Agujero | Detalle |
+|---|---|
+| Números que no existen | **27, 29, 30 y 31 no aparecen en ningún documento.** No se puede saber si se perdió algo o si nunca se usaron |
+| El **28** y el **49** | Solo viven en la bitácora, sin sección propia |
+| Lo que nunca llevó número | Limpiezas, decisiones aplazadas e ideas suyas están en prosa, repartidas en tres ficheros. Contar puntos se las salta todas |
+
+**Lo que de verdad quedaba**, comprobado en el código y no en un documento: el **22** (radios, sin código y CSP sin abrir), el **18-bis** (las prácticas siguen por OpenF1 — `fastf1Puede = sesion.tipo !== 'practica'`, así que sus avisos siguen llegando a los ~50 minutos), **retirar `public/maqueta/`** (seis ficheros todavía servidos en producción pese a que el punto 14 está cerrado) y las **pruebas de componente con jsdom**. Más cuatro decisiones suyas sin contestar y tres cosas aplazadas a propósito.
+
+**Mi parte del error, del día anterior.** El traspaso que dejé el 14 daba **seis puntos por abiertos que ya estaban construidos** —el 11 y el 26 desde el 12 de septiembre, el 3+20 desde el 21 de agosto, el 10a, el 12 y el 25—, y encima le pedí datos para depurar el 25, que llevaba dos días arreglado. La sesión de la oficina leyó ese documento y propuso trabajar en cosas ya hechas. Misma causa: fiarse de las notas en vez del código.
+
+**Lo verificado hoy en esta máquina**, después de bajar los 16 commits de la oficina: 532 pruebas unitarias en verde (los tres ficheros que fallaban era `prisma generate`, que hay que rehacer tras `npm ci`), 188 de navegador y **cero inestables** en la última tanda real —las cuatro del día 14 no se repitieron—, y CI verde en `8f72150`.
+
+**La regla que queda**: no contar puntos. Enumerar lo abierto una cosa por fila, mirando los tres sitios, y comprobando cada una en el código. Y antes de decirle que algo está pendiente, buscarlo.
+
+
 ### 2026-09-14 (68) — La web deja de ser la PWA estirada, las cuentas, y un descuadre de documentos ✅
 
 **Puntos 45 y 47 · el armazón de escritorio.** Tres maquetas mías rechazadas antes de acertar: las tres movían la **cabecera** de sitio sobre la misma página de siempre, una tabla estirada de borde a borde. El usuario lo zanjó —«tus sugerencias de diseño son de las peores que he visto»— y tenía razón. La cuarta copió la **arquitectura** de sus referencias (FotMob, Flashscore) en vez de decorar la mía, y esa sí: «por fin entendiste la consigna». El contenido se para en **1280** —no es estética: es lo que decide si al lado de la tabla caben el raíl (232) y una columna de contexto (320) sin bajar de los ~670 px en que una tabla deja de leerse— y las nueve secciones bajan a un raíl desde `lg`. Desaparece la hoja modal de teléfono en un monitor.

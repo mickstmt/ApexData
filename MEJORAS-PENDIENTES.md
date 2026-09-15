@@ -1,3 +1,28 @@
+> # ⚠️ ESTE DOCUMENTO NO DICE QUE ESTA PENDIENTE
+>
+> Son **las notas de lo que el usuario reporto**, y nada mas. Sus secciones se
+> quedan viejas: el cierre se escribe en el commit y en la bitacora, y volver
+> aqui a tacharlo se olvida.
+>
+> **Y el indice numerado tiene agujeros** (comprobado el 2026-09-15): los
+> numeros **27, 29, 30 y 31 no existen**, el **28** y el **49** solo viven en la
+> bitacora, y todo lo que nunca llevo numero —limpiezas, decisiones aplazadas,
+> ideas suyas— esta en prosa y repartido en tres ficheros. **Contar puntos
+> numerados se las salta todas**: el 2026-09-15 se le dijo al usuario que solo
+> quedaban las radios, y no era verdad.
+>
+> **Donde esta el estado de verdad**, en este orden:
+>
+> 1. **El codigo, y `git log --grep`.** Es el unico registro completo.
+> 2. **`SIGUIENTE-SESION.md`**, seccion «LO QUE QUEDA DE VERDAD» — la lista
+>    abierta, comprobada cosa por cosa contra el codigo.
+> 3. **`PROGRESO_RELANZAMIENTO_2026.md`** (la bitacora) para el porque y lo
+>    medido. Las entradas nuevas van **arriba**.
+> 4. Este documento, **solo** para leer que reporto el usuario.
+>
+> **Antes de decirle que algo esta pendiente, buscarlo en el codigo.** No basta
+> con no encontrarlo tachado aqui.
+
 # ApexData - 19 trabajos pendientes (lista cerrada por el usuario el 2026-09-11)
 
 > ## ⚠️ ESTE DOCUMENTO NO ES LA FUENTE DE LA VERDAD

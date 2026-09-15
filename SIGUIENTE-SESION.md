@@ -1,4 +1,9 @@
-# Para la siguiente sesión (casa) — al 2026-09-14, noche
+# Para la siguiente sesión — al 2026-09-15
+
+> **Corregido el 15 desde casa.** La sección 2 daba por terminada la lista
+> («queda uno: el 22») y no lo estaba. La cuenta buena está en
+> **«LO QUE QUEDA DE VERDAD»**, al final de la sección 2. El resto del
+> documento —el mapa commit → punto, y el método— sigue siendo bueno.
 
 ---
 
@@ -204,15 +209,61 @@ corrigió.
 | `7bce630` | **17-bis** entrar con el correo |
 | `92866a9` (21 ago) | **3 + 20** sesiones nunca vacías |
 
-### Conclusión
+### ⚠️ Conclusión CORREGIDA el 2026-09-15 (casa)
 
-**De los 49 puntos de la lista, queda uno: el 22.** Todo lo demás está cerrado,
-y cada cierre tiene su commit arriba.
+**Aquí decía «de los 49 puntos queda uno: el 22». Era falso, y costó caro**: al
+pedir el listado de pendientes, al usuario se le dijo que solo faltaban las
+radios. Él sabía que no y tuvo que volver a preguntar dos veces.
 
-### 22 · Radios de equipo en el replay (OpenF1 `/v1/team_radio`)
+**Por qué falló**: la cuenta se hizo sobre los puntos NUMERADOS de
+`MEJORAS-PENDIENTES.md`, y ese índice **no es completo**. Comprobado el 15:
 
-⚠️ **Abre la CSP a `livetiming.formula1.com`**, así que hay que avisar al
-usuario **antes** de tocar nada — es una regla suya, no una cortesía.
+| Agujero | Detalle |
+|---|---|
+| Faltan números enteros | **27, 29, 30 y 31 no existen en ningún documento.** No se puede saber si se perdió algo o si nunca se usaron |
+| El **28** | Solo vive en la bitácora (el doble toque). No tiene sección propia |
+| El **49** | Igual: citado en la bitácora y aquí, sin sección en `MEJORAS-PENDIENTES.md` |
+| Lo que nunca llevó número | Limpiezas, decisiones aplazadas e ideas suyas viven en prosa, en tres ficheros distintos. **Contar puntos numerados se las salta todas** |
+
+**Regla que sale de esto**: no contar puntos. Enumerar lo abierto una cosa por
+fila, buscando en los tres sitios —`MEJORAS-PENDIENTES.md`, la bitácora y el
+«Lo que NO está hecho» de `GUIA-DE-PRUEBAS-2026-09.md`— y comprobando cada una
+**en el código**.
+
+### LO QUE QUEDA DE VERDAD (comprobado en el código el 2026-09-15)
+
+**Trabajo pendiente**
+
+| Qué | Comprobación hecha | Nota |
+|---|---|---|
+| **22 · Radios de equipo** | No hay código de `team_radio`; la CSP no menciona `livetiming` | ⚠️ **Avisar antes**: abre la CSP a `livetiming.formula1.com`. Es regla suya |
+| **18-bis · Las prácticas siguen por OpenF1** | `avisos-de-sesion.ts`: `const fastf1Puede = sesion.tipo !== 'practica'` | El punto 18 se verificó para carrera y clasificación (fastf1 publica 16 min antes). **Las prácticas no**: FastF1 devuelve las 22 filas con la posición vacía. El propio documento dice «siguen sin decidir». Los avisos de práctica siguen a ~50 min |
+| **Retirar `public/maqueta/`** | Seis ficheros siguen ahí: `barra.html`, `girar.html`, `toques.html` y tres manifests | Se dijo que se retiraba al cerrar el punto 14, que ya está cerrado. **Sigue servido en producción** |
+| **Pruebas de componente con jsdom** | No hay `jsdom` en `vitest.config` ni en `package.json` | Decisión suya: «al final de todo» |
+
+**Esperando una decisión o una prueba suya**
+
+| Qué | Qué hace falta de él |
+|---|---|
+| **19 · ¿En Brave llegan los avisos?** | Que instale la PWA en Brave **en su teléfono** y mire si llega uno. Brave desactiva por defecto los servicios de Google para push |
+| **La foto de la cuenta de Google sale rota** | Decidir: abrir la CSP a `lh3.googleusercontent.com` (una imagen de Google en cada página) o quedarse con la inicial |
+| **La barra flotante sobre un titular** | Sin decidir. Si algún día molesta, la palanca que funciona es subir la opacidad del 34 % a ~45 %, **no** la sombra (probado, no sirve) |
+| **Los iconos propios** | Casco, podio y bandera están dibujados a mano en `components/iconos/motor.tsx` porque `lucide` no los tiene. Un juego completo y coherente es una pieza aparte, sin decidir |
+
+**Aplazado a propósito — no es deuda, es decisión suya**
+
+| Qué | Cuándo se retoma |
+|---|---|
+| **44 · Neumático, paradas y «en boxes» en la fila** | Decidido el 14: no se integra. Motivo de producto, no de sitio: «al ser una repetición le quita peso; **sin embargo si fuese en vivo ahí sí que sería info crucial**». El disparador es el día que haya **timing en vivo**. Guardado: `mockups/09-la-fila-y-el-alto.html`, la tabla de holguras medida, y el dato ya comprobado (`Compound`, `TyreLife`, `Stint`, `PitInTime`, `PitOutTime` en `/api/laps/{year}/{round}/R/stints`) |
+| **El mini-reproductor del replay**, tipo imagen en imagen | Idea suya, apuntada, **sin evaluar** |
+| **Etiquetar las marcas del deslizador** (cada 10 vueltas) | Apuntado, no acordado |
+
+**Lo que NO hay que volver a decir que está pendiente** (comprobado en el
+código, con su commit): el aro del líder (**11**, `3e422eb`), el tirador del
+mapa (**26**, `581b4b5`), las sesiones vacías (**3 + 20**, `92866a9`, del 21 de
+agosto), en qué minuto estás (**10a**, `0a3183b`), el delta con todos parados
+(**25**, `ba416c5` + `471303f`) y que el abandono se note (**12**, `3e422eb` +
+`5188644`).
 
 ---
 
@@ -250,11 +301,22 @@ usuario **antes** de tocar nada — es una regla suya, no una cortesía.
 
 ## 5 · Por dónde empezaría
 
-Con el **22**, que es lo único que queda — y **preguntándole primero** por la
-apertura de la CSP, que es la condición que él puso.
+**No es el 22.** El 22 necesita su permiso antes de tocarlo (abre la CSP), así
+que no se puede empezar por ahí sin preguntar.
 
-Si prefiere no abrirla, lo siguiente honesto es decirle que la lista está
-terminada y preguntarle qué quiere construir, en vez de inventar deuda.
+1. **Retirar `public/maqueta/`.** Es lo único que no necesita decisión de nadie:
+   se dijo que salía al cerrar el punto 14, el 14 está cerrado, y esas tres
+   páginas siguen servidas en producción. Diez minutos.
+2. **Las prácticas por FastF1 (18-bis).** Es la que más le afecta a diario —los
+   avisos de práctica siguen llegando a los ~50 minutos— y tiene una decisión
+   real detrás: FastF1 no publica clasificación de prácticas, así que hay que
+   elegir entre avisar sin clasificación antes, o seguir esperando a OpenF1.
+   Llevarle las opciones medidas, no la pregunta a secas.
+3. **Preguntarle por el 22 y por la foto de Google**, que son las dos aperturas
+   de CSP pendientes. Las dos en el mismo mensaje, porque son la misma decisión
+   de fondo.
+
+Y **antes de decirle a él que algo está pendiente, buscarlo en el código**.
 
 ---
 
