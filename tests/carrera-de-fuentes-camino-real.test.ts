@@ -40,8 +40,23 @@ vi.mock('@/services/openf1/client', () => ({
 
 vi.mock('@/services/fastf1/client', () => ({ isTelemetryServiceConfigured: true }));
 
+/**
+ * Lo que devuelve FastF1 en una PRACTICA, que no es lo que devuelve en una
+ * carrera. Se deja mutable para poder apagar las vueltas en una prueba.
+ */
+const vueltasDeLaPractica = {
+  actual: [
+    { Driver: 'ANT', LapTime: '0 days 00:01:32.797000' },
+    { Driver: 'LEC', LapTime: '0 days 00:01:32.963000' },
+  ] as Record<string, unknown>[],
+};
+
 vi.mock('@/services', () => ({
   fastf1Client: {
+    getFastestLaps: async () => {
+      await new Promise((r) => setTimeout(r, 300)); // lento, como FastF1
+      return { fastest_laps: vueltasDeLaPractica.actual };
+    },
     getSessionInfo: async () => {
       await new Promise((r) => setTimeout(r, 300)); // lento, como FastF1
       // Con posición y código: una fila vacía ya NO cuenta como tener datos,
@@ -115,5 +130,72 @@ describe('el camino real de sondearFuentes', () => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((filas.get('999:openf1') as any).firstProbeAt).toEqual(viejo);
+  }, 20_000);
+});
+
+/**
+ * En una práctica se mide lo que de verdad se enviaría: las vueltas.
+ *
+ * Comprobado contra producción el 2026-09-15: `/api/clasificacion/2026/14/FP1`,
+ * `FP2` y `FP3` devuelven **cero filas**. FastF1 no publica clasificación de
+ * prácticas, así que un sondeo que exija posiciones está condenado a decir «no
+ * hay datos» para siempre y el experimento no puede contestar nunca.
+ *
+ * Y no es solo que no pueda medir: **no mediría lo que usaríamos**. En una
+ * práctica el orden lo da la vuelta rápida de cada piloto —es lo que ya enseña
+ * la pestaña, con `mejorVueltaPorPiloto`—, no una posición.
+ *
+ * Con el código anterior estas dos pruebas fallan: la primera porque FastF1
+ * quedaba sin `firstSeenAt`, y la segunda porque la nota hablaba de filas sin
+ * clasificar en vez de vueltas.
+ */
+/**
+ * Una práctica que acaba de terminar, con clave PROPIA.
+ *
+ * La clave distinta no es cosmética: el módulo recuerda en un `Map` cuándo
+ * sondeó cada `clave:fuente` para respetar la cadencia, y ese recuerdo no vive
+ * en la base ni lo limpia `filas.clear()`. Reutilizando la 999 de las pruebas
+ * de arriba, la cadencia contestaba «aún no toca» y aquí no se sondeaba nada.
+ */
+const practicaReciente = (clave: number) =>
+  ({
+    ...sesion,
+    session_key: clave,
+    date_end: new Date(Date.now() - 60_000).toISOString(),
+  }) as typeof sesion;
+
+describe('el sondeo de una práctica', () => {
+  beforeEach(() => {
+    filas.clear();
+    vueltasDeLaPractica.actual = [
+      { Driver: 'ANT', LapTime: '0 days 00:01:32.797000' },
+      { Driver: 'LEC', LapTime: '0 days 00:01:32.963000' },
+    ];
+  });
+
+  it('cuenta las vueltas, no las posiciones que FastF1 nunca manda', async () => {
+    const { sondearFuentes } = await import('@/lib/push/carrera-de-fuentes');
+    await sondearFuentes({ sesiones: [practicaReciente(777)] });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fastf1 = filas.get('777:fastf1') as any;
+
+    expect(fastf1?.firstSeenAt, 'FastF1 se quedó sin medir en una práctica').toBeTruthy();
+    expect(fastf1?.lastNote).toBe('2 vueltas');
+  }, 20_000);
+
+  it('sin vueltas cronometradas sigue siendo «todavía no»', async () => {
+    // Una práctica que aún no ha rodado: la sesión puede cargar y no tener una
+    // sola vuelta con tiempo. Eso no es tener datos.
+    vueltasDeLaPractica.actual = [];
+
+    const { sondearFuentes } = await import('@/lib/push/carrera-de-fuentes');
+    await sondearFuentes({ sesiones: [practicaReciente(778)] });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fastf1 = filas.get('778:fastf1') as any;
+
+    expect(fastf1?.firstSeenAt ?? null).toBeNull();
+    expect(fastf1?.lastNote).toBe('sin vueltas cronometradas');
   }, 20_000);
 });

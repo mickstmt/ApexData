@@ -166,6 +166,7 @@ async def get_fastest_laps(
     event: str,
     session_type: str,
     limit: int = Query(10, description="Number of fastest laps to return"),
+    sondeo: bool = False,
 ):
     """
     The best lap OF EACH DRIVER, quickest first.
@@ -176,15 +177,24 @@ async def get_fastest_laps(
     not one. `limit` therefore counts drivers. The page was compensating by
     asking for two thousand laps and reducing them in the browser; grouping
     belongs here, where the laps already are.
+
+    `sondeo=1`, igual que en `/info`: se salta los dos recuerdos —el del
+    resultado y el del «todavia no»— y mira de verdad. Existe porque en las
+    PRACTICAS esta es la unica via: FastF1 devuelve su clasificacion vacia
+    —comprobado con FP1, FP2 y FP3 de España 2026, cero filas con posicion— y
+    lo que si publica son las vueltas. Sin saltarse el recuerdo, un «todavia
+    no» puede ser de hace cinco minutos, y el experimento mide diferencias del
+    tamaño de esos cinco minutos.
     """
     try:
         cache_key = f"fastest_laps_v2_{year}_{event}_{session_type}_{limit}"
 
-        cached_data = cache_manager.get(cache_key)
-        if cached_data is not None:
-            return cached_data
+        if not sondeo:
+            cached_data = cache_manager.get(cache_key)
+            if cached_data is not None:
+                return cached_data
 
-        session = await load_session(year, event, session_type)
+        session = await load_session(year, event, session_type, saltar_memoria=sondeo)
 
         laps = session.laps
 

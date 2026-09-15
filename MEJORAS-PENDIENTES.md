@@ -190,8 +190,10 @@ en los dos temas. No fija una lista de hex, asi que no se queda desactualizada.
 > primeros clasificados). El **25 y el 26 son fallos de cosas que dabamos por
 > cerradas**, asi que van por delante de lo demas.
 >
-> **Pendiente de limpiar**: `public/maqueta/` —la maqueta de la barra y su
-> manifest— se retira al cerrar el punto 14. Sigue servida en produccion.
+> ~~**Pendiente de limpiar**: `public/maqueta/`~~ → **RETIRADA el 2026-09-15.**
+> Seis ficheros que seguian servidos en produccion —`/maqueta/barra.html`
+> respondia 200— aunque el punto 14 se cerro dias antes. Comprobado que nadie
+> los enlazaba desde `src/`.
 
 4. **Replay**: ~~9 + 10a (mandos y linea de tiempo)~~ -> el circuito (11 + 12),
    el final de carrera (2), las radios (22, avisar por la CSP)

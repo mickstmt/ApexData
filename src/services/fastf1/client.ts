@@ -307,9 +307,12 @@ class FastF1Client {
     year: number,
     event: string | number,
     sessionType: SessionType,
-    limit: number = 10
+    limit: number = 10,
+    opciones?: { sondeo?: boolean }
   ): Promise<FastestLapsResponse> {
-    const endpoint = `/api/laps/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/fastest?limit=${numeroAcotado(limit, 1, 100)}`;
+    const endpoint =
+      `/api/laps/${segmentoAnio(year)}/${segmentoEvento(event)}/${sessionType}/fastest?limit=${numeroAcotado(limit, 1, 100)}` +
+      (opciones?.sondeo ? '&sondeo=1' : '');
     return this.fetch<FastestLapsResponse>(endpoint, 60000);
   }
 

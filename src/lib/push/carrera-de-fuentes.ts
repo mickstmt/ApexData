@@ -173,6 +173,37 @@ async function sondearFastF1(sesion: SesionOpenF1): Promise<Respuesta> {
   const tipo = SESIONES[sesion.session_name]?.codigo as SessionType | undefined;
   if (!tipo) return { hayDatos: false, nota: 'sesión que no medimos' };
 
+  /**
+   * En prácticas se pregunta por las VUELTAS, no por la clasificación.
+   *
+   * Porque la clasificación de una práctica no existe en FastF1: comprobado el
+   * 2026-09-15 contra producción, `/clasificacion` devuelve **cero filas** en
+   * FP1, FP2 y FP3 de España. Con el sondeo pidiendo posiciones, la medida de
+   * una práctica está condenada a decir «no hay datos» para siempre, y el
+   * experimento no puede contestar nunca.
+   *
+   * Y lo que se mediría con posiciones tampoco sería lo que usaríamos: en una
+   * práctica el orden lo da **la vuelta rápida de cada piloto**, que es lo que
+   * ya enseña la pestaña. Así que se mide eso, que es lo que se enviaría.
+   *
+   * 25 y no 22: si algún fin de semana rueda un tercer piloto, el tope no
+   * puede ser el que decida cuántos se ven.
+   */
+  if (tipo === 'FP1' || tipo === 'FP2' || tipo === 'FP3') {
+    try {
+      const vueltas = await fastf1Client.getFastestLaps(carrera.year, String(carrera.round), tipo, 25, {
+        sondeo: true,
+      });
+      const conTiempo = (vueltas.fastest_laps ?? []).filter((v) => v.LapTime);
+
+      return conTiempo.length > 0
+        ? { hayDatos: true, nota: `${conTiempo.length} vueltas` }
+        : { hayDatos: false, nota: 'sin vueltas cronometradas' };
+    } catch (error) {
+      return { hayDatos: false, nota: error instanceof Error ? error.message.slice(0, 120) : 'error' };
+    }
+  }
+
   try {
     // `sondeo` para que el servicio no conteste con lo que recordaba: medir el
     // instante en que aparecen los datos con cinco minutos de error es no medir.
