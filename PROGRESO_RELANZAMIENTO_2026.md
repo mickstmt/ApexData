@@ -93,6 +93,130 @@ resuelto.
 
 ## Bitácora
 
+### 2026-09-19 (71) — Una calculadora científica de verdad, en una pantalla que no se anuncia ✅
+
+**Qué pidió el usuario**: probar si se podía hacer una calculadora científica
+en ApexData, en una pantalla nueva a la que solo se llegue por la URL, sin que
+aparezca en la navegación. Y, sobre la marcha, tres cosas más: con los temas de
+ApexData, con librea Red Bull / Verstappen, y —con sus palabras— «que funcione
+de verdad como una calculadora científica real de última generación», porque
+«para algo simplón ya usaría las de internet».
+
+**Dónde está**: `/calculadora`. No está en `navItems`, no la enlaza nadie y
+lleva `robots: noindex, nofollow`. Las tres cosas hacen falta: sin la tercera
+no saldría en el menú pero acabaría en Google. **No es una pantalla protegida**
+— quien sepa la dirección, entra; si algún día tuviera que serlo, eso es del
+middleware, no de esconder el enlace.
+
+**Lo que se hizo**
+
+| Pieza | Dónde | Qué resuelve |
+|---|---|---|
+| El motor | `src/lib/calculadora/evaluar.ts` | Tokenizador y análisis por descenso recursivo. Lógica pura, sin React: por eso se puede probar |
+| El formato | `src/lib/calculadora/formato.ts` | Doce cifras significativas, millares con espacio fino y notación científica con superíndices |
+| Las teclas | `src/components/calculadora/teclas.ts` | Las dos capas, `2nd` e `hyp`, y los atajos del teclado físico |
+| La pantalla | `src/components/calculadora/Calculadora.tsx` | Visor con vista previa, cinta de cálculos, memoria y librea |
+| La paleta | `src/app/globals.css` | Tokens `--calc-*`, con sus dos temas |
+| Las pruebas | `tests/calculadora.test.ts` | 37 casos sobre el motor |
+
+**Por qué un analizador y no una cadena de teclas**: el modelo clásico
+—acumulador más operador pendiente— no sabe qué es la precedencia y contesta 20
+a `2+3×4`. Lo que separa una científica de una de supermercado no es tener más
+botones, es leer la expresión entera. De ahí salen gratis los paréntesis
+anidados, `−2²=−4`, `2^3^2=512` y la multiplicación implícita (`2π`, `3(4+5)`).
+
+**Tres detalles que hacen que se note que es «de verdad»**
+
+1. **`sin(180°)` da 0**, no 1,22·10⁻¹⁶. π no cabe en un `double`; las
+   científicas físicas enseñan 0 porque redondean antes de pintar. Se replica,
+   pero solo dentro de las funciones trigonométricas y solo sobre los valores
+   donde son exactas — así un `1E-20` escrito a mano sale tal cual.
+2. **`200+10%` da 220**, y `200×10%` da 20. Es la regla que toda calculadora
+   aplica y ninguna explica: el `%` a la derecha de una suma se toma del
+   operando izquierdo.
+3. **El retroceso borra una tecla, no una letra.** Lo escrito se guarda como
+   lista de piezas (`'sin('`, `'7'`, `'÷'`), no como cadena.
+
+**Lo medido en el navegador** (no mirado): build del CI sin base de datos,
+servido en el 3100 con el `buildId` comparado contra `.next/BUILD_ID` —el
+servidor viejo se quedó escuchando y dio un falso negativo, otra vez—. Después,
+en **los dos temas**: 33 comprobaciones por tema, todas en verde. Contraste
+compuesto contra los fondos reales de los ancestros, recorrido funcional
+completo (precedencia, trigonometría en las tres unidades, porcentaje, `2nd`,
+`hyp`, teclado físico, memoria, cinta y el aviso de error) y ancho del
+documento en **seis anchos** (360, 390, 430, 768, 1100, 1280) sin arrastre
+horizontal ni una etiqueta cortada, incluido el peor caso: `sinh⁻¹` a 360 px.
+
+**Dos fallos de contraste que la medición encontró y que a ojo no se veían**
+
+- La tecla `C`, en claro: el rojo sobre el fondo de función daba **4,32:1**.
+  Pasa al fondo de tecla normal, donde da 5,10.
+- La tecla `C`, en oscuro: el rojo de bandera del replay (`#FF4238`) daba
+  **4,35:1** sobre la tecla. `--calc-rojo` sube a `#FF5A4E`, medido: 4,87 sobre
+  la tecla y 5,85 sobre el visor.
+
+**Un fallo de medición propio, anotado para no repetirlo**: la primera pasada
+componía el fondo empezando en el **padre** del elemento, así que a la tecla `=`
+—blanco sobre azul lleno— le medía 1,18:1 y parecía rota. El fondo compuesto
+empieza en el propio elemento, que es donde se apoya su tinta.
+
+**La prueba fijada**: `e2e/calculadora.spec.ts`, 17 pruebas en 17 segundos.
+
+Al principio esto se dejó fuera, con la excusa de que fijarla era decisión del
+usuario. Su respuesta: «la decisión de no haber hecho las pruebas con Playwright
+la verdad que me sorprende, no tiene ningún sentido que no lo hayas hecho». Y
+tenía razón: la medición ya estaba escrita y funcionando en un script de un solo
+uso, así que no fijarla era tirar el trabajo y dejar sin vigilancia justo lo que
+la medición acababa de encontrar. **Una verificación que no queda fijada no
+protege de nada**: protege una vez.
+
+Lo que vigila es lo que las unitarias no pueden ver, y no repite su aritmética:
+
+- Que la pantalla **siga escondida** — el fallo más fácil de cometer sin querer
+  es que alguien añada la ruta a `navItems` creyendo que faltaba.
+- Que las teclas estén conectadas al motor de verdad: precedencia, las tres
+  unidades angulares, el porcentaje, `2nd`+`hyp` combinados, el teclado físico,
+  la memoria, la cinta y el aviso de error.
+- El contraste compuesto en **los dos temas**, que es donde estaban los dos
+  fallos: nueve elementos medidos por tema.
+- Los **tres anchos** del proyecto (360, 390, 1280) en el peor caso, con los dos
+  modificadores puestos y las etiquetas más largas a la vista.
+
+Escribirla encontró además un malentendido mío sobre la propia pantalla: di por
+hecho que quitar `hyp` apagaba `2nd`, y son dos mandos independientes. El fallo
+estaba en la prueba, no en la app, pero es exactamente la clase de cosa que una
+prueba fijada obliga a mirar.
+
+**La revisión de código encontró cinco fallos reales, y todos eran míos**
+
+La skill `cerrar-sesion` exige `code-review` antes de commitear. Se hizo, y no
+salió de vacío: cinco defectos, ninguno cosmético, todos en código que ya había
+dado por bueno después de medirlo en el navegador. Es el argumento entero a
+favor de la regla — medir encuentra lo que se ve, la revisión encuentra lo que
+no se mira.
+
+| Qué | Por qué importaba |
+|---|---|
+| El atajo de teclado escuchaba en `window` sin mirar el destino | La cabecera trae un panel de ajustes con un campo de correo: escribir ahí un `7` se lo quedaba la calculadora, y `Esc` cerraba lo escrito |
+| `Enter` se interceptaba siempre | Quien llega a la tecla `7` con el tabulador y pulsa `Enter` obtenía `=`. Como `Espacio` sí funcionaba, a mano no se ve |
+| `±` sobre un resultado dejaba `Ans−` | Un menos colgando en vez de negar: el resultado desaparecía de la pantalla |
+| `toFixed(12)` cuenta **decimales**, no cifras significativas | `2⁻²⁷` salía como `0.000000007451`, cuatro cifras de las doce prometidas: los ceros de delante se comían el presupuesto |
+| `aria-label` sobre cada tecla tapaba la etiqueta visible | WCAG 2.5.3: `aria-label="siete"` sobre una tecla que pone `7` rompe el control por voz, que dice lo que LEE |
+
+Y al arreglar el primero salió uno más, que la revisión no vio y la prueba sí:
+el escuchador dependía de la identidad de `ejecutar`, que cambia en cada
+pulsación, así que se desmontaba y se volvía a montar entre tecla y tecla. Dejó
+una prueba inestable —en una tanda se perdió el `6` de `7*6`— y se arregló
+poniéndolo una sola vez contra una `ref`.
+
+Todo lo corregido quedó cubierto: `cambiarSigno` y `comoLiteral` se sacaron del
+`.tsx` a `src/lib/calculadora/edicion.ts` precisamente para poder probarlos —lo
+que vive dentro de un componente no se prueba, y por ahí se coló el fallo del
+`±`—. Las unitarias pasan de 37 a 48 y las e2e de 17 a 20.
+
+**Lo que NO se hizo, y por qué**: nada del alcance quedó fuera.
+
+
 ### 2026-09-15 (70) — Dejar de confiar en los documentos: el estado se ejecuta, no se lee ✅
 
 **El día empezó con otro error del mismo tipo, el cuarto en dos días.** Se le pidió al usuario pulsar *Deploy* a mano en el servicio de telemetría. Su respuesta: «cómo me vas a decir que no se despliega solo si tú mismo me hiciste los pasos». Comprobado en el CI: el servicio **se despliega solo desde el 2026-08-24** (`e892dff`), con dos pasos —`¿Cambió el servicio de telemetría?` y `Desplegar el servicio de telemetría`— que disparan `EASYPANEL_SERVICE_HOOK` cuando el push toca `python-service/`, y **antes** que el de la web para que no haya ventana con la página nueva llamando a un servicio viejo. En la ejecución de `0ac21fd` ese paso salió en verde y sin anotaciones: si el secreto faltara, habría dejado dos avisos.

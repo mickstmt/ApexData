@@ -827,3 +827,102 @@ html[data-instalada] [data-pie-de-la-app] > footer {
     100% { opacity: 0; transform: translateX(-50%); }
   }
 }
+
+/* ===========================================================================
+   La calculadora: paleta Red Bull, en los dos temas.
+   ===========================================================================
+   Vive aquí y no en el componente porque un color que cambia con el tema
+   necesita dos declaraciones y el atributo `style` solo admite una. Es el
+   mismo patrón del replay: tokens propios de una pantalla, definidos junto a
+   los demás para que se vean de una vez todos los colores de la app.
+
+   La regla que el replay dejó escrita vale igual aquí: si la app ofrece un
+   interruptor de tema, el tema llega a todas partes. Una calculadora que
+   fuera siempre azul marino sería un agujero en el modo claro.
+
+   El azul es el del equipo, sin inventar: `#3671C6` y `#5B93E8` salen de
+   `team-colors.ts`, que ya los tiene medidos. El amarillo se usa SOLO como
+   fondo con tinta negra encima —que es como lo usa la marca— porque como
+   tinta sobre claro no llega a 4,5:1 y habría que oscurecerlo tanto que
+   dejaría de ser amarillo; para eso está `--calc-amarillo-tinta`. */
+[data-calculadora] {
+  --calc-chasis: #E8ECF6;
+  --calc-panel: #FFFFFF;
+  --calc-tecla: #FFFFFF;
+  --calc-tecla-fn: #DDE3F2;
+  --calc-borde: rgba(18, 31, 69, 0.14);
+  --calc-azul: #3671C6;
+  --calc-azul-tinta: #2C5CA3;
+  /* La tinta sobre la tecla «=», que va en azul lleno. En claro el blanco da
+     4,6:1 sobre ese azul; en oscuro el azul es mas claro y el blanco solo
+     llegaria a 2,6, asi que ahi la tinta es el propio chasis. */
+  --calc-igual-tinta: #FFFFFF;
+  --calc-rojo: #CC352D;
+  --calc-amarillo: #FFC906;
+  --calc-amarillo-tinta: #7A5C00;
+  --calc-tinta: #10142B;
+  --calc-tinta-suave: rgba(16, 20, 43, 0.60);
+  --calc-realce: rgba(18, 31, 69, 0.10);
+  --calc-sombra: 0 1px 0 rgba(18, 31, 69, 0.10), 0 8px 24px -16px rgba(18, 31, 69, 0.45);
+}
+
+.dark [data-calculadora] {
+  --calc-chasis: #0A0E22;
+  --calc-panel: #0E1433;
+  --calc-tecla: #1A2350;
+  --calc-tecla-fn: #141B40;
+  --calc-borde: rgba(255, 255, 255, 0.10);
+  --calc-azul: #5B93E8;
+  --calc-azul-tinta: #8FB8F2;
+  --calc-igual-tinta: #0A0E22;
+  /* Mas claro que el rojo de bandera del replay (#FF4238), y por una medida:
+     ese rojo da 4,35:1 sobre la tecla en oscuro, y el aviso «C» es texto, no
+     un bloque, asi que le tocan 4,5. Este da 4,87 sobre la tecla y 5,85 sobre
+     el visor, que son los dos sitios donde se usa. */
+  --calc-rojo: #FF5A4E;
+  --calc-amarillo: #FFC906;
+  --calc-amarillo-tinta: #FFC906;
+  --calc-tinta: #F2F4FB;
+  --calc-tinta-suave: rgba(242, 244, 251, 0.58);
+  --calc-realce: rgba(255, 255, 255, 0.12);
+  --calc-sombra: 0 1px 0 rgba(255, 255, 255, 0.05), 0 12px 32px -20px rgba(0, 0, 0, 0.9);
+}
+
+/* La tecla.
+
+   El `translateY` al pulsar no es un adorno: es lo único que le dice al dedo
+   que la pulsación ha entrado, porque en el móvil el dedo TAPA la tecla justo
+   en el momento en que cambiaría de color. Un píxel basta y sobra.
+
+   `touch-action: manipulation` quita el retardo de 300 ms que Safari deja para
+   ver si viene un doble toque. En un teclado numérico ese retardo se nota en
+   cada dígito. */
+.calc-tecla {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 90ms ease, background-color 140ms ease, filter 140ms ease;
+}
+
+.calc-tecla:active {
+  transform: translateY(1px);
+  filter: brightness(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calc-tecla:active { transform: none; }
+}
+
+/* El destello del resultado: un barrido de luz al pulsar `=`, corto, que hace
+   que el número se lea como recién calculado y no como el que ya estaba. */
+@keyframes calc-resultado {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.calc-resultado-nuevo {
+  animation: calc-resultado 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calc-resultado-nuevo { animation: none; }
+}
