@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import {
   CalendarDays,
+  Calculator,
   Flag,
   Gauge,
   Home,
@@ -134,6 +135,41 @@ export function RejillaDeSecciones({
       >
         <Info className="h-[18px] w-[18px] text-primary" aria-hidden />
         Acerca de ApexData
+      </Link>
+
+      {/* La calculadora, que solo existe dentro de la app instalada.
+          ============================================================
+          No es una sección de ApexData —aquí no hay datos de Fórmula 1— y por
+          eso no está en `navItems`: se llega escribiendo `/calculadora`. Pero
+          en la app instalada no hay barra de direcciones, así que ahí «solo
+          por la URL» significa «inalcanzable». Esta es la única puerta.
+
+          Quién la esconde es una regla de CSS sobre `html[data-instalada]`, no
+          este componente, por lo mismo que el pie: si se decidiera aquí, React
+          pintaría en el servidor un enlace que el navegador tendría que
+          quitar, y eso es un salto a la vista o una discrepancia de
+          hidratación. El atributo lo pone el script en línea de `layout.tsx`
+          antes de pintar nada.
+
+          En la web sigue sin verse. Queda en el HTML, sí, pero la pantalla
+          lleva `noindex, nofollow`, así que encontrarla no sirve para
+          listarla. */}
+      <Link
+        href="/calculadora"
+        data-solo-instalada
+        onClick={alElegir}
+        aria-current={rutaActual.startsWith('/calculadora') ? 'page' : undefined}
+        className={cn(
+          'mt-1 flex min-h-[44px] items-center gap-3 rounded-xl px-3',
+          'text-sm ring-offset-background transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          rutaActual.startsWith('/calculadora')
+            ? 'text-foreground'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <Calculator className="h-[18px] w-[18px] text-primary" aria-hidden />
+        Calculadora científica
       </Link>
     </>
   );

@@ -93,6 +93,72 @@ resuelto.
 
 ## Bitácora
 
+### 2026-09-20 (72) — La calculadora, alcanzable desde la app instalada (y solo desde ahí) ✅
+
+**Qué pasó**: la pantalla se entregó ayer accesible «solo por la URL», que es
+lo que se había pedido. Al usarla, el usuario volvió con esto: «creo que ahora
+sí necesito que sea accesible desde la PWA».
+
+**Y tenía una razón de peso que no se había visto**: en la app instalada **no
+hay barra de direcciones**. «Solo por la URL» no es «discreta» ahí: es
+*inalcanzable*. La decisión original era correcta para la web y dejaba la
+pantalla muerta justo en el entorno que más usa.
+
+**Lo que se hizo**: una entrada en el menú «Más», debajo de «Acerca de», que
+**solo existe dentro de la app instalada**. En la web sigue sin verse. Se le
+preguntó antes de tocarlo, con las tres opciones enseñadas en maqueta —solo en
+la PWA, siempre visible, o sección de pleno derecho— y eligió la primera.
+
+**Cómo se esconde, y por qué así**
+
+Con una regla de CSS sobre `html[data-instalada]`, que es el mismo mecanismo
+que ya usa el pie de la app, y **no** con una condición en React. El motivo
+está escrito en `PieDeLaApp.tsx` desde hace tiempo y vale igual aquí: si se
+decidiera en el componente, el servidor pintaría un enlace que el navegador
+tendría que quitar, y eso es un salto a la vista o una discrepancia de
+hidratación. El atributo lo pone el script en línea de `layout.tsx` antes de
+pintar nada.
+
+La regla va **en negativo** —`html:not([data-instalada])` esconde— y no en
+positivo, por especificidad: `(0,2,0)` gana a la clase `flex` que Tailwind le
+pone al enlace. Con `[data-solo-instalada] { display: none }` a secas las dos
+pesarían `(0,1,0)` y decidiría el orden de las hojas, que es la clase de
+detalle que se rompe sola el día que alguien reordene algo.
+
+Se esconde con `display: none` y no con `visibility` ni con un `aria-hidden`:
+así el enlace no lo alcanza el tabulador ni lo anuncia un lector de pantalla,
+que es lo que significa «no está».
+
+**Lo que NO cambia**: la pantalla sigue fuera de `navItems` y sigue llevando
+`noindex, nofollow`. El enlace queda en el HTML también en la web —lo esconde
+CSS, no React— así que un rastreador puede verlo; da igual, porque la pantalla
+que encontraría se declara no indexable. **Y sigue sin estar protegida**: quien
+sepa la dirección, entra.
+
+**Las pruebas cambiaron con el contrato, que es lo que tenían que hacer**
+
+La que decía «cero enlaces a `/calculadora` en la portada» ya no describe lo
+acordado, así que se sustituyó por tres que sí:
+
+1. Los buscadores no la listan — `noindex` sigue puesto.
+2. En la web no se ve **ni abriendo el menú**. Cuenta enlaces `:visible`, no
+   nodos: el enlace está en el HTML y lo que se vigila es que no se vea.
+3. En la app instalada sí, y se llega: se finge `display-mode: standalone`
+   —el mismo truco que ya usa `pie-de-la-app.spec.ts`, porque Playwright no
+   sabe emular ese medio—, se abre el menú, se pulsa y se comprueba que la
+   calculadora aparece.
+
+Al escribirlas salió un detalle que a ojo no se ve: **el menú se pinta dos
+veces**. La hoja del teléfono y la de la cabecera entre `md` y `lg` comparten
+componente, así que hay dos copias de cada entrada en el documento y las
+aserciones tienen que contar en plural.
+
+**Medido**: 1 enlace visible en la app instalada (claro y oscuro), 0 en la web.
+586 unitarias y 209 e2e en verde, la tanda entera y no solo la de la
+calculadora, porque esta vez se tocó un componente compartido (`Secciones.tsx`)
+y la hoja de estilos global.
+
+
 ### 2026-09-19 (71) — Una calculadora científica de verdad, en una pantalla que no se anuncia ✅
 
 **Qué pidió el usuario**: probar si se podía hacer una calculadora científica

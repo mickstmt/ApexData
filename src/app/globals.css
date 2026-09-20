@@ -705,6 +705,26 @@ html[data-instalada] [data-pie-de-la-app] > footer {
   display: none;
 }
 
+/* Lo que SOLO existe dentro de la app instalada.
+   ============================================================
+   Ahora mismo, la calculadora científica. No es una sección de ApexData y en
+   la web se llega a ella escribiendo la dirección; pero en la app instalada no
+   hay barra de direcciones, así que sin esta puerta no habría ninguna.
+
+   La regla va en negativo —se esconde a quien NO está instalado— y no al
+   revés, por especificidad: `html:not([data-instalada])` pesa más que la clase
+   `flex` que le pone Tailwind al enlace, así que gana sin depender de en qué
+   orden acaben las hojas. Con `[data-solo-instalada] { display: none }` a
+   secas, las dos pesarían igual y decidiría el orden del fichero, que es justo
+   la clase de detalle que se rompe solo al reordenar algo.
+
+   Se esconde con `display: none` y no con `visibility` ni con un `aria-hidden`
+   a mano: así el enlace no es alcanzable con el tabulador ni lo anuncia un
+   lector de pantalla, que es lo que significa «no está». */
+html:not([data-instalada]) [data-solo-instalada] {
+  display: none;
+}
+
 /* El scrubber del replay: el pulgar del `<input type="range">`. La pista la
    pinta el componente —lleva las banderas—, así que aquí solo va el pulgar,
    de 22 px para que se coja con el dedo. */

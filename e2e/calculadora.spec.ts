@@ -97,27 +97,76 @@ const pulsar = (page: Page, nombre: string) =>
 // Que siga escondida
 // ---------------------------------------------------------------------------
 
-test.describe('la pantalla existe pero no se anuncia', () => {
-  test('no la enseña la navegación ni la indexan los buscadores', async ({ page }) => {
+/**
+ * Finge que la página corre dentro de la app instalada.
+ *
+ * Se sustituye `matchMedia` en vez de emular el modo de verdad porque
+ * Playwright no sabe: `display-mode` no está entre los medios que emula. Con
+ * esto se comprueba lo que de verdad puede romperse —el atributo, la regla de
+ * CSS y el enlace— aunque la señal venga de mentira. Es el mismo truco que ya
+ * usa `pie-de-la-app.spec.ts`.
+ */
+async function comoInstalada(page: Page) {
+  await page.addInitScript(() => {
+    const real = window.matchMedia.bind(window);
+    window.matchMedia = (q: string) =>
+      q.includes('display-mode: standalone')
+        ? ({
+            matches: true,
+            media: q,
+            onchange: null,
+            addListener() {},
+            removeListener() {},
+            addEventListener() {},
+            removeEventListener() {},
+            dispatchEvent: () => false,
+          } as MediaQueryList)
+        : real(q);
+  });
+}
+
+test.describe('la pantalla no se anuncia, salvo donde haría falta', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('los buscadores no la listan', async ({ page }) => {
     await page.goto('/calculadora');
     await expect(page.locator('[data-calculadora]')).toBeVisible();
 
-    // Tres piezas, y las tres hacen falta: sin el `noindex` no saldría en el
-    // menú pero acabaría en Google, que es otra forma de estar a la vista.
-    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
-      'content',
-      /noindex/
-    );
+    // Esto sigue valiendo con o sin enlace: la puerta de la app instalada la
+    // hace alcanzable, no indexable.
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+  });
 
+  test('en la web no se ve, ni siquiera abriendo el menú', async ({ page }) => {
     await page.goto('/');
-    const enlaces = await page.locator('a[href="/calculadora"]').count();
-    expect(enlaces, 'alguien ha enlazado la calculadora desde la portada').toBe(0);
 
-    // El menú del móvil, que es donde vive la navegación larga.
-    await page.setViewportSize({ width: 390, height: 844 });
+    // El enlace está en el HTML —lo esconde una regla de CSS, no React— pero
+    // no se ve, no se puede pulsar y no lo alcanza el tabulador. Contar los
+    // VISIBLES, y no los nodos, es justo la diferencia que se quiere vigilar.
+    //
+    // Se cuentan en plural porque el menú se pinta dos veces: la hoja del
+    // teléfono y la de la cabecera entre `md` y `lg` comparten componente, así
+    // que hay dos copias de cada entrada en el documento.
+    await expect(page.locator('a[href="/calculadora"]:visible')).toHaveCount(0);
+
+    await page.getByRole('button', { name: /más/i }).click();
+    await expect(page.getByRole('link', { name: /Acerca de ApexData/i }).first()).toBeVisible();
+    await expect(page.locator('a[href="/calculadora"]:visible')).toHaveCount(0);
+  });
+
+  test('en la app instalada sí, porque allí no hay barra de direcciones', async ({ page }) => {
+    await comoInstalada(page);
     await page.goto('/');
-    const enElMenu = await page.locator('a[href="/calculadora"]').count();
-    expect(enElMenu, 'la calculadora ha entrado en la navegación').toBe(0);
+
+    await expect(page.locator('html[data-instalada]')).toHaveCount(1);
+
+    await page.getByRole('button', { name: /más/i }).click();
+    const enlace = page.locator('a[href="/calculadora"]:visible');
+    await expect(enlace).toHaveCount(1);
+    await expect(enlace).toHaveText(/Calculadora científica/);
+
+    await enlace.click();
+    await expect(page.locator('[data-calculadora]')).toBeVisible();
   });
 });
 
