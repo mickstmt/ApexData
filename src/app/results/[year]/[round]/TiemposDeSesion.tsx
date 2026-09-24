@@ -232,17 +232,24 @@ export function VueltasDePractica({
   directorio: DirectorioDePilotos;
 }) {
   /*
-   * Se piden **todas** las vueltas, no veinte.
+   * Veinticinco, no dos mil.
    *
-   * `/fastest?limit=20` devuelve las veinte vueltas más rápidas de la sesión,
-   * que no es lo mismo que la vuelta rápida de cada piloto: en la PL1 de
-   * Zandvoort 2026 esas veinte eran de solo diez pilotos, con Piastri y Leclerc
-   * repetidos tres veces cada uno. Con el límite alto llega la sesión entera
-   * —601 vueltas, 150 KB medidos— y `mejorVueltaPorPiloto` se queda con una por
-   * piloto, que son los 22 que se quieren ver.
+   * El `limit=2000` era un apaño con fecha de caducidad y ya caducó. Existía
+   * porque `/fastest` devolvía las N vueltas más rápidas de la sesión y no la
+   * mejor de cada piloto: en la PL1 de Zandvoort 2026 las veinte primeras eran
+   * de solo diez pilotos. Se pedía la sesión entera —601 vueltas, 150 KB
+   * medidos— y se reducía aquí. **El servicio agrupa desde hace tiempo**:
+   * comprobado el 2026-09-24 contra producción, `?limit=2000` devuelve 22
+   * filas, una por piloto. El límite cuenta pilotos, así que 25 los cubre con
+   * sitio para un tercer coche suelto.
+   *
+   * Y cambiar la dirección tiene un efecto que hoy hace falta: **la clave de
+   * caché es otra**. Quien tenga guardada una respuesta vacía de `?limit=2000`
+   * —las de hoy, con `max-age=86400` a cuestas— deja de verla al instante en
+   * vez de esperar a que caduque mañana.
    */
   const { datos, cargando, fallo } = usePeticion<FastestLapsResponse>(
-    `/api/laps/${year}/${round}/${sesion}/fastest?limit=2000`
+    `/api/laps/${year}/${round}/${sesion}/fastest?limit=25`
   );
 
   if (cargando) return <Cargando que={`los tiempos de ${nombre}`} />;

@@ -90,7 +90,11 @@ export const SONDAS: Sonda[] = [
       !leer(raiz, 'src/lib/push/avisos-de-sesion.ts').includes("sesion.tipo !== 'practica'"),
     evidencia: "`fastf1Puede` en `src/lib/push/avisos-de-sesion.ts`",
     siSi: 'HECHO',
-    siNo: 'PENDIENTE — siguen por OpenF1, a los ~50 min. Medida limpia esperando a Azerbaiyán',
+    siNo:
+      'CERRADO el 2026-09-24, y se queda como está: **FastF1 no publica antes en prácticas**. ' +
+      'Medido en Bakú — FP1 empate a 30m 14s, FP2 dos minutos MÁS TARDE que OpenF1—, así que cambiarlo ' +
+      'no daría nada y costaría una carga de sesión cada cinco minutos. Se reabre solo si OpenF1 cambia ' +
+      'sus tiempos de publicación',
   },
   {
     pregunta: 'La maqueta de pruebas, ¿retirada de producción?',

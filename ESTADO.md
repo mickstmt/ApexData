@@ -25,7 +25,7 @@ solas y desaparecen el día que la sonda de arriba quede resuelta.
 | Qué | Cómo está | Dónde se comprueba |
 |---|---|---|
 | 22 · Radios de equipo en el replay | PENDIENTE — ⚠️ abre la CSP a `livetiming.formula1.com`: hay que avisar al usuario ANTES | `team_radio` en el cliente de OpenF1 · `livetiming` en `src/lib/csp.ts` |
-| 18-bis · Los avisos de práctica, ¿salen por FastF1? | PENDIENTE — siguen por OpenF1, a los ~50 min. Medida limpia esperando a Azerbaiyán | `fastf1Puede` en `src/lib/push/avisos-de-sesion.ts` |
+| 18-bis · Los avisos de práctica, ¿salen por FastF1? | CERRADO el 2026-09-24, y se queda como está: **FastF1 no publica antes en prácticas**. Medido en Bakú — FP1 empate a 30m 14s, FP2 dos minutos MÁS TARDE que OpenF1—, así que cambiarlo no daría nada y costaría una carga de sesión cada cinco minutos. Se reabre solo si OpenF1 cambia sus tiempos de publicación | `fastf1Puede` en `src/lib/push/avisos-de-sesion.ts` |
 | La maqueta de pruebas, ¿retirada de producción? | HECHO | `public/maqueta/` |
 | Pruebas de componente con jsdom | PENDIENTE — decisión del usuario: «al final de todo» | `jsdom` en `package.json` · `environment` en `vitest.config.mts` |
 | La foto de la cuenta de Google, ¿se ve? | NO, y es decisión suya: enseñarla obliga a abrir la CSP a `lh3.googleusercontent.com` | `img-src` en `src/lib/csp.ts` |

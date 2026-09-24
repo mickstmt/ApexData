@@ -93,6 +93,32 @@ resuelto.
 
 ## Bitácora
 
+### 2026-09-24 (71) — Los avisos traían los resultados y la pantalla decía que no había nada ✅
+
+**Lo reportado**: «hoy han habido prácticas en Bakú y los avisos llegan informando los resultados de manera correcta, pero al entrar en estas sigue diciendo que aún no hay información para dicha sesión».
+
+**Medido antes de tocar nada.** La API **sí tenía los datos**: `/api/laps/2026/15/FP1|FP2/fastest` devolvía 22 vueltas con sus tiempos y HTTP 200, y las dos pestañas se pintaban bien desde un navegador limpio, a 390 y a 1440. O sea que el problema no era del servidor ni de la pantalla: **era del navegador de quien miró antes**.
+
+**La causa, y es un fallo mío del 15 de septiembre.** Ese día se les puso `Cache-Control: public, max-age=86400` a las cuatro rutas de cronometría, para arreglar una queja real suya —«por qué siempre en las prácticas libres pide la data cada vez que entramos»—. El comentario que lo justificaba decía: «si la sesión aún no ha corrido no se llega hasta aquí: es un 404, y un 404 no se cachea». Eso **solo es cierto cuando FastF1 no tiene la sesión**. En cuanto puede cargarla pero las vueltas todavía no están, la respuesta es un **200 con la lista vacía** — y ese vacío se quedaba **un día entero** en el navegador de quien mirase en esa franja. Comprobado hoy que una sesión sin correr sí da 404 limpio (la FP3 de mañana), así que el agujero es exactamente ese: el 200 provisional.
+
+**El arreglo, en dos piezas porque una sola no bastaba:**
+
+1. **La regla de caché pasa a depender del contenido** (`lib/cronometria-cache`): un vacío no se guarda —es «todavía no», no una respuesta— y lo que trae datos se guarda cinco minutos con `stale-while-revalidate` de un día. La segunda visita sigue siendo instantánea, que es lo que se pedía en su momento, pero una respuesta incompleta se cura sola en minutos en vez de durar hasta mañana. Importa porque una práctica a medio publicar puede traer ocho pilotos de veintidós, y eso es 200 y no está vacío.
+2. **La app pide otra dirección**, y eso desatasca a quien ya tiene la respuesta mala guardada: `?limit=2000` pasa a `?limit=25`. El 2000 era un apaño con fecha de caducidad —existía porque `/fastest` devolvía las N vueltas más rápidas y no la mejor de cada piloto— y **ya había caducado**: comprobado hoy contra producción, `?limit=2000` devuelve 22 filas, una por piloto. Al cambiar la clave de caché, los navegadores con el vacío congelado dejan de verlo al instante.
+
+**Y la medida que se dejó montada el 15 dio su resultado, con el fin de semana de Bakú.** El sondeo de prácticas mide vueltas desde entonces, que es lo que de verdad se enviaría:
+
+| Sesión | FastF1 | OpenF1 |
+|---|---|---|
+| Práctica 1 | 30m 14s (22 vueltas, 11 sondeos) | 30m 14s (22 puestos, 31 sondeos) |
+| Práctica 2 | 32m 19s (22 vueltas, 12 sondeos) | 30m 18s (22 puestos, 31 sondeos) |
+
+**El 18-bis se cierra, y en contra de lo que yo estimé.** En prácticas FastF1 **no publica antes**: empata en la primera y llega dos minutos más tarde en la segunda. La estimación de «~7 minutos de ganancia» salió de una sola medida sucia de la FP3 de España y era falsa. Cambiar el aviso de práctica a FastF1 no daría nada y costaría una carga de sesión cada cinco minutos, así que **no se hace** — y no se vuelve a evaluar salvo que OpenF1 cambie sus tiempos de publicación.
+
+**Un dato que sí abre algo**: OpenF1 tenía los puestos a los **30m 14s** y a los **30m 18s**, mientras el aviso espera **35 minutos** (`ESPERA_OPENF1`) antes de preguntar. Ahí hay ~5 minutos sin usar, pendiente de decidir si esos 35 son una restricción real de OpenF1 o un margen que nos pusimos.
+
+**Estado al cerrar**: 593 unitarias (7 nuevas) y 209 de navegador en verde, tipos y lint limpios, build igual que el CI.
+
 ### 2026-09-20 (72) — La calculadora, alcanzable desde la app instalada (y solo desde ahí) ✅
 
 **Qué pasó**: la pantalla se entregó ayer accesible «solo por la URL», que es
