@@ -1,4 +1,4 @@
-import { sesionesDeTemporada } from '@/services/openf1/client';
+import { calendarioDeTemporada } from '@/services/openf1/calendario';
 
 import { avisarDeSesionesTerminadas, type Informe } from './avisos-de-sesion';
 import { recordarSesiones, sondearFuentes, type InformeDeCarrera } from './carrera-de-fuentes';
@@ -11,6 +11,10 @@ import { avisarDePrevias, type InformeDePrevias } from './previas-de-sesion';
  * resultado de lo que acaba de terminar— para **pedir el calendario una sola
  * vez**. Separadas, cada una haría su propia petición a OpenF1 y en un mes sin
  * carreras eso son diecisiete mil peticiones para no hacer nada.
+ *
+ * Y ese calendario ya no se pide a OpenF1 en cada vuelta, sino cada seis horas:
+ * ver `openf1/calendario`, que además sobrevive a un fallo suyo en vez de
+ * llevarse la vuelta por delante.
  */
 export interface InformeDeVuelta {
   resultados: Informe;
@@ -24,7 +28,15 @@ export async function darUnaVuelta(opciones?: {
   ensayo?: boolean;
 }): Promise<InformeDeVuelta> {
   const ahora = opciones?.ahora ?? new Date();
-  const sesiones = await sesionesDeTemporada(ahora.getFullYear());
+  /**
+   * El calendario, de la copia guardada.
+   *
+   * Antes esto era una petición a OpenF1 en cada vuelta —288 al día por una
+   * lista que cambia una vez por fin de semana— y, peor, era el primer paso:
+   * un 401 suyo mataba la vuelta entera y no salía ni un aviso. Se ve en el
+   * registro de producción desde el 2026-09-20. Ver `openf1/calendario`.
+   */
+  const sesiones = await calendarioDeTemporada(ahora.getFullYear(), ahora.getTime());
 
   // Para que el reloj de un minuto del experimento no tenga que volver a
   // pedirlo. Ver `carrera-de-fuentes.ts`.

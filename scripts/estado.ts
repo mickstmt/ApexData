@@ -131,6 +131,21 @@ export const SONDAS: Sonda[] = [
     siNo: 'NO — hay que pulsar Deploy a mano en panel.dittochatbot.com',
   },
   {
+    pregunta: 'El experimento de la carrera de fuentes, ¿sigue sondeando?',
+    resuelta: (raiz) => !existsSync(join(raiz, 'src/lib/push/carrera-de-fuentes.ts')),
+    evidencia: '`src/lib/push/carrera-de-fuentes.ts` · `arrancarSondeo` en `src/instrumentation.ts`',
+    siSi: 'NO — retirado',
+    siNo:
+      'SÍ, y ya tiene su respuesta (7 medidas, veredicto establecido, 18-bis cerrado). ' +
+      'Su reloj de UN MINUTO sondea OpenF1 mientras la fuente no conteste, así que con los 401 ' +
+      'de producción sondea cada minuto durante ocho horas por sesión: el límite de ritmo se ' +
+      'alimenta a sí mismo',
+    decision:
+      '**¿Se retira el experimento de la carrera de fuentes?** Ya tiene su respuesta y su propio ' +
+      'archivo dice que «cuando haya un fin de semana medido y se decida, este archivo y su tabla ' +
+      'se van juntos». Hoy está amplificando los 401 de OpenF1 con un reloj de un minuto.',
+  },
+  {
     pregunta: 'Las cuentas, ¿están disponibles?',
     resuelta: (raiz) => existsSync(join(raiz, 'src/lib/auth.ts')),
     evidencia: '`src/lib/auth.ts` · `src/lib/cuentas/`',

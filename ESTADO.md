@@ -18,6 +18,7 @@
 
 - **¿Se abre la CSP a `livetiming.formula1.com`?** Sin eso no hay radios de equipo. Es regla suya avisar antes de tocar la política, así que **esto se pregunta antes de empezar**, no a mitad.
 - **¿Se abre la CSP a `lh3.googleusercontent.com`** para que se vea la foto de su cuenta de Google? Mientras tanto va la inicial, que no depende de nadie de fuera.
+- **¿Se retira el experimento de la carrera de fuentes?** Ya tiene su respuesta y su propio archivo dice que «cuando haya un fin de semana medido y se decida, este archivo y su tabla se van juntos». Hoy está amplificando los 401 de OpenF1 con un reloj de un minuto.
 
 Preguntárselo **antes** de ponerse, no a mitad. Estas líneas se generan
 solas y desaparecen el día que la sonda de arriba quede resuelta.
@@ -30,6 +31,7 @@ solas y desaparecen el día que la sonda de arriba quede resuelta.
 | Pruebas de componente con jsdom | PENDIENTE — decisión del usuario: «al final de todo» | `jsdom` en `package.json` · `environment` en `vitest.config.mts` |
 | La foto de la cuenta de Google, ¿se ve? | NO, y es decisión suya: enseñarla obliga a abrir la CSP a `lh3.googleusercontent.com` | `img-src` en `src/lib/csp.ts` |
 | El servicio de telemetría, ¿se despliega solo? | SÍ, desde el 2026-08-24 (`e892dff`). El CI dispara `EASYPANEL_SERVICE_HOOK` cuando el push toca `python-service/`. **NO pedir un Deploy a mano.** Si el secreto faltara, el paso dejaría dos avisos en la ejecución | `.github/workflows/ci.yml`, paso «Desplegar el servicio de telemetría» |
+| El experimento de la carrera de fuentes, ¿sigue sondeando? | SÍ, y ya tiene su respuesta (7 medidas, veredicto establecido, 18-bis cerrado). Su reloj de UN MINUTO sondea OpenF1 mientras la fuente no conteste, así que con los 401 de producción sondea cada minuto durante ocho horas por sesión: el límite de ritmo se alimenta a sí mismo | `src/lib/push/carrera-de-fuentes.ts` · `arrancarSondeo` en `src/instrumentation.ts` |
 | Las cuentas, ¿están disponibles? | SÍ — Google y correo, con los favoritos sincronizados | `src/lib/auth.ts` · `src/lib/cuentas/` |
 
 ## Al volver de la otra máquina

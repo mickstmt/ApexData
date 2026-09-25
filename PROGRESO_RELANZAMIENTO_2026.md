@@ -93,6 +93,22 @@ resuelto.
 
 ## Bitácora
 
+### 2026-09-25 (72) — OpenF1 nos daba 401 en bucle, y el calendario mataba la vuelta entera ✅
+
+**Lo reportado**: «creo que algo anda mal con nuestras fuentes de datos», con el registro de producción. Y lo estaba: desde el **2026-09-20**, `[avisos] La vuelta falló: OpenF1 no contestó tras 4 intentos: HTTP 401`, una y otra vez.
+
+**Lo primero, comprobar si OpenF1 había cerrado la API. No.** Desde una conexión doméstica, el 2026-09-25: `sessions?year=2026`, `sessions?year=2025`, `session_result` y `drivers` responden **200**, y doce peticiones seguidas al mismo endpoint dan doce 200. Lo que rechazan es **nuestra IP de producción**, que es justo la hipótesis que ya dejó escrita el cliente el 2026-09-12 y por la que el 401 está entre los reintentables.
+
+**El fallo de diseño que lo convertía en catástrofe.** `darUnaVuelta` empezaba con `sesionesDeTemporada(2026)` —el calendario ENTERO de la temporada— y era el **primer paso**: si eso fallaba, se caía la vuelta completa. Ni avisos, ni previas, ni sondeo. Y ese calendario cambia como mucho una vez por fin de semana, así que eran **288 peticiones al día para releer lo mismo**.
+
+Arreglado con `openf1/calendario`: se pide como mucho **cada seis horas**, y si OpenF1 falla se sigue con **el último calendario bueno** en vez de propagar el error. Solo si nunca hubo uno se deja subir el fallo. De 288 peticiones diarias a 4, y un 401 deja de llevarse la vuelta por delante.
+
+**El amplificador, que hay que decidir.** Hay un **segundo reloj, cada minuto**, que existe solo para el experimento de la carrera de fuentes (`instrumentation.ts`, `arrancarSondeo`). Sondea OpenF1 una vez por sesión dentro de una ventana de ocho horas, y **deja de sondear cuando la fuente contesta**. Con los 401, nunca contesta: cada sesión se queda sondeando **cada minuto durante ocho horas**, y con varias sesiones solapadas eso son varias peticiones por minuto. O sea que el límite de ritmo provoca más peticiones, que empeoran el límite: **un bucle que se alimenta solo**.
+
+El experimento ya tiene su respuesta —siete medidas, el veredicto establecido y el 18-bis cerrado ayer con los datos de Bakú— y su propio archivo dice desde el primer día que «cuando haya un fin de semana medido y se decida, este archivo y su tabla se van juntos». Queda pendiente de su decisión.
+
+**Estado al cerrar**: 598 unitarias (5 nuevas) en verde, tipos y lint limpios, build igual que el CI.
+
 ### 2026-09-24 (71) — Los avisos traían los resultados y la pantalla decía que no había nada ✅
 
 **Lo reportado**: «hoy han habido prácticas en Bakú y los avisos llegan informando los resultados de manera correcta, pero al entrar en estas sigue diciendo que aún no hay información para dicha sesión».
