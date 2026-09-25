@@ -107,6 +107,8 @@ Arreglado con `openf1/calendario`: se pide como mucho **cada seis horas**, y si 
 
 El experimento ya tiene su respuesta —siete medidas, el veredicto establecido y el 18-bis cerrado ayer con los datos de Bakú— y su propio archivo dice desde el primer día que «cuando haya un fin de semana medido y se decida, este archivo y su tabla se van juntos». Queda pendiente de su decisión.
 
+**Lo que queda planteado y no hecho.** El usuario preguntó lo evidente: «¿por qué pedir el calendario completo a cada rato? Si al obtenerlo una vez no debería quedar guardado ya en nuestra db». Tiene razón, y el caché de seis horas es un parche: **vive en memoria**, así que cada despliegue lo borra y la primera vuelta tras arrancar vuelve a depender de OpenF1. Lo que falta de verdad es guardar la `session_key` y el `date_end` en nuestra base — las fechas ya las tenemos en `races`, lo que no tenemos es la llave de OpenF1, de la que cuelgan `clasificacionDeSesion`, `notified_sessions` y el sondeo. Escrito con su análisis previo en **`TRABAJO-CALENDARIO-OPENF1.md`**, para hacerlo desde casa.
+
 **Estado al cerrar**: 598 unitarias (5 nuevas) en verde, tipos y lint limpios, build igual que el CI.
 
 ### 2026-09-24 (71) — Los avisos traían los resultados y la pantalla decía que no había nada ✅
