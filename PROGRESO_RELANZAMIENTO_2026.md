@@ -93,6 +93,76 @@ resuelto.
 
 ## Bitácora
 
+### 2026-09-26 (78) — El calendario de OpenF1 se guarda en nuestra base: de dependencia dura a blanda ✅
+
+Punto 3 y último del orden acordado, y la respuesta a lo que preguntó el
+usuario el 25: «no entiendo por qué pedir el calendario completo a cada rato;
+si al obtenerlo una vez no debería quedar guardado ya en nuestra db».
+
+#### Qué faltaba de verdad
+
+Comprobado contra `prisma/schema.prisma`: `Race` guarda los **comienzos** de
+cada sesión y **ningún final**, y no guarda la `session_key` de la que cuelgan
+`clasificacionDeSesion`, `notified_sessions` y `sent_previews`. Por eso había
+que preguntárselo a OpenF1: no por las fechas, que ya las teníamos, sino por
+**las llaves y los finales**.
+
+Nueva tabla `openf1_sessions`, un espejo fiel de lo que OpenF1 dice:
+`session_key`, `meeting_key`, año, nombre y tipo, **`date_start` y
+`date_end`**, país, localidad, `is_cancelled` y `vista_en`.
+
+#### El dato que lo hizo fácil
+
+OpenF1 publica las sesiones **antes de que corran**: el 2026-09-25 había **41
+futuras** hasta Abu Dabi, todas con su llave y su final. Y la temporada entera
+cabe en **una petición** —131 sesiones, 48 KB, 0,9 s medidos—. O sea que no
+hace falta sembrado perezoso ni decidir un horizonte: se siembra completa, de
+una vez.
+
+#### Lo que cambia en marcha
+
+Al arrancar, `calendarioDeTemporada` ya no va a OpenF1: **lee la copia
+guardada**, y solo pregunta si está caducada. Un despliegue deja de costar una
+petición obligatoria, que era justo el agujero de la caché en memoria — cada
+despliegue la borraba, y en un día con varios eso son varias veces.
+
+Y si OpenF1 no contesta **y** la copia está caducada, se sigue con la copia:
+antes, sin nada en memoria, el error subía y **la vuelta entera moría** —ni
+avisos, ni previas—. Eso es convertir una dependencia dura en blanda: sin
+OpenF1 seguimos sabiendo qué sesiones existen y solo perdemos el resultado de
+la última.
+
+#### Dos desvíos de lo que estaba propuesto, y por qué
+
+- **No se guarda la ronda**, aunque la propuesta de la oficina la incluía. El
+  cruce sesión → gran premio ya lo hace `granPremioDe` por cercanía de fechas,
+  y está comprobado sobre **las 115 sesiones de 2026: las 115 caen en su ronda
+  correcta y ninguna produce dos candidatas**, con 3,29 días de holgura en el
+  desempate. Guardarla añadiría un dato que puede quedarse viejo; y los dos
+  grandes premios anulados de abril no tienen ronda nuestra que asignarles.
+- **El refresco se queda en seis horas**, no en el «una vez al día más otra al
+  empezar un día con sesión» que escribí en el análisis. Seis horas son 4
+  peticiones diarias —irrelevantes— y cubren solas el caso del día de sesión
+  sin necesidad de un caso especial. Menos código y menos que pueda fallar,
+  por la misma frescura.
+
+#### Cómo está montado
+
+La decisión de **cuándo** refrescar se queda en `calendario.ts`, pura y
+comprobable sin base de datos; el guardar y leer vive aparte, en
+`almacen-de-sesiones.ts`, y se inyecta. Los fallos del almacén **no suben**:
+es una caché, no la fuente, así que cada función se traga su error, lo
+registra y devuelve lo que puede.
+
+**Verificado**: lint y tipos limpios, **610 unitarias en verde** (4 nuevas: que
+tras un despliegue no se pide nada si la copia sirve, que una copia caducada se
+refresca y se vuelve a guardar, que con OpenF1 caído se sigue con lo guardado,
+y que sin copia el error sí sube), build desde cero igual que el CI.
+
+**Lo que queda por ver en producción**: que la tabla se siembre en la primera
+vuelta tras el despliegue. Se comprueba mirando que el registro deje de pedir
+el calendario al arrancar.
+
 ### 2026-09-26 (77) — El experimento de la carrera de fuentes se retira, con sus diez medidas escritas ✅
 
 Punto 2 del orden acordado, y **decisión 1 del usuario**: «si consideras que ya

@@ -17,6 +17,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const llamadas = { n: 0, falla: false };
 
+/**
+ * El almacén, en memoria, para no necesitar una base de datos aquí. La
+ * decisión de cuándo refrescar es lo que tiene reglas; guardar y leer es
+ * fontanería y se comprueba en producción.
+ */
+function almacenFalso(inicial: unknown[] = [], visto: Date | null = null) {
+  const estado = { filas: inicial, visto, escrituras: 0 };
+
+  return {
+    estado,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    leerTemporada: async () => (estado.filas.length ? (estado.filas as any) : null),
+    vistoPorUltimaVez: async () => estado.visto,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    guardarTemporada: async (s: any[]) => {
+      estado.filas = s;
+      estado.escrituras++;
+    },
+  };
+}
+
 vi.mock('@/services/openf1/client', () => ({
   sesionesDeTemporada: async (anio: number) => {
     llamadas.n++;
@@ -26,20 +47,23 @@ vi.mock('@/services/openf1/client', () => ({
 }));
 
 describe('el calendario de la temporada', () => {
+  let vacio: ReturnType<typeof almacenFalso>;
+
   beforeEach(async () => {
     const { olvidarCalendario } = await import('@/services/openf1/calendario');
     olvidarCalendario();
     llamadas.n = 0;
     llamadas.falla = false;
+    vacio = almacenFalso();
   });
 
   it('se pide una vez y se reutiliza durante horas', async () => {
     const { calendarioDeTemporada, VIGENCIA_MS } = await import('@/services/openf1/calendario');
     const t0 = 1_000_000;
 
-    await calendarioDeTemporada(2026, t0);
-    await calendarioDeTemporada(2026, t0 + 5 * 60_000);
-    await calendarioDeTemporada(2026, t0 + VIGENCIA_MS - 1);
+    await calendarioDeTemporada(2026, t0, vacio);
+    await calendarioDeTemporada(2026, t0 + 5 * 60_000, vacio);
+    await calendarioDeTemporada(2026, t0 + VIGENCIA_MS - 1, vacio);
 
     // Tres vueltas del reloj, una sola petición: antes eran tres.
     expect(llamadas.n).toBe(1);
@@ -49,8 +73,8 @@ describe('el calendario de la temporada', () => {
     const { calendarioDeTemporada, VIGENCIA_MS } = await import('@/services/openf1/calendario');
     const t0 = 1_000_000;
 
-    await calendarioDeTemporada(2026, t0);
-    await calendarioDeTemporada(2026, t0 + VIGENCIA_MS + 1);
+    await calendarioDeTemporada(2026, t0, vacio);
+    await calendarioDeTemporada(2026, t0 + VIGENCIA_MS + 1, vacio);
 
     expect(llamadas.n).toBe(2);
   });
@@ -59,11 +83,11 @@ describe('el calendario de la temporada', () => {
     const { calendarioDeTemporada, VIGENCIA_MS } = await import('@/services/openf1/calendario');
     const t0 = 1_000_000;
 
-    const bueno = await calendarioDeTemporada(2026, t0);
+    const bueno = await calendarioDeTemporada(2026, t0, vacio);
     llamadas.falla = true;
 
     // Ya caducado, así que se intenta pedir de nuevo y OpenF1 dice 401.
-    const despues = await calendarioDeTemporada(2026, t0 + VIGENCIA_MS + 1);
+    const despues = await calendarioDeTemporada(2026, t0 + VIGENCIA_MS + 1, vacio);
 
     // Esto es lo que salva la vuelta entera: un calendario de hace seis horas
     // sigue siendo el calendario.
@@ -76,15 +100,15 @@ describe('el calendario de la temporada', () => {
 
     // Aquí sí no hay nada que hacer, y el registro tiene que decirlo en vez de
     // fingir un calendario vacío que dejaría a la vuelta sin avisar de nada.
-    await expect(calendarioDeTemporada(2026, 1_000_000)).rejects.toThrow(/401/);
+    await expect(calendarioDeTemporada(2026, 1_000_000, vacio)).rejects.toThrow(/401/);
   });
 
   it('otro año no reutiliza el calendario del anterior', async () => {
     const { calendarioDeTemporada } = await import('@/services/openf1/calendario');
     const t0 = 1_000_000;
 
-    await calendarioDeTemporada(2026, t0);
-    await calendarioDeTemporada(2027, t0 + 1000);
+    await calendarioDeTemporada(2026, t0, vacio);
+    await calendarioDeTemporada(2027, t0 + 1000, vacio);
 
     expect(llamadas.n).toBe(2);
   });
@@ -104,27 +128,27 @@ describe('el calendario de la temporada', () => {
     );
     const t0 = 1_000_000;
 
-    await calendarioDeTemporada(2026, t0);
+    await calendarioDeTemporada(2026, t0, vacio);
     llamadas.falla = true;
 
     // Caduca y falla: una petición más, y a partir de ahí se sirve lo viejo.
     const tFallo = t0 + VIGENCIA_MS + 1;
-    await calendarioDeTemporada(2026, tFallo);
+    await calendarioDeTemporada(2026, tFallo, vacio);
     expect(llamadas.n).toBe(2);
 
     // Cinco vueltas del reloj de cinco minutos dentro de la espera: ninguna
     // petición. Antes era una por vuelta.
     for (let i = 1; i <= 5; i++) {
-      await calendarioDeTemporada(2026, tFallo + i * 5 * 60_000);
+      await calendarioDeTemporada(2026, tFallo + i * 5 * 60_000, vacio);
     }
     expect(llamadas.n).toBe(2);
 
     // Un instante antes de cumplirse la espera todavía no se pregunta.
-    await calendarioDeTemporada(2026, tFallo + ESPERA_TRAS_FALLO_MS - 1);
+    await calendarioDeTemporada(2026, tFallo + ESPERA_TRAS_FALLO_MS - 1, vacio);
     expect(llamadas.n).toBe(2);
 
     // Y al cumplirse sí, que para eso es una espera y no una rendición.
-    await calendarioDeTemporada(2026, tFallo + ESPERA_TRAS_FALLO_MS);
+    await calendarioDeTemporada(2026, tFallo + ESPERA_TRAS_FALLO_MS, vacio);
     expect(llamadas.n).toBe(3);
   });
 
@@ -134,18 +158,80 @@ describe('el calendario de la temporada', () => {
     );
     const t0 = 1_000_000;
 
-    await calendarioDeTemporada(2026, t0);
+    await calendarioDeTemporada(2026, t0, vacio);
     llamadas.falla = true;
     const tFallo = t0 + VIGENCIA_MS + 1;
-    await calendarioDeTemporada(2026, tFallo);
+    await calendarioDeTemporada(2026, tFallo, vacio);
 
     llamadas.falla = false;
     const tBueno = tFallo + ESPERA_TRAS_FALLO_MS + 1;
-    await calendarioDeTemporada(2026, tBueno);
+    await calendarioDeTemporada(2026, tBueno, vacio);
     expect(llamadas.n).toBe(3);
 
     // Y la copia nueva vuelve a valer seis horas, no media.
-    await calendarioDeTemporada(2026, tBueno + ESPERA_TRAS_FALLO_MS + 1);
+    await calendarioDeTemporada(2026, tBueno + ESPERA_TRAS_FALLO_MS + 1, vacio);
     expect(llamadas.n).toBe(3);
+  });
+
+  /**
+   * Lo que la copia en memoria no podía dar, y era la pregunta del usuario:
+   * «si al obtenerlo una vez no debería quedar guardado ya en nuestra db».
+   * Cada despliegue vaciaba la memoria y la primera vuelta tras arrancar
+   * volvía a depender de que OpenF1 contestara.
+   */
+  it('tras un despliegue no se le pide nada a OpenF1 si la copia guardada sirve', async () => {
+    const { calendarioDeTemporada, VIGENCIA_MS } = await import('@/services/openf1/calendario');
+    const t0 = 1_000_000;
+
+    // Un proceso anterior lo guardó hace dos horas; este acaba de arrancar,
+    // así que su memoria está vacía.
+    const guardadas = [{ session_key: 7, session_name: 'Race', year: 2026 }];
+    const almacen = almacenFalso(guardadas, new Date(t0 - 2 * 60 * 60_000));
+
+    const sesiones = await calendarioDeTemporada(2026, t0, almacen);
+
+    expect(sesiones).toEqual(guardadas);
+    expect(llamadas.n).toBe(0);
+    expect(VIGENCIA_MS).toBeGreaterThan(2 * 60 * 60_000);
+  });
+
+  it('si la copia guardada ya caducó, se refresca y se vuelve a guardar', async () => {
+    const { calendarioDeTemporada, VIGENCIA_MS } = await import('@/services/openf1/calendario');
+    const t0 = 1_000_000;
+
+    const vieja = [{ session_key: 7, session_name: 'Race', year: 2026 }];
+    const almacen = almacenFalso(vieja, new Date(t0 - VIGENCIA_MS - 1));
+
+    const sesiones = await calendarioDeTemporada(2026, t0, almacen);
+
+    expect(llamadas.n).toBe(1);
+    expect(sesiones).not.toEqual(vieja);
+    // Y lo nuevo queda guardado, que es lo que salvará al siguiente arranque.
+    expect(almacen.estado.escrituras).toBe(1);
+    expect(almacen.estado.filas).toEqual(sesiones);
+  });
+
+  it('con la copia guardada caducada y OpenF1 caído, se sigue con lo guardado', async () => {
+    const { calendarioDeTemporada, VIGENCIA_MS } = await import('@/services/openf1/calendario');
+    const t0 = 1_000_000;
+
+    const vieja = [{ session_key: 7, session_name: 'Race', year: 2026 }];
+    const almacen = almacenFalso(vieja, new Date(t0 - VIGENCIA_MS - 1));
+    llamadas.falla = true;
+
+    // Esto es lo que convierte a OpenF1 de dependencia dura en blanda: sin él
+    // seguimos sabiendo qué sesiones existen.
+    const sesiones = await calendarioDeTemporada(2026, t0, almacen);
+
+    expect(sesiones).toEqual(vieja);
+    expect(llamadas.n).toBe(1);
+  });
+
+  it('sin copia guardada y con OpenF1 caído, el error sube', async () => {
+    const { calendarioDeTemporada } = await import('@/services/openf1/calendario');
+    llamadas.falla = true;
+
+    // Aquí de verdad no hay nada que servir, y el registro tiene que decirlo.
+    await expect(calendarioDeTemporada(2026, 1_000_000, almacenFalso())).rejects.toThrow(/401/);
   });
 });

@@ -1,4 +1,5 @@
 import { sesionesDeTemporada } from './client';
+import * as almacenReal from './almacen-de-sesiones';
 import type { SesionOpenF1 } from './tipos';
 
 /**
@@ -74,9 +75,22 @@ export function olvidarCalendario(): void {
   guardado = null;
 }
 
+/**
+ * De dónde sale y a dónde va la copia guardada.
+ *
+ * Inyectable para que la decisión de cuándo refrescar —que es lo que de
+ * verdad tiene reglas— se pueda comprobar sin levantar una base de datos.
+ */
+export interface AlmacenDeSesiones {
+  leerTemporada: (anio: number) => Promise<SesionOpenF1[] | null>;
+  vistoPorUltimaVez: (anio: number) => Promise<Date | null>;
+  guardarTemporada: (sesiones: SesionOpenF1[]) => Promise<void>;
+}
+
 export async function calendarioDeTemporada(
   anio: number,
-  ahora: number = Date.now()
+  ahora: number = Date.now(),
+  almacen: AlmacenDeSesiones = almacenReal
 ): Promise<SesionOpenF1[]> {
   const delAnio = guardado?.anio === anio;
   const fresco = delAnio && ahora - guardado!.pedidoEn < VIGENCIA_MS;
@@ -87,9 +101,36 @@ export async function calendarioDeTemporada(
 
   if (fresco || enEspera) return guardado!.sesiones;
 
+  // Nada en memoria: quizá haya una copia en la base de un proceso anterior.
+  //
+  // Esto es lo que arregla el agujero que dejaba la caché en memoria: cada
+  // despliegue la borraba, así que la primera vuelta tras arrancar volvía a
+  // depender de que OpenF1 contestara. Con la copia guardada, un arranque
+  // tras un despliegue reciente no le pide nada a nadie.
+  if (!delAnio) {
+    const guardadas = await almacen.leerTemporada(anio);
+    const visto = guardadas && (await almacen.vistoPorUltimaVez(anio));
+
+    if (guardadas && visto) {
+      guardado = {
+        anio,
+        sesiones: guardadas,
+        pedidoEn: visto.getTime(),
+        siguienteIntento: 0,
+      };
+
+      if (ahora - visto.getTime() < VIGENCIA_MS) return guardadas;
+    }
+  }
+
   try {
     const sesiones = await sesionesDeTemporada(anio);
     guardado = { anio, sesiones, pedidoEn: ahora, siguienteIntento: 0 };
+
+    // Se guarda después de responder al que llama, no antes: si la escritura
+    // falla, la vuelta ya tiene su calendario y sigue. Es una caché.
+    await almacen.guardarTemporada(sesiones);
+
     return sesiones;
   } catch (error) {
     // Con una copia buena, un fallo de OpenF1 deja de ser un problema: el

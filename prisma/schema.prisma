@@ -465,6 +465,53 @@ model NotifiedSession {
 }
 
 /**
+ * El calendario de OpenF1, guardado.
+ * OpenF1 es quien sabe QUÉ sesiones existen —con su `session_key`, de la que
+ * cuelgan la clasificación, los avisos ya mandados y todo lo demás— y cuándo
+ * TERMINAN, que es de donde se cuentan los 35 minutos de espera. Nuestro
+ * `Race` guarda los comienzos y ningún final, así que sin esto no se puede
+ * saber si una sesión ya acabó sin preguntárselo a OpenF1.
+ * Antes se preguntaba en cada vuelta del reloj, y era el PRIMER paso: un fallo
+ * suyo mataba la vuelta entera —ni avisos, ni previas—. Con la copia en la
+ * base, OpenF1 pasa de dependencia dura a blanda: si no contesta seguimos
+ * sabiendo qué sesiones hay y solo perdemos el resultado de la última.
+ * La copia en memoria no bastaba: cada despliegue la borra, y la primera
+ * vuelta tras arrancar volvía a depender de que OpenF1 contestara.
+ * Se siembra de temporada completa en UNA petición —131 sesiones de 2026,
+ * 48 KB medidos— porque OpenF1 publica las futuras con su llave y su final
+ * desde semanas antes: el 2026-09-25 había 41 futuras hasta Abu Dabi.
+ */
+model OpenF1Session {
+  /// La llave de OpenF1. Es la que usan notified_sessions y sent_previews.
+  sessionKey Int @id @map("session_key")
+
+  /// Agrupa las sesiones de un mismo gran premio. No existe en nuestro Race.
+  meetingKey Int @map("meeting_key")
+
+  year        Int
+  sessionName String @map("session_name")
+  sessionType String @map("session_type")
+
+  /// El comienzo, que también tenemos en Race, y el FINAL, que no.
+  dateStart DateTime @map("date_start")
+  dateEnd   DateTime @map("date_end")
+
+  countryName String @map("country_name")
+  location    String
+
+  /// En 2026 se anularon dos grandes premios enteros: Baréin y Arabia Saudí de
+  /// abril, diez sesiones. Sin esto se avisaría de carreras que no se corren.
+  isCancelled Boolean @default(false) @map("is_cancelled")
+
+  /// Cuándo se leyó de OpenF1. De aquí sale si toca refrescar.
+  vistaEn DateTime @updatedAt @map("vista_en")
+
+  @@index([year])
+  @@index([dateEnd])
+  @@map("openf1_sessions")
+}
+
+/**
  * Qué previas se han mandado ya, y a quién.
  * Los resultados llevan una marca global —lo que pasó es igual para todos— pero
  * la previa no: sale a las 20:00 de cada cual, así que dos personas en husos
