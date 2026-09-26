@@ -1,4 +1,50 @@
-# Para la siguiente sesión — al 2026-09-15
+# Para la siguiente sesión — al 2026-09-26
+
+> ## 🔴 LO PRIMERO DE MAÑANA: él da el GO y se empieza
+>
+> La noche del 25 se hizo el **análisis completo** del encargo
+> `TRABAJO-CALENDARIO-OPENF1.md` y **él contestó sus tres decisiones**. No hay
+> nada que volver a preguntarle ni que volver a medir: está todo en las
+> **secciones 5, 6 y 7** de ese documento.
+>
+> Sus palabras al despedirse: «guarda estas decisiones para mañana que ya me voy
+> a dormir; lo primero que haré mañana será darte el go».
+>
+> **Lo decidido:**
+>
+> | # | Decisión | Respuesta |
+> |---|---|---|
+> | 1 | Retirar el experimento de la carrera de fuentes | **SÍ** |
+> | 2 | Cada cuánto refrescar el horario futuro | **Delegada en la sesión** → 1/día la temporada entera, +1 al empezar un día con sesión, y al fallar no antes de 30 min, persistido en la base |
+> | 3 | Sembrar hacia atrás | **NO** — OpenF1 empieza en 2023 |
+>
+> **El orden acordado** (sección 7 del encargo):
+>
+> 1. **El freno de los reintentos** — el 83 % del tráfico con 401, y no depende
+>    de ninguna decisión. La línea de `pedidoEn` en `calendario.ts:67-74`, y un
+>    freno en los avisos, que hoy reintentan cada 5 min durante 48 h a 8
+>    peticiones por intento.
+> 2. **Retirar el experimento**: módulo, tabla `source_probes`, ruta
+>    `/api/fuentes` y el reloj de un minuto de `instrumentation.ts`.
+> 3. **La tabla de llaves de OpenF1**, sembrada de temporada completa en una
+>    petición.
+>
+> Con medida antes y después en cada paso: sin el número, la bitácora no vale.
+>
+> **Y una corrección que hay que respetar**: la sección 1 del encargo dice que
+> OpenF1 rechaza «la IP de producción». **Es falso como bloqueo permanente** —
+> producción habló con OpenF1 durante todo Bakú con el código viejo—. Los 401
+> vienen de las IP compartidas de los runners de GitHub y son intermitentes. Ver
+> la sección 5.0.
+> **Trampa de Windows, comprobada el 26**: en esta máquina
+> `npx vitest run tests/estado.test.ts` sale **en rojo sin que nada esté mal**.
+> El repositorio no tiene `.gitattributes` y `core.autocrlf` está en `true`, así
+> que git deja `ESTADO.md` con CRLF mientras `npm run estado` lo escribe con LF,
+> y la prueba compara el texto tal cual. En el CI (Linux) siempre es LF y sale
+> verde. **No es que el estado esté viejo**: se arregla con un `.gitattributes`
+> o normalizando en la prueba, y no se tocó porque no había GO.
+
+---
 
 > **Corregido el 15 desde casa.** La sección 2 daba por terminada la lista
 > («queda uno: el 22») y no lo estaba. La cuenta buena está en

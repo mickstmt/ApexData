@@ -6,6 +6,11 @@
 > la oficina del 2026-09-25; está escrita a propósito para que se pueda
 > contradecir con datos, no para que se copie.
 
+> ⚠️ **ANÁLISIS HECHO el 2026-09-26 (casa). Léelo antes que nada: está en la
+> sección 5, y una premisa de la sección 1 quedó DESMENTIDA.** Las tres
+> decisiones del usuario (sección 4) están contestadas en la sección 6, y el
+> orden de trabajo acordado, en la 7. **Falta solo su GO.**
+
 ---
 
 ## 0 · Antes de leer nada más
@@ -223,3 +228,209 @@ Estas van con él, no con quien programe. Tráeselas **antes** de construir:
 
 Y las dos que ya están abiertas en `ESTADO.md` y no son de esto: la CSP para las
 radios de equipo, y la CSP para la foto de la cuenta de Google.
+
+---
+
+## 5 · El análisis, medido (sesión de casa, 2026-09-26)
+
+Todo lo de aquí está medido la noche del 2026-09-25 y la madrugada del 26,
+contra OpenF1 y contra producción. Lo que sale de leer el código va marcado
+como tal.
+
+### 5.0 · ⚠️ La premisa de la sección 1 que NO se sostiene
+
+La sección 1 dice «lo que rechazan es **la IP de producción**». **Falso como
+bloqueo permanente.** Producción habló con OpenF1 durante todo el fin de semana
+de Bakú, **con el código viejo** —el que pedía el calendario cada cinco
+minutos—: el parche `2c42d02` se subió a las 23:11Z del 25, y las medidas son
+de las 10:00Z y las 13:30Z del 24 y del 25.
+
+Leído de `/api/fuentes` en producción:
+
+| Sesión de Bakú | Fin | OpenF1 contestó | Sondeos |
+|---|---|---|---|
+| Práctica 1 | 24-09 09:30Z | 30m 14s | 31, uno por minuto |
+| Práctica 2 | 24-09 13:00Z | 30m 18s | 31 |
+| Práctica 3 | 25-09 09:30Z | 30m 10s | 31 |
+| Clasificación | 25-09 13:00Z | 30m 12s | 31 |
+
+El primer sondeo de cada sesión salió entre 10 y 17 s después del final, y para
+eso el reloj necesitaba el calendario cargado: **la llamada del paso 1
+funcionó**. Además, el comentario del propio cliente desde el 2026-09-12
+(`src/services/openf1/client.ts:60-77`) atribuye los 401 a **las IP compartidas
+de los runners de GitHub**, y hay un cron horario que llama a `darUnaVuelta`
+desde ahí (`.github/workflows/refresco.yml:15`).
+
+**Conclusión: los 401 son intermitentes y compatibles con un limitador de
+ritmo, no con una puerta cerrada.** Importa porque un limitador se alimenta del
+propio tráfico.
+
+### 5.1 · Qué le pedimos a OpenF1, y cuánto
+
+El amplificador: cada petición lógica son **4 HTTP** con 401 (esperas 1+3+7 s,
+`client.ts:55` y `:87`), y `clasificacionDeSesion` son **dos** lógicas en
+paralelo que no se cancelan entre sí → **2 HTTP sano, 8 con 401**.
+
+| Origen | Cada cuánto | Sano | Con 401 |
+|---|---|---|---|
+| Calendario, `vuelta.ts:39` | Caché de 6 h | 4 HTTP/día | **1 152 HTTP/día** |
+| Avisos, `avisos-de-sesion.ts:194` | Cada 5 min por sesión, hasta 48 h | ~2 por sesión | ~4 552 por sesión |
+| Sondeo, `carrera-de-fuentes.ts:147` | Cada minuto la 1ª hora, ventana de 8 h | 62 por sesión (medido) | ~1 160 por sesión |
+| Cron de GitHub, `refresco.yml:15` | Cada hora | hasta 24 | ~96 |
+
+**Fallo verificado línea a línea**: el camino de fallo de `calendario.ts:67-74`
+devuelve el calendario viejo pero **no actualiza `pedidoEn`**, así que `sirve`
+se queda en falso y vuelve a preguntar en las 288 vueltas del día. **La caché
+de seis horas se desactiva sola justo cuando OpenF1 falla.**
+
+| Escenario | Sano | Con 401 permanente |
+|---|---|---|
+| Día sin sesiones | **4** | **1 152** |
+| Fin de semana | **~332** (medido) | **~34 000** (derivado del código) |
+
+Reparto con 401: **avisos 66 %, calendario 17 %, experimento 17 %**.
+
+### 5.2 · Qué no está en nuestra base
+
+No están `session_key`, `date_end`, `is_cancelled` ni `meeting_key`. `Race`
+guarda solo **inicios** y **ningún final**.
+
+El final se deduce con la tabla de `src/lib/sesiones.ts:55-65`, que **no
+coincide con la realidad en 3 de 7 tipos** (medido sobre las 115 sesiones de
+2026 en OpenF1):
+
+| Tipo | Nuestra tabla | Real |
+|---|---|---|
+| Carrera | 150 min | **120** |
+| Sprint | 45 min | **60** |
+| Clasif. sprint | 45 min | **44** |
+| Prácticas / Clasificación | 60 min | 60 (una FP1 de 90: Miami) |
+
+Hoy solo afecta a la presentación —los avisos usan el `date_end` de OpenF1—,
+pero es justo el dato a guardar si se deja de preguntar.
+
+### 5.3 · El cruce por cercanía de fechas: sirve
+
+Simulado el algoritmo de `gran-premio.ts:13-36` sobre las **115 sesiones de
+2026**: las 115 se asignan a su ronda correcta y **ninguna produce dos
+candidatas**.
+
+| Medida | Valor |
+|---|---|
+| Separación mínima entre carreras consecutivas | **7 días** (diez parejas) |
+| Caso más apretado | FP1 de China: 1,854 d de la suya, 5,146 d de Australia |
+| Holgura contra el margen de 5 días | 3 h 30 min |
+| Holgura del desempate por cercanía | **3,29 días** |
+
+El fin de semana con sprint **no aprieta**: en 2026 **todos** los GP tienen
+exactamente **5 sesiones**, con sprint o sin él. Pero ojo: el cruce va de
+OpenF1 hacia nuestra carrera; para sembrar hace falta además emparejar sesión
+con sesión por `session_name`, y **eso no existe todavía**.
+
+### 5.4 · Cada cuánto cambia lo futuro
+
+Una sola petición trae la temporada entera: **131 sesiones, 48 KB, 0,9 s**. El
+horizonte deja de ser una pregunta.
+
+Nuestra base y OpenF1 coinciden **al minuto en 114 de 115 sesiones** (la única
+discrepancia es la carrera de Miami, 3 h, y es de nuestro lado). Pero la
+temporada sí cambió de verdad: **dos grandes premios anulados** —Baréin y
+Arabia Saudí de abril, 10 sesiones con `is_cancelled`—.
+
+Detalle útil: esas dos anuladas **no tienen carrera equivalente en nuestra
+base**, así que `granPremioDe` ya devuelve `null` para ellas. `is_cancelled`
+haría falta solo si se siembra directamente desde OpenF1 sin pasar por ese
+cruce.
+
+### 5.5 · Las llaves existen ANTES de que la sesión corra
+
+**Sí.** El 2026-09-25 OpenF1 ya publicaba **41 sesiones futuras** hasta Abu
+Dabi, todas con `session_key`, `date_start`, `date_end` e `is_cancelled`:
+
+```
+11727 Bahrain    Practice 1  2026-10-02T04:30Z -> 05:30Z
+11379 Singapore  Sprint Qual 2026-10-09T12:30Z -> 13:14Z
+11388 Singapore  Race        2026-10-11T12:00Z -> 14:00Z
+```
+
+**El sembrado puede ser anticipado y de temporada completa, en una petición.**
+No hace falta sembrado perezoso.
+
+### 5.6 · Temporadas viejas: OpenF1 empieza en 2023
+
+| Año | Respuesta |
+|---|---|
+| 2018-2022 | **404** |
+| 2023 | 200 — 118 sesiones |
+| 2024 | 200 — 123 sesiones |
+| 2026 | 200 — 131 sesiones |
+
+Nuestra base tiene 2010-2026, así que hacia atrás no hay nada que sembrar
+aunque se quisiera.
+
+### 5.7 · Cuánto tráfico es el experimento
+
+| Escenario | Del experimento | Del total |
+|---|---|---|
+| Fin de semana sano | **310 HTTP** de ~332 | **93 %** |
+| Con 401 permanente | ~5 800 de ~34 000 | 17 % |
+| Día sin sesiones | 0 | 0 % |
+
+Los 310 son medidos: 31 sondeos por sesión × 2 peticiones × 5 sesiones,
+contados en las filas de Bakú. Y el experimento tiene ya **9 medidas**, no
+siete.
+
+### 5.8 · Dónde se contradice la propuesta de la oficina
+
+Se coincide en el fondo: guardar llaves y finales es lo correcto, y 5.5 lo
+refuerza más de lo que la propuesta suponía. También en no tocar `granPremioDe`
+y en no sembrar hacia atrás.
+
+| # | La propuesta dice | El análisis dice |
+|---|---|---|
+| 1 | La IP de producción está rechazada | Intermitente. Ver 5.0 |
+| 2 | La tabla «baja el tráfico a lo que hace falta» | La tabla quita el **17 %**. El **66 %** son los avisos reintentando cada 5 min durante 48 h a 8 peticiones por intento, y eso no lo toca |
+| 3 | El parche de 6 h deja el calendario en 4/día | Solo si OpenF1 responde. Al fallar vuelve a 1 152 (ver 5.1) |
+
+**Lo que el análisis añade**: el 83 % del tráfico con 401 es tormenta de
+reintentos, y se corta con dos arreglos pequeños. La tabla es correcta, pero es
+**resistencia a caídas, no el arreglo del tráfico**.
+
+---
+
+## 6 · Las tres decisiones, ya contestadas por el usuario (2026-09-26)
+
+| # | Decisión | Respuesta |
+|---|---|---|
+| 1 | ¿Se retira el experimento de la carrera de fuentes? | **SÍ, se retira.** Sus palabras: «si consideras que ya tenemos lo suficiente para retirarlo entonces hay que hacerlo». Se van el módulo, su tabla `source_probes`, la ruta `/api/fuentes` y el reloj de un minuto de `instrumentation.ts` |
+| 2 | Cada cuánto se refresca el horario futuro | **Delegada en la sesión.** Sus palabras: «creo que lo que corresponde sería que lo decidas tú ya que tienes más conocimientos». Decidida abajo |
+| 3 | ¿Se siembra hacia atrás? | **NO.** Sigue la recomendación: OpenF1 empieza en 2023 y los avisos solo usan la temporada en curso |
+
+### 6.1 · La decisión 2, tomada y razonada
+
+Tres refrescos, y cada número sale de una medida:
+
+| Cuándo | Cuánto cuesta | De dónde sale el número |
+|---|---|---|
+| **Una vez al día**, la temporada entera | 1 petición | Una sola petición trae las 131 sesiones con sus finales (48 KB, 0,9 s), así que limitar el horizonte no ahorra nada. Acota lo viejo a 24 h, y los cambios de calendario se anuncian con días |
+| **Al empezar un día con sesión**, otra vez | +1 ese día | Lo único que 24 h no cubre son los retrasos del mismo día, y `date_end` es de donde se cuentan los `ESPERA_MINUTOS = 35` |
+| **Al fallar, no antes de 30 min** | tope de 48/día | Hoy un fallo devuelve a 288 vueltas diarias (5.1). Un calendario de horas sigue siendo correcto; insistir cada 5 min con un limitador delante es lo que lo empeora |
+
+Resultado: **1-2 peticiones al día en marcha normal**, con un techo de 48 en el
+peor caso, frente a las 4/día de hoy —o 1 152 cuando falla—.
+
+Y **persistido en la base**, que es lo que pidió el usuario: un despliegue deja
+de borrar el calendario.
+
+---
+
+## 7 · El orden de trabajo para mañana (falta su GO)
+
+1. **El freno de los reintentos.** Es el 83 % del tráfico con 401 y no depende
+   de ninguna decisión: la línea de `pedidoEn` en `calendario.ts`, y un freno
+   en los avisos para que dejen de reintentar cada 5 min durante 48 h.
+2. **Retirar el experimento** (decisión 1). Módulo, tabla, ruta y reloj.
+3. **La tabla de llaves de OpenF1** (secciones 3 y 6.1), sembrada de temporada
+   completa en una petición, con el refresco decidido en 6.1.
+
+Cada paso con su medida antes y después: sin el número, la bitácora no vale.

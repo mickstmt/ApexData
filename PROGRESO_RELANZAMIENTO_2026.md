@@ -93,6 +93,64 @@ resuelto.
 
 ## Bitácora
 
+### 2026-09-26 (73) — El análisis del calendario, y una premisa que se cayó al medirla ⏸️ pendiente de su GO
+
+**Sesión de análisis, sin tocar código**, como pidió el encargo de la oficina
+(`TRABAJO-CALENDARIO-OPENF1.md`): primero contestar sus siete preguntas con
+medidas, y solo después construir. El análisis completo está en la **sección 5**
+de ese documento; aquí queda lo que cambia decisiones.
+
+**La premisa que se cayó.** El encargo daba por hecho que OpenF1 rechaza **la IP
+de producción**. Falso como bloqueo permanente: producción habló con OpenF1
+durante todo Bakú **con el código viejo**, el que pedía el calendario cada cinco
+minutos. Las cuatro sesiones del fin de semana contestaron a los ~30 min con 31
+sondeos cada una, uno por minuto, y el primer sondeo salió entre 10 y 17 s
+después del final —lo que exige tener el calendario ya cargado, o sea que la
+llamada del paso 1 funcionó—. El parche `2c42d02` se subió **después** de esas
+medidas. Y el propio cliente ya lo decía desde el 12 de septiembre: los 401 son
+**las IP compartidas de los runners de GitHub**, que es desde donde corre el cron
+horario de `refresco.yml`. Son intermitentes, propios de un limitador de ritmo.
+Importa porque un limitador **se alimenta del propio tráfico**.
+
+**Dónde está el tráfico de verdad, medido.** Un fin de semana sano son ~332
+peticiones; con 401 permanente, ~34 000. Y el reparto con 401 es lo que decide
+por dónde empezar: **avisos 66 %, calendario 17 %, experimento 17 %**. La tabla
+de llaves que proponía la oficina es correcta, pero ataca el 17 %: el 66 % son
+los avisos reintentando cada cinco minutos durante 48 h a ocho peticiones por
+intento, porque una sesión que falla no se marca. **El 83 % es tormenta de
+reintentos.**
+
+**Un fallo verificado línea a línea**: el camino de fallo de `calendario.ts:67-74`
+devuelve el calendario viejo pero **no actualiza `pedidoEn`**, así que `sirve`
+queda en falso y se vuelve a preguntar en las 288 vueltas del día. La caché de
+seis horas **se desactiva sola justo cuando OpenF1 falla**: 4 peticiones al día
+se convierten en 1 152.
+
+**Lo que simplifica el trabajo pendiente.** OpenF1 publica las sesiones **antes**
+de que corran: el 25 había 41 futuras hasta Abu Dabi, todas con `session_key`,
+`date_end` e `is_cancelled`. Y la temporada entera cabe en **una petición** —131
+sesiones, 48 KB, 0,9 s—, así que el sembrado puede ser anticipado y completo, y
+el horizonte de refresco deja de ser una pregunta. El cruce por cercanía de
+fechas aguanta: simulado sobre las 115 sesiones de 2026, **las 115 caen en su
+ronda correcta** y ninguna produce dos candidatas.
+
+**De paso, dos cosas que nadie había medido**: la tabla de duraciones de
+`sesiones.ts:55-65` **no coincide con la realidad en 3 de 7 tipos** (carrera 150
+vs 120, sprint 45 vs 60, clasif. sprint 45 vs 44), aunque hoy solo afecta a la
+presentación; y la carrera de Miami difiere 3 h entre nuestra base y OpenF1,
+única discrepancia de 115 sesiones y del lado nuestro.
+
+**Sus tres decisiones, contestadas** (sección 6 del encargo): se **retira** el
+experimento de la carrera de fuentes —93 % del tráfico de un fin de semana sano,
+9 medidas y veredicto cerrado—; **no** se siembra hacia atrás, porque OpenF1
+empieza en 2023; y la del refresco la **delegó** en la sesión: queda en **una vez
+al día la temporada entera, otra al empezar un día con sesión, y al fallar no
+antes de 30 minutos**, persistido en la base.
+
+**Estado al cerrar**: nada tocado en `src/`. Pendiente de su GO para el orden de
+la sección 7 —primero el freno de los reintentos, luego retirar el experimento,
+luego la tabla de llaves—.
+
 ### 2026-09-25 (72) — OpenF1 nos daba 401 en bucle, y el calendario mataba la vuelta entera ✅
 
 **Lo reportado**: «creo que algo anda mal con nuestras fuentes de datos», con el registro de producción. Y lo estaba: desde el **2026-09-20**, `[avisos] La vuelta falló: OpenF1 no contestó tras 4 intentos: HTTP 401`, una y otra vez.
