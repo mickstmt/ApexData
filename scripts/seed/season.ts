@@ -16,6 +16,10 @@ import {
   upsertConstructor,
   upsertRace,
   classifiedPosition,
+  entero,
+  enteroOpcional,
+  decimal,
+  milisegundos,
   type JolpicaRace,
   FuenteNoDisponibleError,
 } from './jolpica';
@@ -67,18 +71,18 @@ async function seedRaceResults(year: number, rounds: number) {
       const data = {
         position: classifiedPosition(result.positionText),
         positionText: result.positionText,
-        positionOrder: parseInt(result.position, 10) || 99,
-        points: parseFloat(result.points),
-        grid: parseInt(result.grid, 10),
-        laps: parseInt(result.laps, 10),
+        positionOrder: entero(result.position, 99),
+        points: decimal(result.points),
+        grid: entero(result.grid, 0),
+        laps: entero(result.laps, 0),
         status: result.status,
         statusId: result.status === 'Finished' ? 1 : 2,
         time: result.Time?.time || null,
-        milliseconds: result.Time?.millis ? BigInt(result.Time.millis) : null,
-        fastestLap: result.FastestLap ? parseInt(result.FastestLap.lap, 10) : null,
+        milliseconds: milisegundos(result.Time?.millis),
+        fastestLap: enteroOpcional(result.FastestLap?.lap),
         fastestLapTime: result.FastestLap?.Time.time || null,
         fastestLapSpeed: result.FastestLap?.AverageSpeed?.speed || null,
-        rank: result.FastestLap?.rank ? parseInt(result.FastestLap.rank, 10) : null,
+        rank: enteroOpcional(result.FastestLap?.rank),
       };
 
       await prisma.result.upsert({
@@ -112,7 +116,7 @@ async function seedQualifying(year: number, rounds: number) {
       const constructor = await upsertConstructor(result.Constructor);
 
       const data = {
-        position: parseInt(result.position, 10),
+        position: entero(result.position, 99),
         q1: result.Q1 || null,
         q2: result.Q2 || null,
         q3: result.Q3 || null,
@@ -158,15 +162,15 @@ async function seedSprints(year: number, rounds: number) {
       const data = {
         position: classifiedPosition(result.positionText),
         positionText: result.positionText,
-        positionOrder: parseInt(result.position, 10) || 99,
-        points: parseFloat(result.points),
-        grid: parseInt(result.grid, 10),
-        laps: parseInt(result.laps, 10),
+        positionOrder: entero(result.position, 99),
+        points: decimal(result.points),
+        grid: entero(result.grid, 0),
+        laps: entero(result.laps, 0),
         status: result.status,
         statusId: result.status === 'Finished' ? 1 : 2,
         time: result.Time?.time || null,
-        milliseconds: result.Time?.millis ? BigInt(result.Time.millis) : null,
-        fastestLap: result.FastestLap ? parseInt(result.FastestLap.lap, 10) : null,
+        milliseconds: milisegundos(result.Time?.millis),
+        fastestLap: enteroOpcional(result.FastestLap?.lap),
         fastestLapTime: result.FastestLap?.Time.time || null,
       };
 

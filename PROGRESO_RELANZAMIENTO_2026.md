@@ -93,6 +93,61 @@ resuelto.
 
 ## Bitácora
 
+### 2026-09-26 (75) — Jolpica publicó los resultados antes que la parrilla, y el sembrado llevaba toda la tarde cayendo ✅
+
+**El síntoma**: el flujo horario `Refresh after each session` fallaba desde las
+14:08Z, con el GP de Azerbaiyán ya corrido y la ronda 15 sin resultados en la
+base.
+
+**El mensaje mandaba a mirar donde no era.** Prisma decía:
+
+```
+Invalid `prisma.result.upsert()` invocation in scripts/seed/season.ts:84
+Argument `race` is missing.
+```
+
+…mientras el `create` llevaba `raceId: "cmswddgjg001nul0gw3deddf5"`, correcto.
+Leyendo el error **entero** en vez de la última línea aparece la causa dos
+pantallas más arriba: **`grid: NaN`**.
+
+**Lo que pasó de verdad.** Jolpica publicó los resultados **antes que la
+parrilla**: `result.grid` llegaba vacío, `parseInt('', 10)` daba `NaN` y Prisma
+rechaza un `NaN` en una columna `Int`. Y al no encajar la entrada «sin
+comprobar» (`ResultUncheckedCreateInput`, la que acepta `raceId` a pelo), cae a
+la que lleva relación y echa en falta `race`. De ahí el mensaje engañoso.
+
+Comprobado contra la fuente: a las 17:40Z de hoy,
+`api.jolpi.ca/ergast/f1/2026/15/results.json` ya devuelve los 22 `grid` buenos
+("1", "8", "4"…). O sea que **no era un dato roto, era una carrera**: hay una
+ventana, tras cada gran premio, en la que los resultados existen y la parrilla
+todavía no. El sembrado se rompía ahí **cada vez**.
+
+**El arreglo, en la raíz.** `scripts/seed/jolpica.ts` gana cuatro ayudantes —
+`entero`, `enteroOpcional`, `decimal` y `milisegundos`— y `season.ts` deja de
+hacer `parseInt`/`parseFloat`/`BigInt` a pelo: **14 sustituciones**, y ya no
+queda ningún parseo crudo en el sembrador. La regla es que de ahí **nunca sale
+un NaN**.
+
+Tres detalles que se arreglan de paso:
+
+- `grid` por defecto **0**, que es lo que Ergast usa para «salió del pit lane»:
+  no inventa una posición que no existió, y como el sembrador es idempotente la
+  vuelta siguiente lo corrige solo con la parrilla ya publicada.
+- `positionOrder: parseInt(x) || 99` convertía **el 0 en 99**. Ahora `entero(x,
+  99)` conserva el cero.
+- `BigInt(result.Time.millis)` se llamaba **sin protección** y lanza con
+  cualquier texto que no sea un número: ahora devuelve nulo en vez de tumbar la
+  ronda entera.
+
+**Verificado**: lint limpio, tipos limpios, **612 unitarias en verde** (10
+nuevas en `tests/seed-numeros.test.ts`, con la fila del ganador de Bakú tal y
+como llegó), y build igual que el CI. La prueba incluye la afirmación de que el
+código viejo producía `NaN`, para que valga como regresión y no como
+tautología.
+
+**Lo que no arregla**: los resultados de la ronda 15 entrarán en la siguiente
+vuelta del flujo horario, no al instante.
+
 ### 2026-09-26 (74) — La portada devolvía 500 el día de Bakú, y yo había dado por bueno un CI en rojo ✅
 
 **Lo reportado**: «el CI falló y volvió a fallar otras veces en este transcurso

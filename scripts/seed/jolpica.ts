@@ -276,3 +276,48 @@ export async function upsertRace(race: JolpicaRace) {
     },
   });
 }
+
+/**
+ * Un entero de Jolpica, que puede no haber llegado todavía.
+ *
+ * ## El fallo que esto evita
+ *
+ * El 2026-09-26, con el GP de Azerbaiyán recién corrido, Jolpica publicó los
+ * resultados **antes que la parrilla**: `grid` venía vacío, `parseInt` devolvía
+ * `NaN`, y Prisma rechazaba el `Int`. Con un mensaje que manda a mirar donde no
+ * es —«Argument `race` is missing»—, porque al no encajar la entrada sin
+ * comprobar cae a la que lleva relación y echa en falta `race`. El sembrado
+ * horario estuvo fallando toda la tarde por un campo vacío, y la ronda 15 se
+ * quedó sin resultados.
+ *
+ * Escribir el valor de reserva en vez de rendirse es lo correcto: el sembrador
+ * es idempotente y la vuelta siguiente, ya con la parrilla publicada, lo
+ * corrige solo. Para `grid`, 0 es además lo que usa Ergast para «salió del pit
+ * lane», así que no inventa una posición que no existió.
+ */
+export function entero(valor: string | null | undefined, porDefecto: number): number {
+  const n = parseInt(valor ?? '', 10);
+  return Number.isFinite(n) ? n : porDefecto;
+}
+
+/** Igual, para las columnas que la base admite a nulo. */
+export function enteroOpcional(valor: string | null | undefined): number | null {
+  const n = parseInt(valor ?? '', 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Los puntos, que Jolpica manda como texto decimal. */
+export function decimal(valor: string | null | undefined, porDefecto = 0): number {
+  const n = parseFloat(valor ?? '');
+  return Number.isFinite(n) ? n : porDefecto;
+}
+
+/** Los milisegundos, que llegan como texto y pueden no llegar ni ser válidos. */
+export function milisegundos(valor: string | null | undefined): bigint | null {
+  if (!valor) return null;
+  try {
+    return BigInt(valor);
+  } catch {
+    return null;
+  }
+}
