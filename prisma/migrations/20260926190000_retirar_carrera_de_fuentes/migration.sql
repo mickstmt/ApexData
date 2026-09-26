@@ -1,0 +1,16 @@
+-- El experimento de la carrera de fuentes se retira, y su tabla con él.
+--
+-- Su propio módulo lo decía desde el primer día: «es un experimento con fecha
+-- de caducidad, no una pieza del producto. Cuando haya un fin de semana medido
+-- y se decida, este archivo y su tabla se van juntos». La condición se cumplió
+-- y el usuario lo decidió el 2026-09-26.
+--
+-- Las diez medidas quedan escritas en la bitácora antes de borrarlas, porque
+-- esto no tiene vuelta atrás. Veredicto: FastF1 publica antes de media (1 680 s
+-- contra 2 050 s), pero solo gana de verdad en carrera —9m 57s contra 46m 44s
+-- en España, 15m 34s contra 30m 21s en Bakú—; en prácticas y clasificación
+-- empatan al minuto.
+--
+-- Lo que se gana retirándolo: 310 de las ~332 peticiones a OpenF1 de un fin de
+-- semana sano, el 93 %, y el reloj de un minuto que las disparaba.
+DROP TABLE IF EXISTS "source_probes";

@@ -93,6 +93,66 @@ resuelto.
 
 ## Bitácora
 
+### 2026-09-26 (77) — El experimento de la carrera de fuentes se retira, con sus diez medidas escritas ✅
+
+Punto 2 del orden acordado, y **decisión 1 del usuario**: «si consideras que ya
+tenemos lo suficiente para retirarlo entonces hay que hacerlo».
+
+Su propio módulo lo pedía desde el primer día: «es un experimento con fecha de
+caducidad, no una pieza del producto. Cuando haya un fin de semana medido y se
+decida, este archivo y su tabla se van juntos».
+
+#### Las diez medidas, antes de borrarlas
+
+Esto no tiene vuelta atrás, así que queda aquí. Tiempo desde el final de cada
+sesión hasta que la fuente tuvo datos:
+
+| Sesión | Fin | OpenF1 | FastF1 |
+|---|---|---|---|
+| Carrera (Bakú) | 26-09 13:00Z | 30m 21s | **15m 34s** |
+| Clasificación (Bakú) | 25-09 13:00Z | **30m 12s** | 30m 13s |
+| Práctica 3 (Bakú) | 25-09 09:30Z | **30m 10s** | 30m 11s |
+| Práctica 2 (Bakú) | 24-09 13:00Z | **30m 18s** | 32m 19s |
+| Práctica 1 (Bakú) | 24-09 09:30Z | 30m 14s | 30m 14s |
+| Carrera (España) | 13-09 15:00Z | 46m 44s | **9m 57s** |
+| Clasificación (España) | 12-09 15:00Z | 30m 59s | **25m 00s** |
+| Práctica 3 (España) | 12-09 11:30Z | 49m 56s | **42m 57s** |
+| Práctica 2 (España) | 11-09 16:00Z | **31m 19s** | 31m 48s |
+| Práctica 1 (España) | 11-09 12:30Z | **31m 23s** | 31m 46s |
+
+**Media: OpenF1 2 050 s, FastF1 1 680 s.** El veredicto en una línea: *FastF1
+gana de verdad en carrera —9m 57s contra 46m 44s, y 15m 34s contra 30m 21s— y
+empata al minuto en todo lo demás.* Que es exactamente el reparto que ya tiene
+el código: FastF1 primero salvo en prácticas, cerrado como 18-bis el 24.
+
+#### Qué se ha ido
+
+`src/lib/push/carrera-de-fuentes.ts`, sus dos ficheros de pruebas, la ruta
+`/api/fuentes`, el modelo `SourceProbe`, la tabla `source_probes` —con su
+migración de borrado— y el **reloj de un minuto** de `instrumentation.ts`, que
+era el que disparaba el sondeo. `vuelta.ts` pierde el campo `fuentes` de su
+informe y las llamadas a `recordarSesiones` y `sondearFuentes`.
+
+#### Lo que se gana, medido
+
+**310 de las ~332 peticiones a OpenF1 de un fin de semana sano: el 93 %.** Los
+310 no son una estimación: son 31 sondeos por sesión —contados en las filas de
+Bakú— por 2 peticiones cada uno (`/session_result` y `/drivers`) por 5
+sesiones.
+
+Con OpenF1 devolviendo 401 el porcentaje era menor, un 17 %, porque ahí mandaba
+la tormenta de reintentos. Esa se cortó en la entrada anterior; entre las dos
+queda hecho el 83 % + el 93 % de cada escenario.
+
+El sondeo también ocupaba el único hueco de carga del servicio de telemetría
+—doce segundos medidos por sondeo de FastF1—, así que quien estuviera mirando
+telemetría esperaba detrás. Eso también se acabó.
+
+**Verificado**: lint y tipos limpios, **606 unitarias en verde** (las 17 del
+experimento se van con él), build desde cero igual que el CI, y `ESTADO.md`
+regenerado: la línea «¿se retira el experimento?» **desaparece sola** del bloque
+de decisiones, que es justo lo que esa sonda existía para hacer.
+
 ### 2026-09-26 (76) — El freno de los reintentos: el 83 % del tráfico a OpenF1 cuando falla ✅
 
 Punto 1 del orden acordado en `TRABAJO-CALENDARIO-OPENF1.md` §7. Es lo que el

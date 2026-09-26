@@ -46,11 +46,6 @@ export async function register() {
 
   arrancarAvisos();
 
-  // Fuera de `arrancarAvisos`: ahí dentro quedaba detrás de sus dos `return`
-  // —falta de VAPID, o AVISOS_AUTOMATICOS=0— y el experimento no arrancaba por
-  // motivos que no son suyos, pese a tener su propio interruptor. Un
-  // experimento que mide fuentes no depende de poder firmar notificaciones.
-  arrancarSondeo();
 }
 
 /** Cada cuánto se pregunta si terminó alguna sesión. */
@@ -101,11 +96,7 @@ function arrancarAvisos() {
   const vuelta = async () => {
     try {
       const { darUnaVuelta } = await import('@/lib/push/vuelta');
-      const { resultados: informe, previas, fuentes } = await darUnaVuelta();
-
-      for (const linea of fuentes.nuevas) {
-        console.log(`[fuentes] ${linea}`);
-      }
+      const { resultados: informe, previas } = await darUnaVuelta();
 
       for (const texto of previas.textos) {
         console.log(`[avisos] Previa enviada: ${texto}`);
@@ -135,40 +126,4 @@ function arrancarAvisos() {
   setInterval(vuelta, CADA_MINUTOS * 60 * 1000).unref?.();
 
   console.log(`[avisos] Reloj en marcha: se comprueba cada ${CADA_MINUTOS} minutos.`);
-}
-
-/**
- * El reloj del experimento de las fuentes, aparte y más rápido.
- *
- * ## Por qué no vale el de cinco minutos
- *
- * Porque la pregunta es de segundos. Las dos primeras medidas salieron con un
- * solo sondeo cada una —el primero ya encontró datos—, así que lo único que se
- * supo fue «las dos publicaron antes del minuto 31». Preguntando cada minuto,
- * dos fuentes que publican con medio minuto de diferencia se distinguen; cada
- * cinco, no.
- *
- * ## Por qué cuesta poco
- *
- * No pide el calendario: usa el que dejó el último barrido. Y `tocaSondear`
- * espacia la insistencia pasada la primera hora, así que una sesión que nadie
- * publica no provoca sesenta preguntas por hora durante ocho horas.
- *
- * Temporal, como el experimento. Ver `src/lib/push/carrera-de-fuentes.ts`.
- */
-function arrancarSondeo() {
-  if (process.env.CARRERA_DE_FUENTES === '0') return;
-
-  const sondear = async () => {
-    try {
-      const { sondearConLoRecordado } = await import('@/lib/push/carrera-de-fuentes');
-      const { nuevas } = await sondearConLoRecordado();
-
-      for (const linea of nuevas) console.log(`[fuentes] ${linea}`);
-    } catch (error) {
-      console.error('[fuentes] El sondeo falló:', error);
-    }
-  };
-
-  setInterval(sondear, 60 * 1000).unref?.();
 }
