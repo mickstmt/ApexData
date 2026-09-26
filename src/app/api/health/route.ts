@@ -100,7 +100,7 @@ export async function GET() {
   // servicio a la de la base sin ganar nada.
   const anio = new Date().getFullYear();
 
-  const [, servicio, ultimoAviso, calendario] = await Promise.all([
+  const [, servicio, ultimoAviso, calendario, cronometria] = await Promise.all([
     prisma.$queryRaw`SELECT 1`.catch((error) => {
       console.error('[health] Database unreachable:', error);
       database = 'error';
@@ -136,6 +136,17 @@ export async function GET() {
         _max: { vistaEn: true },
       })
       .catch(() => null),
+    /**
+     * La cronometría de sesiones ya corridas que tenemos guardada.
+     *
+     * Misma razón que las dos de arriba: si dejara de guardarse **no se
+     * notaría**, porque la ruta cae de vuelta a pedírselo al servicio y todo
+     * sigue funcionando, solo que lento otra vez. Y «lento otra vez» es justo
+     * lo que el usuario reportó dos veces.
+     */
+    prisma.cronometriaDeSesion
+      .aggregate({ _count: { year: true }, _max: { guardadaEn: true } })
+      .catch(() => null),
   ]);
 
   const body = {
@@ -162,6 +173,12 @@ export async function GET() {
           year: anio,
           sessions: calendario._count.sessionKey,
           lastSeenAt: calendario._max.vistaEn?.toISOString() ?? null,
+        }
+      : null,
+    storedTiming: cronometria
+      ? {
+          sessions: cronometria._count.year,
+          lastSavedAt: cronometria._max.guardadaEn?.toISOString() ?? null,
         }
       : null,
   };
