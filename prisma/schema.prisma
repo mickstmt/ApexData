@@ -499,8 +499,13 @@ model OpenF1Session {
   countryName String @map("country_name")
   location    String
 
-  /// En 2026 se anularon dos grandes premios enteros: Baréin y Arabia Saudí de
-  /// abril, diez sesiones. Sin esto se avisaría de carreras que no se corren.
+  /// Hoy SIEMPRE llega a false, y conviene saberlo: `sesionesDeTemporada`
+  /// descarta las anuladas antes de que lleguen aquí (client.ts), así que la
+  /// columna guarda fidelidad con la fuente pero no separa nada por sí sola.
+  /// En 2026 se anularon dos grandes premios enteros —Baréin y Arabia Saudí de
+  /// abril, diez sesiones—, y por eso se guardan 121 de las 131 que publica
+  /// OpenF1. Está aquí para el día que ese filtro se mueva aguas abajo, que es
+  /// donde debería estar: quien decide si algo se avisa es el avisador.
   isCancelled Boolean @default(false) @map("is_cancelled")
 
   /// Cuándo se leyó de OpenF1. De aquí sale si toca refrescar.

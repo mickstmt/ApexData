@@ -159,13 +159,25 @@ tras un despliegue no se pide nada si la copia sirve, que una copia caducada se
 refresca y se vuelve a guardar, que con OpenF1 caído se sigue con lo guardado,
 y que sin copia el error sí sube), build desde cero igual que el CI.
 
-**Y para poder comprobarlo, no creérselo.**  gana 
+**Y para poder comprobarlo, no creérselo.** `/api/health` gana `storedCalendar`
 —cuántas sesiones hay guardadas del año en curso y cuándo se leyeron de OpenF1
 por última vez—. Sin eso, que la tabla no se sembrara **no se notaría**: la app
 seguiría funcionando porque cae de vuelta a preguntarle a OpenF1, que es justo
 lo que esto venía a evitar. Es la misma razón por la que ese endpoint ya
 informaba del último aviso enviado: en este proyecto lo que más caro sale es el
 fallo sin síntoma.
+
+**Comprobado en producción**: devuelve **121 sesiones de 2026**, leídas a las
+19:12Z. Son 121 y no las 131 que publica OpenF1 porque `sesionesDeTemporada`
+descarta las anuladas antes de devolverlas, y 2026 tiene diez —los dos grandes
+premios de abril—. El número cuadra al detalle.
+
+**Y una corrección sobre el propio cambio**: por ese filtro aguas arriba, la
+columna `is_cancelled` **nunca llega a `true`**. El comentario del esquema decía
+lo contrario —«sin esto se avisaría de carreras que no se corren»— y era falso
+el mismo día de escribirlo. Corregido donde estaba: la columna guarda fidelidad
+con la fuente, pero hoy no separa nada por sí sola, y está ahí para el día que
+ese filtro baje al avisador, que es donde debería vivir.
 
 ### 2026-09-26 (77) — El experimento de la carrera de fuentes se retira, con sus diez medidas escritas ✅
 

@@ -112,9 +112,11 @@ export async function vistoPorUltimaVez(anio: number): Promise<Date | null> {
 /**
  * Guarda lo que acaba de contestar OpenF1.
  *
- * Se escriben todas, anuladas incluidas: `is_cancelled` es justo el dato que
- * hace falta para no avisar de un gran premio que no se corre, y en 2026 se
- * anularon dos enteros.
+ * Se escribe lo que llegue, tal cual. Aviso para quien lea la tabla: hoy
+ * `is_cancelled` es **siempre false**, porque `sesionesDeTemporada` descarta
+ * las anuladas antes de llegar aquí. Por eso se guardan 121 de las 131 que
+ * OpenF1 publica de 2026: los dos grandes premios de abril que se anularon son
+ * diez sesiones que nunca entran.
  */
 export async function guardarTemporada(sesiones: SesionOpenF1[]): Promise<void> {
   if (!sesiones.length) return;
