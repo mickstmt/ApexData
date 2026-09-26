@@ -162,7 +162,7 @@ Se guarda con dos condiciones y hacen falta las dos: que la sesión sea
 definitiva y que **traiga vueltas**. Una lista vacía es «todavía no», nunca una
 respuesta final.
 
-**Y comprobable, no de fe.**  gana  —cuántas
+**Y comprobable, no de fe.** `/api/health` gana `storedTiming` —cuántas
 sesiones hay guardadas y cuándo se guardó la última—. Sin eso, que dejara de
 guardarse **no se notaría**: la ruta cae de vuelta a pedírselo al servicio y
 todo sigue funcionando, solo que lento otra vez. Y «lento otra vez» es
