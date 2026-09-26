@@ -93,6 +93,66 @@ resuelto.
 
 ## Bitácora
 
+### 2026-09-26 (74) — La portada devolvía 500 el día de Bakú, y yo había dado por bueno un CI en rojo ✅
+
+**Lo reportado**: «el CI falló y volvió a fallar otras veces en este transcurso
+de tiempo, por lo que tu deploy fue erróneo». Las dos cosas ciertas.
+
+**Mi error, primero.** La sesión anterior subió `71728c3` —solo documentos— y
+**dio el trabajo por terminado sin mirar la ejecución del CI**. El CI estaba en
+rojo, y como el despliegue depende de que esté verde, el paso `Deploy to
+EasyPanel` salió **saltado**. Decir «subido y listo» sin abrir la ejecución es
+exactamente lo que las skills de este repositorio mandan no hacer.
+
+**Lo que estaba roto de verdad, y no lo rompió ese commit.** La portada de
+producción devolvía **HTTP 500**, comprobado con `curl`. En el registro, una y
+otra vez: `TypeError: a.date.toISOString is not a function`.
+
+La causa, localizada: `getHubDataCacheada` usa `unstable_cache`, que **guarda
+serializando a JSON**, así que los `Date` vuelven como cadenas. Eso ya se sabía
+y ya se había arreglado… **a medias**. La rehidratación se aplicaba solo a
+`upcoming`:
+
+```
+const upcoming = cacheada.upcoming.map(conFechasDeVerdad);
+const lastRace = cacheada.lastRace;          // ← sin rehidratar
+const ultimaCorrida = cacheada.ultimaCorrida; // ← sin rehidratar
+```
+
+Y `ultimaCorrida` acaba en `esperandoResultados` → `yaTermino` → `raceStart`,
+que hace `race.date.toISOString()`.
+
+**Por qué salió justo hoy y no antes.** `esperandoResultados` sale antes de
+llamar a `yaTermino` mientras la última carrera tenga resultados
+(`if (!ultima || ultima.resultados > 0) return false`). O sea que esa fila solo
+se mira en una ventana muy concreta: **una carrera ya corrida y todavía sin
+resultados en la base**. Eso pasó hoy, con el GP de Azerbaiyán corrido (el aviso
+de carrera salió a las 13:17Z) y Jolpica sin publicar. El fallo llevaba latente
+desde el arreglo anterior.
+
+**El arreglo.** `conFechasDeVerdad` se muda de `page.tsx` a `src/lib/race-time.ts`
+—que es donde vive la semántica de estas fechas— y se aplica a **las tres**
+filas que salen de la caché, no a una. Se muda a propósito: el mismo fallo ya ha
+salido dos veces, y dejar el ayudante pegado a la portada es lo que permitió que
+la segunda fila se quedara fuera.
+
+**Quien lo cazó fue una prueba que ya existía**: `la portada trae datos de
+verdad, también en visitas repetidas` (`e2e/accesibilidad.spec.ts:382`), que
+visita dos veces justo para leer de la caché. Hizo su trabajo; lo que falló fue
+no mirarla. Se añaden además 4 unitarias en `tests/race-time.test.ts`, una de
+ellas reproduciendo el `TypeError` con una fila tal y como vuelve de la caché.
+
+**Sigue pendiente, y es un fallo distinto**: el flujo horario `Refresh after each
+session` falla desde hoy al sembrar los resultados de Bakú —
+`Invalid prisma.result.upsert() invocation` en `scripts/seed/season.ts:84`,
+`Argument 'race' is missing`, aunque el `create` lleva `raceId`—. No está
+diagnosticado y no se ha tocado: es la causa de que la ronda 15 siga sin
+resultados. Va primero en la próxima sesión.
+
+**Verificado**: lint limpio, **602 unitarias en verde**, build igual que el CI.
+Tipos limpios en lo del repositorio —los errores de `verify-*.ts` que salen en
+local son de ficheros **no seguidos por git**, por eso el CI pasa—.
+
 ### 2026-09-26 (73) — El análisis del calendario, y una premisa que se cayó al medirla ⏸️ pendiente de su GO
 
 **Sesión de análisis, sin tocar código**, como pidió el encargo de la oficina

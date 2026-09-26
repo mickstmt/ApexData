@@ -11,7 +11,7 @@ import { FilaDeTiempos, ListaDeFilas } from '@/components/tabla/TablaDeTiempos';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { RaceCountdown, LocalDateTime } from '@/components/home/RaceCountdown';
 import { Championship, ChampionshipSkeleton } from '@/components/home/Championship';
-import { raceStart } from '@/lib/race-time';
+import { conFechasDeVerdad, raceStart } from '@/lib/race-time';
 import { sesionesOrdenadas } from '@/lib/sesiones';
 import { SesionesDelFinDeSemana } from '@/components/home/SesionesDelFinDeSemana';
 
@@ -154,43 +154,18 @@ const getHubDataCacheada = unstable_cache(
   { revalidate: 300, tags: ['portada'] }
 );
 
-/** Los campos de `Race` que son fechas y que la portada usa como tales. */
-const FECHAS = [
-  'date',
-  'fp1Date',
-  'fp2Date',
-  'fp3Date',
-  'qualiDate',
-  'sprintDate',
-  'sprintQualiDate',
-] as const;
-
-/**
- * Devuelve las fechas a ser fechas al salir de la caché.
- *
- * `unstable_cache` guarda serializando a JSON, así que un `Date` vuelve como
- * cadena. Sin esto, `raceStart` reventaba con «date.toISOString is not a
- * function», la portada caía en su pantalla de «no se pudo conectar» y —lo
- * peor— **seguía respondiendo 200 en 14 ms**: el atajo de medir solo el tiempo
- * daba por bueno un error.
- */
-function conFechasDeVerdad<T extends Record<string, unknown>>(fila: T): T {
-  const copia = { ...fila } as Record<string, unknown>;
-  for (const campo of FECHAS) {
-    const valor = copia[campo];
-    if (typeof valor === 'string') copia[campo] = new Date(valor);
-  }
-  return copia as T;
-}
-
 async function getHubData() {
   const now = new Date();
 
   try {
     const cacheada = await getHubDataCacheada();
+    // Las TRES, no solo upcoming: `ultimaCorrida` se quedó fuera la primera
+    // vez y reventó la portada el día del GP de Azerbaiyán.
     const upcoming = cacheada.upcoming.map(conFechasDeVerdad);
-    const lastRace = cacheada.lastRace;
-    const ultimaCorrida = cacheada.ultimaCorrida;
+    const lastRace = cacheada.lastRace ? conFechasDeVerdad(cacheada.lastRace) : null;
+    const ultimaCorrida = cacheada.ultimaCorrida
+      ? conFechasDeVerdad(cacheada.ultimaCorrida)
+      : null;
 
     // Se resuelve fuera de la caché: depende de la hora actual, y meterlo
     // dentro congelaría durante cinco minutos cuál es la próxima carrera justo
