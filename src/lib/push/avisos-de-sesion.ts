@@ -8,6 +8,7 @@ import { isTelemetryServiceConfigured } from '@/services/fastf1/client';
 import type { SessionType } from '@/types';
 
 import { granPremioDe } from './gran-premio';
+import { anotarFallo, olvidarFallos, tocaIntentar } from './espera-tras-fallo';
 import { filasDeFastF1 } from './clasificacion-fastf1';
 import { sePuedeMirar, ESPERA_MINUTOS as ESPERA_OPENF1 } from './ventana';
 
@@ -190,10 +191,25 @@ export async function avisarDeSesionesTerminadas(opciones?: {
         continue;
       }
 
+      // Tras un fallo se deja descansar a la fuente. Sin esto, un 401
+      // sostenido se reintentaba cada cinco minutos durante 48 h: 569
+      // intentos por sesión a ocho peticiones cada uno.
+      const clave = `openf1:${cruda.session_key}`;
+
+      if (!tocaIntentar(clave, ahora)) {
+        informe.esperando.push(etiqueta);
+        continue;
+      }
+
       try {
         filas = await clasificacionDeSesion(cruda.session_key);
+        olvidarFallos(clave);
       } catch (error) {
-        console.error(`[avisos] No se pudo leer ${etiqueta}:`, error);
+        const descanso = anotarFallo(clave, ahora);
+        console.error(
+          `[avisos] No se pudo leer ${etiqueta}; no se reintenta en ${descanso} min:`,
+          error
+        );
         informe.esperando.push(etiqueta);
         continue;
       }

@@ -19,9 +19,16 @@ import type { SesionOpenF1 } from './tipos';
  * saliendo solo cuando algún tic colaba.
  *
  * El 401 no es que hayan cerrado la API: comprobado el 2026-09-25, desde una
- * conexión doméstica doce peticiones seguidas dan 200. Lo que rechazan es
- * nuestra IP de producción, y machacarles el mismo endpoint 288 veces al día no
- * ayuda a que dejen de hacerlo.
+ * conexión doméstica doce peticiones seguidas dan 200.
+ *
+ * **Y tampoco es un bloqueo permanente de nuestra IP**, como se escribió aquí
+ * primero. Medido el 2026-09-26: producción habló con OpenF1 durante todo el
+ * fin de semana de Bakú **con el código viejo**, el que pedía el calendario
+ * cada cinco minutos —las cuatro sesiones contestaron a los ~30 min con 31
+ * sondeos cada una—. Los 401 son intermitentes, propios de un limitador de
+ * ritmo, y el cliente ya los atribuía el 2026-09-12 a las IP compartidas de
+ * los runners de GitHub. Que sea un limitador es justo lo que hace que
+ * machacarles el mismo endpoint 288 veces al día se pague solo.
  *
  * ## Qué hace
  *
@@ -37,10 +44,27 @@ import type { SesionOpenF1 } from './tipos';
 /** Seis horas: el calendario de un fin de semana se publica con días de antelación. */
 export const VIGENCIA_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * Lo que se espera antes de volver a intentarlo cuando OpenF1 falla.
+ *
+ * Sin esto la caché **se desactivaba sola justo cuando hacía falta**: el
+ * camino de fallo devolvía la copia vieja pero no tocaba `pedidoEn`, así que
+ * `sirve` seguía en falso y se volvía a preguntar en cada una de las 288
+ * vueltas del día. Medido el 2026-09-26: de 4 peticiones diarias a **1 152**,
+ * y con el multiplicador de cuatro reintentos por 401 delante.
+ *
+ * Media hora, y no cinco minutos, porque un calendario de horas sigue siendo
+ * el calendario: lo que cambia se publica con días. El techo queda en 48
+ * peticiones al día en el peor caso.
+ */
+export const ESPERA_TRAS_FALLO_MS = 30 * 60 * 1000;
+
 interface Guardado {
   anio: number;
   sesiones: SesionOpenF1[];
   pedidoEn: number;
+  /** Antes de este instante no se vuelve a molestar a OpenF1. Cero: sin espera. */
+  siguienteIntento: number;
 }
 
 let guardado: Guardado | null = null;
@@ -54,17 +78,24 @@ export async function calendarioDeTemporada(
   anio: number,
   ahora: number = Date.now()
 ): Promise<SesionOpenF1[]> {
-  const sirve = guardado?.anio === anio && ahora - guardado.pedidoEn < VIGENCIA_MS;
-  if (sirve) return guardado!.sesiones;
+  const delAnio = guardado?.anio === anio;
+  const fresco = delAnio && ahora - guardado!.pedidoEn < VIGENCIA_MS;
+  // Tras un fallo se sirve lo viejo sin preguntar hasta que pase la espera.
+  // Sin esta segunda condición, un OpenF1 caído devolvía el ritmo a una
+  // petición cada vuelta: la caché se apagaba sola justo cuando salvaba.
+  const enEspera = delAnio && ahora < guardado!.siguienteIntento;
+
+  if (fresco || enEspera) return guardado!.sesiones;
 
   try {
     const sesiones = await sesionesDeTemporada(anio);
-    guardado = { anio, sesiones, pedidoEn: ahora };
+    guardado = { anio, sesiones, pedidoEn: ahora, siguienteIntento: 0 };
     return sesiones;
   } catch (error) {
     // Con una copia buena, un fallo de OpenF1 deja de ser un problema: el
     // calendario de hace unas horas sigue siendo el calendario.
     if (guardado?.anio === anio) {
+      guardado.siguienteIntento = ahora + ESPERA_TRAS_FALLO_MS;
       console.warn(
         `[calendario] OpenF1 falló; se sigue con el calendario de hace ${Math.round(
           (ahora - guardado.pedidoEn) / 60_000

@@ -88,4 +88,64 @@ describe('el calendario de la temporada', () => {
 
     expect(llamadas.n).toBe(2);
   });
+
+  /**
+   * El agujero que esto tapa, medido el 2026-09-26.
+   *
+   * El camino de fallo devolvía la copia vieja pero **no tocaba `pedidoEn`**,
+   * así que la caché seguía caducada y se volvía a preguntar en cada una de
+   * las 288 vueltas del día. La caché de seis horas se apagaba sola justo
+   * cuando estaba salvando la vuelta: 4 peticiones diarias se convertían en
+   * 1 152, y con cuatro reintentos por 401 delante.
+   */
+  it('mientras OpenF1 falla no se le pregunta en cada vuelta', async () => {
+    const { calendarioDeTemporada, VIGENCIA_MS, ESPERA_TRAS_FALLO_MS } = await import(
+      '@/services/openf1/calendario'
+    );
+    const t0 = 1_000_000;
+
+    await calendarioDeTemporada(2026, t0);
+    llamadas.falla = true;
+
+    // Caduca y falla: una petición más, y a partir de ahí se sirve lo viejo.
+    const tFallo = t0 + VIGENCIA_MS + 1;
+    await calendarioDeTemporada(2026, tFallo);
+    expect(llamadas.n).toBe(2);
+
+    // Cinco vueltas del reloj de cinco minutos dentro de la espera: ninguna
+    // petición. Antes era una por vuelta.
+    for (let i = 1; i <= 5; i++) {
+      await calendarioDeTemporada(2026, tFallo + i * 5 * 60_000);
+    }
+    expect(llamadas.n).toBe(2);
+
+    // Un instante antes de cumplirse la espera todavía no se pregunta.
+    await calendarioDeTemporada(2026, tFallo + ESPERA_TRAS_FALLO_MS - 1);
+    expect(llamadas.n).toBe(2);
+
+    // Y al cumplirse sí, que para eso es una espera y no una rendición.
+    await calendarioDeTemporada(2026, tFallo + ESPERA_TRAS_FALLO_MS);
+    expect(llamadas.n).toBe(3);
+  });
+
+  it('al recuperarse, vuelve al ritmo normal', async () => {
+    const { calendarioDeTemporada, VIGENCIA_MS, ESPERA_TRAS_FALLO_MS } = await import(
+      '@/services/openf1/calendario'
+    );
+    const t0 = 1_000_000;
+
+    await calendarioDeTemporada(2026, t0);
+    llamadas.falla = true;
+    const tFallo = t0 + VIGENCIA_MS + 1;
+    await calendarioDeTemporada(2026, tFallo);
+
+    llamadas.falla = false;
+    const tBueno = tFallo + ESPERA_TRAS_FALLO_MS + 1;
+    await calendarioDeTemporada(2026, tBueno);
+    expect(llamadas.n).toBe(3);
+
+    // Y la copia nueva vuelve a valer seis horas, no media.
+    await calendarioDeTemporada(2026, tBueno + ESPERA_TRAS_FALLO_MS + 1);
+    expect(llamadas.n).toBe(3);
+  });
 });

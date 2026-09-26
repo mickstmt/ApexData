@@ -93,6 +93,63 @@ resuelto.
 
 ## Bitácora
 
+### 2026-09-26 (76) — El freno de los reintentos: el 83 % del tráfico a OpenF1 cuando falla ✅
+
+Punto 1 del orden acordado en `TRABAJO-CALENDARIO-OPENF1.md` §7. Es lo que el
+análisis del 26 señaló como el sitio donde está el tráfico de verdad, y no
+dependía de ninguna decisión del usuario.
+
+**El reparto medido, con 401 permanente**: avisos **66 %**, calendario **17 %**,
+experimento 17 %. La tabla de llaves que propone el encargo ataca el 17 %; esto
+ataca el 83 %.
+
+#### El calendario apagaba su propia caché
+
+`calendario.ts` devolvía la copia vieja cuando OpenF1 fallaba —bien— pero **no
+tocaba `pedidoEn`**, así que `sirve` seguía en falso y se volvía a preguntar en
+cada una de las 288 vueltas del día. **La caché de seis horas se desactivaba
+sola justo cuando estaba salvando la vuelta**: de 4 peticiones diarias a 1 152,
+con el multiplicador de cuatro reintentos por 401 delante.
+
+Ahora hay `ESPERA_TRAS_FALLO_MS = 30 min`: tras un fallo se sirve la copia
+vieja **sin preguntar** hasta que pase la espera. Media hora y no cinco minutos
+porque un calendario de horas sigue siendo el calendario —lo que cambia se
+publica con días—. Techo: **48 peticiones al día** en el peor caso, frente a
+1 152.
+
+#### Los avisos insistían 48 horas
+
+Cuando `clasificacionDeSesion` lanzaba, la sesión **no se marcaba**, así que la
+vuelta siguiente lo reintentaba. Durante las `VENTANA_HORAS = 48` enteras:
+**569 intentos por sesión**, y cada intento son **8 peticiones HTTP** porque
+`/session_result` y `/drivers` van en paralelo y con 401 cada una agota sus
+cuatro reintentos. ~4 552 peticiones por sesión.
+
+Nuevo `src/lib/push/espera-tras-fallo.ts`, con espera **escalonada**: 5, 10, 20
+y techo de 30 minutos. Escalonada y no fija porque un aviso de resultados es
+urgente y castigar el primer tropiezo con media hora de silencio sería peor que
+el problema; lo que se corta es la insistencia sostenida. De 569 intentos por
+sesión a ~96, **más del 80 % menos**, comprobado en una prueba que simula el
+reloj durante las 48 h.
+
+**Lo que NO frena, y es deliberado**: solo los **errores**. Que OpenF1 conteste
+«todavía no hay datos» —lista vacía— es la respuesta normal en la media hora
+posterior a una sesión, y esa se sigue reintentando a cada vuelta: es una sola
+petición barata y es justo lo que hay que hacer. El freno se levanta entero en
+cuanto la fuente contesta.
+
+#### Y una premisa corregida en el código
+
+El comentario de `calendario.ts` afirmaba que «lo que rechazan es nuestra IP de
+producción». Medido el 26 y desmentido: producción habló con OpenF1 durante
+todo Bakú **con el código viejo**. Los 401 son intermitentes, de limitador de
+ritmo, y el cliente ya los atribuía el 12 a las IP compartidas de los runners
+de GitHub. Corregido donde estaba escrito, que es lo que este proyecto lleva
+semanas aprendiendo a hacer.
+
+**Verificado**: lint y tipos limpios, **623 unitarias en verde** (11 nuevas),
+build igual que el CI.
+
 ### 2026-09-26 (75) — Jolpica publicó los resultados antes que la parrilla, y el sembrado llevaba toda la tarde cayendo ✅
 
 **El síntoma**: el flujo horario `Refresh after each session` fallaba desde las
