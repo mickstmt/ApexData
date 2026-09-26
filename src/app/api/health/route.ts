@@ -98,7 +98,9 @@ export async function GET() {
 
   // Las dos comprobaciones a la vez: encadenarlas sumaría la espera del
   // servicio a la de la base sin ganar nada.
-  const [, servicio, ultimoAviso] = await Promise.all([
+  const anio = new Date().getFullYear();
+
+  const [, servicio, ultimoAviso, calendario] = await Promise.all([
     prisma.$queryRaw`SELECT 1`.catch((error) => {
       console.error('[health] Database unreachable:', error);
       database = 'error';
@@ -117,6 +119,21 @@ export async function GET() {
       .findFirst({
         orderBy: { notifiedAt: 'desc' },
         select: { sessionName: true, notifiedAt: true, sent: true },
+      })
+      .catch(() => null),
+    /**
+     * El calendario de OpenF1 que tenemos guardado.
+     *
+     * Por la misma razón que el aviso de arriba: si la tabla no se sembrara,
+     * **no se notaría**. La app seguiría funcionando, porque cae de vuelta a
+     * preguntarle a OpenF1 — que es justo lo que esto venía a evitar. Un fallo
+     * silencioso es el que más caro sale en este proyecto.
+     */
+    prisma.openF1Session
+      .aggregate({
+        where: { year: anio },
+        _count: { sessionKey: true },
+        _max: { vistaEn: true },
       })
       .catch(() => null),
   ]);
@@ -138,6 +155,13 @@ export async function GET() {
           session: ultimoAviso.sessionName,
           at: ultimoAviso.notifiedAt.toISOString(),
           sent: ultimoAviso.sent,
+        }
+      : null,
+    storedCalendar: calendario
+      ? {
+          year: anio,
+          sessions: calendario._count.sessionKey,
+          lastSeenAt: calendario._max.vistaEn?.toISOString() ?? null,
         }
       : null,
   };

@@ -159,9 +159,13 @@ tras un despliegue no se pide nada si la copia sirve, que una copia caducada se
 refresca y se vuelve a guardar, que con OpenF1 caído se sigue con lo guardado,
 y que sin copia el error sí sube), build desde cero igual que el CI.
 
-**Lo que queda por ver en producción**: que la tabla se siembre en la primera
-vuelta tras el despliegue. Se comprueba mirando que el registro deje de pedir
-el calendario al arrancar.
+**Y para poder comprobarlo, no creérselo.**  gana 
+—cuántas sesiones hay guardadas del año en curso y cuándo se leyeron de OpenF1
+por última vez—. Sin eso, que la tabla no se sembrara **no se notaría**: la app
+seguiría funcionando porque cae de vuelta a preguntarle a OpenF1, que es justo
+lo que esto venía a evitar. Es la misma razón por la que ese endpoint ya
+informaba del último aviso enviado: en este proyecto lo que más caro sale es el
+fallo sin síntoma.
 
 ### 2026-09-26 (77) — El experimento de la carrera de fuentes se retira, con sus diez medidas escritas ✅
 
