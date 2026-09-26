@@ -6,10 +6,11 @@
 > la oficina del 2026-09-25; está escrita a propósito para que se pueda
 > contradecir con datos, no para que se copie.
 
-> ⚠️ **ANÁLISIS HECHO el 2026-09-26 (casa). Léelo antes que nada: está en la
-> sección 5, y una premisa de la sección 1 quedó DESMENTIDA.** Las tres
-> decisiones del usuario (sección 4) están contestadas en la sección 6, y el
-> orden de trabajo acordado, en la 7. **Falta solo su GO.**
+> ✅ **CERRADO el 2026-09-26. Este documento es ya un registro, no un encargo.**
+> El análisis está en la sección 5 —y una premisa de la sección 1 quedó
+> **DESMENTIDA**, ver 5.0—, las tres decisiones del usuario en la 6, y lo que
+> se hizo, con sus commits y sus medidas, en la 7. **No queda nada pendiente
+> aquí.**
 
 ---
 
@@ -424,13 +425,43 @@ de borrar el calendario.
 
 ---
 
-## 7 · El orden de trabajo para mañana (falta su GO)
+## 7 · El orden de trabajo — ✅ HECHO el 2026-09-26
 
-1. **El freno de los reintentos.** Es el 83 % del tráfico con 401 y no depende
-   de ninguna decisión: la línea de `pedidoEn` en `calendario.ts`, y un freno
-   en los avisos para que dejen de reintentar cada 5 min durante 48 h.
-2. **Retirar el experimento** (decisión 1). Módulo, tabla, ruta y reloj.
-3. **La tabla de llaves de OpenF1** (secciones 3 y 6.1), sembrada de temporada
-   completa en una petición, con el refresco decidido en 6.1.
+El usuario dio el go con «igual vamos a hacer todo pero en el orden
+correspondiente», y se hizo entero ese mismo día. **Este documento queda como
+registro; no hay nada pendiente en él.**
 
-Cada paso con su medida antes y después: sin el número, la bitácora no vale.
+El orden se alteró sobre lo escrito arriba por una razón: al abrir la sesión, el
+flujo horario llevaba toda la tarde fallando y la portada de producción
+devolvía 500. Eso iba primero.
+
+| # | Qué | Commit | Efecto comprobado |
+|---|---|---|---|
+| 0 | La portada devolvía 500 | `ce6ea40` | `ultimaCorrida` volvía de la caché con la fecha en texto. Dos visitas seguidas a 200, la segunda desde caché |
+| 1 | El sembrado roto | `e5d367a` | `grid: NaN` porque Jolpica publica los resultados antes que la parrilla. **R15 sembrada, 22 pilotos** |
+| 2 | El freno de los reintentos | `7ec0314` | Calendario con 401: de 1 152 peticiones/día a **48** de techo. Avisos: de ~4 552 por sesión a ~770 |
+| 3 | Retirar el experimento | `e6590da` | **93 %** del tráfico de un fin de semana sano. `/api/fuentes` da 404 y la base sigue en pie |
+| 4 | La tabla de llaves | `7dff710` | Un arranque tras despliegue deja de costar una petición, y un OpenF1 caído ya no mata la vuelta |
+| 4-bis | `storedCalendar` en `/api/health` | `c0874a5` | Sin esto, que la tabla no se sembrara **no se notaría** |
+
+Las diez medidas del experimento quedaron escritas en la bitácora (entrada 77)
+**antes** de borrar su tabla, porque eso no tiene vuelta atrás.
+
+### Lo que este documento proponía y no se hizo, con su motivo
+
+- **Guardar la ronda junto a la llave.** No se guarda: `granPremioDe` ya cruza
+  por cercanía de fechas y está comprobado sobre las 115 sesiones de 2026 —las
+  115 caen en su ronda correcta, 3,29 días de holgura en el desempate—.
+  Guardarla añadiría un dato que puede quedarse viejo, y los dos grandes
+  premios anulados de abril no tienen ronda nuestra que asignarles.
+- **Refrescar «una vez al día más otra al empezar un día con sesión»**, como
+  decía la sección 6.1. Se quedó en las **seis horas** que ya había: son 4
+  peticiones diarias, cubren solas el caso del día de sesión y evitan un caso
+  especial. Menos código por la misma frescura.
+
+### La lección de la sesión, que vale más que el código
+
+**Subir no es terminar.** El día empezó con un CI en rojo que la sesión
+anterior había dado por bueno sin abrirlo, y con el despliegue **saltado** por
+eso mismo. Desde ahí, cada commit fue con lint, tipos, suite y build, y
+esperando el verde del anterior antes de apilar el siguiente.

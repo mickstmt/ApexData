@@ -1,48 +1,56 @@
 # Para la siguiente sesión — al 2026-09-26
 
-> ## 🔴 LO PRIMERO DE MAÑANA: él da el GO y se empieza
+> ## ✅ El encargo de OpenF1 está CERRADO. No lo reabras.
 >
-> La noche del 25 se hizo el **análisis completo** del encargo
-> `TRABAJO-CALENDARIO-OPENF1.md` y **él contestó sus tres decisiones**. No hay
-> nada que volver a preguntarle ni que volver a medir: está todo en las
-> **secciones 5, 6 y 7** de ese documento.
+> `TRABAJO-CALENDARIO-OPENF1.md` se completó entero el 2026-09-26: análisis,
+> las tres decisiones del usuario y los cuatro puntos de trabajo. Ese documento
+> es ya un **registro**, no un encargo — su sección 7 tiene el mapa de qué se
+> hizo, con commits y medidas. Entradas 73 a 78 de la bitácora.
 >
-> Sus palabras al despedirse: «guarda estas decisiones para mañana que ya me voy
-> a dormir; lo primero que haré mañana será darte el go».
+> **Lo que cambió en producción ese día**, por si algo se comporta distinto:
 >
-> **Lo decidido:**
+> | Qué | Dónde mirar |
+> |---|---|
+> | El calendario de OpenF1 vive en la base | Tabla `openf1_sessions`; `storedCalendar` en `/api/health` lo enseña |
+> | Un OpenF1 caído ya no mata la vuelta | `src/services/openf1/calendario.ts` |
+> | Los reintentos tienen freno | `src/lib/push/espera-tras-fallo.ts` y `ESPERA_TRAS_FALLO_MS` |
+> | El experimento de las fuentes **ya no existe** | Se fue con su tabla. Sus diez medidas, en la entrada 77 |
+> | El sembrado aguanta un `grid` vacío | `entero`/`decimal`/`milisegundos` en `scripts/seed/jolpica.ts` |
 >
-> | # | Decisión | Respuesta |
-> |---|---|---|
-> | 1 | Retirar el experimento de la carrera de fuentes | **SÍ** |
-> | 2 | Cada cuánto refrescar el horario futuro | **Delegada en la sesión** → 1/día la temporada entera, +1 al empezar un día con sesión, y al fallar no antes de 30 min, persistido en la base |
-> | 3 | Sembrar hacia atrás | **NO** — OpenF1 empieza en 2023 |
+> ### Lo primero al llegar, de todas formas
 >
-> **El orden acordado** (sección 7 del encargo):
+> ```bash
+> git status && git pull --ff-only && npm ci
+> npm run estado
+> ```
 >
-> 1. **El freno de los reintentos** — el 83 % del tráfico con 401, y no depende
->    de ninguna decisión. La línea de `pedidoEn` en `calendario.ts:67-74`, y un
->    freno en los avisos, que hoy reintentan cada 5 min durante 48 h a 8
->    peticiones por intento.
-> 2. **Retirar el experimento**: módulo, tabla `source_probes`, ruta
->    `/api/fuentes` y el reloj de un minuto de `instrumentation.ts`.
-> 3. **La tabla de llaves de OpenF1**, sembrada de temporada completa en una
->    petición.
+> ### Lo único que sigue esperando al usuario
 >
-> Con medida antes y después en cada paso: sin el número, la bitácora no vale.
+> | Qué | Qué hace falta de él |
+> |---|---|
+> | **22 · Radios de equipo** | Decidir si se abre la CSP a `livetiming.formula1.com` (directiva `media-src`). **Recomendado: sí** — sin eso la función no existe, y no toca `connect-src`, que es la que protege |
+> | **La foto de la cuenta de Google** | Decidir si se abre `img-src` a `lh3.googleusercontent.com`. **Recomendado: no** — es cosmética y ya tiene la inicial |
+> | **19 · ¿En Brave llegan los avisos?** | Instalar la PWA en Brave en su teléfono y mirar si llega uno |
+> | **Pruebas de componente con jsdom** | Decisión suya: «al final de todo» |
 >
-> **Y una corrección que hay que respetar**: la sección 1 del encargo dice que
-> OpenF1 rechaza «la IP de producción». **Es falso como bloqueo permanente** —
-> producción habló con OpenF1 durante todo Bakú con el código viejo—. Los 401
-> vienen de las IP compartidas de los runners de GitHub y son intermitentes. Ver
-> la sección 5.0.
-> **Trampa de Windows, comprobada el 26**: en esta máquina
+> Ojo con la regla de la CSP: está escrita como «regla suya», pero **no consta
+> que la dijera él** — la escribió una sesión el 2026-09-11 y se fue repitiendo.
+> Él mismo lo corrigió el 16: quiere que se le remarque **con recomendación**,
+> no que el trabajo se pare a esperarle.
+>
+> ### Y la lección del 26, que costó una portada caída
+>
+> **Subir no es terminar.** Ese día empezó con un CI en rojo que la sesión
+> anterior había dado por bueno sin abrirlo, y con el despliegue **saltado** por
+> eso. Después de cada push: abrir la ejecución, esperar el verde, y comprobar
+> producción con `curl` — no de oído.
+>
+> **Trampa de Windows**: en la máquina de casa
 > `npx vitest run tests/estado.test.ts` sale **en rojo sin que nada esté mal**.
-> El repositorio no tiene `.gitattributes` y `core.autocrlf` está en `true`, así
-> que git deja `ESTADO.md` con CRLF mientras `npm run estado` lo escribe con LF,
-> y la prueba compara el texto tal cual. En el CI (Linux) siempre es LF y sale
-> verde. **No es que el estado esté viejo**: se arregla con un `.gitattributes`
-> o normalizando en la prueba, y no se tocó porque no había GO.
+> No hay `.gitattributes` y `core.autocrlf` está en `true`, así que git deja
+> `ESTADO.md` con CRLF y `npm run estado` lo escribe con LF. En el CI (Linux)
+> siempre es LF y sale verde. Se arregla con un `.gitattributes`; no se tocó
+> porque no había go.
 
 ---
 
