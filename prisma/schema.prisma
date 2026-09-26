@@ -517,6 +517,42 @@ model OpenF1Session {
 }
 
 /**
+ * La cronometría de una sesión ya corrida, guardada para siempre.
+ * Los tiempos de una sesión terminada NO VUELVEN A CAMBIAR, y sin embargo se
+ * volvían a pedir una y otra vez: el navegador los guarda cinco minutos y el
+ * servicio de telemetría una hora (CACHE_TTL), así que pasada esa hora la
+ * primera visita obliga a FastF1 a procesar la sesión entera otra vez.
+ * Medido en producción el 2026-09-26: en caliente 0,06 s, en frío 4,35 s. Eso
+ * es el «pidiendo los tiempos» que el usuario ve al entrar en una práctica, y
+ * lo reportó dos veces —el 15 y el 26—.
+ * Ponerle una hora de caducidad a un dato inmutable era el fallo. Aquí no
+ * caduca: se guarda cuando la sesión es DEFINITIVA y ya no se vuelve a pedir.
+ * Cuesta poco: la pestaña pide la mejor vuelta de cada piloto, 5,5 KB medidos
+ * por sesión, unos 700 KB por temporada entera.
+ */
+model CronometriaDeSesion {
+  year Int
+
+  /// La ronda tal y como la pide la ruta, que es texto: «15».
+  event String
+
+  /// FP1, FP2, FP3, SQ, S, Q o R.
+  sessionType String @map("session_type")
+
+  /// La respuesta entera de /fastest, sin recortar: se sirve recortada al
+  /// límite que pida cada quien, así que una sola fila vale para todos.
+  datos Json
+
+  /// Cuántas vueltas trae, para poder mirar la tabla sin abrir el JSON.
+  vueltas Int
+
+  guardadaEn DateTime @default(now()) @map("guardada_en")
+
+  @@id([year, event, sessionType])
+  @@map("cronometria_sesiones")
+}
+
+/**
  * Qué previas se han mandado ya, y a quién.
  * Los resultados llevan una marca global —lo que pasó es igual para todos— pero
  * la previa no: sale a las 20:00 de cada cual, así que dos personas en husos

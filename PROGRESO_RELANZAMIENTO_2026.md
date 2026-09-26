@@ -93,6 +93,79 @@ resuelto.
 
 ## Bitácora
 
+### 2026-09-26 (79) — «Siempre pide la data cada vez que entramos»: los tiempos de una sesión corrida ya no caducan ✅
+
+**Lo reportado, por segunda vez** —el 15 y hoy—: «¿por qué para las prácticas
+libres sigue diciendo cuando entro que está pidiendo los tiempos? Igual para la
+1 y la 2. No entiendo por qué siempre las pedimos y no las guardamos, cuál es
+la complicación».
+
+#### Lo medido antes de tocar nada
+
+Contra producción, sobre la FP1 de Bakú y la FP2 de Italia:
+
+| Caso | Tiempo |
+|---|---|
+| Alguien la pidió en la última hora | **0,06 s** |
+| Nadie la ha pedido en la última hora | **4,35 s** ← el «pidiendo los tiempos» |
+
+Y el reparto de quién guardaba qué:
+
+| Capa | Qué guardaba | Cuánto duraba |
+|---|---|---|
+| El navegador | La respuesta | 5 min fresca, luego refresca por detrás |
+| El servicio de telemetría | La respuesta, en disco | **1 hora** (`CACHE_TTL = 3600`) |
+| Nuestra base | **Nada** | — |
+
+Pasada esa hora, nadie la tenía y FastF1 volvía a procesar la sesión entera. No
+los 36 s del principio porque sus descargas crudas sí viven en un volumen que
+sobrevive a los reinicios —está en `DEPLOY.md`—, de ahí los 4,35 s.
+
+**El fallo de fondo**: los tiempos de una sesión terminada **no cambian nunca
+más**. Ponerle una hora de caducidad a un dato inmutable es el mismo error que
+el calendario de esta mañana.
+
+#### La respuesta a «cuál es la complicación»: casi ninguna
+
+| Supuesta pega | Lo medido |
+|---|---|
+| Ocupa mucho | La pestaña pide solo `/fastest?limit=25`: **5,5 KB**. Una temporada de prácticas ≈ **700 KB** |
+| Cambia | No. Una sesión corrida es definitiva |
+| Es complejo | Un `upsert` por sesión |
+
+La única complicación real es **cuándo** se puede guardar. Demasiado pronto
+congela para siempre una lista parcial o vacía — el fallo del 24, pero sin
+fecha de caducidad. Se resuelve con `HORAS_HASTA_DEFINITIVA = 4` desde el
+comienzo de la sesión: cubre de sobra la más larga —una carrera son dos horas
+por reglamento y tres con una suspensión— y una práctica dura una.
+
+#### Una corrección de algo que dije hace un rato
+
+Al plantearlo dije que faltaba el `date_end` que llegó hoy con
+`openf1_sessions`, y **no era verdad**: el comienzo de cada sesión está en
+`Race` desde siempre, y con un margen generoso basta. El `date_end` permitiría
+afinar el margen, no habilita nada. Queda escrito en el propio módulo para que
+nadie herede la idea equivocada.
+
+#### Lo hecho
+
+Tabla `cronometria_sesiones` —clave `(year, event, session_type)`, la respuesta
+entera en `JSONB`— y `src/lib/cronometria-guardada.ts`, con la parte que tiene
+reglas separada de la que toca la base, como el calendario.
+
+La ruta mira primero lo guardado y responde sin caducidad. Si no hay nada, pide
+**30** aunque le hayan pedido 10 —cargar la sesión cuesta igual, y así lo
+guardado sirve para cualquier límite— y recorta al responder. El guardado **no
+se espera**: quien pregunta ya tiene su respuesta.
+
+Se guarda con dos condiciones y hacen falta las dos: que la sesión sea
+definitiva y que **traiga vueltas**. Una lista vacía es «todavía no», nunca una
+respuesta final.
+
+**Verificado**: lint y tipos limpios, **623 unitarias en verde** (13 nuevas,
+centradas en cuándo es seguro guardar, con el fin de semana de Bakú real),
+build igual que el CI.
+
 ### 2026-09-26 (78) — El calendario de OpenF1 se guarda en nuestra base: de dependencia dura a blanda ✅
 
 Punto 3 y último del orden acordado, y la respuesta a lo que preguntó el
