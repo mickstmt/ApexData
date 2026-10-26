@@ -8,6 +8,10 @@
  * coló el fallo de negar un resultado.
  */
 
+import { BARRA } from './evaluar';
+import { cabeComoFraccion } from './formato';
+import type { Racional } from './racional';
+
 /**
  * Los valores que no son dígitos pero sí son un operando.
  *
@@ -22,6 +26,51 @@ const VALORES_SUELTOS = new Set(['π', 'e', 'Ans', 'rand']);
 const INFIJOS = ['+', '−', '×', '÷', '^', 'ʸ√', ' mod '];
 
 /**
+ * Una pieza que es parte de un número.
+ *
+ * Casi siempre es una cifra suelta, pero no siempre: la cinta y `MR` devuelven
+ * el número entero de una pieza —`'12'`, `'0.5'`— y para `±` y para la tecla
+ * de fracción ese número es tan número como el tecleado.
+ */
+const DIGITO = /^[\d.]+$/;
+
+/** Un número que el analizador sabe leer: no vale un punto suelto. */
+const NUMERO_COMPLETO = /^(?:\d+(?:\.\d*)?|\.\d+)$/;
+
+/**
+ * Por qué no se puede poner la barra de fracción ahora, o `null` si se puede.
+ *
+ * Va aparte de `ponerFraccion` para que la pantalla diga el motivo de verdad y
+ * no lo adivine: los dos casos piden cosas distintas al usuario.
+ */
+export function porQueNoCabeFraccion(piezas: string[]): 'falta-numerador' | 'ya-tiene-barra' | null {
+  if (piezas[piezas.length - 1] === BARRA) return 'ya-tiene-barra';
+  let i = piezas.length;
+  while (i > 0 && DIGITO.test(piezas[i - 1])) i -= 1;
+  if (piezas[i - 1] === BARRA) return 'ya-tiene-barra';
+  if (!NUMERO_COMPLETO.test(piezas.slice(i).join(''))) return 'falta-numerador';
+  return null;
+}
+
+/**
+ * Pone la barra de fracción detrás del número que se acaba de escribir.
+ *
+ * Es la forma de escribir de la Casio en modo línea: primero el numerador,
+ * luego la tecla, luego el denominador, y el siguiente operador cierra la
+ * fracción. Sin teclas de cursor no hay otra: una plantilla con dos casillas
+ * vacías obligaría a moverse entre ellas.
+ *
+ * Devuelve `null` cuando no hay dónde ponerla, para que la pantalla avise en
+ * vez de dejar una barra suelta que el analizador no sabría leer:
+ *
+ * - si lo último no es un número (`2+`, `sin(`, `π`, un `.` suelto o nada);
+ * - si ese número ya es un denominador: `1⁄2⁄3` no es una fracción.
+ */
+export function ponerFraccion(piezas: string[]): string[] | null {
+  return porQueNoCabeFraccion(piezas) ? null : [...piezas, BARRA];
+}
+
+/**
  * Cambia el signo del último operando escrito, no el de toda la expresión.
  *
  * Es lo que hace la tecla `±` de una calculadora: en `5×3`, pulsarla deja
@@ -34,7 +83,17 @@ const INFIJOS = ['+', '−', '×', '÷', '^', 'ʸ√', ' mod '];
  */
 export function cambiarSigno(piezas: string[]): string[] {
   let i = piezas.length;
-  while (i > 0 && /^[\d.]$/.test(piezas[i - 1])) i -= 1;
+  // Una fracción a medias —`1⁄`, sin denominador todavía— también es el
+  // último operando: el signo va delante del numerador, no detrás de la barra.
+  if (piezas[i - 1] === BARRA) i -= 1;
+  while (i > 0 && DIGITO.test(piezas[i - 1])) i -= 1;
+
+  // Y una entera también: en `3×1⁄2` el operando es `1⁄2`, y meter el menos
+  // entre la barra y el `2` dejaría un denominador que el analizador no lee.
+  if (i < piezas.length && piezas[i - 1] === BARRA) {
+    i -= 1;
+    while (i > 0 && DIGITO.test(piezas[i - 1])) i -= 1;
+  }
 
   // Si no termina en dígitos, todavía puede terminar en un operando: `π`, `e`,
   // `Ans` o `rand`.
@@ -74,7 +133,15 @@ export function cambiarSigno(piezas: string[]): string[] {
  * letra es el número de Euler: sin esta traducción, recuperar `1e-7` de la
  * cinta lo leería como «1 · e · (−7)», que no vale lo mismo ni de lejos.
  */
-export function comoLiteral(valor: number): string {
+export function comoLiteral(valor: number, exacto?: Racional | null): string {
+  // Si se sabe la fracción, vuelve como fracción: un ⅓ recuperado de la cinta
+  // como `0.333333333333333` ya no sería un tercio, y `+1⁄3` daría un
+  // decimal en vez de ⅔.
+  if (cabeComoFraccion(exacto)) {
+    const { n, d } = exacto;
+    return n < BigInt(0) ? `(−${-n}${BARRA}${d})` : `${n}${BARRA}${d}`;
+  }
+
   const texto = String(valor);
   if (!texto.includes('e')) return valor < 0 ? `(${texto})` : texto;
 

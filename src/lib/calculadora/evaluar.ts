@@ -23,8 +23,32 @@
  *   − unario               (por eso −2² es −4 y no 4, como en cualquier científica)
  *   ^ ʸ√                   (asociativo por la derecha: 2^3^2 = 2^9 = 512)
  *   ! % ² ³ postfijos
+ *   a⁄b                    (la fracción es UN número: 1⁄2² es (1⁄2)², como en una Casio)
  * ```
+ *
+ * ## Dos cuentas a la vez
+ *
+ * Cada operando lleva su valor en `double` y, mientras se pueda, el mismo
+ * valor en fracción exacta (`racional.ts`). El `double` es el que manda —es el
+ * de siempre, y con él se pintan los decimales—; la fracción solo decide si el
+ * resultado se puede enseñar como ⅚. En cuanto aparece algo que no es
+ * racional —π, una raíz, un seno— la fracción pasa a `null` y ya no vuelve.
  */
+
+import {
+  absoluto,
+  deTexto,
+  dividir,
+  elevar,
+  entero,
+  factorialExacto,
+  multiplicar,
+  negar,
+  restar,
+  resto,
+  sumar,
+  type Racional,
+} from './racional';
 
 /** En qué unidad se leen los ángulos. Las tres que trae cualquier científica. */
 export type ModoAngular = 'DEG' | 'RAD' | 'GRAD';
@@ -34,12 +58,31 @@ export interface Contexto {
   modo: ModoAngular;
   /** El último resultado, que es lo que vale la tecla `Ans`. */
   ans: number;
+  /** El mismo `Ans` en exacto, si lo era. Sin él, `Ans` cortaría la fracción. */
+  ansExacto?: Racional | null;
+  /**
+   * Si `Ans` se estaba viendo como fracción. Así `=` y luego `+ 1⁄6` sigue en
+   * fracción aunque lo nuevo no lleve barra: se sigue con lo que se veía.
+   */
+  ansEnFraccion?: boolean;
   /** De dónde salen los números de `rand`. Inyectable para poder probarlo. */
   aleatorio?: () => number;
 }
 
-/** El resultado de evaluar: o un número, o el motivo por el que no lo hay. */
-export type Resultado = { ok: true; valor: number } | { ok: false; error: string };
+/**
+ * El resultado de evaluar: o un número, o el motivo por el que no lo hay.
+ *
+ * `exacto` es el valor en fracción, o `null` si no es racional. `fraccion` dice
+ * si se escribió alguna con la tecla: es lo que decide cómo se enseña al
+ * pulsar `=`. Que `1÷3` salga en decimal y `1⁄3` en fracción es la razón de
+ * ser de la tecla; si no, haría lo mismo que `÷`.
+ */
+export type Resultado =
+  | { ok: true; valor: number; exacto: Racional | null; fraccion: boolean }
+  | { ok: false; error: string };
+
+/** La barra que pone la tecla de fracción. No es `/`: esa ya es dividir. */
+export const BARRA = '⁄';
 
 /** Un fallo de cálculo con un motivo que se le puede enseñar al usuario. */
 class ErrorDeCalculo extends Error {}
@@ -52,7 +95,15 @@ function fallar(motivo: string): never {
 // 1. Tokenizar
 // ---------------------------------------------------------------------------
 
-type Tipo = 'numero' | 'constante' | 'funcion' | 'operador' | 'abre' | 'cierra' | 'postfijo';
+type Tipo =
+  | 'numero'
+  | 'constante'
+  | 'funcion'
+  | 'operador'
+  | 'abre'
+  | 'cierra'
+  | 'postfijo'
+  | 'fraccion';
 
 interface Token {
   tipo: Tipo;
@@ -191,6 +242,12 @@ function tokenizar(entrada: string): Token[] {
     if ('+-−*×/÷^'.includes(c)) {
       const normal = c === '−' ? '-' : c === '×' ? '*' : c === '÷' ? '/' : c;
       tokens.push({ tipo: 'operador', texto: normal });
+      i += 1;
+      continue;
+    }
+
+    if (c === BARRA) {
+      tokens.push({ tipo: 'fraccion', texto: BARRA });
       i += 1;
       continue;
     }
@@ -342,6 +399,12 @@ function aplicarFuncion(nombre: string, v: number, ctx: Contexto): number {
 // 3. Analizar y evaluar
 // ---------------------------------------------------------------------------
 
+/** Un valor ya resuelto: el `double` de siempre y, si lo hay, su fracción. */
+interface Valor {
+  valor: number;
+  exacto: Racional | null;
+}
+
 /**
  * Un operando ya resuelto.
  *
@@ -352,13 +415,26 @@ function aplicarFuncion(nombre: string, v: number, ctx: Contexto): number {
  * división no: `200 × 10%` son 20. Sin este dato no se puede distinguir un
  * caso del otro.
  */
-interface Operando {
-  valor: number;
-  porcentajeDe: number | null;
+interface Operando extends Valor {
+  porcentajeDe: Valor | null;
 }
 
-function analizar(tokens: Token[], ctx: Contexto): number {
+/** La fracción de una operación, si los dos lados la tienen. */
+function ambos(
+  a: Valor,
+  b: Valor,
+  operacion: (x: Racional, y: Racional) => Racional | null
+): Racional | null {
+  return a.exacto && b.exacto ? operacion(a.exacto, b.exacto) : null;
+}
+
+const CIEN = entero(100);
+const UNO_EXACTO = entero(1);
+
+function analizar(tokens: Token[], ctx: Contexto): { total: Valor; fraccion: boolean } {
   let pos = 0;
+  /** Si se escribió alguna fracción con la tecla. Decide cómo se enseña. */
+  let fraccion = false;
 
   const mirar = (): Token | undefined => tokens[pos];
 
@@ -367,20 +443,37 @@ function analizar(tokens: Token[], ctx: Contexto): number {
     t !== undefined &&
     (t.tipo === 'numero' || t.tipo === 'constante' || t.tipo === 'funcion' || t.tipo === 'abre');
 
-  function primario(): number {
+  function primario(): Valor {
     const t = mirar();
     if (!t) fallar('Falta un número');
 
     if (t.tipo === 'numero') {
       pos += 1;
-      return t.valor as number;
+      const arriba: Valor = { valor: t.valor as number, exacto: deTexto(t.texto) };
+
+      // La fracción se lee aquí, dentro del número, y no como un operador:
+      // `1⁄2` es un número igual que `0.5`, así que `1⁄2²` eleva la fracción
+      // entera y `3×1⁄2` no depende de ninguna precedencia.
+      if (mirar()?.tipo !== 'fraccion') return arriba;
+      pos += 1;
+      fraccion = true;
+
+      const abajo = mirar();
+      if (abajo?.tipo !== 'numero') fallar('Falta el denominador');
+      pos += 1;
+      if (abajo.valor === 0) fallar('No se puede dividir entre cero');
+      const denominador: Valor = { valor: abajo.valor as number, exacto: deTexto(abajo.texto) };
+      return { valor: arriba.valor / denominador.valor, exacto: ambos(arriba, denominador, dividir) };
     }
 
     if (t.tipo === 'constante') {
       pos += 1;
-      if (t.texto === 'Ans') return ctx.ans;
-      if (t.texto === 'rand') return (ctx.aleatorio ?? Math.random)();
-      return CONSTANTES[t.texto];
+      if (t.texto === 'Ans') {
+        if (ctx.ansEnFraccion) fraccion = true;
+        return { valor: ctx.ans, exacto: ctx.ansExacto ?? null };
+      }
+      if (t.texto === 'rand') return { valor: (ctx.aleatorio ?? Math.random)(), exacto: null };
+      return { valor: CONSTANTES[t.texto], exacto: null };
     }
 
     if (t.tipo === 'funcion') {
@@ -390,47 +483,62 @@ function analizar(tokens: Token[], ctx: Contexto): number {
       // potencia que venga detrás —`√9×2` es 3×2, no √18— que es justo lo que
       // hace una de sobremesa.
       const argumento = mirar()?.tipo === 'abre' ? primario() : potencia();
-      return aplicarFuncion(t.texto, argumento, ctx);
+      return {
+        valor: aplicarFuncion(t.texto, argumento.valor, ctx),
+        // De todas las funciones, solo el valor absoluto de una fracción es
+        // otra fracción.
+        exacto: t.texto === 'abs' && argumento.exacto ? absoluto(argumento.exacto) : null,
+      };
     }
 
     if (t.tipo === 'abre') {
       pos += 1;
-      const dentro = expresion().valor;
+      const dentro = expresion();
       // Un paréntesis sin cerrar no es un error: al pulsar `=` se cierran
       // solos, igual que en cualquier calculadora.
       if (mirar()?.tipo === 'cierra') pos += 1;
-      return dentro;
+      return { valor: dentro.valor, exacto: dentro.exacto };
     }
+
+    if (t.tipo === 'fraccion') fallar('Falta el numerador');
 
     return fallar('Falta un número');
   }
 
   function postfijo(): Operando {
-    let valor = primario();
-    let porcentajeDe: number | null = null;
+    let { valor, exacto } = primario();
+    let porcentajeDe: Valor | null = null;
 
     for (;;) {
       const t = mirar();
       if (t?.tipo !== 'postfijo') break;
       pos += 1;
       porcentajeDe = null;
-      if (t.texto === '!') valor = factorial(valor);
-      else if (t.texto === '²') valor = valor * valor;
-      else if (t.texto === '³') valor = valor * valor * valor;
-      else if (t.texto === '⁻¹') {
+      if (t.texto === '!') {
+        valor = factorial(valor);
+        exacto = exacto && factorialExacto(exacto);
+      } else if (t.texto === '²') {
+        valor = valor * valor;
+        exacto = exacto && multiplicar(exacto, exacto);
+      } else if (t.texto === '³') {
+        valor = valor * valor * valor;
+        exacto = exacto && elevar(exacto, entero(3));
+      } else if (t.texto === '⁻¹') {
         if (valor === 0) fallar('No se puede dividir entre cero');
         valor = 1 / valor;
+        exacto = exacto && dividir(UNO_EXACTO, exacto);
       } else if (t.texto === '%') {
-        porcentajeDe = valor;
+        porcentajeDe = { valor, exacto };
         valor /= 100;
+        exacto = exacto && dividir(exacto, CIEN);
       }
     }
 
-    return { valor, porcentajeDe };
+    return { valor, exacto, porcentajeDe };
   }
 
-  function potencia(): number {
-    return conSigno().valor;
+  function potencia(): Valor {
+    return conSigno();
   }
 
   /** `base ^ exponente` y `índice ʸ√ radicando`, ambos por la derecha. */
@@ -442,7 +550,12 @@ function analizar(tokens: Token[], ctx: Contexto): number {
       pos += 1;
       // Por la derecha y con el unario dentro: `2^-3` es un octavo, y `2^3^2`
       // es 2⁹ y no 8².
-      return { valor: Math.pow(izquierda.valor, conSigno().valor), porcentajeDe: null };
+      const exponente = conSigno();
+      return {
+        valor: Math.pow(izquierda.valor, exponente.valor),
+        exacto: ambos(izquierda, exponente, elevar),
+        porcentajeDe: null,
+      };
     }
 
     if (t?.tipo === 'operador' && t.texto === 'ʸ√') {
@@ -455,11 +568,11 @@ function analizar(tokens: Token[], ctx: Contexto): number {
       // devuelve el signo.
       if (radicando < 0) {
         if (Number.isInteger(indice) && Math.abs(indice % 2) === 1) {
-          return { valor: -Math.pow(-radicando, 1 / indice), porcentajeDe: null };
+          return { valor: -Math.pow(-radicando, 1 / indice), exacto: null, porcentajeDe: null };
         }
         fallar('No hay raíz par de un número negativo');
       }
-      return { valor: Math.pow(radicando, 1 / indice), porcentajeDe: null };
+      return { valor: Math.pow(radicando, 1 / indice), exacto: null, porcentajeDe: null };
     }
 
     return izquierda;
@@ -477,7 +590,12 @@ function analizar(tokens: Token[], ctx: Contexto): number {
     if (t?.tipo === 'operador' && (t.texto === '-' || t.texto === '+')) {
       pos += 1;
       const dentro = conSigno();
-      return { valor: t.texto === '-' ? -dentro.valor : dentro.valor, porcentajeDe: null };
+      if (t.texto === '+') return { ...dentro, porcentajeDe: null };
+      return {
+        valor: -dentro.valor,
+        exacto: dentro.exacto && negar(dentro.exacto),
+        porcentajeDe: null,
+      };
     }
     return elevacion();
   }
@@ -493,13 +611,25 @@ function analizar(tokens: Token[], ctx: Contexto): number {
         pos += 1;
         const derecha = conSigno();
         if (t.texto === '*') {
-          izquierda = { valor: izquierda.valor * derecha.valor, porcentajeDe: null };
+          izquierda = {
+            valor: izquierda.valor * derecha.valor,
+            exacto: ambos(izquierda, derecha, multiplicar),
+            porcentajeDe: null,
+          };
         } else if (t.texto === '/') {
           if (derecha.valor === 0) fallar('No se puede dividir entre cero');
-          izquierda = { valor: izquierda.valor / derecha.valor, porcentajeDe: null };
+          izquierda = {
+            valor: izquierda.valor / derecha.valor,
+            exacto: ambos(izquierda, derecha, dividir),
+            porcentajeDe: null,
+          };
         } else {
           if (derecha.valor === 0) fallar('No se puede dividir entre cero');
-          izquierda = { valor: izquierda.valor % derecha.valor, porcentajeDe: null };
+          izquierda = {
+            valor: izquierda.valor % derecha.valor,
+            exacto: ambos(izquierda, derecha, resto),
+            porcentajeDe: null,
+          };
         }
         factores += 1;
         continue;
@@ -509,7 +639,11 @@ function analizar(tokens: Token[], ctx: Contexto): number {
       // viene puede empezar un operando; si no, el término se ha acabado.
       if (abreOperando(t)) {
         const derecha = conSigno();
-        izquierda = { valor: izquierda.valor * derecha.valor, porcentajeDe: null };
+        izquierda = {
+          valor: izquierda.valor * derecha.valor,
+          exacto: ambos(izquierda, derecha, multiplicar),
+          porcentajeDe: null,
+        };
         factores += 1;
         continue;
       }
@@ -517,7 +651,7 @@ function analizar(tokens: Token[], ctx: Contexto): number {
       break;
     }
 
-    return factores === 1 ? izquierda : { valor: izquierda.valor, porcentajeDe: null };
+    return factores === 1 ? izquierda : { ...izquierda, porcentajeDe: null };
   }
 
   function expresion(): Operando {
@@ -530,13 +664,20 @@ function analizar(tokens: Token[], ctx: Contexto): number {
       const derecha = termino();
 
       // Aquí es donde `200 + 10%` se convierte en 220.
-      const sumando =
-        derecha.porcentajeDe !== null
-          ? (izquierda.valor * derecha.porcentajeDe) / 100
-          : derecha.valor;
+      const base = derecha.porcentajeDe;
+      const sumando: Valor = base
+        ? {
+            valor: (izquierda.valor * base.valor) / 100,
+            exacto: ambos(izquierda, base, (a, b) => {
+              const producto = multiplicar(a, b);
+              return producto && dividir(producto, CIEN);
+            }),
+          }
+        : derecha;
 
       izquierda = {
-        valor: t.texto === '+' ? izquierda.valor + sumando : izquierda.valor - sumando,
+        valor: t.texto === '+' ? izquierda.valor + sumando.valor : izquierda.valor - sumando.valor,
+        exacto: ambos(izquierda, sumando, t.texto === '+' ? sumar : restar),
         porcentajeDe: null,
       };
     }
@@ -548,7 +689,7 @@ function analizar(tokens: Token[], ctx: Contexto): number {
 
   if (pos < tokens.length) fallar('Sobra algo al final');
 
-  return total.valor;
+  return { total, fraccion };
 }
 
 /**
@@ -562,12 +703,13 @@ export function evaluar(entrada: string, ctx: Contexto): Resultado {
   if (entrada.trim() === '') return { ok: false, error: '' };
 
   try {
-    const valor = analizar(tokenizar(entrada), ctx);
+    const { total, fraccion } = analizar(tokenizar(entrada), ctx);
+    const { valor, exacto } = total;
 
     if (Number.isNaN(valor)) return { ok: false, error: 'Eso no da un número' };
     if (!Number.isFinite(valor)) return { ok: false, error: 'Demasiado grande' };
 
-    return { ok: true, valor };
+    return { ok: true, valor, exacto, fraccion };
   } catch (error) {
     if (error instanceof ErrorDeCalculo) return { ok: false, error: error.message };
     return { ok: false, error: 'No se puede calcular eso' };

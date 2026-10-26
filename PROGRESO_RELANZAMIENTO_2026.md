@@ -93,6 +93,40 @@ resuelto.
 
 ## Bitácora
 
+### 2026-10-26 (80) — La calculadora escribe fracciones: ½ + ⅓ = ⅚, exacto ✅
+
+**Qué se pidió**: «el botón de división fraccional», que es la tecla ▭/▭ de una Casio. Y, a propuesta del usuario, un aviso que salga solo la primera vez y señale dónde está.
+
+**Cómo se decidió**: tres agentes de UX (accesibilidad, sistema visual, producto) y una maqueta navegable a 360, 390 y escritorio en los dos temas (https://claude.ai/artifact/SHn9Lxyxo2JnXJFAjA22uH).
+
+- **Ubicación**: la tecla va en el bloque científico, en el sitio de `mod`, que pasa a la segunda cara de `%`. Primero se propuso quitarle el sitio a `n!`, como la Casio fx-991EX; el usuario prefirió que el factorial siguiera a un toque. No va junto al `0` para no tocar la zona del pulgar.
+- **Aviso**: un globo junto a la tecla y un anillo azul que late tres veces y se queda quieto. Se descartaron la franja con «Ver dónde» y la insignia «Nuevo» sola.
+
+**Qué hay debajo**:
+
+- El motor lleva, junto al `double` de siempre, una fracción exacta en `bigint` (`src/lib/calculadora/racional.ts`). Pasa a `null` en cuanto entra algo irracional: π, raíces, trigonometría.
+- Sale en fracción **solo si se escribió con la tecla**: `1÷3` sigue dando 0.333… y el botón del visor «a fracción» lo pasa a ⅓. Sin esta regla la tecla haría lo mismo que `÷`.
+- Atajos `f` (fracción) y `d` (fracción ⇄ decimal). Un lector de pantalla oye «5 entre 6»: VoiceOver lee «5/6» como una fecha.
+
+**Medido**:
+
+- Anillo azul: 4,10:1 en claro y 6,17:1 en oscuro. El amarillo daba 1,30:1 en claro y se descartó.
+- El globo cabe entero a 360 y a 1280 px sin tapar la tecla.
+- A 360 px al resultado le quedan 160 px: 0.833333333333 ocupaba 185 px a 22 px de letra; ahora pasa a 17 px y ocupa 143.
+- 75 unitarias de la calculadora (650 en total) y 36 e2e, 14 nuevas. Tanda e2e completa: 221 en verde y 1 roja, la del DNF del replay, inestable por carga; pasó dos veces sola.
+
+**Fallos propios**:
+
+- La revisión de código encontró diez defectos antes del commit. Entre ellos: la barra se calculaba sobre lo escrito una pulsación atrás, un «.» suelto se aceptaba como numerador, y la cinta devolvía ⅓ como 0.333333333333333 y perdía la fracción. Arreglados y con prueba.
+- El build local fallaba por un `.next/dev/types` viejo que apuntaba a `api/fuentes`, ruta ya borrada. El CI parte de cero y no lo ve.
+
+**Lo que no entra**:
+
+- Números mixtos (1 ½): no se pidieron.
+- Fracciones apiladas mientras se escribe: se escriben en línea, porque no hay cursor.
+- `MR` devuelve el decimal: la memoria guarda y suma decimales.
+- El aviso se recuerda por aparato. En iPhone, Safari y la app instalada lo guardan por separado.
+
 ### 2026-09-26 (79) — «Siempre pide la data cada vez que entramos»: los tiempos de una sesión corrida ya no caducan ✅
 
 **Lo reportado, por segunda vez** —el 15 y hoy—: «¿por qué para las prácticas

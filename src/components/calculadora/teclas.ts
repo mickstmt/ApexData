@@ -13,6 +13,7 @@
  * hay dos modificadores, los mismos que trae una Casio de instituto:
  *
  * - `2nd` da la función inversa: `sin` pasa a `sin⁻¹`, `ln` a `eˣ`, `x²` a `x³`.
+ *   Y guarda lo que no cabe a la vista: `%` pasa a `mod`.
  * - `hyp` da la hiperbólica: `sin` pasa a `sinh`.
  *
  * Y se combinan: con los dos puestos, `sin` es `sinh⁻¹`. Eso es exactamente lo
@@ -28,7 +29,11 @@ export type Accion =
   | { tipo: 'borrar' }
   | { tipo: 'limpiar' }
   | { tipo: 'signo' }
-  | { tipo: 'memoria'; que: 'MC' | 'MR' | 'M+' | 'M-' | 'MS' };
+  | { tipo: 'memoria'; que: 'MC' | 'MR' | 'M+' | 'M-' | 'MS' }
+  /** La barra de fracción. No es un `insertar`: solo cabe detrás de un número. */
+  | { tipo: 'fraccion' }
+  /** Pasa el resultado de fracción a decimal y vuelta. La S⇔D de una Casio. */
+  | { tipo: 'vista' };
 
 /** Cómo se pinta cada tecla. El color dice para qué sirve, no adorna. */
 export type Variante = 'fn' | 'num' | 'op' | 'igual' | 'mem' | 'borrar';
@@ -45,6 +50,8 @@ export interface Tecla {
   ancha?: boolean;
   /** Se pinta en amarillo cuando el modificador está puesto. */
   alterada?: boolean;
+  /** La tecla del teclado físico, cuando no es la obvia. Se anuncia en `title`. */
+  atajo?: string;
 }
 
 const insertar = (texto: string): Accion => ({ tipo: 'insertar', texto });
@@ -144,11 +151,33 @@ export function teclasCientificas(segunda: boolean, hiperbolico: boolean): Tecla
     { id: 'factorial', etiqueta: 'n!', accion: insertar('!'), variante: 'fn', titulo: 'factorial' },
     { id: 'exp', etiqueta: 'EXP', accion: insertar('E'), variante: 'fn', titulo: 'por diez elevado a' },
 
-    { id: 'mod', etiqueta: 'mod', accion: insertar(' mod '), variante: 'fn', titulo: 'resto de la división' },
+    // La fracción ocupa el sitio que era de `mod`, que pasa a la segunda cara
+    // de `%`. Se eligió así, y no quitarle el sitio a `n!` —que es lo que hace
+    // la Casio fx-991EX—, para que el factorial siguiera a un toque. Y la
+    // pareja tiene sentido por sí sola: en casi todos los lenguajes de
+    // programación `%` ya significa «resto». Va en este bloque y no junto al
+    // `0` para no tocar la zona del pulgar: ahí un dedo desviado escribiría
+    // una fracción a medias en vez de un dígito.
+    //
+    // La etiqueta es un dibujo y no un carácter: ni `▭` ni `⁄` vienen en la
+    // tipografía monoespaciada, como pasó con `⌫`. Lo pinta el componente.
+    {
+      id: 'fraccion',
+      etiqueta: '▭/▭',
+      accion: { tipo: 'fraccion' },
+      variante: 'fn',
+      titulo: 'fracción',
+      atajo: 'f',
+    },
     { id: 'abs', etiqueta: '|x|', accion: insertar('abs('), variante: 'fn', titulo: 'valor absoluto' },
     { id: 'rand', etiqueta: 'rand', accion: insertar('rand'), variante: 'fn', titulo: 'número al azar' },
     { id: 'ans', etiqueta: 'Ans', accion: insertar('Ans'), variante: 'fn', titulo: 'último resultado' },
-    { id: 'porciento', etiqueta: '%', accion: insertar('%'), variante: 'fn', titulo: 'por ciento' },
+    conSegunda(
+      'porciento',
+      { etiqueta: '%', texto: '%', titulo: 'por ciento' },
+      { etiqueta: 'mod', texto: ' mod ', titulo: 'resto de la división' },
+      segunda
+    ),
   ];
 }
 
@@ -234,6 +263,8 @@ export const ATAJOS: Record<string, Accion> = {
   g: insertar('log('),
   r: insertar('√('),
   a: insertar('Ans'),
+  f: { tipo: 'fraccion' },
+  d: { tipo: 'vista' },
   '=': { tipo: 'igual' },
   Enter: { tipo: 'igual' },
   Backspace: { tipo: 'borrar' },

@@ -1,8 +1,28 @@
 import { describe, expect, it } from 'vitest';
 
-import { evaluar, type Contexto, type ModoAngular } from '@/lib/calculadora/evaluar';
-import { cambiarSigno, comoLiteral } from '@/lib/calculadora/edicion';
-import { formatear, superindice } from '@/lib/calculadora/formato';
+import { BARRA, evaluar, type Contexto, type ModoAngular } from '@/lib/calculadora/evaluar';
+import {
+  cambiarSigno,
+  comoLiteral,
+  ponerFraccion,
+  porQueNoCabeFraccion,
+} from '@/lib/calculadora/edicion';
+import {
+  cabeComoFraccion,
+  formatear,
+  formatearEntero,
+  fraccionALeer,
+  superindice,
+} from '@/lib/calculadora/formato';
+import {
+  deTexto,
+  elevar,
+  entero,
+  factorialExacto,
+  racional,
+  resto,
+  type Racional,
+} from '@/lib/calculadora/racional';
 
 /**
  * Lo que tiene que cumplir una calculadora científica para llamarse así.
@@ -212,7 +232,8 @@ describe('las comodidades de una calculadora de verdad', () => {
 
   it('da números al azar dentro del intervalo pedido', () => {
     const r = evaluar('rand×6', { modo: 'DEG', ans: 0, aleatorio: () => 0.5 });
-    expect(r).toEqual({ ok: true, valor: 3 });
+    // Un número al azar no es una fracción que se pueda enseñar exacta.
+    expect(r).toEqual({ ok: true, valor: 3, exacto: null, fraccion: false });
   });
 });
 
@@ -309,5 +330,200 @@ describe('la precisión de la pantalla', () => {
 
   it('por debajo de 10⁻⁹ ya pasa a notación científica', () => {
     expect(formatear(Math.pow(2, -31))).toBe('4.65661287×10⁻¹⁰');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fracciones exactas
+// ---------------------------------------------------------------------------
+
+/** La fracción exacta de una expresión, como «n/d», o el fallo con su motivo. */
+function exacto(expresion: string, contexto: Contexto = ctx()): string {
+  const r = evaluar(expresion, contexto);
+  if (!r.ok) throw new Error(`«${expresion}» no se pudo calcular: ${r.error}`);
+  if (!r.exacto) return 'no exacto';
+  return `${r.exacto.n}/${r.exacto.d}`;
+}
+
+/** Se escribe con `/` en las pruebas por legibilidad; la tecla pone `⁄`. */
+const f = (texto: string) => texto.replaceAll('|', BARRA);
+
+describe('las fracciones exactas', () => {
+  it('suma un medio y un tercio y da cinco sextos, no 0,8333', () => {
+    expect(exacto(f('1|2+1|3'))).toBe('5/6');
+    expect(valor(f('1|2+1|3'))).toBeCloseTo(5 / 6, 12);
+  });
+
+  it('simplifica: dos cuartos son un medio', () => {
+    expect(exacto(f('2|4'))).toBe('1/2');
+  });
+
+  it('una fracción es un número entero: la potencia la eleva entera', () => {
+    // Como en la Casio. Si la barra fuera una división más, 1⁄2² sería 1/4
+    // por casualidad y 3⁄2² sería 3/4 en vez de 9/4.
+    expect(exacto(f('3|2²'))).toBe('9/4');
+    expect(exacto(f('3×1|2'))).toBe('3/2');
+  });
+
+  it('sigue exacta con todo lo que es racional', () => {
+    expect(exacto(f('(2|3)²×9'))).toBe('4/1');
+    expect(exacto(f('7|4−1|2'))).toBe('5/4');
+    expect(exacto('2^-2')).toBe('1/4');
+    expect(exacto(f('1|2⁻¹'))).toBe('2/1');
+    expect(exacto('200+10%')).toBe('220/1');
+    expect(exacto('−7 mod 3')).toBe('-1/1');
+    expect(exacto('abs(−3)')).toBe('3/1');
+  });
+
+  it('deja de ser exacta en cuanto entra algo irracional', () => {
+    expect(exacto('π')).toBe('no exacto');
+    expect(exacto('√2')).toBe('no exacto');
+    expect(exacto('sin(30)')).toBe('no exacto');
+    expect(exacto('2^0.5')).toBe('no exacto');
+  });
+
+  it('lee los decimales tecleados sin pasar por el double', () => {
+    // Con `Number` primero, 0.1 llegaría como 0,1000000000000000055511…
+    expect(exacto('0.1+0.2')).toBe('3/10');
+    expect(exacto('0.75')).toBe('3/4');
+    expect(exacto('1.5E-3')).toBe('3/2000');
+  });
+
+  it('se enseña en fracción solo si se escribió con la tecla', () => {
+    // La razón de ser de la tecla: si `1÷3` también saliera en fracción, haría
+    // lo mismo que `÷`.
+    const conTecla = evaluar(f('1|3'), ctx());
+    const conDivision = evaluar('1÷3', ctx());
+    expect(conTecla.ok && conTecla.fraccion).toBe(true);
+    expect(conDivision.ok && conDivision.fraccion).toBe(false);
+    // Pero las dos son exactas: la tecla `d` puede pasar 0.333… a ⅓.
+    expect(exacto('1÷3')).toBe('1/3');
+  });
+
+  it('Ans sigue en fracción si se estaba viendo así', () => {
+    const anterior: Racional = { n: BigInt(5), d: BigInt(6) };
+    const contexto: Contexto = { modo: 'DEG', ans: 5 / 6, ansExacto: anterior, ansEnFraccion: true };
+    const r = evaluar('Ans+1', contexto);
+    expect(r.ok && r.fraccion).toBe(true);
+    expect(exacto('Ans+1', contexto)).toBe('11/6');
+  });
+
+  it('dice qué falta, con palabras', () => {
+    expect(motivo(f('1|'))).toBe('Falta el denominador');
+    expect(motivo(f('1|0'))).toBe('No se puede dividir entre cero');
+    expect(motivo(f('|2'))).toBe('Falta el numerador');
+  });
+});
+
+describe('la aritmética de fracciones', () => {
+  it('guarda el signo arriba y el denominador positivo', () => {
+    expect(racional(BigInt(3), BigInt(-6))).toEqual({ n: BigInt(-1), d: BigInt(2) });
+  });
+
+  it('el resto lleva el signo del dividendo, como el decimal', () => {
+    // Si no, la tecla `d` cambiaría el número además de su forma.
+    const r = resto({ n: BigInt(-7), d: BigInt(1) }, { n: BigInt(3), d: BigInt(1) });
+    expect(r).toEqual({ n: BigInt(-1), d: BigInt(1) });
+    expect(-7 % 3).toBe(-1);
+  });
+
+  it('no eleva a exponentes enormes: se rinde y queda el decimal', () => {
+    expect(elevar({ n: BigInt(2), d: BigInt(1) }, { n: BigInt(100000), d: BigInt(1) })).toBeNull();
+    expect(exacto('1.5^200')).toBe('no exacto');
+  });
+
+  it('no lee lo que no es un número', () => {
+    expect(deTexto('.')).toBeNull();
+    expect(deTexto('abc')).toBeNull();
+  });
+});
+
+describe('escribir una fracción', () => {
+  it('pone la barra detrás del número recién escrito', () => {
+    expect(ponerFraccion(['1'])).toEqual(['1', BARRA]);
+    expect(ponerFraccion(['2', '+', '1', '5'])).toEqual(['2', '+', '1', '5', BARRA]);
+  });
+
+  it('sin número delante no hay fracción', () => {
+    expect(ponerFraccion([])).toBeNull();
+    expect(ponerFraccion(['2', '+'])).toBeNull();
+    expect(ponerFraccion(['sin('])).toBeNull();
+    expect(ponerFraccion(['π'])).toBeNull();
+  });
+
+  it('un denominador no lleva otra barra, y lo dice', () => {
+    expect(ponerFraccion(['1', BARRA, '2'])).toBeNull();
+    expect(porQueNoCabeFraccion(['1', BARRA, '2'])).toBe('ya-tiene-barra');
+    // Dos veces seguidas: la barra ya está, el numerador también.
+    expect(porQueNoCabeFraccion(['1', BARRA])).toBe('ya-tiene-barra');
+    expect(porQueNoCabeFraccion(['2', '+'])).toBe('falta-numerador');
+  });
+
+  it('un punto suelto no es un numerador', () => {
+    // `.⁄2` no lo sabe leer el analizador: se rechaza al pulsar, no al calcular.
+    expect(ponerFraccion(['.'])).toBeNull();
+    expect(ponerFraccion(['2', '.'])).toEqual(['2', '.', BARRA]);
+  });
+
+  it('vale detrás de un número recuperado de la cinta o de MR', () => {
+    // Esos llegan como una sola pieza, no cifra a cifra.
+    expect(ponerFraccion(['12'])).toEqual(['12', BARRA]);
+    expect(ponerFraccion(['2', '+', '0.5'])).toEqual(['2', '+', '0.5', BARRA]);
+  });
+
+  it('«±» niega la fracción entera, no su denominador', () => {
+    // Meter el menos detrás de la barra dejaba `1⁄−2`, que no se puede leer.
+    expect(cambiarSigno(['3', '×', '1', BARRA, '2'])).toEqual(['3', '×', '−', '1', BARRA, '2']);
+    expect(cambiarSigno(['1', BARRA])).toEqual(['−', '1', BARRA]);
+    expect(cambiarSigno(['−', '1', BARRA, '2'])).toEqual(['1', BARRA, '2']);
+  });
+});
+
+describe('cómo se enseña una fracción', () => {
+  it('no enseña como fracción lo que es un entero', () => {
+    expect(cabeComoFraccion({ n: BigInt(4), d: BigInt(1) })).toBe(false);
+    expect(cabeComoFraccion(null)).toBe(false);
+  });
+
+  it('no enseña como fracción lo que ya no se lee', () => {
+    // 1.23456789 en exacto: un denominador de nueve cifras sí cabe…
+    expect(cabeComoFraccion(deTexto('1.23456789'))).toBe(true);
+    // …uno de trece ya no.
+    expect(cabeComoFraccion(deTexto('0.0000000000001'))).toBe(false);
+  });
+
+  it('agrupa las cifras como el decimal', () => {
+    expect(formatearEntero(BigInt(1234567))).toBe(formatear(1234567));
+  });
+
+  it('se lee «5 entre 6», que no se confunde con una fecha', () => {
+    expect(fraccionALeer({ n: BigInt(5), d: BigInt(6) })).toBe('5 entre 6');
+    expect(fraccionALeer({ n: BigInt(-1), d: BigInt(2) })).toBe('menos 1 entre 2');
+  });
+});
+
+describe('la cinta devuelve las fracciones como fracciones', () => {
+  it('un tercio vuelve como 1⁄3 y no como su decimal', () => {
+    const tercio: Racional = { n: BigInt(1), d: BigInt(3) };
+    expect(comoLiteral(1 / 3, tercio)).toBe(`1${BARRA}3`);
+    // Y sumado a otro tercio da dos tercios exactos.
+    expect(exacto(`${comoLiteral(1 / 3, tercio)}+1${BARRA}3`)).toBe('2/3');
+  });
+
+  it('los negativos vuelven entre paréntesis', () => {
+    const literal = comoLiteral(-0.5, { n: BigInt(-1), d: BigInt(2) });
+    expect(exacto(`${literal}×2`)).toBe('-1/1');
+  });
+
+  it('lo que no es fracción vuelve como siempre', () => {
+    expect(comoLiteral(144, entero(144))).toBe('144');
+    expect(comoLiteral(Math.PI, null)).toBe(String(Math.PI));
+  });
+});
+
+describe('el factorial exacto', () => {
+  it('es exacto mientras cabe y se rinde cuando no', () => {
+    expect(factorialExacto(entero(20))).toEqual({ n: BigInt('2432902008176640000'), d: BigInt(1) });
+    expect(factorialExacto(entero(170))).toBeNull();
   });
 });

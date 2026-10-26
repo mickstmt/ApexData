@@ -18,6 +18,8 @@
  * el SI, y que no parte la línea— agrupa sin inventarse un símbolo nuevo.
  */
 
+import type { Racional } from './racional';
+
 /** Cuántas cifras significativas se enseñan. Por debajo está el ruido del `double`. */
 const DIGITOS = 12;
 
@@ -118,4 +120,41 @@ function recortar(valor: number): string {
   const exponente = Math.floor(Math.log10(Math.abs(valor)));
   const decimales = Math.min(100, Math.max(0, DIGITOS - exponente - 1));
   return valor.toFixed(decimales).replace(/\.?0+$/, '');
+}
+
+// ---------------------------------------------------------------------------
+// Fracciones
+// ---------------------------------------------------------------------------
+
+/**
+ * Si una fracción se puede enseñar como fracción.
+ *
+ * Hacen falta dos cosas. Que no sea un entero: `4⁄1` no es una fracción que
+ * nadie quiera ver, es un 4. Y que quepa: la pantalla apila numerador y
+ * denominador con la misma anchura que el resultado decimal, y un
+ * `123456789⁄100000000` —que es lo que da `1.23456789` escrito en exacto— ya
+ * no se lee mejor que su decimal. Doce cifras arriba y doce abajo es el mismo
+ * listón que `DIGITOS`.
+ */
+export function cabeComoFraccion(r: Racional | null | undefined): r is Racional {
+  if (!r || r.d === BigInt(1)) return false;
+  const arriba = (r.n < BigInt(0) ? -r.n : r.n).toString().length;
+  return arriba <= DIGITOS && r.d.toString().length <= DIGITOS;
+}
+
+/** Un entero de la fracción, con el mismo agrupado de millares que el decimal. */
+export function formatearEntero(n: bigint): string {
+  return agrupar(n.toString());
+}
+
+/**
+ * Cómo se lee la fracción en voz alta.
+ *
+ * Existe porque VoiceOver en español lee «5/6» como una fecha, y el visual
+ * apilado no tiene texto que leer. «5 entre 6» es como se dice en clase y no
+ * hay forma de confundirlo.
+ */
+export function fraccionALeer(r: Racional): string {
+  const negativa = r.n < BigInt(0);
+  return `${negativa ? 'menos ' : ''}${negativa ? -r.n : r.n} entre ${r.d}`;
 }

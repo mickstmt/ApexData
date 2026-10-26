@@ -946,3 +946,67 @@ html:not([data-instalada]) [data-solo-instalada] {
 @media (prefers-reduced-motion: reduce) {
   .calc-resultado-nuevo { animation: none; }
 }
+
+/* El anillo de la tecla nueva, mientras el aviso está abierto.
+
+   Azul y no amarillo, por una medida: el amarillo da 1,30:1 sobre el chasis
+   claro y un borde que señala algo necesita 3:1 (WCAG 1.4.11). El azul da
+   4,10:1 en claro y 6,17:1 en oscuro. Además el amarillo ya significa aquí
+   «modificador puesto».
+
+   Late tres veces y se queda quieto: un pulso que no para es movimiento que
+   no dice nada nuevo, y WCAG 2.2.2 pide que lo que se mueve solo pare antes
+   de cinco segundos. Tres latidos de 1,2 s son 3,6. */
+.calc-anillo { position: relative; }
+
+.calc-anillo::before,
+.calc-anillo::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 2px solid var(--calc-azul);
+  border-radius: 15px;
+  pointer-events: none;
+}
+
+.calc-anillo::before {
+  opacity: 0;
+  animation: calc-anillo 1200ms cubic-bezier(0.2, 0.8, 0.2, 1) 3;
+}
+
+@keyframes calc-anillo {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+/* La casilla donde va el denominador, mientras falta. Parpadea como un
+   cursor porque es eso: el sitio donde cae la siguiente cifra. */
+.calc-hueco {
+  display: inline-block;
+  width: 0.62em;
+  height: 0.95em;
+  margin-left: 1px;
+  vertical-align: -2px;
+  border: 1.5px solid var(--calc-azul);
+  border-radius: 2px;
+  animation: calc-parpadeo 1s steps(2, start) infinite;
+}
+
+@keyframes calc-parpadeo {
+  to { opacity: 0.25; }
+}
+
+/* La tecla de fracción cuando no puede entrar —sin número delante—. Sin esto,
+   pulsarla no hacía nada visible y parecía rota. */
+.calc-sacudida { animation: calc-sacudida 260ms ease; }
+
+@keyframes calc-sacudida {
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calc-anillo::before,
+  .calc-hueco,
+  .calc-sacudida { animation: none; }
+}

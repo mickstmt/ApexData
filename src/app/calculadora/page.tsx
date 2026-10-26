@@ -7,7 +7,7 @@ import { Calculadora } from '@/components/calculadora/Calculadora';
  *
  * Porque no es una sección de ApexData: aquí no hay datos de Fórmula 1, no
  * sale de ninguna fuente y no encaja en el menú entre «Circuitos» y
- * «Telemetría». Se llega escribiendo `/calculadora` y punto, que es justo lo
+ * «Telemetría». En la web se llega escribiendo `/calculadora`, que es justo lo
  * que se pidió.
  *
  * Esconderla es una decisión de tres piezas, y las tres hacen falta:
@@ -18,8 +18,10 @@ import { Calculadora } from '@/components/calculadora/Calculadora';
  * 2. `robots: noindex, nofollow` le dice a los buscadores que no la listen.
  *    Sin esto la pantalla seguiría sin estar en el menú, pero acabaría en
  *    Google, que es otra forma de estar a la vista.
- * 3. No hay ningún enlace hacia ella en toda la app. Una página sin enlaces
- *    entrantes no se encuentra por casualidad.
+ * 3. En la web no hay ningún enlace visible hacia ella. El único que existe
+ *    está en el menú «Más» (`Secciones.tsx`) y una regla de CSS lo esconde
+ *    fuera de la app instalada, porque ahí no hay barra de direcciones y
+ *    «solo por la URL» sería «inalcanzable».
  *
  * Lo que NO es: una pantalla protegida. Quien sepa la dirección, entra. Si
  * algún día tuviera que ser privada de verdad, eso es cosa del middleware y de
