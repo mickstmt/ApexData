@@ -93,6 +93,45 @@ resuelto.
 
 ## Bitácora
 
+### 2026-10-29 (81) — La guía de lo nuevo: cada módulo enseña, paso a paso, lo que se le añade ✅
+
+**Qué se pidió**: una guía como las de bienvenida de una web, que lleva a lo importante y se avanza con «Siguiente» hasta «Entendido», pero solo para lo nuevo. Tiene que salir la primera vez que cada usuario entra en un módulo después de un cambio, y servir para todas las funciones de aquí en adelante. El prompt para llevarla a otros proyectos se entregó en la conversación.
+
+**Cómo se decidió**: con una maqueta navegable de dos variantes (https://claude.ai/artifact/X7YmeyNXwD23uanw8WH4oP) y dos agentes de UX. El usuario eligió la recomendada:
+
+- **Libre, sin oscurecer la pantalla.** La calculadora sigue funcionando y usar lo señalado hace avanzar la guía. La variante con foco bloqueaba justo la tecla que se enseña.
+- **Caduca a los 30 días.** El agente de producto proponía no enseñar novedades a quien entra por primera vez. Se enseñan porque el usuario lo pidió así, y la caducidad lo acota.
+
+**Qué hay debajo**:
+
+- `src/lib/novedades/registro.ts`: una entrada por novedad, con su módulo, su fecha y de 1 a 3 pasos. Anunciar algo es añadir una entrada.
+- `GuiaDeNovedades.tsx`: el globo («1 de 2», «Saltar», «Atrás», «Siguiente» o «Entendido») y el anillo, pintados encima de lo señalado. Sustituye a `AvisoDeFraccion.tsx`.
+- Qué cuenta como visto: cada paso al enseñarse; todos con «Saltar» o `Esc`; y un paso cuando se usa lo que señala, con el dedo o con el atajo. Quien cerró el aviso viejo de la tecla solo ve el paso del botón del visor.
+- Lo visto se guarda en el aparato. Sin almacenamiento, la guía no sale.
+- Playwright da por vistas todas las novedades en todas las pruebas, así que una novedad nueva no rompe las de su módulo. Las pruebas de la guía fijan el reloj del navegador para no caducar solas.
+- Skill nueva, `anunciar-novedad`, y una línea en `CLAUDE.md`.
+
+**Medido**:
+
+- Texto del globo: 18,15:1 en claro y 16,38:1 en oscuro. Contador: 11,79 y 9,10. «Siguiente»: 4,85 y 6,17. Anillo: 4,10 y 6,17.
+- A 360 y 1280 px, en los dos pasos, el globo cabe, no tapa lo señalado y lleva los botones en una fila.
+- 10 unitarias nuevas (660 en total) y 41 e2e de la calculadora, 12 de ellas de la guía.
+- Tanda e2e completa: 226 en verde y 1 en rojo, «la cinta devuelve una fracción como fracción». Teclea nada más cargar, y con la máquina cargada perdió dos teclas antes de que la página respondiera. Sola pasó 8 de 8.
+
+**Fallos propios**: la revisión de código encontró ocho defectos antes del commit. Estos son los que se notaban al usarla:
+
+- Cerrada con el teclado en el paso del visor, el foco se perdía, porque ese botón está apagado hasta el primer «=».
+- Una «d» sin nada que convertir cerraba la guía.
+- `Esc` se lo quitaba a cualquier menú abierto encima.
+- El anillo no se recolocaba si lo señalado se movía.
+- Dos novedades del mismo módulo podían sumar más de 3 pasos.
+
+Están arreglados. Los dos primeros tienen prueba.
+
+**Lo que no entra**: guías de bienvenida a la app entera, recordar lo visto entre aparatos, y más de 3 pasos por visita.
+
+**Pendiente**: las pruebas de teclado de la calculadora teclean sin esperar a que la página esté lista. Hoy solo ha fallado una, con la máquina cargada.
+
 ### 2026-10-26 (80) — La calculadora escribe fracciones: ½ + ⅓ = ⅚, exacto ✅
 
 **Qué se pidió**: «el botón de división fraccional», que es la tecla ▭/▭ de una Casio. Y, a propuesta del usuario, un aviso que salga solo la primera vez y señale dónde está.

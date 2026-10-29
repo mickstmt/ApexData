@@ -866,6 +866,14 @@ html:not([data-instalada]) [data-solo-instalada] {
    tinta sobre claro no llega a 4,5:1 y habría que oscurecerlo tanto que
    dejaría de ser amarillo; para eso está `--calc-amarillo-tinta`. */
 [data-calculadora] {
+  /* La guía de novedades, en los colores de la calculadora. Azul y no
+     amarillo, por una medida: el amarillo da 1,30:1 sobre el chasis claro y
+     el anillo necesita 3:1. El azul da 4,10:1 en claro y 6,17:1 en oscuro.
+     Además el amarillo ya significa aquí «modificador puesto». */
+  --novedad-fondo: var(--calc-tinta);
+  --novedad-tinta: var(--calc-panel);
+  --novedad-acento: var(--calc-azul);
+  --novedad-acento-tinta: var(--calc-igual-tinta);
   --calc-chasis: #E8ECF6;
   --calc-panel: #FFFFFF;
   --calc-tecla: #FFFFFF;
@@ -947,34 +955,43 @@ html:not([data-instalada]) [data-solo-instalada] {
   .calc-resultado-nuevo { animation: none; }
 }
 
-/* El anillo de la tecla nueva, mientras el aviso está abierto.
+/* La guía de novedades (`GuiaDeNovedades.tsx`).
 
-   Azul y no amarillo, por una medida: el amarillo da 1,30:1 sobre el chasis
-   claro y un borde que señala algo necesita 3:1 (WCAG 1.4.11). El azul da
-   4,10:1 en claro y 6,17:1 en oscuro. Además el amarillo ya significa aquí
-   «modificador puesto».
+   Los colores los pone cada módulo con cuatro variables, porque el globo y el
+   anillo tienen que medirse contra SU fondo: el anillo es un borde que señala
+   algo y pide 3:1 contra lo que hay alrededor (WCAG 1.4.11), y el texto del
+   globo 4,5:1. Sin ellas, el globo va en los colores de la app, invertidos.
 
-   Late tres veces y se queda quieto: un pulso que no para es movimiento que
-   no dice nada nuevo, y WCAG 2.2.2 pide que lo que se mueve solo pare antes
-   de cinco segundos. Tres latidos de 1,2 s son 3,6. */
-.calc-anillo { position: relative; }
+   El anillo late tres veces y se queda quieto: un pulso que no para es
+   movimiento que no dice nada nuevo, y WCAG 2.2.2 pide que lo que se mueve
+   solo pare antes de cinco segundos. Tres latidos de 1,2 s son 3,6. */
+.novedad-globo {
+  background: var(--novedad-fondo, hsl(var(--foreground)));
+  color: var(--novedad-tinta, hsl(var(--background)));
+}
 
-.calc-anillo::before,
-.calc-anillo::after {
+.novedad-boton { color: inherit; }
+.novedad-principal {
+  background: var(--novedad-acento, hsl(var(--background)));
+  color: var(--novedad-acento-tinta, hsl(var(--foreground)));
+}
+.novedad-boton:focus-visible {
+  outline: 2px solid var(--novedad-tinta, hsl(var(--background)));
+  outline-offset: 2px;
+}
+
+.novedad-anillo { border: 2px solid var(--novedad-acento, hsl(var(--ring))); }
+.novedad-anillo::before {
   content: '';
   position: absolute;
-  inset: -4px;
-  border: 2px solid var(--calc-azul);
-  border-radius: 15px;
-  pointer-events: none;
-}
-
-.calc-anillo::before {
+  inset: -2px;
+  border: inherit;
+  border-radius: inherit;
   opacity: 0;
-  animation: calc-anillo 1200ms cubic-bezier(0.2, 0.8, 0.2, 1) 3;
+  animation: novedad-anillo 1200ms cubic-bezier(0.2, 0.8, 0.2, 1) 3;
 }
 
-@keyframes calc-anillo {
+@keyframes novedad-anillo {
   0% { transform: scale(1); opacity: 0.6; }
   100% { transform: scale(1.35); opacity: 0; }
 }
@@ -1006,7 +1023,7 @@ html:not([data-instalada]) [data-solo-instalada] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .calc-anillo::before,
+  .novedad-anillo::before,
   .calc-hueco,
   .calc-sacudida { animation: none; }
 }

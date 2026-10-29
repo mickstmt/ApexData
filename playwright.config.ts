@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
+import { todasLasNovedadesVistas } from './e2e/novedades-vistas';
+
+const ORIGEN = 'http://localhost:3100';
+
 /**
  * Pruebas de comportamiento en un navegador real.
  *
@@ -56,7 +60,10 @@ export default defineConfig({
   // `timeout` a cada aserción sería ir apagando fuegos de uno en uno.
   expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   use: {
-    baseURL: 'http://localhost:3100',
+    baseURL: ORIGEN,
+    // Las novedades, ya vistas: si no, la guía taparía lo que se prueba. Por
+    // qué, en `e2e/novedades-vistas.ts`.
+    storageState: todasLasNovedadesVistas(ORIGEN),
     trace: 'on-first-retry',
     /**
      * Navegar tiene su propio límite, más largo que el de una aserción.

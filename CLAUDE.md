@@ -46,3 +46,6 @@ empezar sin su permiso. Ese bloque se genera solo y desaparece solo.
 Las demás reglas de trato con el usuario —maquetas navegables, un paso por
 mensaje, medir en el navegador, avisar antes de abrir la CSP— están en las
 skills `empezar-sesion`, `verificar`, `desplegar` y `cerrar-sesion`.
+
+Toda función nueva y visible en un módulo se anuncia con la guía de lo nuevo:
+skill `anunciar-novedad`.

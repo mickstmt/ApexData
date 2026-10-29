@@ -20,7 +20,8 @@ import {
 import type { Racional } from '@/lib/calculadora/racional';
 import { cn } from '@/lib/utils';
 
-import { AvisoDeFraccion, ID_AVISO } from './AvisoDeFraccion';
+import { GuiaDeNovedades, useGuiaDeNovedades } from '@/components/novedades/GuiaDeNovedades';
+import { ANCLAS_CALCULADORA } from '@/lib/novedades/registro';
 import {
   ATAJOS,
   TECLAS_MEMORIA,
@@ -75,13 +76,6 @@ const CINTA = 12;
  */
 const SIGUEN_DEL_RESULTADO = new Set(['+', '−', '×', '÷', '^', 'ʸ√', ' mod ', '%', '!', '²', '³', '⁻¹']);
 
-/**
- * Dónde se apunta que el aviso de la tecla de fracción ya se vio.
- *
- * Es por aparato, y se acepta: en el iPhone Safari y la app instalada guardan
- * cada uno lo suyo, así que puede salir una vez en cada sitio.
- */
-const CLAVE_AVISO = 'apexdata-calculadora-fraccion-vista';
 
 /** El golpecito del móvil al pulsar. Donde no exista, no pasa nada. */
 function vibrar() {
@@ -116,7 +110,7 @@ export function Calculadora() {
   const [golpe, setGolpe] = useState(0);
   /** Cambia cada vez que la tecla de fracción no puede entrar, para sacudirla. */
   const [rechazo, setRechazo] = useState(0);
-  const [aviso, setAviso] = useState(false);
+  const guia = useGuiaDeNovedades('calculadora');
   /** Lo que se le dice a un lector de pantalla y no tiene sitio en el visor. */
   const [anuncio, setAnuncio] = useState('');
 
@@ -188,40 +182,6 @@ export function Calculadora() {
     setPiezas([]);
   }, [expresion, contexto]);
 
-  /**
-   * Cierra el aviso de la tecla nueva y apunta que ya se vio.
-   *
-   * Si el navegador no deja guardar, el aviso se cierra igual; solo que en la
-   * próxima visita volvería a salir. Por eso al abrir se mira al revés: sin
-   * almacenamiento no se enseña nunca.
-   */
-  const cerrarAviso = useCallback(() => {
-    if (!aviso) return;
-    setAviso(false);
-    try {
-      localStorage.setItem(CLAVE_AVISO, '1');
-    } catch {
-      // Modo privado o almacenamiento bloqueado.
-    }
-  }, [aviso]);
-
-  /** La primera vez, el aviso. Espera un poco para no llegar a la vez que la pantalla. */
-  useEffect(() => {
-    let visto = true;
-    try {
-      visto = localStorage.getItem(CLAVE_AVISO) !== null;
-    } catch {
-      // Sin almacenamiento no se puede prometer «una sola vez»: mejor ninguna.
-    }
-    if (visto) return;
-
-    const espera = setTimeout(() => {
-      setAviso(true);
-      setAnuncio('Novedad: tecla de fracción, en la última fila de funciones.');
-    }, 600);
-    return () => clearTimeout(espera);
-  }, []);
-
   const ejecutar = useCallback(
     (accion: Accion) => {
       vibrar();
@@ -248,6 +208,8 @@ export function Calculadora() {
 
       if (accion.tipo === 'vista') {
         if (!cerrado || cerrado.error || !cabeComoFraccion(cerrado.exacto)) return;
+        // Después de la guarda: una `d` que no hace nada no es haberlo usado.
+        guia.usado(ANCLAS_CALCULADORA.vista);
         const siguiente = vista === 'fraccion' ? 'decimal' : 'fraccion';
         setVista(siguiente);
         setAnsEnFraccion(siguiente === 'fraccion');
@@ -256,7 +218,7 @@ export function Calculadora() {
       }
 
       if (accion.tipo === 'fraccion') {
-        cerrarAviso();
+        guia.usado(ANCLAS_CALCULADORA.fraccion);
         // Tras un `=` no hay numerador: la cuenta nueva aún no ha empezado.
         const motivo = cerrado ? 'falta-numerador' : porQueNoCabeFraccion(piezas);
         if (motivo) {
@@ -315,7 +277,7 @@ export function Calculadora() {
       // se pulsa `2nd`, se pulsa la función y `2nd` se apaga solo.
       if (segunda) setSegunda(false);
     },
-    [calcular, cerrarAviso, cerrado, ans, expresion, contexto, memoria, segunda, piezas, vista, rechazo]
+    [calcular, guia, cerrado, ans, expresion, contexto, memoria, segunda, piezas, vista, rechazo]
   );
 
   /**
@@ -348,15 +310,12 @@ export function Calculadora() {
    * siempre llama a la versión recién renderizada.
    */
   const ultimaAccion = useRef(ejecutar);
-  /** Con el aviso abierto, `Esc` lo cierra y no toca la cuenta. */
-  const cierreDelAviso = useRef<(() => void) | null>(null);
   // La asignación va en su propio efecto y no en el render: escribir una `ref`
   // mientras se renderiza es un efecto secundario, y React lo prohíbe porque
   // con el modo concurrente un render puede descartarse a medias.
   useEffect(() => {
     ultimaAccion.current = ejecutar;
-    cierreDelAviso.current = aviso ? cerrarAviso : null;
-  }, [ejecutar, aviso, cerrarAviso]);
+  }, [ejecutar]);
 
   useEffect(() => {
     function alPulsar(evento: KeyboardEvent) {
@@ -370,14 +329,9 @@ export function Calculadora() {
       // `Enter` y `Espacio` pertenecen al botón que tenga el foco.
       if (etiqueta === 'BUTTON' && (evento.key === 'Enter' || evento.key === ' ')) return;
 
-      // `Esc` es «borrar todo», pero con el aviso abierto lo primero que se
-      // quiere cerrar es el aviso. Sin esta guarda, quitarse el globo de
-      // encima se llevaba la cuenta que se estaba escribiendo.
-      if (evento.key === 'Escape' && cierreDelAviso.current) {
-        evento.preventDefault();
-        cierreDelAviso.current();
-        return;
-      }
+      // `Esc` es «borrar todo», pero con la guía de novedades abierta lo
+      // primero que se quiere cerrar es la guía. De eso se encarga ella: lo
+      // recoge antes que este escuchador y no deja que llegue aquí.
 
       const accion = ATAJOS[evento.key] ?? ATAJOS[evento.key.toLowerCase()];
       if (!accion) return;
@@ -488,7 +442,6 @@ export function Calculadora() {
                     key={tecla.id}
                     tecla={tecla}
                     alPulsar={ejecutar}
-                    senalada={tecla.id === 'fraccion' && aviso}
                     rechazo={tecla.id === 'fraccion' ? rechazo : undefined}
                   />
                 ))}
@@ -516,7 +469,11 @@ export function Calculadora() {
 
       <PieDeAyuda />
 
-      <AvisoDeFraccion abierto={aviso} contenedor={caja} alCerrar={cerrarAviso} />
+      <GuiaDeNovedades
+        guia={guia}
+        contenedor={caja}
+        adornos={{ 'calculadora-fracciones/tecla': <EjemploDeFraccion /> }}
+      />
 
       <p role="status" className="sr-only">
         {anuncio}
@@ -628,6 +585,7 @@ const Visor = ({
       <button
         type="button"
         onClick={alCambiarVista}
+        data-novedad="vista"
         disabled={!convertible}
         title={
           convertible
@@ -721,6 +679,31 @@ function Fraccion({ valor }: { valor: Racional }) {
       </span>
       <span className="sr-only">{fraccionALeer(valor)}</span>
     </>
+  );
+}
+
+/** El ejemplo del primer paso de la guía de novedades: ½ + ⅓ = ⅚, apilado. */
+function EjemploDeFraccion() {
+  return (
+    <p className="my-2 flex items-center gap-1.5 font-mono text-[15px] font-semibold">
+      <Mini arriba={1} abajo={2} />
+      <span aria-hidden>+</span>
+      <Mini arriba={1} abajo={3} />
+      <span aria-hidden>=</span>
+      <Mini arriba={5} abajo={6} />
+      {/* Apilado, el ejemplo no tiene nada que leer; dicho, sí. */}
+      <span className="sr-only">Un medio más un tercio igual a cinco sextos.</span>
+    </p>
+  );
+}
+
+function Mini({ arriba, abajo }: { arriba: number; abajo: number }) {
+  return (
+    <span aria-hidden className="inline-flex flex-col items-center text-[13px] leading-none">
+      <span className="px-0.5">{arriba}</span>
+      <span className="my-[2px] h-[1.5px] self-stretch bg-current" />
+      <span className="px-0.5">{abajo}</span>
+    </span>
   );
 }
 
@@ -907,14 +890,11 @@ function Boton({
   tecla,
   alPulsar,
   apagada,
-  senalada,
   rechazo,
 }: {
   tecla: Tecla;
   alPulsar: (accion: Accion) => void;
   apagada?: boolean;
-  /** La tecla que señala el aviso de novedad: lleva el anillo. */
-  senalada?: boolean;
   /** Cambia cuando la tecla no ha podido entrar, para sacudirla. */
   rechazo?: number;
 }) {
@@ -938,7 +918,6 @@ function Boton({
       disabled={apagada}
       onClick={() => alPulsar(tecla.accion)}
       data-tecla={tecla.id}
-      aria-describedby={senalada ? ID_AVISO : undefined}
       /**
        * El nombre accesible es la etiqueta que se ve, no una descripción.
        *
@@ -955,7 +934,6 @@ function Boton({
       title={tecla.atajo ? `${tecla.titulo} (tecla ${tecla.atajo})` : tecla.titulo}
       className={cn(
         'calc-tecla flex min-h-[46px] items-center justify-center rounded-xl border border-transparent sm:min-h-[52px]',
-        senalada && 'calc-anillo',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--calc-azul)]',
         'focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--calc-chasis)]',
         'disabled:opacity-40',

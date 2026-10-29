@@ -1,5 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { NOVEDADES } from '../src/lib/novedades/registro';
+import { NAVEGADOR_VACIO } from './novedades-vistas';
+
 /**
  * La calculadora científica de `/calculadora`.
  *
@@ -94,20 +97,6 @@ async function conMedidor(page: Page, tema: 'light' | 'dark') {
     };
   });
 }
-
-/**
- * Da por visto el aviso de la tecla de fracción.
- *
- * Sale la primera vez que se entra, y en una prueba TODAS las visitas son la
- * primera: el navegador empieza vacío. Sin esto el globo taparía teclas que
- * las pruebas de siempre necesitan pulsar. El aviso tiene sus propias pruebas.
- */
-const yaVisto = (page: Page) =>
-  page.addInitScript(() => {
-    try {
-      localStorage.setItem('apexdata-calculadora-fraccion-vista', '1');
-    } catch {}
-  });
 
 const resultado = (page: Page) => page.locator('[data-visor="resultado"]');
 const expresion = (page: Page) => page.locator('[data-visor="expresion"]');
@@ -208,7 +197,6 @@ test.describe('la pantalla no se anuncia, salvo donde haría falta', () => {
 
 test.describe('las teclas mueven el motor', () => {
   test.use({ viewport: { width: 390, height: 844 } });
-  test.beforeEach(async ({ page }) => yaVisto(page));
 
   test('calcula mientras se escribe y respeta la precedencia', async ({ page }) => {
     await page.goto('/calculadora');
@@ -389,7 +377,6 @@ test.describe('las teclas mueven el motor', () => {
 for (const tema of ['light', 'dark'] as const) {
   test.describe(`el tema ${tema}`, () => {
     test.use({ viewport: { width: 390, height: 844 } });
-    test.beforeEach(async ({ page }) => yaVisto(page));
 
     test('todo lo que hay que leer llega a 4,5:1', async ({ page }) => {
       await conMedidor(page, tema);
@@ -451,7 +438,6 @@ for (const tema of ['light', 'dark'] as const) {
 // ---------------------------------------------------------------------------
 
 test.describe('la maqueta aguanta los tres anchos', () => {
-  test.beforeEach(async ({ page }) => yaVisto(page));
   for (const ancho of [360, 390, 1280]) {
     test(`a ${ancho} px no arrastra ni corta etiquetas`, async ({ page }) => {
       await page.setViewportSize({ width: ancho, height: 900 });
@@ -494,7 +480,6 @@ const fraccionEnPantalla = (page: Page) => resultado(page).getAttribute('data-fr
 
 test.describe('la tecla de fracción', () => {
   test.use({ viewport: { width: 390, height: 844 } });
-  test.beforeEach(async ({ page }) => yaVisto(page));
 
   test('½ + ⅓ da ⅚ exacto, y el botón del visor lo pasa a decimal', async ({ page }) => {
     await page.goto('/calculadora');
@@ -592,23 +577,59 @@ test.describe('la tecla de fracción', () => {
 });
 
 // ---------------------------------------------------------------------------
-// El aviso de la primera vez
+// La guía de novedades
 // ---------------------------------------------------------------------------
 
-const globo = (page: Page) => page.getByText('Nuevo: fracciones exactas');
+/**
+ * Las pruebas de la guía empiezan con el navegador vacío —las demás lo tienen
+ * todo visto, desde `playwright.config.ts`— y con el reloj del navegador en el
+ * segundo día de la novedad: con el de verdad, estas pruebas se pondrían rojas
+ * solas cuando la novedad caducara.
+ */
+const FRACCIONES = NOVEDADES.find((n) => n.id === 'calculadora-fracciones');
+if (!FRACCIONES) {
+  throw new Error(
+    'Las pruebas de la guía usan la novedad «calculadora-fracciones». Si se ha borrado del registro, cámbialas a otra.'
+  );
+}
+const DIA = 24 * 60 * 60 * 1000;
+const enElDia = (dias: number) => new Date(Date.parse(`${FRACCIONES.desde}T12:00:00Z`) + dias * DIA);
 
-test.describe('el aviso de la tecla nueva', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
+const globo = (page: Page) => page.locator('#guia-novedades');
+const anillo = (page: Page) => page.locator('[data-novedad-anillo]');
 
-  test('sale la primera vez, señala la tecla y no vuelve', async ({ page }) => {
+/** Que el anillo rodee a lo señalado, con su holgura de 4 px. */
+async function anilloSobre(page: Page, selector: string) {
+  const a = await anillo(page).boundingBox();
+  const t = await page.locator(selector).boundingBox();
+  expect(a && t, 'no se encontró el anillo o lo señalado').toBeTruthy();
+  expect(Math.abs(a!.x + 4 - t!.x)).toBeLessThan(1);
+  expect(Math.abs(a!.y + 4 - t!.y)).toBeLessThan(1);
+}
+
+test.describe('la guía de lo nuevo', () => {
+  test.use({ viewport: { width: 390, height: 844 }, storageState: NAVEGADOR_VACIO });
+  test.beforeEach(async ({ page }) => page.clock.setFixedTime(enElDia(1)));
+
+  test('sale la primera vez, va de la tecla al botón del visor y no vuelve', async ({ page }) => {
     await page.goto('/calculadora');
 
-    await expect(globo(page)).toBeVisible();
-    await expect(page.locator('[data-tecla="fraccion"]')).toHaveClass(/calc-anillo/);
+    await expect(globo(page)).toContainText('1 de 2');
+    await expect(globo(page)).toContainText('Nuevo: fracciones exactas');
+    await anilloSobre(page, '[data-tecla="fraccion"]');
+    await expect(page.locator('[data-tecla="fraccion"]')).toHaveAttribute('aria-describedby', 'guia-novedades');
 
-    await page.getByRole('button', { name: 'Entendido' }).click();
+    await globo(page).getByRole('button', { name: 'Siguiente' }).click();
+    await expect(globo(page)).toContainText('2 de 2');
+    await expect(globo(page)).toContainText('Fracción o decimal');
+    await anilloSobre(page, '[data-novedad="vista"]');
+    // La descripción se va con el paso: si no, la tecla seguiría «descrita»
+    // por un globo que ya habla de otra cosa.
+    await expect(page.locator('[data-tecla="fraccion"]')).not.toHaveAttribute('aria-describedby');
+
+    await globo(page).getByRole('button', { name: 'Entendido' }).click();
     await expect(globo(page)).toBeHidden();
-    await expect(page.locator('[data-tecla="fraccion"]')).not.toHaveClass(/calc-anillo/);
+    await expect(anillo(page)).toHaveCount(0);
 
     await page.reload();
     await expect(page.locator('[data-calculadora]')).toBeVisible();
@@ -617,7 +638,15 @@ test.describe('el aviso de la tecla nueva', () => {
     await expect(globo(page)).toBeHidden();
   });
 
-  test('«Esc» lo cierra sin borrar la cuenta', async ({ page }) => {
+  test('«Atrás» vuelve al paso anterior', async ({ page }) => {
+    await page.goto('/calculadora');
+    await globo(page).getByRole('button', { name: 'Siguiente' }).click();
+    await globo(page).getByRole('button', { name: 'Atrás' }).click();
+    await expect(globo(page)).toContainText('1 de 2');
+    await expect(globo(page).getByRole('button', { name: 'Atrás' })).toHaveCount(0);
+  });
+
+  test('«Esc» la cierra entera sin borrar la cuenta', async ({ page }) => {
     await page.goto('/calculadora');
     await expect(globo(page)).toBeVisible();
 
@@ -626,32 +655,101 @@ test.describe('el aviso de la tecla nueva', () => {
     await expect(globo(page)).toBeHidden();
     // `Esc` es «borrar todo»; sin la guarda, quitarse el globo se llevaba el 7.
     await expect(expresion(page)).toHaveText('7');
+
+    // Y cuenta como «Saltar»: el segundo paso tampoco vuelve.
+    await page.reload();
+    await page.waitForTimeout(1200);
+    await expect(globo(page)).toBeHidden();
   });
 
-  test('pulsar la tecla también lo cierra', async ({ page }) => {
+  test('usar lo señalado pasa al paso siguiente, con el dedo o con el teclado', async ({ page }) => {
     await page.goto('/calculadora');
-    await expect(globo(page)).toBeVisible();
+    await expect(globo(page)).toContainText('1 de 2');
 
     await pulsar(page, '1');
     await pulsar(page, 'fracción');
-    await expect(globo(page)).toBeHidden();
+    await expect(globo(page)).toContainText('2 de 2');
     await expect(expresion(page)).toHaveText('1/');
+
+    await page.keyboard.type('2=');
+    await page.keyboard.press('d');
+    await expect(globo(page)).toBeHidden();
+  });
+
+  test('una «d» que no hace nada no cuenta como haber usado el botón', async ({ page }) => {
+    await page.goto('/calculadora');
+    await globo(page).getByRole('button', { name: 'Siguiente' }).click();
+    await expect(globo(page)).toContainText('2 de 2');
+
+    // Sin «=» delante no hay nada que convertir: el botón está apagado.
+    await page.keyboard.press('d');
+    await expect(globo(page)).toContainText('2 de 2');
+  });
+
+  test('cerrada con el teclado, el foco no se pierde', async ({ page }) => {
+    await page.goto('/calculadora');
+    await expect(globo(page)).toBeVisible();
+
+    // Se entra al globo desde una tecla, como quien llega con el tabulador.
+    await page.getByRole('button', { name: '7', exact: true }).focus();
+    await globo(page).getByRole('button', { name: 'Siguiente' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(globo(page)).toContainText('2 de 2');
+    await page.keyboard.press('Enter');
+    await expect(globo(page)).toBeHidden();
+
+    // Lo señalado en el último paso es el botón del visor, apagado antes del
+    // primer «=»: no puede tener el foco, y vuelve a donde estaba.
+    expect(await page.evaluate(() => document.activeElement?.textContent?.trim())).toBe('7');
+  });
+
+  test('quien ya cerró el aviso de la tecla solo ve el paso del botón', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('apexdata-calculadora-fraccion-vista', '1'));
+    await page.goto('/calculadora');
+
+    await expect(globo(page)).toContainText('Fracción o decimal');
+    // Un paso solo: ni contador, ni «Saltar».
+    await expect(globo(page)).not.toContainText('de 1');
+    await expect(globo(page).getByRole('button', { name: 'Saltar' })).toHaveCount(0);
+  });
+
+  test('pasados treinta días ya no sale', async ({ page }) => {
+    await page.clock.setFixedTime(enElDia(30));
+    await page.goto('/calculadora');
+    await expect(page.locator('[data-calculadora]')).toBeVisible();
+    await page.waitForTimeout(1200);
+    await expect(globo(page)).toBeHidden();
   });
 
   for (const ancho of [360, 1280]) {
-    test(`a ${ancho} px cabe entero y no tapa la tecla`, async ({ page }) => {
+    test(`a ${ancho} px cabe entero y no tapa lo que señala`, async ({ page }) => {
       await page.setViewportSize({ width: ancho, height: 900 });
       await page.goto('/calculadora');
-      await expect(globo(page)).toBeVisible();
 
-      const caja = await page.locator('#aviso-fraccion').boundingBox();
-      const tecla = await page.locator('[data-tecla="fraccion"]').boundingBox();
-      expect(caja && tecla, 'no se encontró el globo o la tecla').toBeTruthy();
-      expect(caja!.x).toBeGreaterThanOrEqual(0);
-      expect(caja!.x + caja!.width).toBeLessThanOrEqual(ancho);
-      // Encima de la tecla, sin pisarla: se tiene que poder pulsar.
-      expect(caja!.y + caja!.height).toBeLessThanOrEqual(tecla!.y);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(ancho);
+      for (const [selector, boton] of [
+        ['[data-tecla="fraccion"]', 'Siguiente'],
+        ['[data-novedad="vista"]', 'Entendido'],
+      ] as const) {
+        await expect(globo(page).getByRole('button', { name: boton })).toBeVisible();
+        // Que termine de colocarse: entra con una animación de 220 ms.
+        await page.waitForTimeout(300);
+        const caja = await globo(page).boundingBox();
+        const tecla = await page.locator(selector).boundingBox();
+        expect(caja && tecla, 'no se encontró el globo o lo señalado').toBeTruthy();
+        expect(caja!.x).toBeGreaterThanOrEqual(0);
+        expect(caja!.x + caja!.width).toBeLessThanOrEqual(ancho);
+        // Encima o debajo, pero sin pisarlo: se tiene que poder pulsar.
+        const pisa = caja!.y < tecla!.y + tecla!.height && caja!.y + caja!.height > tecla!.y;
+        expect(pisa, `el globo tapa ${selector}`).toBe(false);
+        // Los botones del pie, en una sola fila.
+        const alturas = await globo(page)
+          .getByRole('button')
+          .evaluateAll((bs) => bs.map((b) => Math.round(b.getBoundingClientRect().top)));
+        expect(new Set(alturas).size, 'los botones del globo no caben en una fila').toBe(1);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(ancho);
+
+        if (boton === 'Siguiente') await globo(page).getByRole('button', { name: boton }).click();
+      }
     });
   }
 
@@ -668,23 +766,27 @@ test.describe('el aviso de la tecla nueva', () => {
           __contraste: (el: Element) => number;
           __contrasteDe: (color: string, el: Element) => number;
         };
-        const aviso = document.querySelector('#aviso-fraccion')!;
+        const g = document.querySelector('#guia-novedades')!;
+        const [contador, titulo] = [...g.querySelectorAll('p')];
         const tecla = document.querySelector('[data-tecla="fraccion"]')!;
         return {
-          titulo: w.__contraste(aviso.querySelector('p')!),
-          boton: w.__contraste(aviso.querySelector('button')!),
+          contador: w.__contraste(contador),
+          titulo: w.__contraste(titulo),
+          saltar: w.__contraste(g.querySelector('button')!),
+          siguiente: w.__contraste(g.querySelector('.novedad-principal')!),
           // El anillo, contra el chasis que hay alrededor de la tecla.
           anillo: w.__contrasteDe(
-            getComputedStyle(tecla, '::after').borderTopColor,
+            getComputedStyle(document.querySelector('[data-novedad-anillo]')!).borderTopColor,
             tecla.parentElement!
           ),
         };
       });
 
-      expect(m.titulo, `el texto del globo se queda en ${m.titulo}:1`).toBeGreaterThanOrEqual(LEGIBLE);
-      expect(m.boton, `«Entendido» se queda en ${m.boton}:1`).toBeGreaterThanOrEqual(LEGIBLE);
-      // WCAG 1.4.11: lo que señala algo y no es texto pide 3:1.
-      expect(m.anillo, `el anillo se queda en ${m.anillo}:1`).toBeGreaterThanOrEqual(3);
+      for (const [que, valor] of Object.entries(m)) {
+        // WCAG 1.4.11: lo que señala algo y no es texto pide 3:1.
+        const liston = que === 'anillo' ? 3 : LEGIBLE;
+        expect(valor, `${que} se queda en ${valor}:1`).toBeGreaterThanOrEqual(liston);
+      }
     });
   }
 });
